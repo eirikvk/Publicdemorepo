@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bebygd, jordbruk, natur – direkte</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
+<style>
+/* Layout: velgere øverst, kartet som eneste panel til venstre, tallene åpent til høyre, metode og kall-logg under. */
+:root {
+  --bg: #F2F4F1; --surface: #FBFCFA; --ink: #17201C; --ink-2: #47534E; --ink-3: #6F7B75; --line: #D3DAD5;
+  --beb: #A03488; --jor: #CF9B1F; --nat: #2E8F63; --accent: #2B4C7E; --slor: rgba(242,244,241,.78);
+  --display: "Familjen Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --surface: #1A201D; --ink: #E9EEEA; --ink-2: #B5BFB9; --ink-3: #88938D; --line: #2E3733;
+  --beb: #B45BB0; --jor: #B88A22; --nat: #2B9567; --accent: #9DBDEE; --slor: rgba(18,23,21,.8); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121715; --surface: #1A201D; --ink: #E9EEEA; --ink-2: #B5BFB9; --ink-3: #88938D; --line: #2E3733;
+  --beb: #B45BB0; --jor: #B88A22; --nat: #2B9567; --accent: #9DBDEE; --slor: rgba(18,23,21,.8); color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 28px 56px; display: flex; flex-direction: column; gap: 24px }
+h1, h2, h3, p, dl, dd, table { margin: 0 }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+.top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between }
+.brand { font: 600 15px/1.2 var(--display); letter-spacing: .01em; color: var(--ink-2) }
+.brand small { display: block; font: 400 13px/1.4 var(--body); color: var(--ink-3); letter-spacing: 0 }
+.pick { display: flex; flex-wrap: wrap; gap: 12px }
+.pick label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3) }
+.pick select { font: 500 16px/1.2 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; min-width: 190px; max-width: 100% }
+
+.head h1 { font: 600 clamp(34px, 6vw, 56px)/1.02 var(--display); letter-spacing: -.02em; text-wrap: balance }
+.head p { color: var(--ink-2); margin-top: 6px }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 32px 40px; align-items: start }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr) } }
+
+.map { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.stage { position: relative; height: min(68vh, 620px); min-height: 340px; border-radius: 6px; overflow: hidden; background: var(--bg) }
+#kart { position: absolute; inset: 0 }
+.chip { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 110px); padding: 7px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: 13px; text-align: center; pointer-events: none }
+#laster { top: 10px } #ute { bottom: 34px; border-radius: 10px }
+.mapfoot { display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums }
+.probe b { font-weight: 600; color: var(--ink) }
+.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ink-2); cursor: pointer }
+.opt input { margin: 3px 0 0; accent-color: var(--accent) }
+
+.ol-control button { width: 44px; height: 44px; font-size: 22px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin: 0 0 6px }
+.ol-control button:hover, .ol-control button:focus { color: var(--ink); background: var(--surface); outline: 2px solid var(--accent) }
+.ol-control { background: none; padding: 0 } .ol-zoom { top: 10px; left: auto; right: 10px }
+.ol-scale-line { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; left: 10px; bottom: 10px; padding: 3px 6px }
+.ol-scale-line-inner { color: var(--ink-2); border-color: var(--ink-2); font: 500 12px/1.3 var(--body) }
+.ol-attribution, .ol-attribution:not(.ol-collapsed) { right: 10px; bottom: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; color: var(--ink-2) }
+.ol-attribution ul { color: var(--ink-2); text-shadow: none } .ol-attribution button { display: none }
+.ol-attribution.ol-collapsed ul { display: inline }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bakgrunn { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) } }
+:root[data-theme="dark"] .bakgrunn { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) }
+
+.nums { display: flex; flex-direction: column; gap: 18px; min-width: 0 }
+.nums h2 { font: 600 13px/1.3 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3) }
+.total { font: 600 30px/1.1 var(--display); font-variant-numeric: tabular-nums }
+.total span { font: 400 15px/1.4 var(--body); color: var(--ink-2); margin-left: 6px }
+.bar { display: flex; gap: 2px; height: 18px }
+.bar i { display: block; min-width: 3px; height: 100% }
+.bar i:first-child { border-radius: 4px 0 0 4px } .bar i:last-child { border-radius: 0 4px 4px 0 }
+.rows { display: flex; flex-direction: column; border-top: 1px solid var(--line) }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 4.6em; gap: 12px; align-items: center; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent }
+.row .sw { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--c); background: var(--c) }
+.row[aria-pressed="false"] .sw { background: transparent }
+.row[aria-pressed="false"] .nm { color: var(--ink-3); text-decoration: line-through }
+.row .nm { font-weight: 500 }
+.row .km { color: var(--ink-2); text-align: right; white-space: nowrap }
+.row .pc { font: 600 18px/1 var(--display); text-align: right; white-space: nowrap }
+.hint { font-size: 13px; color: var(--ink-3) }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 40px; border-top: 1px solid var(--line); padding-top: 28px }
+.notes section { display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.notes h2 { font: 600 18px/1.25 var(--display) }
+.notes p { color: var(--ink-2); font-size: 15px; max-width: 62ch }
+.tw { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line) }
+th { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3) }
+td { color: var(--ink-2) }
+td:first-child { font-weight: 500; color: var(--ink) }
+td.r, th.r { text-align: right; white-space: nowrap; padding-right: 0 }
+td.feil { color: var(--ink); font-weight: 600 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Bebygd, jordbruk, natur<small>Direkte fra åpne kilder, uten egen server</small></div>
+    <div class="pick">
+      <label for="fylke">Fylke<select id="fylke"><option>Henter …</option></select></label>
+      <label for="kommune">Kommune<select id="kommune"><option>Henter …</option></select></label>
+    </div>
+  </header>
+
+  <div class="head">
+    <h1 id="navn">Henter kommuner …</h1>
+    <p id="under"></p>
+  </div>
+
+  <div class="main">
+    <section class="map" aria-label="Kart">
+      <div class="stage">
+        <div id="kart"></div>
+        <div class="chip" id="laster" hidden>Henter kart fra NIBIO …</div>
+        <div class="chip" id="ute" hidden>Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.</div>
+      </div>
+      <div class="mapfoot">
+        <div class="probe" id="probe">Trykk på kartet for å se klassen.</div>
+        <div id="siste"></div>
+      </div>
+      <label class="opt" for="oversikt"><input type="checkbox" id="oversikt" checked>Vis også klassene når kartet er zoomet ut. Da ber siden om et større bilde, og kallet tar lengre tid.</label>
+    </section>
+
+    <section class="nums" aria-label="Arealtall">
+      <h2>Areal i kommunen, SSB <span id="aar"></span></h2>
+      <div class="total"><b id="tot">–</b><span>land og ferskvann</span></div>
+      <div class="bar" id="bar" role="img"></div>
+      <div class="rows" id="rows"></div>
+      <p class="hint">Trykk på en klasse for å skjule eller vise den. Da tegner NIBIO kartet på nytt uten den klassen. Havet er ikke farget og er ikke med i tallene.</p>
+    </section>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Kall mot åpne kilder</h2>
+      <div class="tw"><table>
+        <thead><tr><th>Kilde</th><th>Hva</th><th class="r">Tid</th><th class="r">Størrelse</th></tr></thead>
+        <tbody id="logg"></tbody>
+      </table></div>
+      <p>Viser de siste kallene nettleseren din har gjort. Bakgrunnskartet er ferdige fliser fra Kartverket og er ikke med i listen.</p>
+    </section>
+    <section>
+      <h2>Slik er klassene satt sammen</h2>
+      <div class="tw"><table>
+        <thead><tr><th>Klasse</th><th>Kart: økosystemtype</th><th>Tall: arealklasse</th></tr></thead>
+        <tbody>
+          <tr><td>Bebygd</td><td>Bebygd og opparbeidet areal</td><td>01–14</td></tr>
+          <tr><td>Jordbruk</td><td>Dyrket mark og grasmark</td><td>15–16</td></tr>
+          <tr><td>Natur</td><td>Skog, hei, lite vegetert mark, våtmark, elv, innsjø og strand</td><td>17–22 og 24</td></tr>
+        </tbody>
+      </table></div>
+      <p>Tredelingen sendes som en stil i hvert kartkall, så NIBIO tegner tre farger i stedet for elleve.</p>
+    </section>
+    <section>
+      <h2>Om siden</h2>
+      <p>Alt hentes direkte i nettleseren når du velger kommune: kommunelisten og grensen fra Kartverket, arealtallene fra SSB, og kartet fra NIBIO. Ingenting er lagret på forhånd.</p>
+      <p>Kart: Nasjonalt grunnkart for arealanalyse, årsversjon 2025, NIBIO. Tall: SSB, tabell 09594. Grenser og bakgrunnskart: Kartverket.</p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
+<script>
+(function () {
+  const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
+  const KV = 'https://api.kartverket.no/kommuneinfo/v1';
+  const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data';
+  const GRENSE = 17;      /* grunnkartet tegnes bare ved 17 meter per piksel eller finere (1:50 000) */
+  const MAKSPX = 4096;    /* største bilde siden ber om når kartet er zoomet ut */
+  const KL = [
+    ['beb', 'Bebygd', ['bebygdOpparbeidetAreal'], ['01', '02', '03', '04', '05', '06', '07', '08-09', '10-11', '12-13', '14']],
+    ['jor', 'Jordbruk', ['dyrketmark', 'grasmark'], ['15-16']],
+    ['nat', 'Natur', ['skog', 'heiBuskmark', 'liteVegetertMark', 'vatmark', 'elverBekkerKanaler', 'innsjoerVannmagasiner', 'kyststrenderSvabergDyner'], ['17', '18', '19', '20', '21', '22', '24']]
+  ];
+  const $ = id => document.getElementById(id);
+  const nf = (v, d = 1) => v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const kb = b => b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
+  const vis = { beb: true, jor: true, nat: true };
+  let fylker = [], valgt = null, valgNr = 0;
+
+  /* Kall-logg: hvert kall mot en åpen kilde måles i nettleseren. */
+  const rader = [];
+  function logg(kilde, hva, ms, bytes, feil) {
+    rader.unshift([kilde, hva, feil ? 'feilet' : (ms >= 1000 ? nf(ms / 1000) + ' s' : Math.round(ms) + ' ms'), feil ? '' : kb(bytes), feil]);
+    rader.length = Math.min(rader.length, 8);
+    const tb = $('logg'); tb.textContent = '';
+    rader.forEach(r => { const tr = tb.insertRow(); r.slice(0, 4).forEach((v, i) => { const td = tr.insertCell(); td.textContent = v; if (i > 1) td.className = 'r' + (r[4] ? ' feil' : '') }) });
+  }
+  async function hent(kilde, hva, url, som) {
+    const t0 = performance.now();
+    try {
+      const r = await fetch(url); if (!r.ok) throw new Error(r.status);
+      const b = await r.blob(); logg(kilde, hva, performance.now() - t0, b.size);
+      return som === 'blob' ? b : JSON.parse(await b.text());
+    } catch (e) { logg(kilde, hva, 0, 0, true); throw e }
+  }
+
+  /* Stilen som sendes til NIBIO: én regel per synlig klasse. */
+  const farge = id => getComputedStyle(document.documentElement).getPropertyValue('--' + id).trim();
+  function sld() {
+    const regler = KL.filter(k => vis[k[0]]).map(([id, , verdier]) => {
+      let f = verdier.map(v => `<ogc:PropertyIsEqualTo><ogc:PropertyName>okosystemtypeniva1</ogc:PropertyName><ogc:Literal>${v}</ogc:Literal></ogc:PropertyIsEqualTo>`).join('');
+      if (verdier.length > 1) f = `<ogc:Or>${f}</ogc:Or>`;
+      return `<Rule><ogc:Filter>${f}</ogc:Filter><PolygonSymbolizer><Fill><CssParameter name="fill">${farge(id)}</CssParameter></Fill></PolygonSymbolizer></Rule>`;
+    }).join('');
+    return `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;
+  }
+
+  /* Kartlaget: ett bilde per utsnitt, hentet når brukeren slipper kartet. */
+  const tomt = document.createElement('canvas'); tomt.width = tomt.height = 1;
+  let avbryt = null, kallNr = 0;
+  async function lastKart(extent, resolution, pixelRatio) {
+    const mitt = ++kallNr;
+    if (avbryt) avbryt.abort();
+    const w = Math.round((extent[2] - extent[0]) / resolution * pixelRatio), h = Math.round((extent[3] - extent[1]) / resolution * pixelRatio);
+    const mPerPx = resolution / pixelRatio;
+    if (!valgt) return tomt;
+    let k = 1;
+    if (mPerPx > GRENSE) {
+      k = Math.ceil(mPerPx / GRENSE);
+      if (!$('oversikt').checked || w * k > MAKSPX || h * k > MAKSPX) { $('ute').hidden = false; $('laster').hidden = true; $('siste').textContent = ''; return tomt }
+    }
+    $('ute').hidden = true;
+    if (!KL.some(x => vis[x[0]])) { $('laster').hidden = true; return tomt }
+    const p = new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'okosystemtype', styles: '', crs: 'EPSG:3857',
+      bbox: extent.map(v => v.toFixed(1)).join(','), width: w * k, height: h * k, format: 'image/png; mode=8bit', transparent: 'true', sld_body: sld() });
+    avbryt = new AbortController(); $('laster').hidden = false;
+    const t0 = performance.now(), hva = `Kart ${w * k} × ${h * k} px` + (k > 1 ? `, ${k} ganger forstørret` : '');
+    try {
+      const r = await fetch(WMS + '?' + p, { signal: avbryt.signal }); if (!r.ok) throw new Error(r.status);
+      const b = await r.blob(); if (!b.type.startsWith('image')) throw new Error('ikke bilde');
+      const ms = performance.now() - t0; logg('NIBIO', hva, ms, b.size);
+      if (mitt === kallNr) { $('laster').hidden = true; $('siste').textContent = `Siste kartkall: ${nf(ms / 1000)} s, ${kb(b.size)}` }
+      return { image: await createImageBitmap(b), pixelRatio: pixelRatio * k };
+    } catch (e) {
+      if (e.name !== 'AbortError') { logg('NIBIO', hva, 0, 0, true); if (mitt === kallNr) { $('laster').hidden = true; $('siste').textContent = 'Kartkallet feilet.' } }
+      return tomt;
+    }
+  }
+  const nyKilde = () => new ol.source.Image({ loader: lastKart, projection: 'EPSG:3857' });
+  const tema = new ol.layer.Image({ className: 'tema', source: nyKilde(), opacity: 0.86 });
+  const hentKartPaaNytt = () => tema.setSource(nyKilde());
+  const bakgrunn = new ol.layer.Tile({ className: 'bakgrunn', source: new ol.source.XYZ({
+    url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png', maxZoom: 18, crossOrigin: 'anonymous', attributions: '© Kartverket, NIBIO' }) });
+  const slorKilde = new ol.source.Vector(), grenseKilde = new ol.source.Vector();
+  const slor = new ol.layer.Vector({ className: 'slor', source: slorKilde, style: () => new ol.style.Style({ fill: new ol.style.Fill({ color: farge('slor') }) }) });
+  const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) }) });
+  const view = new ol.View({ center: ol.proj.fromLonLat([15, 65]), zoom: 4, maxZoom: 19 });
+  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, tema, slor, grense], view,
+    controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
+  const tegnPaaNytt = () => { hentKartPaaNytt(); slor.changed(); grense.changed() };
+  $('oversikt').addEventListener('change', tegnPaaNytt);
+
+  /* Trykk på kartet: les fargen i punktet og finn klassen. */
+  const rgb = id => { const v = farge(id).replace('#', ''); return [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16)) };
+  kart.on('singleclick', e => {
+    const d = tema.getData(e.pixel), p = $('probe');
+    if (!d || d[3] < 40) { p.textContent = 'Ingen klasse her (hav, skjult klasse eller for langt ute).'; return }
+    let best = null, min = 1e9;
+    KL.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
+    p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = best;
+  });
+
+  /* Tallpanelet */
+  const rows = $('rows');
+  KL.forEach(([id, navn]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'row'; b.id = 'vis-' + id;
+    b.style.setProperty('--c', `var(--${id})`); b.setAttribute('aria-pressed', 'true');
+    b.innerHTML = `<span class="sw"></span><span class="nm">${navn}</span><span class="km" id="km-${id}">–</span><span class="pc" id="pc-${id}">–</span>`;
+    b.addEventListener('click', () => { vis[id] = !vis[id]; b.setAttribute('aria-pressed', String(vis[id])); hentKartPaaNytt() });
+    rows.appendChild(b);
+  });
+  function visTall(a, aar) {
+    const sum = a[0] + a[1] + a[2], bar = $('bar'); bar.textContent = '';
+    $('tot').textContent = nf(sum) + ' km²'; $('aar').textContent = aar;
+    bar.setAttribute('aria-label', KL.map(([, n], i) => `${n} ${nf(a[i] / sum * 100)} prosent`).join(', '));
+    KL.forEach(([id, navn], i) => {
+      const p = a[i] / sum * 100, s = document.createElement('i');
+      s.style.cssText = `flex:${Math.max(a[i], 0.0001)} 1 0;background:var(--${id})`; s.title = `${navn}: ${nf(a[i], 2)} km², ${nf(p)} %`; bar.appendChild(s);
+      $('km-' + id).textContent = nf(a[i], a[i] < 10 ? 2 : 1) + ' km²';
+      $('pc-' + id).textContent = p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %';
+    });
+  }
+  function tomTall(tekst) { $('tot').textContent = tekst; $('bar').textContent = ''; KL.forEach(([id]) => { $('km-' + id).textContent = '–'; $('pc-' + id).textContent = '–' }) }
+
+  async function hentTall(k, mitt) {
+    const koder = KL.flatMap(x => x[3]).join(',');
+    try {
+      const j = await hent('SSB', `Areal for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&valueCodes[Region]=${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=top(1)`);
+      if (mitt !== valgNr) return;
+      const ix = j.dimension.ArealKlasse.category.index, tid = j.dimension.Tid.category.index;
+      const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
+      visTall(KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)), Array.isArray(tid) ? tid[0] : Object.keys(tid)[0]);
+    } catch (e) { if (mitt === valgNr) tomTall('Tallene kunne ikke hentes') }
+  }
+  async function hentGrense(k, mitt) {
+    try {
+      const j = await hent('Kartverket', `Grense for ${k.navn}`, `${KV}/kommuner/${k.nr}/omrade?utkoordsys=4258`);
+      if (mitt !== valgNr) return;
+      const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
+      const polys = geom.getType() === 'MultiPolygon' ? geom.getPolygons() : [geom];
+      const V = 20037508, ytre = [[-V, -V], [V, -V], [V, V], [-V, V], [-V, -V]];
+      slorKilde.clear(); grenseKilde.clear();
+      slorKilde.addFeature(new ol.Feature(new ol.geom.Polygon([ytre, ...polys.map(p => p.getLinearRing(0).getCoordinates())])));
+      grenseKilde.addFeature(new ol.Feature(geom));
+      view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
+    } catch (e) { if (mitt === valgNr) $('probe').textContent = 'Kommunegrensen kunne ikke hentes.' }
+  }
+
+  const fSel = $('fylke'), kSel = $('kommune');
+  const finn = nr => { for (const f of fylker) for (const k of f.kommuner) if (k.nr === nr) return [f, k]; return null };
+  function fyllKommuner(f, nr) { kSel.length = 0; f.kommuner.forEach(k => kSel.add(new Option(k.navn, k.nr))); kSel.value = nr || f.kommuner[0].nr }
+  function velg(nr) {
+    const t = finn(nr); if (!t) return;
+    const [f, k] = t, mitt = ++valgNr; valgt = k;
+    if (fSel.value !== f.nr) { fSel.value = f.nr; fyllKommuner(f, nr) }
+    try { localStorage.setItem('bjn-live-kommune', nr) } catch (e) {}
+    try { history.replaceState(null, '', '#' + nr) } catch (e) {}
+    $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
+    $('probe').textContent = 'Trykk på kartet for å se klassen.'; tomTall('Henter …');
+    hentTall(k, mitt); hentGrense(k, mitt);
+  }
+  fSel.addEventListener('change', () => { const f = fylker.find(x => x.nr === fSel.value); fyllKommuner(f); velg(kSel.value) });
+  kSel.addEventListener('change', () => velg(kSel.value));
+
+  hent('Kartverket', 'Fylker og kommuner', `${KV}/fylkerkommuner`).then(j => {
+    fylker = j.map(f => ({ nr: f.fylkesnummer, navn: f.fylkesnavn, kommuner: f.kommuner.map(k => ({ nr: k.kommunenummer, navn: k.kommunenavnNorsk })).sort((a, b) => a.navn.localeCompare(b.navn, 'nb')) }))
+      .sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+    fSel.length = 0; fylker.forEach(f => fSel.add(new Option(f.navn, f.nr)));
+    let forst = (location.hash || '').replace('#', '');
+    if (!finn(forst)) { try { forst = localStorage.getItem('bjn-live-kommune') } catch (e) { forst = null } }
+    if (!finn(forst)) forst = finn('3218') ? '3218' : fylker[0].kommuner[0].nr;
+    const f0 = finn(forst)[0]; fSel.value = f0.nr; fyllKommuner(f0, forst); velg(forst);
+  }).catch(() => { $('navn').textContent = 'Kommunelisten kunne ikke hentes'; $('under').textContent = 'Sjekk nettforbindelsen og last siden på nytt.' });
+
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', tegnPaaNytt);
+  new MutationObserver(tegnPaaNytt).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+</body>
+</html>
