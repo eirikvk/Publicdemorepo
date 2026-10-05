@@ -109,6 +109,7 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .row.naturrad .sw { border-width: 3px; background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: 0 0 0 1px var(--ink-3) }
 .row.naturrad.flate .sw { background: var(--c) }
 .row.naturrad[aria-pressed="false"] .sw { background: transparent }
+.row.naturrad[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }   /* av er utgangspunktet, så navnet strykes ikke */
 .naturblokk { display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: var(--ink-2) }
 #naturblokker { display: contents }
 .naturblokk b { font-weight: 600; color: var(--ink) }
@@ -258,7 +259,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 00.55';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 01.05';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -669,7 +670,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       felt: 'Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark', slakk: 5, kildetekst: 'Miljødirektoratet, naturtyper med KU-verdi (stor og svært stor verdi)', ekstra: hentDekning,
       les: p => ({ navn: p['Områdenavn'] || p.Naturtype || 'Uten navn', url: p.FaktaarkLokalitet || p.Faktaark || '', under: [p.Naturtype, String(p.Verdikategori || '').toLowerCase()].filter(Boolean).join(', ') }) }
   ].map(t => {
-    t.kilde = new ol.source.Vector(); t.minne = new Map(); t.data = null; t.paa = true;
+    t.kilde = new ol.source.Vector(); t.minne = new Map(); t.data = null; t.paa = false;   /* naturlagene er av når siden åpnes, så kartet starter enkelt */
     /* Bare omriss: en hvit kant og en farget strek. En fylling over hele området måtte tegnes på nytt i hvert bilde når kartet flyttes.
        Laget deler lerret med planlaget, så de klippes samlet. Den store bufferen gjør at alle omrissene i kommunen tegnes i ett, også de
        utenfor utsnittet, så de er på plass mens kartet flyttes. */
@@ -686,7 +687,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       ? new ol.layer.Tile({ className: 'plan', visible: false, source: new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, transition: 0, projection: UTM, tileLoadFunction: tile => tegnFlateflis(t, tile) }) })
       : new ol.layer.Vector({ className: 'plan', source: t.kilde, visible: false, renderBuffer: 4000, style: (f, res) => {
           const u = f.getGeometry().getExtent(); return Math.max(u[2] - u[0], u[3] - u[1]) < 8 * res ? t.merke : t.strek } });
-    const k = t.knapp = document.createElement('button'); k.type = 'button'; k.className = 'row naturrad' + (t.flate ? ' flate' : ''); k.id = t.id + 'knapp'; k.style.setProperty('--c', `var(--${t.id})`); k.setAttribute('aria-pressed', 'true');
+    const k = t.knapp = document.createElement('button'); k.type = 'button'; k.className = 'row naturrad' + (t.flate ? ' flate' : ''); k.id = t.id + 'knapp'; k.style.setProperty('--c', `var(--${t.id})`); k.setAttribute('aria-pressed', 'false');
     k.innerHTML = '<span class="sw"></span><span class="nm"></span><span class="km"></span><span class="pc"></span>'; k.querySelector('.nm').textContent = t.navn;
     k.addEventListener('click', () => { t.paa = !t.paa; k.setAttribute('aria-pressed', String(t.paa)); visNatur(t) });
     const b = t.blokk = document.createElement('div'); b.className = 'naturblokk'; b.id = t.id + 'blokk'; b.hidden = true;
