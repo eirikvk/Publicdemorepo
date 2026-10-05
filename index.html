@@ -442,8 +442,9 @@ td.feil { color: var(--ink); font-weight: 600 }
     s.har.add(n);
     createImageBitmap(new Blob([buf])).then(bm => {
       if (s !== samle) return;
-      const u = flisnett.getTileCoordExtent(tc);
-      s.g.drawImage(bm, (u[0] - s.ext[0]) / s.res, (s.ext[3] - u[3]) / s.res, (u[2] - u[0]) / s.res, (u[3] - u[1]) / s.res);
+      /* Flisen legges på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
+      const u = flisnett.getTileCoordExtent(tc), px = v => Math.round((v - s.ext[0]) / s.res), py = v => Math.round((s.ext[3] - v) / s.res);
+      s.g.drawImage(bm, px(u[0]), py(u[3]), px(u[2]) - px(u[0]), py(u[1]) - py(u[3]));
       clearTimeout(s.t); s.t = setTimeout(() => { if (s !== samle) return; ov = { lerret: s.c, ext: s.ext, dynamisk: true }; tegnOversikt(); status(); if (planPaa) regnPlan() }, 400);
     }).catch(() => {});
   }
