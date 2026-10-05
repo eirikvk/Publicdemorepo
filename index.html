@@ -7,20 +7,21 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
 <style>
-/* Klassefargene er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog. */
+/* Klassefargene er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog.
+   Planlagt utbygging har mørkere slektninger av klassefargene: blågrønn for natur og brun for jordbruk. Parene er kontrollert for fargeblindhet. */
 /* Layout: velgere øverst, kartet som eneste panel til venstre, tallene åpent til høyre, metode og kall-logg under. */
 :root {
   --bg: #F2F4F1; --surface: #FBFCFA; --ink: #17201C; --ink-2: #47534E; --ink-3: #6F7B75; --line: #D3DAD5;
-  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --accent: #2B4C7E;
+  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #155E75; --pjor: #92400E; --accent: #2B4C7E;
   --display: "Familjen Grotesk", "Avenir Next", "Segoe UI", sans-serif;
   --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #121715; --surface: #1A201D; --ink: #E9EEEA; --ink-2: #B5BFB9; --ink-3: #88938D; --line: #2E3733;
-  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --accent: #9DBDEE; color-scheme: dark } }
+  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #3B9AC2; --pjor: #9F5512; --accent: #9DBDEE; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #121715; --surface: #1A201D; --ink: #E9EEEA; --ink-2: #B5BFB9; --ink-3: #88938D; --line: #2E3733;
-  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --accent: #9DBDEE; color-scheme: dark }
+  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #3B9AC2; --pjor: #9F5512; --accent: #9DBDEE; color-scheme: dark }
 
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -75,14 +76,17 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 4.6em; gap: 12px; align-items: center; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent }
 .row .sw { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--c); background: var(--c) }
 .row[aria-pressed="false"] .sw { background: transparent }
-.row.lag { grid-template-columns: auto minmax(0, 1fr) }
-.row.lag .sw { border-color: var(--ink); background: repeating-linear-gradient(135deg, var(--ink) 0 2px, var(--nat) 2px 6px) }
-.row.lag[aria-pressed="false"] .sw { background: transparent }
-.row.lag[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }
 .row[aria-pressed="false"] .nm { color: var(--ink-3); text-decoration: line-through }
 .row .nm { font-weight: 500 }
 .row .km { color: var(--ink-2); text-align: right; white-space: nowrap }
 .row .pc { font: 600 18px/1 var(--display); text-align: right; white-space: nowrap }
+.row.lag .sw { --c: var(--pnat); background: linear-gradient(135deg, var(--pnat) 50%, var(--pjor) 50%) }
+.row.lag[aria-pressed="false"] .sw { background: transparent }
+.row.lag[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }
+.forklaring { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2) }
+.forklaring span { display: flex; gap: 8px; align-items: center }
+.forklaring i { flex: none; width: 14px; height: 14px; border-radius: 3px }
+.plan { opacity: .92 }
 .hint { font-size: 13px; color: var(--ink-3) }
 
 .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 40px; border-top: 1px solid var(--line); padding-top: 28px }
@@ -132,10 +136,11 @@ td.feil { color: var(--ink); font-weight: 600 }
       <div class="total"><b id="tot">–</b><span>land og ferskvann</span></div>
       <div class="bar" id="bar" role="img"></div>
       <div class="rows" id="rows"></div>
-      <h2>Planlagt endring</h2>
-      <div class="rows"><button type="button" class="row lag" id="planknapp" aria-pressed="false"><span class="sw skravur"></span><span class="nm">Natur og jordbruk satt av til framtidig utbygging</span></button></div>
-      <p class="hint">Viser dagens natur og jordbruk som ligger i områder kommuneplanen setter av til framtidig bebyggelse, anlegg eller samferdsel. Kartet er omtrentlig og bare til illustrasjon.</p>
-      <p class="hint">Trykk på en klasse for å skjule eller vise den. Det skjer i nettleseren, uten nytt kartkall. Havet er ikke farget og er ikke med i tallene.</p>
+      <div class="forklaring">
+        <span><i style="background:var(--pnat)"></i>Natur som kommuneplanen setter av til framtidig utbygging</span>
+        <span><i style="background:var(--pjor)"></i>Jordbruk som kommuneplanen setter av til framtidig utbygging</span>
+      </div>
+      <p class="hint">Trykk på et kartlag for å skjule eller vise det. De fire lagene er uavhengige, så planlagt utbygging kan vises alene. Havet er ikke farget og er ikke med i tallene. Planlaget er omtrentlig og bare til illustrasjon.</p>
     </section>
   </div>
 
@@ -159,7 +164,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         </tbody>
       </table></div>
       <p>Tredelingen sendes som en stil i hvert kall, så NIBIO tegner tre klasser i stedet for elleve. Fargene settes i nettleseren og er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog.</p>
-      <p>Planlagt endring hentes fra kommuneplanens arealdel hos DiBK: arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig. Nettleseren legger dette oppå dagens klasser og viser bare det som i dag er natur eller jordbruk.</p>
+      <p>Planlagt endring hentes fra kommuneplanens arealdel hos DiBK: arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig. Nettleseren legger dette oppå dagens klasser og viser bare det som i dag er natur eller jordbruk, med en mørkere farge for hver av de to. Laget kan vises alene, uavhengig av de tre klassene.</p>
     </section>
     <section>
       <h2>Om siden</h2>
@@ -340,13 +345,12 @@ td.feil { color: var(--ink); font-weight: 600 }
       const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
       g.drawImage(await createImageBitmap(new Blob([planBuf])), 0, 0, 512, 512);
       const P = g.getImageData(0, 0, 512, 512).data, ut = g.createImageData(512, 512), o = ut.data;
-      const jor = vis.jor && rgb('jor'), nat = vis.nat && rgb('nat'), blekk = rgb('ink');
-      for (let y = 0, i = 0; y < 512; y++) for (let x = 0; x < 512; x++, i += 4) {
+      const pjor = rgb('pjor'), pnat = rgb('pnat');   /* uavhengig av hvilke klasser som vises i kartet */
+      for (let i = 0; i < o.length; i += 4) {
         if (P[i + 3] < 100 || K[i + 3] < 100) continue;                 /* utenfor planområdene, eller hav */
         const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;   /* allerede bebygd i dag */
-        const f = gr >= b ? jor : nat; if (!f) continue;
-        const strek = ((x + y) & 15) < 4;                               /* skravur, sammenhengende over fliskantene */
-        o[i] = strek ? blekk[0] : f[0]; o[i + 1] = strek ? blekk[1] : f[1]; o[i + 2] = strek ? blekk[2] : f[2]; o[i + 3] = 255;
+        const f = gr >= b ? pjor : pnat;
+        o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255;
       }
       g.putImageData(ut, 0, 0);
       const url = URL.createObjectURL(await new Promise(ok => c.toBlob(ok))), img = tile.getImage();
@@ -438,13 +442,17 @@ td.feil { color: var(--ink); font-weight: 600 }
   kart.on('singleclick', e => {
     const p = $('probe');
     if (klipp && !klipp.intersectsCoordinate(e.coordinate)) { p.textContent = 'Utenfor kommunen.'; return }
+    const pl = planPaa && planLag.getVisible() ? planLag.getData(e.pixel) : null;
+    if (pl && pl[3] > 40) {
+      const av = c => (pl[0] - c[0]) ** 2 + (pl[1] - c[1]) ** 2 + (pl[2] - c[2]) ** 2;
+      p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = (av(rgb('pjor')) < av(rgb('pnat')) ? 'Jordbruk' : 'Natur') + ', satt av til framtidig utbygging'; return;
+    }
     let d = tema.getVisible() ? tema.getData(e.pixel) : null;
     if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = (view.getResolution() < ovRes ? oversiktGrov : oversiktLag).getData(e.pixel);
-    if (!d || d[3] < 40) { p.textContent = 'Ingen klasse her (hav, skjult klasse eller for langt ute).'; return }
+    if (!d || d[3] < 40) { p.textContent = 'Ingen synlig klasse her (hav, skjult kartlag eller for langt ute).'; return }
     let best = null, min = 1e9;
     KL.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
-    const pl = planPaa && planLag.getVisible() ? planLag.getData(e.pixel) : null;
-    p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = best + (pl && pl[3] > 40 ? ', satt av til framtidig utbygging' : '');
+    p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = best;
   });
 
   /* Tallpanelet */
@@ -456,6 +464,10 @@ td.feil { color: var(--ink); font-weight: 600 }
     b.addEventListener('click', () => { vis[id] = !vis[id]; b.setAttribute('aria-pressed', String(vis[id])); tegnOversikt(); fargeleggFliser() });
     rows.appendChild(b);
   });
+  {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'row lag'; b.id = 'planknapp'; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<span class="sw"></span><span class="nm">Planlagt utbygging</span><span class="km"></span><span class="pc"></span>'; rows.appendChild(b);
+  }
   $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan() });
   function visTall(a, aar) {
     const sum = a[0] + a[1] + a[2], bar = $('bar'); bar.textContent = '';
