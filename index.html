@@ -321,7 +321,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   const hentRaa = lagHenter('NIBIO', 'Kart'), hentPlan = lagHenter('DiBK', 'Kommuneplan');
   function lastFlis(tile, src) {
-    hentRaa(src).then(fargeleggBlob).then(blob => {
+    hentRaa(src).then(buf => { leggISamling(tile.getTileCoord(), buf); return fargeleggBlob(buf) }).then(blob => {
       const img = tile.getImage(), url = URL.createObjectURL(blob);
       img.addEventListener('load', () => { URL.revokeObjectURL(url); klare.add(tile.getTileCoord().join('/')) }, { once: true }); img.src = url;
     }).catch(() => tile.setState(3));
@@ -342,7 +342,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   async function dagensKlasser(tc) {   /* dagens klasser i flisens piksler, i de rene fargene fra NIBIO */
     const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
     if (tc[0] >= FLISNIVA) g.drawImage(await createImageBitmap(new Blob([await hentRaa(flisUrl(tc))])), 0, 0, 512, 512);
-    else if (ov) {
+    else if (ov && ov.buf) {
       const u = plannett.getTileCoordExtent(tc); ovBilde = ovBilde || createImageBitmap(new Blob([ov.buf]));
       g.drawImage(await ovBilde, (u[0] - ov.ext[0]) / ovRes, (ov.ext[3] - u[3]) / ovRes, (u[2] - u[0]) / ovRes, (u[3] - u[1]) / ovRes, 0, 0, 512, 512);
     } else return null;
@@ -407,15 +407,42 @@ td.feil { color: var(--ink); font-weight: 600 }
   oversiktLag.on('postrender', e => { e.context.imageSmoothingEnabled = true });
   const oversiktSynlig = v => oversiktLag.setVisible(v);
   async function tegnOversikt() {
-    if (!ov) return;
-    const url = URL.createObjectURL(await fargeleggBlob(ov.buf)), gammel = ovUrl; ovUrl = url;
-    ovRes = (ov.ext[2] - ov.ext[0]) / new DataView(ov.buf).getUint32(16);   /* kartmeter per piksel i det lagrede bildet */
-    oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: UTM }));
+    const denne = ov; if (!denne) return;
+    const blob = denne.lerret ? await fargeleggLerret(denne.lerret) : await fargeleggBlob(denne.buf);
+    if (denne !== ov) return;
+    const url = URL.createObjectURL(blob), gammel = ovUrl; ovUrl = url;
+    ovRes = (denne.ext[2] - denne.ext[0]) / (denne.lerret ? denne.lerret.width : new DataView(denne.buf).getUint32(16));   /* kartmeter per piksel i oversiktsbildet */
+    oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: denne.ext, projection: UTM }));
     if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
-    ovBilde = null; tegnPlan(); if (planPaa) regnPlan();
+    if (!denne.dynamisk) { ovBilde = null; tegnPlan(); if (planPaa) regnPlan() }
+  }
+
+  /* Kommuner uten lagret oversiktsbilde: nettleseren setter sammen sitt eget av flisene den har hentet. Zoomer man ut
+     igjen, vises dermed det man alt har sett, i stedet for bare bakgrunnskartet. Det hentes ingenting nytt for dette. */
+  let samle = null;
+  function nySamling(ext) {
+    const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(ext[2] - ext[0], ext[3] - ext[1]) / 2048), c = document.createElement('canvas');
+    c.width = Math.ceil((ext[2] - ext[0]) / res); c.height = Math.ceil((ext[3] - ext[1]) / res);
+    samle = { c, g: c.getContext('2d', { willReadFrequently: true }), res, ext: [ext[0], ext[3] - c.height * res, ext[0] + c.width * res, ext[3]], har: new Set(), t: null };
+  }
+  function leggISamling(tc, buf) {
+    const s = samle, n = tc.join('/'); if (!s || s.har.has(n)) return;
+    s.har.add(n);
+    createImageBitmap(new Blob([buf])).then(bm => {
+      if (s !== samle) return;
+      const u = flisnett.getTileCoordExtent(tc);
+      s.g.drawImage(bm, (u[0] - s.ext[0]) / s.res, (s.ext[3] - u[3]) / s.res, (u[2] - u[0]) / s.res, (u[3] - u[1]) / s.res);
+      clearTimeout(s.t); s.t = setTimeout(() => { if (s !== samle) return; ov = { lerret: s.c, ext: s.ext, dynamisk: true }; tegnOversikt(); status() }, 400);
+    }).catch(() => {});
+  }
+  function fargeleggLerret(k) {
+    const F = KL.map(([id]) => vis[id] ? rgb(id) : null), c = document.createElement('canvas'); c.width = k.width; c.height = k.height;
+    const d = k.getContext('2d').getImageData(0, 0, k.width, k.height), o = d.data;
+    for (let i = 0; i < o.length; i += 4) { if (!o[i + 3]) continue; const f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F); o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3] }
+    c.getContext('2d').putImageData(d, 0, 0); return new Promise(ok => c.toBlob(ok));
   }
   async function hentOversikt(k, mitt) {
-    ov = null; ovBilde = null; oversiktLag.setSource(null); oversiktSynlig(true);
+    ov = null; ovBilde = null; samle = null; oversiktLag.setSource(null); oversiktSynlig(true);
     if (!oversikter[k.nr]) return;
     try {
       const buf = await hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
@@ -456,7 +483,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     const c = e.context, vc = ol.render.getVectorContext(e);
     c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore();
   };
-  tema.on('postrender', klippTilKommunen); planLag.on('postrender', klippTilKommunen);
+  tema.on('postrender', klippTilKommunen); planLag.on('postrender', klippTilKommunen); oversiktLag.on('postrender', klippTilKommunen);
   /* Omtrentlig areal, regnet ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå oversiktsbildets
      klasser for hele kommunen, og pikslene telles. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
   let regnNr = 0;
@@ -465,7 +492,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     tn.textContent = tj.textContent = note.textContent = '';
     if (!planPaa || !klipp) return;
     if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
-    if (!ov) { note.textContent = 'Arealet kan bare regnes ut for kommuner med lagret oversiktsbilde.'; return }
+    if (!ov || ov.dynamisk) { note.textContent = 'Arealet kan bare regnes ut for kommuner med lagret oversiktsbilde.'; return }
     tn.textContent = tj.textContent = 'regner …';
     const koord = [], n = { nat: 0, jor: 0, pnat: 0, pjor: 0 }, nr = valgt.nr; plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
     const x0 = Math.min(...koord.map(t => t[1])), y0 = Math.min(...koord.map(t => t[2])), w = (Math.max(...koord.map(t => t[1])) - x0 + 1) * 512, h = (Math.max(...koord.map(t => t[2])) - y0 + 1) * 512, d = new Uint8Array(w * h);
@@ -505,8 +532,9 @@ td.feil { color: var(--ink); font-weight: 600 }
      alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
   function status() {
     if (view.getResolution() < MAKSRES) { $('ute').hidden = true; return }
-    const o = valgt && oversikter[valgt.nr], treff = !!o && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
-    oversiktSynlig(true); $('ute').hidden = treff || !valgt; $('siste').textContent = treff ? 'Viser lagret oversiktsbilde' : '';
+    const o = (ov && ov.ext) || (valgt && oversikter[valgt.nr]), treff = !!o && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
+    oversiktSynlig(true); $('ute').hidden = treff || !valgt;
+    $('siste').textContent = !treff ? '' : ov && ov.dynamisk ? 'Viser kart nettleseren allerede har hentet' : 'Viser lagret oversiktsbilde';
   }
   kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true) });
   kart.on('moveend', () => { iBevegelse = false; status(); kart.render() });
@@ -579,6 +607,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
       grenseKilde.clear(); grenseKilde.addFeature(new ol.Feature(geom));
       klipp = geom; tema.setExtent(geom.getExtent()); planLag.setExtent(geom.getExtent()); tema.setVisible(true); visPlan();
+      if (!oversikter[k.nr]) nySamling(geom.getExtent());
       if (!k.boks) view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
     } catch (e) { if (mitt === valgNr) { $('probe').textContent = 'Kommunegrensen kunne ikke hentes.'; tema.setVisible(true) } }
   }
