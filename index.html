@@ -15,7 +15,7 @@
 :root {
   --bg: #F2F4F1; --surface: #FBFCFA; --ink: #17201C; --ink-2: #47534E; --ink-3: #6F7B75; --line: #D3DAD5;
   --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #171C1A; --pjor: #92400E; --accent: #2B4C7E;
-  --hav: #BDD7E7; --inn: #6BAED6; --elv: #08519C; --land: #B9B3A4;
+  --hav: #BDD7E7; --inn: #6BAED6; --elv: #08519C; --land: #B9B3A4; --slor: #F7F8F5;
   --display: "Familjen Grotesk", "Avenir Next", "Segoe UI", sans-serif;
   --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
@@ -208,7 +208,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     </section>
     <section>
       <h2>Tekniske valg</h2>
-      <label class="valg" for="smale"><input type="checkbox" id="smale">Vis smale striper i planlagt utbygging. Det er felt under rundt 40 meters bredde, ofte grøntdrag og kanter langs eksisterende bebyggelse.</label>
+      <label class="valg" for="smale"><input type="checkbox" id="smale">Vis smale striper i planlagt utbygging. Det er felt som ikke er bredere enn rundt 40 meter noe sted, ofte grøntdrag og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.</label>
     </section>
   </div>
 </div>
@@ -300,9 +300,13 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   const oppslag = (r, g, b) => (r >> 3) << 10 | (g >> 3) << 5 | b >> 3;
   const klasseAv = (r, g, b) => { const q = oppslag(r, g, b); return LT[q] >= 128 ? LA[q] : LB[q] };   /* klassen det er mest av i pikselen */
+  /* Fargene som brukes nå. En skjult klasse er gjennomsiktig. Unntaket er når planlagt utbygging vises: da får skjulte klasser et lyst slør,
+     så bakgrunnskartet dempes der og de mørke planfeltene synes tydelig også når de står alene. Fjerde tall er hvor tett fargen er. */
+  const SLOR = 0.82;
+  const klassefarger = () => { const slor = planPaa && !ingenPlan() ? [...rgb('slor'), SLOR] : null; return ALLE.map(([id]) => vis[id] ? rgb(id) : slor) };
   function tilFarge(r, g, b, a, F) {
     if (!a) return [0, 0, 0, 0];
-    const q = oppslag(r, g, b), A = F[LA[q]], B = F[LB[q]], t = LT[q] / 255, va = A ? t : 0, vb = B ? 1 - t : 0, syn = va + vb;
+    const q = oppslag(r, g, b), A = F[LA[q]], B = F[LB[q]], t = LT[q] / 255, va = A ? t * (A[3] || 1) : 0, vb = B ? (1 - t) * (B[3] || 1) : 0, syn = va + vb;
     if (!(syn > 0)) return [0, 0, 0, 0];
     const f = [0, 0, 0, Math.round(a * syn)];
     for (let k = 0; k < 3; k++) f[k] = Math.round(((A ? A[k] * va : 0) + (B ? B[k] * vb : 0)) / syn);
@@ -316,7 +320,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     dv.setUint32(8 + data.length, (c ^ 0xFFFFFFFF) >>> 0); return o;
   }
   async function fargeleggBlob(buf) {
-    const F = ALLE.map(([id]) => vis[id] ? rgb(id) : null), u = new Uint8Array(buf), dv = new DataView(buf);
+    const F = klassefarger(), u = new Uint8Array(buf), dv = new DataView(buf);
     let p = 8, plte = null, trns = null, type3 = false; const deler = [];
     while (p + 12 <= u.length) {
       const len = dv.getUint32(p), type = String.fromCharCode(u[p + 4], u[p + 5], u[p + 6], u[p + 7]);
@@ -474,7 +478,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const tegnPlan = () => planLag.setSource(nyPlanKilde());
   let planNokkel = 0;
   const oppfriskPlan = () => planLag.getSource().setKey(String(++planNokkel));   /* tegner flisene på nytt, og de gamle står til de nye er klare */
-  const fargeleggFliser = () => { oversiktSynlig(true); klare.clear(); tema.setSource(nyFlisKilde()); tegnPlan() };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall */
+  const fargeleggFliser = () => { oversiktSynlig(true); klare.clear(); tema.setSource(nyFlisKilde()) };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall. Planlaget røres ikke: det avhenger ikke av hvilke klasser som vises. */
 
   /* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv. */
   let oversikter = {}, ov = null, ovUrl = null, ovRes = 0;
@@ -496,7 +500,8 @@ td.feil { color: var(--ink); font-weight: 600 }
     const forste = !oversiktLag.getSource();
     oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: denne.ext, projection: UTM })); if (forste) oversiktSynlig(true);
     if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
-    if (!denne.dynamisk) { ovBilde = null; tegnPlan(); if (planPaa) regnPlan() }
+    /* Første gang et lagret oversiktsbilde er på plass, regnes planlagt utbygging ut. Senere fargebytter rører ikke planlaget. */
+    if (!denne.dynamisk && !denne.regnet) { denne.regnet = true; ovBilde = null; tegnPlan(); if (planPaa) regnPlan() }
   }
 
   /* Kommuner uten lagret oversiktsbilde: nettleseren setter sammen sitt eget av flisene den har hentet. Zoomer man ut
@@ -527,7 +532,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     }).catch(() => {});
   }
   function fargeleggLerret(k) {
-    const F = ALLE.map(([id]) => vis[id] ? rgb(id) : null), c = document.createElement('canvas'); c.width = k.width; c.height = k.height;
+    const F = klassefarger(), c = document.createElement('canvas'); c.width = k.width; c.height = k.height;
     const d = k.getContext('2d').getImageData(0, 0, k.width, k.height), o = d.data;
     for (let i = 0; i < o.length; i += 4) { if (!o[i + 3]) continue; const f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F); o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3] }
     c.getContext('2d').putImageData(d, 0, 0); return new Promise(ok => c.toBlob(ok));
@@ -549,7 +554,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const view = new ol.View({ projection: UTM, center: ol.proj.fromLonLat([15, 65], UTM), resolutions: OPPLOSNINGER.slice(2), resolution: OPPLOSNINGER[4], enableRotation: false });
   const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, planLag, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
-  const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); grense.changed() };
+  const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); oppfriskPlan(); grense.changed() };
   /* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen.
      Kartet slipper derfor knip og dra igjennom til nettleseren så lenge siden er forstørret. Knappene for zoom og trykk i kartet virker fortsatt. */
   if (window.visualViewport) {
@@ -629,11 +634,18 @@ td.feil { color: var(--ink); font-weight: 600 }
       }));
     } catch (e) { if (mitt === regnNr) { tn.textContent = tj.textContent = ''; note.textContent = 'Arealet kunne ikke regnes ut.' } return }
     if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
-    /* Til oversikten fjernes felt som er smalere enn to ruter (rundt 40 meter): først krympes alt én rute, så utvides det igjen.
-       Det tar bort de tynne stripene langs eksisterende bebyggelse, som ellers ville dominere når feltene forstørres. */
+    /* Smale striper: et felt som ikke er bredere enn to ruter (rundt 40 meter) noe sted. De oppstår der plangrensen og grunnkartet ikke
+       treffer hverandre, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle fire sider.
+       Så beholdes alt som henger sammen med en kjerne. Et større felt beholdes dermed helt, også der det smalner av, og bare
+       felt uten kjerne faller bort. */
     const krympet = new Uint8Array(w * h), ryddet = new Uint8Array(w * h), er = ukjent ? i => d[i] || ukjent[i] : i => d[i];
     for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && er(i - 1) && er(i + 1) && er(i - w) && er(i + w)) krympet[i] = d[i];
-    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && (krympet[i] || krympet[i - 1] || krympet[i + 1] || krympet[i - w] || krympet[i + w])) ryddet[i] = d[i];
+    let front = []; for (let i = 0; i < krympet.length; i++) if (krympet[i]) { ryddet[i] = d[i]; front.push(i) }
+    while (front.length) {
+      const ny = [];
+      for (const i of front) for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) if (d[j] && !ryddet[j]) { ryddet[j] = d[j]; ny.push(j) }
+      front = ny;
+    }
     let rn = 0, rj = 0; for (let i = 0; i < ryddet.length; i++) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
     const naer = new Uint8Array(w * h);
     for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (ryddet[i] || ryddet[i - 1] || ryddet[i + 1] || ryddet[i - w] || ryddet[i + w]) naer[i] = 1;
@@ -641,7 +653,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0', der = dyn ? ' i det hentede kartet' : '';
     tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen${der} (${nf(km2(n.pnat))} km² med smale striper)`;
     tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket${der} (${nf(km2(n.pjor))} km² med smale striper)`;
-    const felles = 'Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
+    const felles = 'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
     if (dyn) {
       const a = km2(n.beb + n.jor + n.nat), rute = Math.round(Math.max(m, sm.res));
       note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${nf(a)} km² land${ssbSum ? ` av ${nf(ssbSum)} km² (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
@@ -686,9 +698,10 @@ td.feil { color: var(--ink); font-weight: 600 }
       if (mitt !== valgNr) return;
       planInfo = { nr: k.nr, tilstand: dekning < 0.15 ? 'ingen' : 'ok', dekning, kilde };
     } catch (e) { if (mitt !== valgNr) return; planInfo = { nr: k.nr, tilstand: 'feil' } }
-    visPlanInfo(); visPlan();
+    visPlanInfo(); visPlan(); if (ingenPlan()) nyttSlor();
   }
-  const visPlan = () => { planLag.setVisible(planPaa && !!klipp && !ingenPlan()); regnPlan() };   /* resten av kartet står urørt når laget slås på */
+  const visPlan = () => { planLag.setVisible(planPaa && !!klipp && !ingenPlan()); regnPlan() };
+  const nyttSlor = () => { if (KL.some(([id]) => !vis[id])) { tegnOversikt(); fargeleggFliser() } };   /* sløret over skjulte klasser følger planlaget */   /* resten av kartet står urørt når laget slås på */
 
   /* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
      alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
@@ -748,7 +761,8 @@ td.feil { color: var(--ink); font-weight: 600 }
     if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = oversiktLag.getData(e.pixel);
     if (!d || d[3] < 40) { p.textContent = 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).'; return }
     let best = null, min = 1e9;
-    ALLE.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
+    [...ALLE.filter(k => vis[k[0]]), ['slor', null]].forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
+    if (!best) { p.textContent = 'Kartlaget for dette punktet er skjult.'; return }
     p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = best;
   });
 
@@ -765,8 +779,8 @@ td.feil { color: var(--ink); font-weight: 600 }
     const b = document.createElement('button'); b.type = 'button'; b.className = 'row lag'; b.id = 'planknapp'; b.setAttribute('aria-pressed', 'true');
     b.innerHTML = '<span class="sw"></span><span class="nm">Planlagt utbygging</span><span class="km"></span><span class="pc"></span>'; rows.appendChild(b);
   }
-  $('smale').addEventListener('change', e => { visSmale = e.target.checked; tegnPlan() });
-  $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan() });
+  $('smale').addEventListener('change', e => { visSmale = e.target.checked; oppfriskPlan() });
+  $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan(); nyttSlor() });
   /* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
      kommunens flate (grensen fra Kartverket) minus land og ferskvann. */
   let ferskvann = null, flate = 0;
