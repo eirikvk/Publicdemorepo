@@ -79,7 +79,6 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .row.lag .sw { border-color: var(--ink); background: repeating-linear-gradient(135deg, var(--ink) 0 2px, var(--nat) 2px 6px) }
 .row.lag[aria-pressed="false"] .sw { background: transparent }
 .row.lag[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }
-.medplan .tema { opacity: .35 }
 .row[aria-pressed="false"] .nm { color: var(--ink-3); text-decoration: line-through }
 .row .nm { font-weight: 500 }
 .row .km { color: var(--ink-2); text-align: right; white-space: nowrap }
@@ -417,7 +416,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore();
   };
   tema.on('postrender', klippTilKommunen); planLag.on('postrender', klippTilKommunen);
-  const visPlan = () => { planLag.setVisible(planPaa && !!klipp); $('kart').classList.toggle('medplan', planPaa) };
+  const visPlan = () => planLag.setVisible(planPaa && !!klipp);   /* resten av kartet står urørt når laget slås på */
 
   /* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
      alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
