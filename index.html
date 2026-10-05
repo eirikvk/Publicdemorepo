@@ -330,7 +330,8 @@ td.feil { color: var(--ink); font-weight: 600 }
   const tema = new ol.layer.Tile({ className: 'tema', source: nyFlisKilde(), maxResolution: MAKSRES });
   /* Kommuneplanen fra DiBK: områder satt av til framtidig bebyggelse, anlegg og samferdsel (arealformål 1000- og 2000-serien
      med arealbruksstatus 2), hentet som fliser i samme rutenett. For hver flis legges planen oppå dagens klasser i nettleseren,
-     og bare natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut brukes oversiktsbildet som dagens klasser. */
+     og bare natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut brukes oversiktsbildet som dagens klasser:
+     det lagrede, eller det nettleseren selv har satt sammen av flisene den har hentet. */
   const PLAN = 'https://nap.ft.dibk.no/services/wms/kommuneplaner/';
   const planSom = v => `<PropertyIsLike wildCard="*" singleChar="?" escapeChar="!"><PropertyName>arealformål</PropertyName><Literal>${v}</Literal></PropertyIsLike>`;
   const PLANFILTER = `<Filter xmlns="http://www.opengis.net/ogc"><And><PropertyIsEqualTo><PropertyName>arealbruksstatus</PropertyName><Literal>2</Literal></PropertyIsEqualTo><Or>${planSom('1*')}${planSom('2*')}</Or></And></Filter>`;
@@ -345,6 +346,14 @@ td.feil { color: var(--ink); font-weight: 600 }
     else if (ov && ov.buf) {
       const u = plannett.getTileCoordExtent(tc); ovBilde = ovBilde || createImageBitmap(new Blob([ov.buf]));
       g.drawImage(await ovBilde, (u[0] - ov.ext[0]) / ovRes, (ov.ext[3] - u[3]) / ovRes, (u[2] - u[0]) / ovRes, (u[3] - u[1]) / ovRes, 0, 0, 512, 512);
+    } else if (ov && ov.lerret && klipp) {   /* nettleserens eget oversiktsbilde: bare det som er hentet, og bare innenfor kommunen */
+      const u = plannett.getTileCoordExtent(tc), r = (ov.ext[2] - ov.ext[0]) / ov.lerret.width, s = 512 / (u[2] - u[0]);
+      g.drawImage(ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r, 0, 0, 512, 512);
+      g.globalCompositeOperation = 'destination-in'; g.beginPath();
+      for (const flate of klipp.getType() === 'MultiPolygon' ? klipp.getCoordinates() : [klipp.getCoordinates()]) for (const ring of flate) {
+        ring.forEach(([x, y], i) => i ? g.lineTo((x - u[0]) * s, (u[3] - y) * s) : g.moveTo((x - u[0]) * s, (u[3] - y) * s)); g.closePath();
+      }
+      g.fill('evenodd'); g.globalCompositeOperation = 'source-over';
     } else return null;
     return g.getImageData(0, 0, 512, 512).data;
   }
@@ -382,7 +391,8 @@ td.feil { color: var(--ink); font-weight: 600 }
       const pjor = rgb('pjor'), pnat = rgb('pnat');   /* uavhengig av hvilke klasser som vises i kartet */
       /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
       const [tz, tx, ty] = tile.getTileCoord(), R = !visSmale && planRaster && valgt && planRaster.nr === valgt.nr ? planRaster : null, sh = R ? tz - R.z : 0;
-      for (let py = 0, i = 0; py < 512; py++) for (let px = 0; px < 512; px++, i += 4) {
+      const vent = !visSmale && !R && valgt && !oversikter[valgt.nr];   /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
+      if (!vent) for (let py = 0, i = 0; py < 512; py++) for (let px = 0; px < 512; px++, i += 4) {
         if (P[i + 3] < 100 || K[i + 3] < 100) continue;                 /* utenfor planområdene, eller hav */
         const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;   /* allerede bebygd i dag */
         if (R) { const lx = ((tx * 512 + px) >> sh) - R.x0 * 512, ly = ((ty * 512 + py) >> sh) - R.y0 * 512; if (lx < 0 || ly < 0 || lx >= R.w || ly >= R.h || !R.naer[ly * R.w + lx]) continue }
@@ -395,6 +405,8 @@ td.feil { color: var(--ink); font-weight: 600 }
   const nyPlanKilde = () => new ol.source.XYZ({ tileUrlFunction: planUrl, tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: lastPlanFlis, transition: 0, projection: UTM });
   const planLag = new ol.layer.Tile({ className: 'plan', source: nyPlanKilde(), visible: false });
   const tegnPlan = () => planLag.setSource(nyPlanKilde());
+  let planNokkel = 0;
+  const oppfriskPlan = () => planLag.getSource().setKey(String(++planNokkel));   /* tegner flisene på nytt, og de gamle står til de nye er klare */
   const fargeleggFliser = () => { oversiktSynlig(true); klare.clear(); tema.setSource(nyFlisKilde()); tegnPlan() };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall */
 
   /* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv. */
@@ -432,7 +444,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       if (s !== samle) return;
       const u = flisnett.getTileCoordExtent(tc);
       s.g.drawImage(bm, (u[0] - s.ext[0]) / s.res, (s.ext[3] - u[3]) / s.res, (u[2] - u[0]) / s.res, (u[3] - u[1]) / s.res);
-      clearTimeout(s.t); s.t = setTimeout(() => { if (s !== samle) return; ov = { lerret: s.c, ext: s.ext, dynamisk: true }; tegnOversikt(); status() }, 400);
+      clearTimeout(s.t); s.t = setTimeout(() => { if (s !== samle) return; ov = { lerret: s.c, ext: s.ext, dynamisk: true }; tegnOversikt(); status(); if (planPaa) regnPlan() }, 400);
     }).catch(() => {});
   }
   function fargeleggLerret(k) {
@@ -484,47 +496,66 @@ td.feil { color: var(--ink); font-weight: 600 }
     c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore();
   };
   tema.on('postrender', klippTilKommunen); planLag.on('postrender', klippTilKommunen); oversiktLag.on('postrender', klippTilKommunen);
-  /* Omtrentlig areal, regnet ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå oversiktsbildets
-     klasser for hele kommunen, og pikslene telles. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
-  let regnNr = 0;
+  /* Omtrentlig areal, regnet ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå dagens klasser,
+     og pikslene telles. Med lagret oversiktsbilde gjelder det hele kommunen. Uten gjelder det den delen av kommunen
+     nettleseren har hentet kart for, og tallene regnes ut på nytt hver gang det kommer mer kart.
+     Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
+  let regnNr = 0, ssbSum = 0;
   async function regnPlan() {
     const mitt = ++regnNr, tn = $('tall-pnat'), tj = $('tall-pjor'), note = $('tallnote'), Z = 9;
-    tn.textContent = tj.textContent = note.textContent = '';
-    if (!planPaa || !klipp) return;
+    const tom = () => { tn.textContent = tj.textContent = note.textContent = '' };
+    if (!planPaa || !klipp) return tom();
     if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
-    if (!ov || ov.dynamisk) { note.textContent = 'Arealet kan bare regnes ut for kommuner med lagret oversiktsbilde.'; return }
-    tn.textContent = tj.textContent = 'regner …';
-    const koord = [], n = { nat: 0, jor: 0, pnat: 0, pjor: 0 }, nr = valgt.nr; plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
-    const x0 = Math.min(...koord.map(t => t[1])), y0 = Math.min(...koord.map(t => t[2])), w = (Math.max(...koord.map(t => t[1])) - x0 + 1) * 512, h = (Math.max(...koord.map(t => t[2])) - y0 + 1) * 512, d = new Uint8Array(w * h);
+    if (!ov) { tom(); if (!oversikter[valgt.nr]) note.textContent = 'Zoom inn i kartet for å få et anslag. Arealet regnes ut for den delen av kommunen nettleseren har hentet kart for.'; return }
+    const dyn = !!ov.dynamisk, sm = dyn ? samle : null, kant = dyn ? 1 : 0;
+    if (dyn && !sm) return;
+    if (!(dyn && planRaster)) { tom(); tn.textContent = tj.textContent = 'regner …' }   /* nye tall erstatter de gamle uten at teksten blinker */
+    const koord = [], n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 }, nr = valgt.nr;
+    const hentet = dyn ? [...sm.har].map(v => v.split('/').map(Number)) : null;   /* flisene som ligger i nettleserens oversiktsbilde */
+    if (dyn) new Set(hentet.map(([z, x, y]) => `${x >> (z - Z)}/${y >> (z - Z)}`)).forEach(v => koord.push([Z, ...v.split('/').map(Number)]));
+    else plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
+    const x0 = Math.min(...koord.map(t => t[1])) - kant, y0 = Math.min(...koord.map(t => t[2])) - kant;
+    const w = (Math.max(...koord.map(t => t[1])) - x0 + 1 + kant) * 512, h = (Math.max(...koord.map(t => t[2])) - y0 + 1 + kant) * 512, d = new Uint8Array(w * h);
+    /* Der det ikke er hentet kart, vet vi ikke om feltet fortsetter. Slike ruter teller som naboer, så felt ikke skrelles av langs kanten av det hentede. */
+    const ukjent = dyn ? new Uint8Array(w * h).fill(1) : null;
+    if (dyn) for (const [z, x, y] of hentet) {
+      const sh = z - Z, s = 512 >> sh, cx = ((x * 512) >> sh) - x0 * 512, cy = ((y * 512) >> sh) - y0 * 512;
+      for (let j = 0; j < s; j++) ukjent.fill(0, (cy + j) * w + cx, (cy + j) * w + cx + s);
+    }
     try {
       await Promise.all(koord.map(async tc => {
         const [K, buf] = await Promise.all([dagensKlasser(tc), hentPlan(planUrl(tc))]);
+        if (!K) throw new Error('mangler dagens klasser');
         const g = lerret().getContext('2d', { willReadFrequently: true }); g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
         const P = g.getImageData(0, 0, 512, 512).data;
         const start = (tc[2] - y0) * 512 * w + (tc[1] - x0) * 512;
         for (let i = 0, q = 0; i < K.length; i += 4, q++) {
           if (K[i + 3] < 100) continue;
-          const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;
+          const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) { n.beb++; continue }
           const jor = gr >= b, plan = P[i + 3] >= 100;
           if (jor) { n.jor++; if (plan) n.pjor++ } else { n.nat++; if (plan) n.pnat++ }
           if (plan) d[start + (q >> 9) * w + (q & 511)] = jor ? 2 : 1;
         }
       }));
     } catch (e) { if (mitt === regnNr) { tn.textContent = tj.textContent = ''; note.textContent = 'Arealet kunne ikke regnes ut.' } return }
-    if (mitt !== regnNr) return;
+    if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
     /* Til oversikten fjernes felt som er smalere enn to ruter (rundt 40 meter): først krympes alt én rute, så utvides det igjen.
        Det tar bort de tynne stripene langs eksisterende bebyggelse, som ellers ville dominere når feltene forstørres. */
-    const krympet = new Uint8Array(w * h), ryddet = new Uint8Array(w * h);
-    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) krympet[i] = d[i];
+    const krympet = new Uint8Array(w * h), ryddet = new Uint8Array(w * h), er = ukjent ? i => d[i] || ukjent[i] : i => d[i];
+    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && er(i - 1) && er(i + 1) && er(i - w) && er(i + w)) krympet[i] = d[i];
     for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && (krympet[i] || krympet[i - 1] || krympet[i + 1] || krympet[i - w] || krympet[i + w])) ryddet[i] = d[i];
     let rn = 0, rj = 0; for (let i = 0; i < ryddet.length; i++) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
     const naer = new Uint8Array(w * h);
     for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (ryddet[i] || ryddet[i - 1] || ryddet[i + 1] || ryddet[i - w] || ryddet[i + w]) naer[i] = 1;
-    planRaster = { nr, z: Z, x0, y0, w, h, alle: d, ryddet, naer }; tegnPlan();
-    const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0';
-    tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen (${nf(km2(n.pnat))} km² med smale striper)`;
-    tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket (${nf(km2(n.pjor))} km² med smale striper)`;
-    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.`;
+    planRaster = { nr, z: Z, x0, y0, w, h, alle: d, ryddet, naer }; if (dyn) oppfriskPlan(); else tegnPlan();
+    const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0', der = dyn ? ' i det hentede kartet' : '';
+    tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen${der} (${nf(km2(n.pnat))} km² med smale striper)`;
+    tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket${der} (${nf(km2(n.pjor))} km² med smale striper)`;
+    const felles = 'Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
+    if (dyn) {
+      const a = km2(n.beb + n.jor + n.nat), rute = Math.round(Math.max(m, sm.res));
+      note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${nf(a)} km²${ssbSum ? ` av ${nf(ssbSum)} km² (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
+    } else note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. ${felles}`;
   }
   const visPlan = () => { planLag.setVisible(planPaa && !!klipp); regnPlan() };   /* resten av kartet står urørt når laget slås på */
 
@@ -578,7 +609,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   $('smale').addEventListener('change', e => { visSmale = e.target.checked; tegnPlan() });
   $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan() });
   function visTall(a, aar) {
-    const sum = a[0] + a[1] + a[2], bar = $('bar'); bar.textContent = '';
+    const sum = a[0] + a[1] + a[2], bar = $('bar'); bar.textContent = ''; ssbSum = sum;
     $('tot').textContent = nf(sum) + ' km²'; $('aar').textContent = aar;
     bar.setAttribute('aria-label', KL.map(([, n], i) => `${n} ${nf(a[i] / sum * 100)} prosent`).join(', '));
     KL.forEach(([id, navn], i) => {
@@ -588,7 +619,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       $('pc-' + id).textContent = p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %';
     });
   }
-  function tomTall(tekst) { $('tot').textContent = tekst; $('bar').textContent = ''; KL.forEach(([id]) => { $('km-' + id).textContent = '–'; $('pc-' + id).textContent = '–' }) }
+  function tomTall(tekst) { ssbSum = 0; $('tot').textContent = tekst; $('bar').textContent = ''; KL.forEach(([id]) => { $('km-' + id).textContent = '–'; $('pc-' + id).textContent = '–' }) }
 
   async function hentTall(k, mitt) {
     const koder = KL.flatMap(x => x[3]).join(',');
