@@ -50,7 +50,11 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .stage { position: relative; height: min(68vh, 620px); min-height: 340px; border-radius: 6px; overflow: hidden; background: var(--bg) }
 #kart { position: absolute; inset: 0 }
 .chip { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 110px); padding: 7px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-size: 13px; text-align: center; pointer-events: none }
-#laster { top: 10px } #ute { bottom: 34px; border-radius: 10px }
+#laster { top: 10px } #ute { bottom: 34px; border-radius: 10px } #zoomet { top: 64px; border-radius: 10px; font-weight: 600 }
+/* Knip på kortet rundt kartet forstørrer ikke siden, så et bomtrykk like utenfor kartet ikke zoomer hele siden. Resten av siden
+   kan forstørres som vanlig. Er siden forstørret, slipper kartet bevegelsene igjennom, så man alltid kan knipe seg ut igjen. */
+.map { touch-action: pan-x pan-y }
+.sidezoom .map { touch-action: auto }
 .mapfoot { display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums }
 .probe b { font-weight: 600; color: var(--ink) }
 .opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ink-2); cursor: pointer }
@@ -142,6 +146,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         <div id="kart"></div>
         <div class="chip" id="laster" hidden>Henter kart …</div>
         <button type="button" class="bytt" id="bytt" hidden></button>
+        <div class="chip" id="zoomet" role="status" hidden>Siden er forstørret. Knip sammen for å zoome ut, så virker kartet igjen.</div>
         <div class="chip" id="ute" hidden>Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.</div>
       </div>
       <div class="mapfoot">
@@ -545,6 +550,17 @@ td.feil { color: var(--ink); font-weight: 600 }
   const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, planLag, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
   const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); grense.changed() };
+  /* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen.
+     Kartet slipper derfor knip og dra igjennom til nettleseren så lenge siden er forstørret. Knappene for zoom og trykk i kartet virker fortsatt. */
+  if (window.visualViewport) {
+    const vv = window.visualViewport; let stor = false;
+    const sjekk = () => {
+      const na = vv.scale > 1.03; if (na === stor) return; stor = na;
+      document.documentElement.classList.toggle('sidezoom', stor); kart.getViewport().style.touchAction = stor ? 'auto' : 'none';
+      kart.getInteractions().forEach(i => i.setActive(!stor)); $('zoomet').hidden = !stor;
+    };
+    vv.addEventListener('resize', sjekk); vv.addEventListener('scroll', sjekk); sjekk();
+  }
 
   /* Utenfor valgt kommune vises bare bakgrunnskartet: flisene klippes mot kommunens flate,
      hentes bare innenfor kommunens utstrekning, og slås først på når grensen er lastet. */
