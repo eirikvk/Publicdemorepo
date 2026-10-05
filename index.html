@@ -84,8 +84,10 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .row.lag[aria-pressed="false"] .sw { background: transparent }
 .row.lag[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }
 .forklaring { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2) }
-.forklaring span { display: flex; gap: 8px; align-items: center }
-.forklaring i { flex: none; width: 14px; height: 14px; border-radius: 3px }
+.forklaring div { display: flex; gap: 8px; align-items: flex-start }
+.forklaring i { flex: none; width: 14px; height: 14px; border-radius: 3px; margin-top: 3px }
+.forklaring b { font-weight: 600; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums }
+.forklaring #tallnote { color: var(--ink-3) }
 .plan { opacity: .92 }
 .hint { font-size: 13px; color: var(--ink-3) }
 
@@ -137,8 +139,9 @@ td.feil { color: var(--ink); font-weight: 600 }
       <div class="bar" id="bar" role="img"></div>
       <div class="rows" id="rows"></div>
       <div class="forklaring">
-        <span><i style="background:var(--pnat)"></i>Natur som kommuneplanen setter av til framtidig utbygging</span>
-        <span><i style="background:var(--pjor)"></i>Jordbruk som kommuneplanen setter av til framtidig utbygging</span>
+        <div><i style="background:var(--pnat)"></i><p>Natur som kommuneplanen setter av til framtidig utbygging <b id="tall-pnat"></b></p></div>
+        <div><i style="background:var(--pjor)"></i><p>Jordbruk som kommuneplanen setter av til framtidig utbygging <b id="tall-pjor"></b></p></div>
+        <p id="tallnote"></p>
       </div>
       <p class="hint">Trykk på et kartlag for å skjule eller vise det. De fire lagene er uavhengige, så planlagt utbygging kan vises alene. Havet er ikke farget og er ikke med i tallene. Planlaget er omtrentlig og bare til illustrasjon.</p>
     </section>
@@ -375,7 +378,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: UTM }));
     oversiktGrov.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: UTM, interpolate: false }));
     if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
-    ovBilde = null; tegnPlan();
+    ovBilde = null; tegnPlan(); if (planPaa) regnPlan();
   }
   async function hentOversikt(k, mitt) {
     ov = null; ovBilde = null; oversiktLag.setSource(null); oversiktGrov.setSource(null); oversiktSynlig(true);
@@ -420,7 +423,36 @@ td.feil { color: var(--ink); font-weight: 600 }
     c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore();
   };
   tema.on('postrender', klippTilKommunen); planLag.on('postrender', klippTilKommunen);
-  const visPlan = () => planLag.setVisible(planPaa && !!klipp);   /* resten av kartet står urørt når laget slås på */
+  /* Omtrentlig areal, regnet ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå oversiktsbildets
+     klasser for hele kommunen, og pikslene telles. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
+  let regnNr = 0;
+  async function regnPlan() {
+    const mitt = ++regnNr, tn = $('tall-pnat'), tj = $('tall-pjor'), note = $('tallnote'), Z = 9;
+    tn.textContent = tj.textContent = note.textContent = '';
+    if (!planPaa || !klipp) return;
+    if (!ov) { note.textContent = 'Arealet kan bare regnes ut for kommuner med lagret oversiktsbilde.'; return }
+    tn.textContent = tj.textContent = 'regner …';
+    const koord = [], n = { nat: 0, jor: 0, pnat: 0, pjor: 0 }; plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
+    try {
+      await Promise.all(koord.map(async tc => {
+        const [K, buf] = await Promise.all([dagensKlasser(tc), hentPlan(planUrl(tc))]);
+        const g = lerret().getContext('2d', { willReadFrequently: true }); g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
+        const P = g.getImageData(0, 0, 512, 512).data;
+        for (let i = 0; i < K.length; i += 4) {
+          if (K[i + 3] < 100) continue;
+          const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;
+          const jor = gr >= b, plan = P[i + 3] >= 100;
+          if (jor) { n.jor++; if (plan) n.pjor++ } else { n.nat++; if (plan) n.pnat++ }
+        }
+      }));
+    } catch (e) { if (mitt === regnNr) { tn.textContent = tj.textContent = ''; note.textContent = 'Arealet kunne ikke regnes ut.' } return }
+    if (mitt !== regnNr) return;
+    const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0';
+    tn.textContent = `ca. ${nf(km2(n.pnat))} km², ${pst(n.pnat, n.nat)} % av naturen`;
+    tj.textContent = `ca. ${nf(km2(n.pjor))} km², ${pst(n.pjor, n.jor)} % av jordbruket`;
+    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Anslag til illustrasjon, ikke offisiell statistikk.`;
+  }
+  const visPlan = () => { planLag.setVisible(planPaa && !!klipp); regnPlan() };   /* resten av kartet står urørt når laget slås på */
 
   /* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
      alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
