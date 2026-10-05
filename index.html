@@ -255,7 +255,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
      så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
   const raa = new Map();   /* rå flisbilder, slik at fargebytte og skjuling av klasser ikke krever nye kall */
-  const ko = []; let aktive = 0, nyeKall = false, feilIVisning = false, rundeTimer = null, runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
+  const ko = []; let aktive = 0, nyeKall = false, feilIVisning = false, iBevegelse = false, rundeTimer = null, runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   const flisnett = ol.tilegrid.createXYZ({ tileSize: 256, minZoom: FLISNIVA, maxZoom: 19 });
   function flisUrl(tc) {
     return WMS + '?' + new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'okosystemtype', styles: '', crs: 'EPSG:3857',
@@ -326,10 +326,11 @@ td.feil { color: var(--ink); font-weight: 600 }
     const o = valgt && oversikter[valgt.nr], treff = !!o && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
     oversiktLag.setVisible(true); $('ute').hidden = treff || !valgt; $('siste').textContent = treff ? 'Viser lagret oversiktsbilde' : '';
   }
-  kart.on('movestart', () => { nyeKall = false; feilIVisning = false; oversiktLag.setVisible(true) });
-  kart.on('moveend', status);
+  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktLag.setVisible(true) });
+  kart.on('moveend', () => { iBevegelse = false; status(); kart.render() });
+  view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktLag.setVisible(true) });
   kart.on('rendercomplete', () => {
-    if (view.getResolution() >= MAKSRES || !valgt || aktive || ko.length) return;
+    if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || aktive || ko.length) return;   /* aldri skjul oversikten midt i en bevegelse */
     if (!feilIVisning) oversiktLag.setVisible(false);
     if (!nyeKall) $('siste').textContent = 'Ingen nye kall. Flisene lå allerede i nettleseren.';
   });
