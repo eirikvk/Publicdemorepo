@@ -262,7 +262,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '5. oktober kl. 23.35';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '5. oktober kl. 23.45';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -530,9 +530,10 @@ td.feil { color: var(--ink); font-weight: 600 }
     constructor(lerret, ext) { super({ projection: UTM }); this.bilde_ = new ol.Image(ext, (ext[3] - ext[1]) / lerret.height, 1, 2 /* ferdig lastet */); this.bilde_.setImage(lerret); this.nr_ = 0 }
     getImageInternal(extent) { return ol.extent.intersects(extent, this.bilde_.getExtent()) ? this.bilde_ : null }
     oppdater(lerret) {
-      const mitt = ++this.nr_; this.changed();
+      const mitt = ++this.nr_, bytt = ny => { const gml = this.bilde_.getImage(); this.bilde_.setImage(ny); if (gml && gml !== ny && gml.close) gml.close(); this.changed() };
+      bytt(lerret);   /* lerretet vises med en gang, og byttes med en kopi som tegnes raskere når den er klar */
       if (!window.createImageBitmap) return;
-      createImageBitmap(lerret).then(bm => { if (mitt !== this.nr_) { bm.close(); return } const gml = this.bilde_.getImage(); this.bilde_.setImage(bm); if (gml && gml.close) gml.close(); this.changed() }).catch(() => {});
+      createImageBitmap(lerret).then(bm => { if (mitt !== this.nr_) { bm.close(); return } bytt(bm) }).catch(() => {});
     }
   }
   oversiktLag.on('prerender', e => { e.context.imageSmoothingEnabled = e.frameState.viewState.resolution >= ovRes });
@@ -595,30 +596,36 @@ td.feil { color: var(--ink); font-weight: 600 }
       const u = flisnett.getTileCoordExtent(tc), px = v => Math.round((v - s.ext[0]) / s.res), py = v => Math.round((s.ext[3] - v) / s.res);
       const X = px(u[0]), Y = py(u[3]), W = px(u[2]) - X, H = py(u[1]) - Y;
       s.g.drawImage(bm, X, Y, W, H); s.venter.push([X, Y, W, H]);   /* fargelegges når kartet står stille */
+      if (view.getResolution() >= MAKSRES) fargeleggVentende(s);   /* zoomet ut vises det sammensatte kartet, så flisen må inn med en gang */
       if (!ov || ov.lerret !== s.c) { ov = { lerret: s.c, ext: s.ext, dynamisk: true }; visSamling(s); status() }
       planleggEtterarbeid(); tidSlutt('sammensatt kart', t0);
     }).catch(() => {});
   }
-  /* Alt etterarbeid når det har kommet nye fliser gjøres først når kartet har stått stille litt og ingenting lastes: de nye flisene
-     fargelegges inn i det sammensatte kartet, én om gangen med pust imellom, og så regnes plantallene og planlaget ut på nytt.
-     Da hakker ikke kartet mens man flytter det. Starter man å flytte igjen, venter resten til neste stopp. */
+  /* Etterarbeidet når det har kommet nye fliser gjøres når kartet har stått stille litt, så det ikke hakker mens man flytter det:
+     de nye flisene fargelegges inn i det sammensatte kartet, én om gangen med pust imellom, og når ingenting lastes lenger,
+     regnes plantallene og planlaget ut på nytt. Starter man å flytte igjen, venter resten til neste stopp.
+     Unntaket er når man zoomer ut til det sammensatte kartet er det eneste som vises. Da fargelegges alt som venter med en gang,
+     ellers ville det man nettopp så på mangle. */
+  function fargeleggVentende(s) {
+    if (!s || !s.venter.length) return;
+    while (s.venter.length) fargeleggSamling(s, ...s.venter.shift());
+    if (s.kilde) s.kilde.oppdater(s.vis);
+  }
   let etterTimer = null, etterVenter = false;
   function planleggEtterarbeid() {
     etterVenter = true; clearTimeout(etterTimer);
     etterTimer = setTimeout(async () => {
-      if (iBevegelse || opptatt()) return planleggEtterarbeid();
+      if (iBevegelse) return;   /* moveend tar opp tråden igjen */
       const s = samle, t0 = performance.now(), antall = s ? s.venter.length : 0;
       if (s && s.venter.length) {
-        while (s.venter.length) {
-          if (iBevegelse || s !== samle) return;   /* moveend tar opp tråden igjen */
-          fargeleggSamling(s, ...s.venter.shift()); await new Promise(ok => setTimeout(ok, 0));
-        }
-        if (s.kilde) s.kilde.oppdater(s.vis);
+        while (s.venter.length && !iBevegelse && s === samle) { fargeleggSamling(s, ...s.venter.shift()); await new Promise(ok => setTimeout(ok, 0)) }
+        if (s.kilde) s.kilde.oppdater(s.vis);   /* også når det ble avbrutt, så det som er gjort vises */
       }
       if (iBevegelse || s !== samle) return;
+      if (opptatt()) return planleggEtterarbeid();   /* tallene venter til alt er hentet */
       etterVenter = false; if (planPaa) await regnAlt();
       maalTekst[1] = `Siste etterarbeid: ${Math.round(performance.now() - t0)} ms for ${antall} ${antall === 1 ? 'ny flis' : 'nye fliser'}.`; visMaaling();
-    }, 500);
+    }, 400);
   }
   async function hentOversikt(k, mitt) {
     ov = null; ovBilde = null; samle = null; oversiktLag.setSource(null); oversiktSynlig(true);
@@ -941,7 +948,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   $('versjon').textContent = `Utgave: ${VERSJON}.`;
   kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer); cancelAnimationFrame(maalRaf); maalT = []; maalSist = 0; bruk = {}; maalRaf = requestAnimationFrame(maalBilde) });
   kart.on('moveend', () => { iBevegelse = false; maalFerdig(); status(); kart.render(); if (etterVenter) planleggEtterarbeid() });
-  view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktSynlig(true) });
+  view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) { oversiktSynlig(true); fargeleggVentende(samle) } });
   kart.on('rendercomplete', () => {
     if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || !tema.getVisible() || opptatt()) return;   /* aldri skjul oversikten midt i en bevegelse */
     if (!feilIVisning) oversiktSynlig(false);
