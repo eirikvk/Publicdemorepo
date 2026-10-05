@@ -127,7 +127,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       <div class="total"><b id="tot">–</b><span>land og ferskvann</span></div>
       <div class="bar" id="bar" role="img"></div>
       <div class="rows" id="rows"></div>
-      <p class="hint">Trykk på en klasse for å skjule eller vise den. Da tegner NIBIO kartet på nytt uten den klassen. Havet er ikke farget og er ikke med i tallene.</p>
+      <p class="hint">Trykk på en klasse for å skjule eller vise den. Det skjer i nettleseren, uten nytt kartkall. Havet er ikke farget og er ikke med i tallene.</p>
     </section>
   </div>
 
@@ -150,11 +150,11 @@ td.feil { color: var(--ink); font-weight: 600 }
           <tr><td>Natur</td><td>Skog, hei, lite vegetert mark, våtmark, elv, innsjø og strand</td><td>17–22 og 24</td></tr>
         </tbody>
       </table></div>
-      <p>Tredelingen sendes som en stil i hvert kartkall, så NIBIO tegner tre farger i stedet for elleve.</p>
+      <p>Tredelingen sendes som en stil i hvert kartkall, så NIBIO tegner tre klasser i stedet for elleve. Fargene du ser, settes i nettleseren.</p>
     </section>
     <section>
       <h2>Om siden</h2>
-      <p>Alt hentes direkte i nettleseren når du velger kommune: kommunelisten og grensen fra Kartverket, arealtallene fra SSB, og kartet fra NIBIO. Ingenting er lagret på forhånd.</p>
+      <p>Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra SSB og kartet fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.</p>
       <p>Kart: Nasjonalt grunnkart for arealanalyse, årsversjon 2025, NIBIO. Tall: SSB, tabell 09594. Grenser og bakgrunnskart: Kartverket.</p>
     </section>
   </div>
@@ -168,6 +168,8 @@ td.feil { color: var(--ink); font-weight: 600 }
   const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data';
   const GRENSE = 17;      /* grunnkartet tegnes bare ved 17 meter per piksel eller finere (1:50 000) */
   const MAKSPX = 4096;    /* største bilde siden ber om når kartet er zoomet ut */
+  const MAKSTETTHET = 2;  /* telefoner har ofte tre piksler per punkt; to er nok og gir under halvparten så store bilder */
+  const DATAFARGE = { beb: '#ff0000', jor: '#00ff00', nat: '#0000ff' };  /* rene farger fra NIBIO, byttes til visningsfarger i nettleseren */
   const KL = [
     ['beb', 'Bebygd', ['bebygdOpparbeidetAreal'], ['01', '02', '03', '04', '05', '06', '07', '08-09', '10-11', '12-13', '14']],
     ['jor', 'Jordbruk', ['dyrketmark', 'grasmark'], ['15-16']],
@@ -187,29 +189,70 @@ td.feil { color: var(--ink); font-weight: 600 }
     const tb = $('logg'); tb.textContent = '';
     rader.forEach(r => { const tr = tb.insertRow(); r.slice(0, 4).forEach((v, i) => { const td = tr.insertCell(); td.textContent = v; if (i > 1) td.className = 'r' + (r[4] ? ' feil' : '') }) });
   }
-  async function hent(kilde, hva, url, som) {
+  async function hent(kilde, hva, url, stille) {
     const t0 = performance.now();
     try {
       const r = await fetch(url); if (!r.ok) throw new Error(r.status);
       const b = await r.blob(); logg(kilde, hva, performance.now() - t0, b.size);
-      return som === 'blob' ? b : JSON.parse(await b.text());
-    } catch (e) { logg(kilde, hva, 0, 0, true); throw e }
+      return JSON.parse(await b.text());
+    } catch (e) { if (!stille) logg(kilde, hva, 0, 0, true); throw e }
   }
 
-  /* Stilen som sendes til NIBIO: én regel per synlig klasse. */
+  /* Stilen som sendes til NIBIO: tre regler med rene farger. Den er lik i alle kall. */
   const farge = id => getComputedStyle(document.documentElement).getPropertyValue('--' + id).trim();
-  function sld() {
-    const regler = KL.filter(k => vis[k[0]]).map(([id, , verdier]) => {
+  const rgb = id => { const v = farge(id).replace('#', ''); return [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16)) };
+  const SLD = (() => {
+    const regler = KL.map(([id, , verdier]) => {
       let f = verdier.map(v => `<ogc:PropertyIsEqualTo><ogc:PropertyName>okosystemtypeniva1</ogc:PropertyName><ogc:Literal>${v}</ogc:Literal></ogc:PropertyIsEqualTo>`).join('');
       if (verdier.length > 1) f = `<ogc:Or>${f}</ogc:Or>`;
-      return `<Rule><ogc:Filter>${f}</ogc:Filter><PolygonSymbolizer><Fill><CssParameter name="fill">${farge(id)}</CssParameter></Fill></PolygonSymbolizer></Rule>`;
+      return `<Rule><ogc:Filter>${f}</ogc:Filter><PolygonSymbolizer><Fill><CssParameter name="fill">${DATAFARGE[id]}</CssParameter></Fill></PolygonSymbolizer></Rule>`;
     }).join('');
     return `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;
+  })();
+
+  /* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger.
+     Siden bytter ut tabellen og lar selve bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. */
+  function tilFarge(r, g, b, a, F) {
+    const s = r + g + b; if (!s || !a) return [0, 0, 0, 0];
+    const v = [r / s, g / s, b / s]; let syn = 0, R = 0, G = 0, B = 0;
+    for (let c = 0; c < 3; c++) if (F[c]) { syn += v[c]; R += v[c] * F[c][0]; G += v[c] * F[c][1]; B += v[c] * F[c][2] }
+    return syn > 0 ? [Math.round(R / syn), Math.round(G / syn), Math.round(B / syn), Math.round(a * syn)] : [0, 0, 0, 0];
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } return t })();
+  function pngDel(type, data) {
+    const o = new Uint8Array(data.length + 12), dv = new DataView(o.buffer);
+    dv.setUint32(0, data.length); for (let i = 0; i < 4; i++) o[4 + i] = type.charCodeAt(i); o.set(data, 8);
+    let c = 0xFFFFFFFF; for (let i = 4; i < 8 + data.length; i++) c = CRC[(c ^ o[i]) & 255] ^ (c >>> 8);
+    dv.setUint32(8 + data.length, (c ^ 0xFFFFFFFF) >>> 0); return o;
+  }
+  async function fargelegg(buf) {
+    const F = KL.map(([id]) => vis[id] ? rgb(id) : null), u = new Uint8Array(buf), dv = new DataView(buf);
+    let p = 8, plte = null, trns = null, type3 = false; const deler = [];
+    while (p + 12 <= u.length) {
+      const len = dv.getUint32(p), type = String.fromCharCode(u[p + 4], u[p + 5], u[p + 6], u[p + 7]);
+      if (type === 'IHDR') type3 = u[p + 17] === 3;
+      if (type === 'PLTE') plte = [p + 8, len]; else if (type === 'tRNS') trns = [p + 8, len];
+      deler.push([type, p, len + 12]); p += len + 12;
+    }
+    if (!type3 || !plte) {   /* uventet bildeformat: gå gjennom pikslene i stedet */
+      const bm = await createImageBitmap(new Blob([buf])), c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
+      const g = c.getContext('2d'); g.drawImage(bm, 0, 0); const d = g.getImageData(0, 0, c.width, c.height), o = d.data;
+      for (let i = 0; i < o.length; i += 4) { const f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F); o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3] }
+      g.putImageData(d, 0, 0); return c;
+    }
+    const n = plte[1] / 3, nyP = new Uint8Array(plte[1]), nyT = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      const f = tilFarge(u[plte[0] + 3 * i], u[plte[0] + 3 * i + 1], u[plte[0] + 3 * i + 2], trns && i < trns[1] ? u[trns[0] + i] : 255, F);
+      nyP[3 * i] = f[0]; nyP[3 * i + 1] = f[1]; nyP[3 * i + 2] = f[2]; nyT[i] = f[3];
+    }
+    const ut = [u.subarray(0, 8)];
+    deler.forEach(([type, pos, len]) => { if (type === 'PLTE') ut.push(pngDel('PLTE', nyP), pngDel('tRNS', nyT)); else if (type !== 'tRNS') ut.push(u.subarray(pos, pos + len)) });
+    return createImageBitmap(new Blob(ut, { type: 'image/png' }));
   }
 
   /* Kartlaget: ett bilde per utsnitt, hentet når brukeren slipper kartet. */
   const tomt = document.createElement('canvas'); tomt.width = tomt.height = 1;
-  let avbryt = null, kallNr = 0;
+  let avbryt = null, kallNr = 0, lager = null;
   async function lastKart(extent, resolution, pixelRatio) {
     const mitt = ++kallNr;
     if (avbryt) avbryt.abort();
@@ -223,16 +266,19 @@ td.feil { color: var(--ink); font-weight: 600 }
     }
     $('ute').hidden = true;
     if (!KL.some(x => vis[x[0]])) { $('laster').hidden = true; return tomt }
+    const nokkel = extent.map(v => v.toFixed(1)).join(',') + '|' + w * k + 'x' + h * k;
+    if (lager && lager.nokkel === nokkel) { $('laster').hidden = true; return { image: await fargelegg(lager.buf), pixelRatio: pixelRatio * k } }
     const p = new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'okosystemtype', styles: '', crs: 'EPSG:3857',
-      bbox: extent.map(v => v.toFixed(1)).join(','), width: w * k, height: h * k, format: 'image/png; mode=8bit', transparent: 'true', sld_body: sld() });
+      bbox: extent.map(v => v.toFixed(1)).join(','), width: w * k, height: h * k, format: 'image/png; mode=8bit', transparent: 'true', sld_body: SLD });
     avbryt = new AbortController(); $('laster').hidden = false;
     const t0 = performance.now(), hva = `Kart ${w * k} × ${h * k} px` + (k > 1 ? `, ${k} ganger forstørret` : '');
     try {
       const r = await fetch(WMS + '?' + p, { signal: avbryt.signal }); if (!r.ok) throw new Error(r.status);
-      const b = await r.blob(); if (!b.type.startsWith('image')) throw new Error('ikke bilde');
-      const ms = performance.now() - t0; logg('NIBIO', hva, ms, b.size);
-      if (mitt === kallNr) { $('laster').hidden = true; $('siste').textContent = `Siste kartkall: ${nf(ms / 1000)} s, ${kb(b.size)}` }
-      return { image: await createImageBitmap(b), pixelRatio: pixelRatio * k };
+      if (!(r.headers.get('content-type') || '').startsWith('image')) throw new Error('ikke bilde');
+      const buf = await r.arrayBuffer(), ms = performance.now() - t0; logg('NIBIO', hva, ms, buf.byteLength);
+      lager = { nokkel, buf };
+      if (mitt === kallNr) { $('laster').hidden = true; $('siste').textContent = `Siste kartkall: ${nf(ms / 1000)} s, ${kb(buf.byteLength)}` }
+      return { image: await fargelegg(buf), pixelRatio: pixelRatio * k };
     } catch (e) {
       if (e.name !== 'AbortError') { logg('NIBIO', hva, 0, 0, true); if (mitt === kallNr) { $('laster').hidden = true; $('siste').textContent = 'Kartkallet feilet.' } }
       return tomt;
@@ -247,13 +293,12 @@ td.feil { color: var(--ink); font-weight: 600 }
   const slor = new ol.layer.Vector({ className: 'slor', source: slorKilde, style: () => new ol.style.Style({ fill: new ol.style.Fill({ color: farge('slor') }) }) });
   const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) }) });
   const view = new ol.View({ center: ol.proj.fromLonLat([15, 65]), zoom: 4, maxZoom: 19 });
-  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, tema, slor, grense], view,
+  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, tema, slor, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
   const tegnPaaNytt = () => { hentKartPaaNytt(); slor.changed(); grense.changed() };
   $('oversikt').addEventListener('change', tegnPaaNytt);
 
   /* Trykk på kartet: les fargen i punktet og finn klassen. */
-  const rgb = id => { const v = farge(id).replace('#', ''); return [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16)) };
   kart.on('singleclick', e => {
     const d = tema.getData(e.pixel), p = $('probe');
     if (!d || d[3] < 40) { p.textContent = 'Ingen klasse her (hav, skjult klasse eller for langt ute).'; return }
@@ -304,7 +349,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       slorKilde.clear(); grenseKilde.clear();
       slorKilde.addFeature(new ol.Feature(new ol.geom.Polygon([ytre, ...polys.map(p => p.getLinearRing(0).getCoordinates())])));
       grenseKilde.addFeature(new ol.Feature(geom));
-      view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
+      if (!k.boks) view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
     } catch (e) { if (mitt === valgNr) $('probe').textContent = 'Kommunegrensen kunne ikke hentes.' }
   }
 
@@ -319,14 +364,21 @@ td.feil { color: var(--ink); font-weight: 600 }
     try { history.replaceState(null, '', '#' + nr) } catch (e) {}
     $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
     $('probe').textContent = 'Trykk på kartet for å se klassen.'; tomTall('Henter …');
+    slorKilde.clear(); grenseKilde.clear();
+    if (k.boks) view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', 'EPSG:3857'), { padding: [16, 16, 16, 16], duration: 350 });
     hentTall(k, mitt); hentGrense(k, mitt);
   }
   fSel.addEventListener('change', () => { const f = fylker.find(x => x.nr === fSel.value); fyllKommuner(f); velg(kSel.value) });
   kSel.addEventListener('change', () => velg(kSel.value));
 
-  hent('Kartverket', 'Fylker og kommuner', `${KV}/fylkerkommuner`).then(j => {
-    fylker = j.map(f => ({ nr: f.fylkesnummer, navn: f.fylkesnavn, kommuner: f.kommuner.map(k => ({ nr: k.kommunenummer, navn: k.kommunenavnNorsk })).sort((a, b) => a.navn.localeCompare(b.navn, 'nb')) }))
-      .sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+  const boksAv = b => { const c = b && b.coordinates && b.coordinates[0]; if (!c) return null; const x = c.map(q => q[0]), y = c.map(q => q[1]); return [Math.min(...x), Math.min(...y), Math.max(...x), Math.max(...y)] };
+  hent('Egen fil', 'Fylker og kommuner', 'kommuner.json', true)
+    .then(j => j.map(f => ({ nr: f[0], navn: f[1], kommuner: f[2].map(k => ({ nr: k[0], navn: k[1], boks: k.slice(2) })) })))
+    .catch(() => hent('Kartverket', 'Fylker og kommuner', `${KV}/fylkerkommuner`)
+      .then(j => j.map(f => ({ nr: f.fylkesnummer, navn: f.fylkesnavn, kommuner: f.kommuner.map(k => ({ nr: k.kommunenummer, navn: k.kommunenavnNorsk, boks: boksAv(k.avgrensningsboks) })) }))))
+    .then(liste => {
+    fylker = liste.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+    fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
     fSel.length = 0; fylker.forEach(f => fSel.add(new Option(f.navn, f.nr)));
     let forst = (location.hash || '').replace('#', '');
     if (!finn(forst)) { try { forst = localStorage.getItem('bjn-live-kommune') } catch (e) { forst = null } }
