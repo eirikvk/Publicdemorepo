@@ -105,8 +105,8 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .forklaring #tallnote { color: var(--ink-3) }
 .plan { opacity: .92 }
 .vann { display: flex; flex-direction: column; gap: 10px }
-/* Verneområder tegnes som omriss med hvit kant og svak fylling, så klassene under fortsatt synes. Formen skiller dem fra de andre lagene, ikke bare fargen. */
-.row.vernrad .sw { --c: var(--vern); border-width: 3px; background: color-mix(in srgb, var(--vern) 22%, transparent); box-shadow: 0 0 0 1px var(--ink-3) }
+/* Verneområder tegnes som omriss med hvit kant, så klassene under fortsatt synes. Formen skiller dem fra de andre lagene, ikke bare fargen. */
+.row.vernrad .sw { --c: var(--vern); border-width: 3px; background: color-mix(in srgb, var(--vern) 14%, transparent); box-shadow: 0 0 0 1px var(--ink-3) }
 .row.vernrad[aria-pressed="false"] .sw { background: transparent }
 .vernblokk { display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: var(--ink-2) }
 .vernblokk b { font-weight: 600; color: var(--ink) }
@@ -454,7 +454,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   function grovPlanFlis(tc) {
     const R = planRaster; if (!R) return null;
     const [z, x, y] = tc, f = 2 ** (R.z - z), D = visSmale ? R.alle : R.ryddet, F = [rgb('pnat'), rgb('pjor')];
-    const c = lerret(), g = c.getContext('2d'), ut = g.createImageData(512, 512), o = ut.data;
+    const c = lerret(), g = c.getContext('2d'), ut = g.createImageData(512, 512), o = ut.data; let tegnet = false;
     for (let py = 0; py < 512; py++) {
       const Y = (y * 512 + py) * f - R.y0 * 512; if (Y + f <= 0 || Y >= R.h) continue;
       for (let px = 0; px < 512; px++) {
@@ -462,16 +462,18 @@ td.feil { color: var(--ink); font-weight: 600 }
         let a = 0, b = 0;
         for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++) for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) { const v = D[rad + i]; if (v === 1) a++; else if (v === 2) b++ }
         if (!a && !b) continue;
+        tegnet = true;
         const q = F[b > a ? 1 : 0], i = 4 * (py * 512 + px), andel = (a + b) / (f * f);
         o[i] = q[0]; o[i + 1] = q[1]; o[i + 2] = q[2]; o[i + 3] = Math.round(255 * Math.max(SVAKEST, Math.sqrt(andel)));
       }
     }
-    g.putImageData(ut, 0, 0); return c;
+    g.putImageData(ut, 0, 0); c.tom = !tegnet; return c;
   }
   const flisFraLerret = async (tile, c) => { const url = URL.createObjectURL(await new Promise(ok => c.toBlob(ok))), img = tile.getImage(); img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); img.src = url };
+  const TOM = 4;   /* OpenLayers' tilstand for en flis uten innhold */
   async function lastPlanFlis(tile, src) {
     try {
-      if (tile.getTileCoord()[0] <= 9) { const c = grovPlanFlis(tile.getTileCoord()); if (!c) throw new Error('rutenettet er ikke klart'); await flisFraLerret(tile, c); return }
+      if (tile.getTileCoord()[0] <= 9) { const c = grovPlanFlis(tile.getTileCoord()); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } await flisFraLerret(tile, c); return }
       const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentPlan(src)]);
       if (!K) throw new Error('mangler dagens klasser');
       const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
@@ -480,14 +482,16 @@ td.feil { color: var(--ink); font-weight: 600 }
       const pjor = rgb('pjor'), pnat = rgb('pnat');   /* uavhengig av hvilke klasser som vises i kartet */
       /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
       const [tz, tx, ty] = tile.getTileCoord(), R = !visSmale && planRaster && valgt && planRaster.nr === valgt.nr ? planRaster : null, sh = R ? tz - R.z : 0;
+      let tegnet = false;
       const vent = !visSmale && !R && valgt && !oversikter[valgt.nr];   /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
       if (!vent) for (let py = 0, i = 0; py < 512; py++) for (let px = 0; px < 512; px++, i += 4) {
         if (P[i + 3] < 100 || K[i + 3] < 100) continue;                 /* utenfor planområdene, eller hav */
         const k = klasseAv(K[i], K[i + 1], K[i + 2]); if (k !== JOR && k !== NAT) continue;   /* allerede bebygd i dag, eller vann */
         if (R) { const lx = ((tx * 512 + px) >> sh) - R.x0 * 512, ly = ((ty * 512 + py) >> sh) - R.y0 * 512; if (lx < 0 || ly < 0 || lx >= R.w || ly >= R.h || !R.naer[ly * R.w + lx]) continue }
         const f = k === JOR ? pjor : pnat;
-        o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255;
+        o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; tegnet = true;
       }
+      if (!tegnet) { tile.setState(TOM); return }   /* de fleste fliser har ingen planlagt utbygging. Tomme fliser tegnes ikke, så laget koster ingenting der. */
       g.putImageData(ut, 0, 0); await flisFraLerret(tile, c);
     } catch (e) { tile.setState(3) }
   }
@@ -568,10 +572,12 @@ td.feil { color: var(--ink); font-weight: 600 }
      og hvert område får en liten maske som brukes til å regne ut arealet i kommunen og hvor mye planlagt utbygging som ligger innenfor. */
   const VERN = 'https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer/0/query';
   const vernKilde = new ol.source.Vector();
-  const vernStil = (() => { const f = rgb('vern'); return [
-    new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(255,255,255,.9)', width: 5 }) }),
-    new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('vern'), width: 2.25 }), fill: new ol.style.Fill({ color: `rgba(${f[0]},${f[1]},${f[2]},.14)` }) })] })();
-  const vernLag = new ol.layer.Vector({ className: 'vernlag', source: vernKilde, visible: false, style: vernStil });
+  /* Bare omriss: en hvit kant og en lilla strek. En fylling over hele området måtte tegnes på nytt i hvert bilde
+     når kartet flyttes, og det merkes i kommuner med store verneområder. */
+  const vernStil = [
+    new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(255,255,255,.92)', width: 6 }) }),
+    new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('vern'), width: 2.75 }) })];
+  const vernLag = new ol.layer.Vector({ className: 'plan', source: vernKilde, visible: false, style: vernStil });   /* samme lerret som planlaget, så de klippes samlet */
   let vern = null, vernPaa = true;
   function vernMaske(g, kommune) {   /* delen av området som ligger i kommunen, som et lite rutenett med dekning per rute */
     const e = ol.extent.getIntersection(g.getExtent(), kommune.getExtent()); if (ol.extent.isEmpty(e)) return null;
@@ -683,12 +689,29 @@ td.feil { color: var(--ink); font-weight: 600 }
   });
   let klipp = null;
   const klippStil = new ol.style.Style({ fill: new ol.style.Fill({ color: '#000' }) });
+  /* Klippingen er det dyreste i hvert bilde når kartet flyttes, så den gjøres så sjelden som mulig:
+     ikke i det hele tatt når kommunegrensen er utenfor utsnittet, og ellers én gang per lerret i stedet for én gang per lag. */
+  let klippBilde = null, klippTrengs = true, klippRinger = null, klippFor = null;
+  function grenseISyne(fs) {
+    if (klippBilde === fs) return klippTrengs;
+    klippBilde = fs;
+    if (klippFor !== klipp) { klippFor = klipp; klippRinger = (klipp.getType() === 'MultiPolygon' ? klipp.getCoordinates().flat() : klipp.getCoordinates()).map(r => Float64Array.from(r.flat())) }
+    const m = 4 * fs.viewState.resolution, x0 = fs.extent[0] - m, y0 = fs.extent[1] - m, x1 = fs.extent[2] + m, y1 = fs.extent[3] + m;
+    for (const r of klippRinger) for (let i = 0; i + 3 < r.length; i += 2) {
+      const ax = r[i], ay = r[i + 1], bx = r[i + 2], by = r[i + 3];
+      if ((ax < x0 && bx < x0) || (ax > x1 && bx > x1) || (ay < y0 && by < y0) || (ay > y1 && by > y1)) continue;
+      return klippTrengs = true;   /* en del av grensen kan ligge i utsnittet */
+    }
+    return klippTrengs = !klipp.intersectsCoordinate(fs.viewState.center);   /* helt innenfor: ingenting å klippe. Helt utenfor: alt skal bort. */
+  }
   const klippTilKommunen = e => {
-    if (!klipp) return;
+    if (!klipp || !grenseISyne(e.frameState)) return;
     const c = e.context, vc = ol.render.getVectorContext(e);
     c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore();
   };
-  tema.on('postrender', klippTilKommunen); planLag.on('postrender', klippTilKommunen); oversiktLag.on('postrender', klippTilKommunen); vernLag.on('postrender', klippTilKommunen);
+  const tegnes = (lag, res) => lag.getVisible() && res < lag.getMaxResolution() && res >= lag.getMinResolution();
+  const klippSist = (lag, over) => lag.on('postrender', e => { if (!over || !tegnes(over, e.frameState.viewState.resolution)) klippTilKommunen(e) });   /* laget over i samme lerret klipper for begge */
+  klippSist(oversiktLag, tema); klippSist(tema, null); klippSist(planLag, vernLag); klippSist(vernLag, null);
   /* Omtrentlig areal, regnet ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå dagens klasser,
      og pikslene telles. Med lagret oversiktsbilde gjelder det hele kommunen. Uten gjelder det den delen av kommunen
      nettleseren har hentet kart for, og tallene regnes ut på nytt hver gang det kommer mer kart.
