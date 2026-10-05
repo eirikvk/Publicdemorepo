@@ -199,6 +199,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const FLISNIVA = 10;    /* groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000 */
   const MAKSRES = 30;     /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */
   const SAMTIDIG = 4;     /* høyst fire kall mot NIBIO om gangen */
+  const SVAKEST = 0.35;   /* svakeste farge for en piksel med bare litt planlagt utbygging i seg, så den ikke forsvinner helt */
   const MAKSTETTHET = 2;  /* telefoner har ofte tre piksler per punkt; to er nok og gir under halvparten så store bilder */
   const DATAFARGE = { beb: '#ff0000', jor: '#00ff00', nat: '#0000ff' };  /* rene farger fra NIBIO, byttes til visningsfarger i nettleseren */
   const KL = [
@@ -347,29 +348,26 @@ td.feil { color: var(--ink); font-weight: 600 }
     } else return null;
     return g.getImageData(0, 0, 512, 512).data;
   }
-  /* Zoomet ut er planfeltene mindre enn en skjermpiksel og ville forsvunnet. Derfor tegnes flisene på nivå 9 og grovere
-     fra et rutenett for hele kommunen (21 meter per rute, laget av arealutregningen). Hver flispiksel får farge hvis noen
-     av rutene under den er planlagt utbygd, og feltene utvides et par piksler. De ser dermed større ut enn de er. */
+  /* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra et rutenett
+     for hele kommunen (21 meter per rute, laget av arealutregningen). En flispiksel får farge bare hvis det faktisk ligger
+     planlagt utbygging innenfor den, og styrken følger hvor stor del av pikselen det gjelder. Feltene blir dermed aldri
+     større enn de er, og de forsvinner heller ikke: små felt vises som svake enkeltpiksler. */
   let planRaster = null;
   function grovPlanFlis(tc) {
     const R = planRaster; if (!R) return null;
-    const [z, x, y] = tc, f = 2 ** (R.z - z), D = visSmale ? R.alle : R.ryddet; let kl = new Uint8Array(512 * 512);
+    const [z, x, y] = tc, f = 2 ** (R.z - z), D = visSmale ? R.alle : R.ryddet, F = [rgb('pnat'), rgb('pjor')];
+    const c = lerret(), g = c.getContext('2d'), ut = g.createImageData(512, 512), o = ut.data;
     for (let py = 0; py < 512; py++) {
       const Y = (y * 512 + py) * f - R.y0 * 512; if (Y + f <= 0 || Y >= R.h) continue;
       for (let px = 0; px < 512; px++) {
         const X = (x * 512 + px) * f - R.x0 * 512; if (X + f <= 0 || X >= R.w) continue;
         let a = 0, b = 0;
         for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++) for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) { const v = D[rad + i]; if (v === 1) a++; else if (v === 2) b++ }
-        if (a || b) kl[py * 512 + px] = b > a ? 2 : 1;
+        if (!a && !b) continue;
+        const q = F[b > a ? 1 : 0], i = 4 * (py * 512 + px), andel = (a + b) / (f * f);
+        o[i] = q[0]; o[i + 1] = q[1]; o[i + 2] = q[2]; o[i + 3] = Math.round(255 * Math.max(SVAKEST, Math.sqrt(andel)));
       }
     }
-    for (let runde = z >= R.z ? 1 : 2; runde > 0; runde--) {   /* utvid én piksel per runde */
-      const ny = kl.slice();
-      for (let py = 1; py < 511; py++) for (let px = 1, i = py * 512 + 1; px < 511; px++, i++) if (!kl[i]) ny[i] = kl[i - 1] || kl[i + 1] || kl[i - 512] || kl[i + 512];
-      kl = ny;
-    }
-    const c = lerret(), g = c.getContext('2d'), ut = g.createImageData(512, 512), o = ut.data, F = [null, rgb('pnat'), rgb('pjor')];
-    for (let i = 0; i < kl.length; i++) if (kl[i]) { const q = F[kl[i]]; o[4 * i] = q[0]; o[4 * i + 1] = q[1]; o[4 * i + 2] = q[2]; o[4 * i + 3] = 255 }
     g.putImageData(ut, 0, 0); return c;
   }
   const flisFraLerret = async (tile, c) => { const url = URL.createObjectURL(await new Promise(ok => c.toBlob(ok))), img = tile.getImage(); img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); img.src = url };
@@ -497,7 +495,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0';
     tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen (${nf(km2(n.pnat))} km² med smale striper)`;
     tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket (${nf(km2(n.pjor))} km² med smale striper)`;
-    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Zoomet ut er feltene forstørret så de synes. Anslag til illustrasjon, ikke offisiell statistikk.`;
+    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.`;
   }
   const visPlan = () => { planLag.setVisible(planPaa && !!klipp); regnPlan() };   /* resten av kartet står urørt når laget slås på */
 
