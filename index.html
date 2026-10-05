@@ -290,8 +290,11 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
 
   /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
-  const farge = id => getComputedStyle(document.documentElement).getPropertyValue('--' + id).trim();
-  const rgb = id => { const v = farge(id).replace('#', ''); return [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16)) };
+  /* Fargene leses fra stilarket én gang og huskes til temaet byttes. Å spørre stilarket for hver flis tvinger nettleseren
+     til å regne ut stiler på nytt midt i tegningen. */
+  let fargeMinne = {}, rgbMinne = {};
+  const farge = id => fargeMinne[id] || (fargeMinne[id] = getComputedStyle(document.documentElement).getPropertyValue('--' + id).trim());
+  const rgb = id => rgbMinne[id] || (rgbMinne[id] = (v => [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16)))(farge(id).replace('#', '')));
   const SLD = (() => {
     const hex = f => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
     const regler = ALLE.map(([id, , verdier]) => {
@@ -458,9 +461,9 @@ td.feil { color: var(--ink); font-weight: 600 }
     const [z, x, y] = tc, f = 2 ** (R.z - z), D = visSmale ? R.alle : R.ryddet, F = [rgb('pnat'), rgb('pjor')];
     const c = lerret(), g = c.getContext('2d'), ut = g.createImageData(512, 512), o = ut.data; let tegnet = false;
     for (let py = 0; py < 512; py++) {
-      const Y = (y * 512 + py) * f - R.y0 * 512; if (Y + f <= 0 || Y >= R.h) continue;
+      const Y = (y * 512 + py) * f - R.cy0; if (Y + f <= 0 || Y >= R.h) continue;
       for (let px = 0; px < 512; px++) {
-        const X = (x * 512 + px) * f - R.x0 * 512; if (X + f <= 0 || X >= R.w) continue;
+        const X = (x * 512 + px) * f - R.cx0; if (X + f <= 0 || X >= R.w) continue;
         let a = 0, b = 0;
         for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++) for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) { const v = D[rad + i]; if (v === 1) a++; else if (v === 2) b++ }
         if (!a && !b) continue;
@@ -471,11 +474,16 @@ td.feil { color: var(--ink); font-weight: 600 }
     }
     g.putImageData(ut, 0, 0); c.tom = !tegnet; return c;
   }
-  const flisFraLerret = async (tile, c) => { const url = URL.createObjectURL(await new Promise(ok => c.toBlob(ok))), img = tile.getImage(); img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); img.src = url };
+  const flisFraLerret = (tile, c) => tile.setImage(c);   /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
   const TOM = 4;   /* OpenLayers' tilstand for en flis uten innhold */
+  function iEllerInntil(R, x, y) {   /* ligger ruta i et beholdt felt, eller rett ved siden av et? */
+    if (x < 0 || y < 0 || x >= R.w || y >= R.h) return false;
+    const i = y * R.w + x, r = R.ryddet;
+    return !!(r[i] || (x > 0 && r[i - 1]) || (x < R.w - 1 && r[i + 1]) || (y > 0 && r[i - R.w]) || (y < R.h - 1 && r[i + R.w]));
+  }
   async function lastPlanFlis(tile, src) {
     try {
-      if (tile.getTileCoord()[0] <= 9) { const c = grovPlanFlis(tile.getTileCoord()); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } await flisFraLerret(tile, c); return }
+      if (tile.getTileCoord()[0] <= 9) { const c = grovPlanFlis(tile.getTileCoord()); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } flisFraLerret(tile, c); return }
       const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentPlan(src)]);
       if (!K) throw new Error('mangler dagens klasser');
       const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
@@ -489,12 +497,12 @@ td.feil { color: var(--ink); font-weight: 600 }
       if (!vent) for (let py = 0, i = 0; py < 512; py++) for (let px = 0; px < 512; px++, i += 4) {
         if (P[i + 3] < 100 || K[i + 3] < 100) continue;                 /* utenfor planområdene, eller hav */
         const k = klasseAv(K[i], K[i + 1], K[i + 2]); if (k !== JOR && k !== NAT) continue;   /* allerede bebygd i dag, eller vann */
-        if (R) { const lx = ((tx * 512 + px) >> sh) - R.x0 * 512, ly = ((ty * 512 + py) >> sh) - R.y0 * 512; if (lx < 0 || ly < 0 || lx >= R.w || ly >= R.h || !R.naer[ly * R.w + lx]) continue }
+        if (R && !iEllerInntil(R, ((tx * 512 + px) >> sh) - R.cx0, ((ty * 512 + py) >> sh) - R.cy0)) continue;
         const f = k === JOR ? pjor : pnat;
         o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; tegnet = true;
       }
       if (!tegnet) { tile.setState(TOM); return }   /* de fleste fliser har ingen planlagt utbygging. Tomme fliser tegnes ikke, så laget koster ingenting der. */
-      g.putImageData(ut, 0, 0); await flisFraLerret(tile, c);
+      g.putImageData(ut, 0, 0); flisFraLerret(tile, c);
     } catch (e) { tile.setState(3) }
   }
   const nyPlanKilde = () => new ol.source.XYZ({ tileUrlFunction: planUrl, tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: lastPlanFlis, transition: 0, projection: UTM });
@@ -510,6 +518,17 @@ td.feil { color: var(--ink); font-weight: 600 }
      forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
      zoombevegelse rekker ikke å laste bildet sitt, og da blinket bakgrunnskartet gjennom første gang man zoomet inn. */
   const oversiktLag = new ol.layer.Image({ className: 'tema' });
+  /* Kilde for kartet nettleseren setter sammen selv. Bildet er et lerret som fylles på flis for flis, og kartlaget får en kopi
+     av det som bilde. Det sparer å pakke hele lerretet som PNG og lese det inn igjen hver gang det kommer nye fliser. */
+  class LerretKilde extends ol.source.Image {
+    constructor(lerret, ext) { super({ projection: UTM }); this.bilde_ = new ol.Image(ext, (ext[3] - ext[1]) / lerret.height, 1, 2 /* ferdig lastet */); this.bilde_.setImage(lerret); this.nr_ = 0 }
+    getImageInternal(extent) { return ol.extent.intersects(extent, this.bilde_.getExtent()) ? this.bilde_ : null }
+    oppdater(lerret) {
+      const mitt = ++this.nr_; this.changed();
+      if (!window.createImageBitmap) return;
+      createImageBitmap(lerret).then(bm => { if (mitt !== this.nr_) { bm.close(); return } const gml = this.bilde_.getImage(); this.bilde_.setImage(bm); if (gml && gml.close) gml.close(); this.changed() }).catch(() => {});
+    }
+  }
   oversiktLag.on('prerender', e => { e.context.imageSmoothingEnabled = e.frameState.viewState.resolution >= ovRes });
   oversiktLag.on('postrender', e => { e.context.imageSmoothingEnabled = true });
   /* Uten bilde holdes laget skjult. Et synlig lag uten kilde får OpenLayers til å feile midt i en kartbevegelse,
@@ -517,32 +536,49 @@ td.feil { color: var(--ink); font-weight: 600 }
   const oversiktSynlig = v => oversiktLag.setVisible(v && !!oversiktLag.getSource());
   async function tegnOversikt() {
     const denne = ov; if (!denne) return;
-    const blob = denne.lerret ? await fargeleggLerret(denne.lerret) : await fargeleggBlob(denne.buf);
+    if (denne.lerret) { const s = samle; if (s && s.c === denne.lerret) { s.venter.length = 0; fargeleggSamling(s); visSamling(s) } return }
+    const blob = await fargeleggBlob(denne.buf);
     if (denne !== ov) return;
     const url = URL.createObjectURL(blob), gammel = ovUrl; ovUrl = url;
-    ovRes = (denne.ext[2] - denne.ext[0]) / (denne.lerret ? denne.lerret.width : new DataView(denne.buf).getUint32(16));   /* kartmeter per piksel i oversiktsbildet */
+    ovRes = (denne.ext[2] - denne.ext[0]) / new DataView(denne.buf).getUint32(16);   /* kartmeter per piksel i oversiktsbildet */
     const forste = !oversiktLag.getSource();
     oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: denne.ext, projection: UTM })); if (forste) oversiktSynlig(true);
     if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
     /* Første gang et lagret oversiktsbilde er på plass, regnes planlagt utbygging ut. Senere fargebytter rører ikke planlaget. */
-    if (!denne.dynamisk && !denne.regnet) { denne.regnet = true; ovBilde = null; tegnPlan(); if (planPaa) regnAlt() }
+    if (!denne.regnet) { denne.regnet = true; ovBilde = null; tegnPlan(); if (planPaa) regnAlt() }
   }
 
   /* Kommuner uten lagret oversiktsbilde: nettleseren setter sammen sitt eget av flisene den har hentet. Zoomer man ut
-     igjen, vises dermed det man alt har sett, i stedet for bare bakgrunnskartet. Det hentes ingenting nytt for dette. */
+     igjen, vises dermed det man alt har sett, i stedet for bare bakgrunnskartet. Det hentes ingenting nytt for dette.
+     Lerretet c har de rå klassefargene og brukes til utregning. Lerretet vis har visningsfargene og er det som tegnes. */
   let samle = null;
   const samlinger = new Map();   /* beholdes for de fire sist besøkte kommunene, så kartet er der når man bytter tilbake */
   function nySamling(nr, ext) {
     let s = samlinger.get(nr);
     if (!s) {
-      const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(ext[2] - ext[0], ext[3] - ext[1]) / 2048), c = document.createElement('canvas');
-      c.width = Math.ceil((ext[2] - ext[0]) / res); c.height = Math.ceil((ext[3] - ext[1]) / res);
-      s = { c, g: c.getContext('2d', { willReadFrequently: true }), res, ext: [ext[0], ext[3] - c.height * res, ext[0] + c.width * res, ext[3]], har: new Set(), t: null };
+      const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(ext[2] - ext[0], ext[3] - ext[1]) / 2048), c = document.createElement('canvas'), vis = document.createElement('canvas');
+      c.width = vis.width = Math.ceil((ext[2] - ext[0]) / res); c.height = vis.height = Math.ceil((ext[3] - ext[1]) / res);
+      s = { c, g: c.getContext('2d', { willReadFrequently: true }), vis, vg: vis.getContext('2d'), res, ext: [ext[0], ext[3] - c.height * res, ext[0] + c.width * res, ext[3]], har: new Set(), blokker: new Map(), kilde: null, venter: [] };
     }
     samlinger.delete(nr); samlinger.set(nr, s);
-    if (samlinger.size > 4) { const eldst = samlinger.keys().next().value; samlinger.get(eldst).c.width = 0; samlinger.delete(eldst) }
+    if (samlinger.size > 4) { const eldst = samlinger.keys().next().value, g = samlinger.get(eldst); g.c.width = g.vis.width = 0; g.blokker.clear(); samlinger.delete(eldst) }
     samle = s;
     if (s.har.size) { ov = { lerret: s.c, ext: s.ext, dynamisk: true }; tegnOversikt(); status(); if (planPaa) regnAlt() }
+  }
+  function fargeleggSamling(s, x = 0, y = 0, w = s.c.width, h = s.c.height) {   /* fra rå klassefarger til visningsfarger, for hele lerretet eller bare en flis */
+    if (x < 0) { w += x; x = 0 } if (y < 0) { h += y; y = 0 } w = Math.min(w, s.c.width - x); h = Math.min(h, s.c.height - y); if (w <= 0 || h <= 0) return;
+    const F = klassefarger(), d = s.g.getImageData(x, y, w, h), o = d.data; let sist = -1, f = null;
+    for (let i = 0; i < o.length; i += 4) {
+      if (!o[i + 3]) continue;
+      const n = (o[i] << 24 | o[i + 1] << 16 | o[i + 2] << 8 | o[i + 3]) >>> 0; if (n !== sist) { sist = n; f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F) }   /* like nabopiksler regnes én gang */
+      o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3];
+    }
+    s.vg.putImageData(d, x, y);
+  }
+  function visSamling(s) {
+    ovRes = s.res; s.kilde = s.kilde || new LerretKilde(s.vis, s.ext);
+    const forste = !oversiktLag.getSource(); if (oversiktLag.getSource() !== s.kilde) oversiktLag.setSource(s.kilde); if (forste) oversiktSynlig(true);
+    s.kilde.oppdater(s.vis);
   }
   function leggISamling(tc, buf) {
     const s = samle, n = tc.join('/'); if (!s || s.har.has(n)) return;
@@ -551,15 +587,31 @@ td.feil { color: var(--ink); font-weight: 600 }
       s.har.add(n);
       /* Flisen legges på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
       const u = flisnett.getTileCoordExtent(tc), px = v => Math.round((v - s.ext[0]) / s.res), py = v => Math.round((s.ext[3] - v) / s.res);
-      s.g.drawImage(bm, px(u[0]), py(u[3]), px(u[2]) - px(u[0]), py(u[1]) - py(u[3]));
-      clearTimeout(s.t); s.t = setTimeout(() => { if (s !== samle) return; ov = { lerret: s.c, ext: s.ext, dynamisk: true }; tegnOversikt(); status(); if (planPaa) regnAlt() }, 400);
+      const X = px(u[0]), Y = py(u[3]), W = px(u[2]) - X, H = py(u[1]) - Y;
+      s.g.drawImage(bm, X, Y, W, H); s.venter.push([X, Y, W, H]);   /* fargelegges når kartet står stille */
+      if (!ov || ov.lerret !== s.c) { ov = { lerret: s.c, ext: s.ext, dynamisk: true }; visSamling(s); status() }
+      planleggEtterarbeid();
     }).catch(() => {});
   }
-  function fargeleggLerret(k) {
-    const F = klassefarger(), c = document.createElement('canvas'); c.width = k.width; c.height = k.height;
-    const d = k.getContext('2d').getImageData(0, 0, k.width, k.height), o = d.data;
-    for (let i = 0; i < o.length; i += 4) { if (!o[i + 3]) continue; const f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F); o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3] }
-    c.getContext('2d').putImageData(d, 0, 0); return new Promise(ok => c.toBlob(ok));
+  /* Alt etterarbeid når det har kommet nye fliser gjøres først når kartet har stått stille litt og ingenting lastes: de nye flisene
+     fargelegges inn i det sammensatte kartet, én om gangen med pust imellom, og så regnes plantallene og planlaget ut på nytt.
+     Da hakker ikke kartet mens man flytter det. Starter man å flytte igjen, venter resten til neste stopp. */
+  let etterTimer = null, etterVenter = false;
+  function planleggEtterarbeid() {
+    etterVenter = true; clearTimeout(etterTimer);
+    etterTimer = setTimeout(async () => {
+      if (iBevegelse || opptatt()) return planleggEtterarbeid();
+      const s = samle;
+      if (s && s.venter.length) {
+        while (s.venter.length) {
+          if (iBevegelse || s !== samle) return;   /* moveend tar opp tråden igjen */
+          fargeleggSamling(s, ...s.venter.shift()); await new Promise(ok => setTimeout(ok, 0));
+        }
+        if (s.kilde) s.kilde.oppdater(s.vis);
+      }
+      if (iBevegelse || s !== samle) return;
+      etterVenter = false; if (planPaa) regnAlt();
+    }, 500);
   }
   async function hentOversikt(k, mitt) {
     ov = null; ovBilde = null; samle = null; oversiktLag.setSource(null); oversiktSynlig(true);
@@ -579,7 +631,9 @@ td.feil { color: var(--ink); font-weight: 600 }
   const vernStil = [
     new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(255,255,255,.92)', width: 6 }) }),
     new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('vern'), width: 2.75 }) })];
-  const vernLag = new ol.layer.Vector({ className: 'plan', source: vernKilde, visible: false, style: vernStil });   /* samme lerret som planlaget, så de klippes samlet */
+  /* Samme lerret som planlaget, så de klippes samlet. Den store bufferen gjør at alle omrissene i kommunen tegnes i ett, også de utenfor
+     utsnittet. Da er de på plass med en gang kartet flyttes, i stedet for å dukke opp først når bevegelsen stopper. */
+  const vernLag = new ol.layer.Vector({ className: 'plan', source: vernKilde, visible: false, style: vernStil, renderBuffer: 4000 });
   let vern = null, vernPaa = true;
   function vernMaske(g, kommune) {   /* området som et lite rutenett med dekning per rute. kommune oppgis bare hvis flaten ikke alt er klippet. */
     const e = kommune ? ol.extent.getIntersection(g.getExtent(), kommune.getExtent()) : g.getExtent(); if (ol.extent.isEmpty(e)) return null;
@@ -629,9 +683,8 @@ td.feil { color: var(--ink); font-weight: 600 }
     vern.omrader.forEach(o => { o.plan = 0; o.smal = 0 }); vern.regnet = !!R;
     if (R && vern.omrader.length) {
       const m = OPPLOSNINGER[R.z] / 2;
-      for (let i = 0; i < R.alle.length; i++) {
-        if (!R.alle[i]) continue;
-        const x = ORIGO[0] + (R.x0 * 512 + i % R.w + .5) * m, y = ORIGO[1] - (R.y0 * 512 + Math.floor(i / R.w) + .5) * m;
+      for (const i of R.celler) {
+        const x = ORIGO[0] + (R.cx0 + i % R.w + .5) * m, y = ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + .5) * m;
         for (const o of vern.omrader) {
           if (x < o.ext[0] || x > o.ext[2] || y < o.ext[1] || y > o.ext[3]) continue;
           const M = o.maske || (o.maske = vernMaske(o.f.getGeometry(), o.uklippet ? klipp : null)); if (!M) continue;   /* masken lages først når en planrute ligger i nærheten */
@@ -680,7 +733,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const view = new ol.View({ projection: UTM, center: ol.proj.fromLonLat([15, 65], UTM), resolutions: OPPLOSNINGER.slice(2), resolution: OPPLOSNINGER[4], enableRotation: false });
   const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, planLag, vernLag, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
-  const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); oppfriskPlan(); grense.changed() };
+  const tegnPaaNytt = () => { fargeMinne = {}; rgbMinne = {}; tegnOversikt(); fargeleggFliser(); oppfriskPlan(); grense.changed() };
   /* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen.
      Kartet slipper derfor knip og dra igjennom til nettleseren så lenge siden er forstørret. Knappene for zoom og trykk i kartet virker fortsatt. */
   if (window.visualViewport) {
@@ -739,60 +792,69 @@ td.feil { color: var(--ink); font-weight: 600 }
      nettleseren har hentet kart for, og tallene regnes ut på nytt hver gang det kommer mer kart.
      Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
   let regnNr = 0, ssbSum = 0;
+  async function regnBlokk(tc, fliser) {   /* én flis på nivå 9: dagens klasser lagt oppå planen. fliser er de hentede kartflisene innenfor, eller null når hele kommunen er kjent. */
+    const [K, buf] = await Promise.all([dagensKlasser(tc), hentPlan(planUrl(tc))]);
+    if (!K) throw new Error('mangler dagens klasser');
+    const g = lerret().getContext('2d', { willReadFrequently: true }); g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
+    const P = g.getImageData(0, 0, 512, 512).data, d = new Uint8Array(262144), n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
+    if (fliser) {
+      d.fill(3);
+      for (const [z, x, y] of fliser) { const sh = z - tc[0], s = 512 >> sh, cx = ((x * 512) >> sh) - tc[1] * 512, cy = ((y * 512) >> sh) - tc[2] * 512; for (let j = 0; j < s; j++) d.fill(0, (cy + j) * 512 + cx, (cy + j) * 512 + cx + s) }
+    }
+    for (let i = 0, q = 0; i < K.length; i += 4, q++) {
+      if (K[i + 3] < 100) continue;
+      const k = klasseAv(K[i], K[i + 1], K[i + 2]); if (!k) { n.beb++; continue } if (k !== JOR && k !== NAT) continue;   /* vann telles ikke */
+      const jor = k === JOR, plan = P[i + 3] >= 100;
+      if (jor) { n.jor++; if (plan) n.pjor++ } else { n.nat++; if (plan) n.pnat++ }
+      if (plan) d[q] = jor ? 2 : 1;
+    }
+    return { sig: fliser ? fliser.length : -1, d, n };
+  }
   async function regnPlan() {
     const mitt = ++regnNr, tn = $('tall-pnat'), tj = $('tall-pjor'), note = $('tallnote'), Z = 9;
     const tom = () => { tn.textContent = tj.textContent = note.textContent = '' };
     if (!planPaa || !klipp || ingenPlan()) return tom();
     if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
     if (!ov) { tom(); if (!oversikter[valgt.nr]) note.textContent = 'Zoom inn i kartet for å få et anslag. Arealet regnes ut for den delen av kommunen nettleseren har hentet kart for.'; return }
-    const dyn = !!ov.dynamisk, sm = dyn ? samle : null, kant = dyn ? 1 : 0;
+    const dyn = !!ov.dynamisk, sm = dyn ? samle : null, kant = dyn ? 1 : 0, nr = valgt.nr, denne = ov;
     if (dyn && !sm) return;
     if (!(dyn && planRaster)) { tom(); tn.textContent = tj.textContent = 'regner …' }   /* nye tall erstatter de gamle uten at teksten blinker */
-    const koord = [], n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 }, nr = valgt.nr;
-    const hentet = dyn ? [...sm.har].map(v => v.split('/').map(Number)) : null;   /* flisene som ligger i nettleserens oversiktsbilde */
-    if (dyn) new Set(hentet.map(([z, x, y]) => `${x >> (z - Z)}/${y >> (z - Z)}`)).forEach(v => koord.push([Z, ...v.split('/').map(Number)]));
-    else plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
-    const x0 = Math.min(...koord.map(t => t[1])) - kant, y0 = Math.min(...koord.map(t => t[2])) - kant;
-    const w = (Math.max(...koord.map(t => t[1])) - x0 + 1 + kant) * 512, h = (Math.max(...koord.map(t => t[2])) - y0 + 1 + kant) * 512, d = new Uint8Array(w * h);
-    /* Der det ikke er hentet kart, vet vi ikke om feltet fortsetter. Slike ruter teller som naboer, så felt ikke skrelles av langs kanten av det hentede. */
-    const ukjent = dyn ? new Uint8Array(w * h).fill(1) : null;
-    if (dyn) for (const [z, x, y] of hentet) {
-      const sh = z - Z, s = 512 >> sh, cx = ((x * 512) >> sh) - x0 * 512, cy = ((y * 512) >> sh) - y0 * 512;
-      for (let j = 0; j < s; j++) ukjent.fill(0, (cy + j) * w + cx, (cy + j) * w + cx + s);
-    }
+    /* Rutenettet bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
+       fliser innenfor den, så et nytt utsnitt koster én eller to blokker og ikke hele det hentede området. */
+    const blokker = dyn ? sm.blokker : (denne.blokker || (denne.blokker = new Map())), under = new Map();
+    if (dyn) for (const v of sm.har) { const [z, x, y] = v.split('/').map(Number), k = `${x >> (z - Z)}/${y >> (z - Z)}`; if (!under.has(k)) under.set(k, []); under.get(k).push([z, x, y]) }
+    else plannett.forEachTileCoord(denne.ext, Z, tc => under.set(`${tc[1]}/${tc[2]}`, null));
     try {
-      await Promise.all(koord.map(async tc => {
-        const [K, buf] = await Promise.all([dagensKlasser(tc), hentPlan(planUrl(tc))]);
-        if (!K) throw new Error('mangler dagens klasser');
-        const g = lerret().getContext('2d', { willReadFrequently: true }); g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
-        const P = g.getImageData(0, 0, 512, 512).data;
-        const start = (tc[2] - y0) * 512 * w + (tc[1] - x0) * 512;
-        for (let i = 0, q = 0; i < K.length; i += 4, q++) {
-          if (K[i + 3] < 100) continue;
-          const k = klasseAv(K[i], K[i + 1], K[i + 2]); if (!k) { n.beb++; continue } if (k !== JOR && k !== NAT) continue;   /* vann telles ikke */
-          const jor = k === JOR, plan = P[i + 3] >= 100;
-          if (jor) { n.jor++; if (plan) n.pjor++ } else { n.nat++; if (plan) n.pnat++ }
-          if (plan) d[start + (q >> 9) * w + (q & 511)] = jor ? 2 : 1;
-        }
+      await Promise.all([...under].map(async ([k, fliser]) => {
+        const har = blokker.get(k), sig = fliser ? fliser.length : -1; if (har && har.sig === sig) return;
+        const [x, y] = k.split('/').map(Number), blokk = await regnBlokk([Z, x, y], fliser); blokker.set(k, blokk);
       }));
     } catch (e) { if (mitt === regnNr) { tn.textContent = tj.textContent = ''; note.textContent = 'Arealet kunne ikke regnes ut.' } return }
     if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
+    const nokler = [...under.keys()].map(k => k.split('/').map(Number)), tx0 = Math.min(...nokler.map(t => t[0])), ty0 = Math.min(...nokler.map(t => t[1]));
+    const cx0 = tx0 * 512 - kant, cy0 = ty0 * 512 - kant, w = (Math.max(...nokler.map(t => t[0])) - tx0 + 1) * 512 + 2 * kant, h = (Math.max(...nokler.map(t => t[1])) - ty0 + 1) * 512 + 2 * kant;
+    /* Verdier per rute: 0 ingenting, 1 natur og 2 jordbruk satt av til utbygging, 3 ukjent fordi kartet ikke er hentet der.
+       Ukjente ruter teller som naboer, så et felt ikke skrelles av langs kanten av det hentede. */
+    const d = new Uint8Array(w * h), n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 }; if (dyn) d.fill(3);
+    for (const [x, y] of nokler) {
+      const b = blokker.get(`${x}/${y}`), start = ((y - ty0) * 512 + kant) * w + (x - tx0) * 512 + kant;
+      for (let r = 0; r < 512; r++) d.set(b.d.subarray(r * 512, r * 512 + 512), start + r * w);
+      for (const k in n) n[k] += b.n[k];
+    }
     /* Smale striper: et felt som ikke er bredere enn to ruter (rundt 40 meter) noe sted. De oppstår der plangrensen og grunnkartet ikke
        treffer hverandre, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle fire sider.
        Så beholdes alt som henger sammen med en kjerne. Et større felt beholdes dermed helt, også der det smalner av, og bare
        felt uten kjerne faller bort. */
-    const krympet = new Uint8Array(w * h), ryddet = new Uint8Array(w * h), er = ukjent ? i => d[i] || ukjent[i] : i => d[i];
-    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && er(i - 1) && er(i + 1) && er(i - w) && er(i + w)) krympet[i] = d[i];
-    let front = []; for (let i = 0; i < krympet.length; i++) if (krympet[i]) { ryddet[i] = d[i]; front.push(i) }
+    const celler = []; for (let i = 0; i < d.length; i++) { const v = d[i]; if (v === 1 || v === 2) celler.push(i) }
+    const ryddet = new Uint8Array(w * h); let front = [];
+    for (const i of celler) { const x = i % w; if (x > 0 && x < w - 1 && i >= w && i < d.length - w && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) { ryddet[i] = d[i]; front.push(i) } }
     while (front.length) {
       const ny = [];
-      for (const i of front) for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) if (d[j] && !ryddet[j]) { ryddet[j] = d[j]; ny.push(j) }
+      for (const i of front) for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) { const v = d[j]; if ((v === 1 || v === 2) && !ryddet[j]) { ryddet[j] = v; ny.push(j) } }
       front = ny;
     }
-    let rn = 0, rj = 0; for (let i = 0; i < ryddet.length; i++) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
-    const naer = new Uint8Array(w * h);
-    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (ryddet[i] || ryddet[i - 1] || ryddet[i + 1] || ryddet[i - w] || ryddet[i + w]) naer[i] = 1;
-    planRaster = { nr, z: Z, x0, y0, w, h, alle: d, ryddet, naer }; if (dyn) oppfriskPlan(); else tegnPlan();
+    let rn = 0, rj = 0; for (const i of celler) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
+    planRaster = { nr, z: Z, cx0, cy0, w, h, alle: d, ryddet, celler: Int32Array.from(celler) }; oppfriskPlan();
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0', der = dyn ? ' i det hentede kartet' : '';
     tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen${der} (${nf(km2(n.pnat))} km² med smale striper)`;
     tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket${der} (${nf(km2(n.pjor))} km² med smale striper)`;
@@ -800,7 +862,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     if (dyn) {
       const a = km2(n.beb + n.jor + n.nat), rute = Math.round(Math.max(m, sm.res));
       note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${nf(a)} km² land${ssbSum ? ` av ${nf(ssbSum)} km² (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
-    } else note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. ${felles}`;
+    } else note.textContent = `Regnet ut i nettleseren fra ${under.size} kartfliser med piksler på ${Math.round(m)} meter. ${felles}`;
   }
   /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker.
      Langs grensen stikker naboenes planer litt inn, så under 15 prosent regnes som at kommunen ikke har plan der.
@@ -855,8 +917,8 @@ td.feil { color: var(--ink); font-weight: 600 }
     oversiktSynlig(true); $('ute').hidden = treff || !valgt;
     $('siste').textContent = !treff ? '' : ov && ov.dynamisk ? 'Viser kart nettleseren allerede har hentet' : 'Viser lagret oversiktsbilde';
   }
-  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true) });
-  kart.on('moveend', () => { iBevegelse = false; status(); kart.render() });
+  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer) });
+  kart.on('moveend', () => { iBevegelse = false; status(); kart.render(); if (etterVenter) planleggEtterarbeid() });
   view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktSynlig(true) });
   kart.on('rendercomplete', () => {
     if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || !tema.getVisible() || opptatt()) return;   /* aldri skjul oversikten midt i en bevegelse */
@@ -993,7 +1055,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     try { history.replaceState(null, '', '#' + nr) } catch (e) {}
     $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
     $('probe').textContent = 'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.'; tomTall('Henter …');
-    grenseKilde.clear(); klipp = null; flate = 0; planRaster = null; planInfo = null; visPlanInfo(); vern = null; vernKilde.clear(); visVern(); tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
+    grenseKilde.clear(); klipp = null; flate = 0; planRaster = null; clearTimeout(etterTimer); etterVenter = false; planInfo = null; visPlanInfo(); vern = null; vernKilde.clear(); visVern(); tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
     hentOversikt(k, mitt);
     if (k.boks && !behold) view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
     hentTall(k, mitt); hentGrense(k, mitt, behold); status();
