@@ -258,14 +258,16 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 00.40';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 00.45';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
   const tidSlutt = (navn, t0) => { const d = performance.now() - t0, b = bruk[navn] || (bruk[navn] = { sum: 0, n: 0, maks: 0 }); b.sum += d; b.n++; if (d > b.maks) b.maks = d };
   const nf = (v, d = 1) => v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
-  /* Alle arealer vises i dekar. Internt regnes det i kvadratkilometer, som er enheten SSB oppgir. 1 km² er 1000 dekar. */
-  const dekar = km2 => { const v = km2 * 1000; return (v > 0 && v < 0.05 ? 'under 0,1' : nf(v, v < 100 ? 1 : 0)) + ' daa' };
+  /* Alle arealer vises i dekar. Internt regnes det i kvadratkilometer, som er enheten SSB oppgir. 1 km² er 1000 dekar.
+     I kolonner og lister står forkortelsen «daa», i setninger står «dekar» skrevet ut. */
+  const dekar = (km2, enhet = 'daa') => { const v = km2 * 1000; return (v > 0 && v < 0.05 ? 'under 0,1' : nf(v, v < 100 ? 1 : 0)) + ' ' + enhet };
+  const iTekst = km2 => dekar(km2, 'dekar');
   const kb = b => b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
   const vis = { beb: true, jor: true, nat: true, hav: true, inn: true, elv: true };
   let fylker = [], valgt = null, valgNr = 0;
@@ -783,16 +785,16 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   function visNatur(t) {
     const D = t.data, ok = !!D && !!valgt && D.nr === valgt.nr, o = ok ? D.omrader : [], sum = ok ? D.sum || 0 : 0, km = dekar;
-    const daa = n => dekar(n * (OPPLOSNINGER[9] / 2) ** 2 / 1e6), el = n => $(t.id + n);   /* fra antall ruter på 21 meter */
+    const daa = n => iTekst(n * (OPPLOSNINGER[9] / 2) ** 2 / 1e6), el = n => $(t.id + n);   /* fra antall ruter på 21 meter, brukes i setninger */
     t.lag.setVisible(t.paa && !!klipp && ok && o.length > 0); t.blokk.hidden = !ok || (!o.length && !D.feil);   /* uten områder holder det at knappen sier «ingen» */
     t.knapp.querySelector('.km').textContent = !ok ? '' : D.feil ? 'ikke hentet' : o.length ? km(sum) : 'ingen';
     if (!ok) return;
     const liste = el('liste'); liste.textContent = '';
     el('sum').textContent = D.feil ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.` : !o.length ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${km(sum)} av kommunen${t.avLand ? (ssbSum ? `, ${nf(sum / ssbSum * 100)} % av landarealet` : '') : flate ? `, ${nf(sum / flate * 100)} % av flaten med sjø` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}`;
+      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${t.avLand ? (ssbSum ? `, ${nf(sum / ssbSum * 100)} % av landarealet` : '') : flate ? `, ${nf(sum / flate * 100)} % av flaten med sjø` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}`;
     const E = D.ekstra, merk = el('merk');
     merk.textContent = !E ? '' : !(E.km2 > 0) ? 'Kommunen er ikke kartlagt etter Miljødirektoratets instruks. Laget viser da bare eldre registreringer og utvalgte naturtyper.'
-      : `Ca. ${ssbSum ? nf(Math.min(100, E.km2 / ssbSum * 100)) + ' % av landarealet' : km(E.km2)} er kartlagt etter Miljødirektoratets instruks${E.fra ? ` (${E.fra === E.til ? E.fra : E.fra + '–' + E.til})` : ''}. Utenfor det kartlagte kan det finnes verdifull natur som ikke er registrert.`;
+      : `Ca. ${ssbSum ? nf(Math.min(100, E.km2 / ssbSum * 100)) + ' % av landarealet' : iTekst(E.km2)} er kartlagt etter Miljødirektoratets instruks${E.fra ? ` (${E.fra === E.til ? E.fra : E.fra + '–' + E.til})` : ''}. Utenfor det kartlagte kan det finnes verdifull natur som ikke er registrert.`;
     const plan = o.reduce((s, x) => s + x.plan, 0), smal = o.reduce((s, x) => s + x.smal, 0), der = ov && ov.dynamisk ? ' i den delen av kommunen det er hentet kart for' : '', vp = el('plan');
     vp.textContent = '';
     if (o.length) {
@@ -947,12 +949,12 @@ td.feil { color: var(--ink); font-weight: 600 }
     let rn = 0, rj = 0; for (const i of celler) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
     planRaster = { nr, z: Z, cx0, cy0, w, h, alle: d, ryddet, celler: Int32Array.from(celler) }; oppfriskPlan(); tidSlutt('plantall', tStart);
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0', der = dyn ? ' i det hentede kartet' : '';
-    tn.textContent = `ca. ${dekar(km2(rn))}, ${pst(rn, n.nat)} % av naturen${der} (${dekar(km2(n.pnat))} med smale striper)`;
-    tj.textContent = `ca. ${dekar(km2(rj))}, ${pst(rj, n.jor)} % av jordbruket${der} (${dekar(km2(n.pjor))} med smale striper)`;
+    tn.textContent = `ca. ${iTekst(km2(rn))}, ${pst(rn, n.nat)} % av naturen${der} (${iTekst(km2(n.pnat))} med smale striper)`;
+    tj.textContent = `ca. ${iTekst(km2(rj))}, ${pst(rj, n.jor)} % av jordbruket${der} (${iTekst(km2(n.pjor))} med smale striper)`;
     const felles = 'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
     if (dyn) {
       const a = km2(n.beb + n.jor + n.nat), rute = Math.round(Math.max(m, sm.res));
-      note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${dekar(a)} land${ssbSum ? ` av ${dekar(ssbSum)} (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
+      note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${ssbSum ? ` av ${iTekst(ssbSum)} (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
     } else note.textContent = `Regnet ut i nettleseren fra ${under.size} kartfliser med piksler på ${Math.round(m)} meter. ${felles}`;
   }
   /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker.
