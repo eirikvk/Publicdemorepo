@@ -399,21 +399,23 @@ td.feil { color: var(--ink); font-weight: 600 }
 
   /* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv. */
   let oversikter = {}, ov = null, ovUrl = null, ovRes = 0;
-  /* Samme lerret som flisene. Bildet glattes når det vises forminsket, og vises med rene piksler når det forstørres som plassholder. */
-  const oversiktLag = new ol.layer.Image({ className: 'tema' }), oversiktGrov = new ol.layer.Image({ className: 'tema' });
-  const oversiktSynlig = v => { oversiktLag.setVisible(v); oversiktGrov.setVisible(v) };
+  /* Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når det
+     forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
+     zoombevegelse rekker ikke å laste bildet sitt, og da blinket bakgrunnskartet gjennom første gang man zoomet inn. */
+  const oversiktLag = new ol.layer.Image({ className: 'tema' });
+  oversiktLag.on('prerender', e => { e.context.imageSmoothingEnabled = e.frameState.viewState.resolution >= ovRes });
+  oversiktLag.on('postrender', e => { e.context.imageSmoothingEnabled = true });
+  const oversiktSynlig = v => oversiktLag.setVisible(v);
   async function tegnOversikt() {
     if (!ov) return;
     const url = URL.createObjectURL(await fargeleggBlob(ov.buf)), gammel = ovUrl; ovUrl = url;
     ovRes = (ov.ext[2] - ov.ext[0]) / new DataView(ov.buf).getUint32(16);   /* kartmeter per piksel i det lagrede bildet */
-    oversiktLag.setMinResolution(ovRes); oversiktGrov.setMaxResolution(ovRes);
     oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: UTM }));
-    oversiktGrov.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: UTM, interpolate: false }));
     if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
     ovBilde = null; tegnPlan(); if (planPaa) regnPlan();
   }
   async function hentOversikt(k, mitt) {
-    ov = null; ovBilde = null; oversiktLag.setSource(null); oversiktGrov.setSource(null); oversiktSynlig(true);
+    ov = null; ovBilde = null; oversiktLag.setSource(null); oversiktSynlig(true);
     if (!oversikter[k.nr]) return;
     try {
       const buf = await hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
@@ -427,7 +429,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const grenseKilde = new ol.source.Vector();
   const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) }) });
   const view = new ol.View({ projection: UTM, center: ol.proj.fromLonLat([15, 65], UTM), resolutions: OPPLOSNINGER.slice(2), resolution: OPPLOSNINGER[4], enableRotation: false });
-  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, oversiktGrov, tema, planLag, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
+  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, planLag, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
   const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); grense.changed() };
 
@@ -525,7 +527,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = (av(rgb('pjor')) < av(rgb('pnat')) ? 'Jordbruk' : 'Natur') + ', satt av til framtidig utbygging'; return;
     }
     let d = tema.getVisible() ? tema.getData(e.pixel) : null;
-    if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = (view.getResolution() < ovRes ? oversiktGrov : oversiktLag).getData(e.pixel);
+    if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = oversiktLag.getData(e.pixel);
     if (!d || d[3] < 40) { p.textContent = 'Ingen synlig klasse her (hav, skjult kartlag eller for langt ute).'; return }
     let best = null, min = 1e9;
     KL.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
