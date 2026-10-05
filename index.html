@@ -262,8 +262,11 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '5. oktober kl. 23.25';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '5. oktober kl. 23.35';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
+  /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
+  let bruk = {};
+  const tidSlutt = (navn, t0) => { const d = performance.now() - t0, b = bruk[navn] || (bruk[navn] = { sum: 0, n: 0, maks: 0 }); b.sum += d; b.n++; if (d > b.maks) b.maks = d };
   const nf = (v, d = 1) => v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
   const kb = b => b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
   const vis = { beb: true, jor: true, nat: true, hav: true, inn: true, elv: true };
@@ -346,7 +349,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     dv.setUint32(8 + data.length, (c ^ 0xFFFFFFFF) >>> 0); return o;
   }
   async function fargeleggBlob(buf) {
-    const F = klassefarger(), u = new Uint8Array(buf), dv = new DataView(buf);
+    const t0 = performance.now(), F = klassefarger(), u = new Uint8Array(buf), dv = new DataView(buf);
     let p = 8, plte = null, trns = null, type3 = false; const deler = [];
     while (p + 12 <= u.length) {
       const len = dv.getUint32(p), type = String.fromCharCode(u[p + 4], u[p + 5], u[p + 6], u[p + 7]);
@@ -367,7 +370,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     }
     const ut = [u.subarray(0, 8)];
     deler.forEach(([type, pos, len]) => { if (type === 'PLTE') ut.push(pngDel('PLTE', nyP), pngDel('tRNS', nyT)); else if (type !== 'tRNS') ut.push(u.subarray(pos, pos + len)) });
-    return new Blob(ut, { type: 'image/png' });
+    const blob = new Blob(ut, { type: 'image/png' }); tidSlutt('kartfliser', t0); return blob;
   }
 
   /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
@@ -452,7 +455,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       g.drawImage(ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r, 0, 0, 512, 512);
       g.globalCompositeOperation = 'destination-in'; kommuneSti(g, klipp, u, s); g.fill('evenodd'); g.globalCompositeOperation = 'source-over';
     } else return null;
-    return g.getImageData(0, 0, 512, 512).data;
+    const t0 = performance.now(), data = g.getImageData(0, 0, 512, 512).data; tidSlutt('dagens klasser', t0); return data;
   }
   /* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra et rutenett
      for hele kommunen (21 meter per rute, laget av arealutregningen). En flispiksel får farge bare hvis det faktisk ligger
@@ -486,11 +489,11 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   async function lastPlanFlis(tile, src) {
     try {
-      if (tile.getTileCoord()[0] <= 9) { const c = grovPlanFlis(tile.getTileCoord()); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } flisFraLerret(tile, c); return }
+      if (tile.getTileCoord()[0] <= 9) { const t0 = performance.now(), c = grovPlanFlis(tile.getTileCoord()); tidSlutt('planfliser', t0); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } flisFraLerret(tile, c); return }
       const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentPlan(src)]);
       if (!K) throw new Error('mangler dagens klasser');
-      const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
-      g.drawImage(await createImageBitmap(new Blob([planBuf])), 0, 0, 512, 512);
+      const c = lerret(), g = c.getContext('2d', { willReadFrequently: true }), bm = await createImageBitmap(new Blob([planBuf])), t0 = performance.now();
+      g.drawImage(bm, 0, 0, 512, 512);
       const P = g.getImageData(0, 0, 512, 512).data, ut = g.createImageData(512, 512), o = ut.data;
       const pjor = rgb('pjor'), pnat = rgb('pnat');   /* uavhengig av hvilke klasser som vises i kartet */
       /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
@@ -504,8 +507,8 @@ td.feil { color: var(--ink); font-weight: 600 }
         const f = k === JOR ? pjor : pnat;
         o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; tegnet = true;
       }
-      if (!tegnet) { tile.setState(TOM); return }   /* de fleste fliser har ingen planlagt utbygging. Tomme fliser tegnes ikke, så laget koster ingenting der. */
-      g.putImageData(ut, 0, 0); flisFraLerret(tile, c);
+      if (!tegnet) { tile.setState(TOM); tidSlutt('planfliser', t0); return }   /* de fleste fliser har ingen planlagt utbygging. Tomme fliser tegnes ikke, så laget koster ingenting der. */
+      g.putImageData(ut, 0, 0); flisFraLerret(tile, c); tidSlutt('planfliser', t0);
     } catch (e) { tile.setState(3) }
   }
   const nyPlanKilde = () => new ol.source.XYZ({ tileUrlFunction: planUrl, tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: lastPlanFlis, transition: 0, projection: UTM });
@@ -570,13 +573,13 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   function fargeleggSamling(s, x = 0, y = 0, w = s.c.width, h = s.c.height) {   /* fra rå klassefarger til visningsfarger, for hele lerretet eller bare en flis */
     if (x < 0) { w += x; x = 0 } if (y < 0) { h += y; y = 0 } w = Math.min(w, s.c.width - x); h = Math.min(h, s.c.height - y); if (w <= 0 || h <= 0) return;
-    const F = klassefarger(), d = s.g.getImageData(x, y, w, h), o = d.data; let sist = -1, f = null;
+    const t0 = performance.now(), F = klassefarger(), d = s.g.getImageData(x, y, w, h), o = d.data; let sist = -1, f = null;
     for (let i = 0; i < o.length; i += 4) {
       if (!o[i + 3]) continue;
       const n = (o[i] << 24 | o[i + 1] << 16 | o[i + 2] << 8 | o[i + 3]) >>> 0; if (n !== sist) { sist = n; f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F) }   /* like nabopiksler regnes én gang */
       o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3];
     }
-    s.vg.putImageData(d, x, y);
+    s.vg.putImageData(d, x, y); tidSlutt('fargelegging', t0);
   }
   function visSamling(s) {
     ovRes = s.res; s.kilde = s.kilde || new LerretKilde(s.vis, s.ext);
@@ -587,13 +590,13 @@ td.feil { color: var(--ink); font-weight: 600 }
     const s = samle, n = tc.join('/'); if (!s || s.har.has(n)) return;
     createImageBitmap(new Blob([buf])).then(bm => {
       if (s !== samle || s.har.has(n)) return;
-      s.har.add(n);
+      const t0 = performance.now(); s.har.add(n);
       /* Flisen legges på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
       const u = flisnett.getTileCoordExtent(tc), px = v => Math.round((v - s.ext[0]) / s.res), py = v => Math.round((s.ext[3] - v) / s.res);
       const X = px(u[0]), Y = py(u[3]), W = px(u[2]) - X, H = py(u[1]) - Y;
       s.g.drawImage(bm, X, Y, W, H); s.venter.push([X, Y, W, H]);   /* fargelegges når kartet står stille */
       if (!ov || ov.lerret !== s.c) { ov = { lerret: s.c, ext: s.ext, dynamisk: true }; visSamling(s); status() }
-      planleggEtterarbeid();
+      planleggEtterarbeid(); tidSlutt('sammensatt kart', t0);
     }).catch(() => {});
   }
   /* Alt etterarbeid når det har kommet nye fliser gjøres først når kartet har stått stille litt og ingenting lastes: de nye flisene
@@ -684,7 +687,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   function regnVern() {
     if (!vern || !valgt || vern.nr !== valgt.nr) return visVern();
     const R = planRaster && planRaster.nr === valgt.nr && planPaa && !ingenPlan() ? planRaster : null;
-    vern.omrader.forEach(o => { o.plan = 0; o.smal = 0 }); vern.regnet = !!R;
+    const t0 = performance.now(); vern.omrader.forEach(o => { o.plan = 0; o.smal = 0 }); vern.regnet = !!R;
     if (R && vern.omrader.length) {
       const m = OPPLOSNINGER[R.z] / 2;
       for (const i of R.celler) {
@@ -698,7 +701,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         }
       }
     }
-    visVern();
+    visVern(); tidSlutt('verneområder', t0);
   }
   function visVern() {
     const ok = !!vern && !!valgt && vern.nr === valgt.nr, o = ok ? vern.omrader : [], sum = o.reduce((s, x) => s + x.km2, 0), km = v => v < 0.005 ? 'under 0,01 km²' : nf(v, v < 10 ? 2 : 1) + ' km²';
@@ -785,8 +788,8 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   const klippTilKommunen = e => {
     if (!klipp || !grenseISyne(e.frameState)) return;
-    const c = e.context, vc = ol.render.getVectorContext(e);
-    c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore();
+    const t0 = performance.now(), c = e.context, vc = ol.render.getVectorContext(e);
+    c.save(); c.globalCompositeOperation = 'destination-in'; vc.setStyle(klippStil); vc.drawGeometry(klipp); c.restore(); tidSlutt('klipping', t0);
   };
   const tegnes = (lag, res) => lag.getVisible() && res < lag.getMaxResolution() && res >= lag.getMinResolution();
   const klippSist = (lag, over) => lag.on('postrender', e => { if (!over || !tegnes(over, e.frameState.viewState.resolution)) klippTilKommunen(e) });   /* laget over i samme lerret klipper for begge */
@@ -835,7 +838,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       }));
     } catch (e) { if (mitt === regnNr) { tn.textContent = tj.textContent = ''; note.textContent = 'Arealet kunne ikke regnes ut.' } return }
     if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
-    const nokler = [...under.keys()].map(k => k.split('/').map(Number)), tx0 = Math.min(...nokler.map(t => t[0])), ty0 = Math.min(...nokler.map(t => t[1]));
+    const tStart = performance.now(), nokler = [...under.keys()].map(k => k.split('/').map(Number)), tx0 = Math.min(...nokler.map(t => t[0])), ty0 = Math.min(...nokler.map(t => t[1]));
     const cx0 = tx0 * 512 - kant, cy0 = ty0 * 512 - kant, w = (Math.max(...nokler.map(t => t[0])) - tx0 + 1) * 512 + 2 * kant, h = (Math.max(...nokler.map(t => t[1])) - ty0 + 1) * 512 + 2 * kant;
     /* Verdier per rute: 0 ingenting, 1 natur og 2 jordbruk satt av til utbygging, 3 ukjent fordi kartet ikke er hentet der.
        Ukjente ruter teller som naboer, så et felt ikke skrelles av langs kanten av det hentede. */
@@ -858,7 +861,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       front = ny;
     }
     let rn = 0, rj = 0; for (const i of celler) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
-    planRaster = { nr, z: Z, cx0, cy0, w, h, alle: d, ryddet, celler: Int32Array.from(celler) }; oppfriskPlan();
+    planRaster = { nr, z: Z, cx0, cy0, w, h, alle: d, ryddet, celler: Int32Array.from(celler) }; oppfriskPlan(); tidSlutt('plantall', tStart);
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0', der = dyn ? ' i det hentede kartet' : '';
     tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen${der} (${nf(km2(n.pnat))} km² med smale striper)`;
     tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket${der} (${nf(km2(n.pjor))} km² med smale striper)`;
@@ -922,8 +925,13 @@ td.feil { color: var(--ink); font-weight: 600 }
     $('siste').textContent = !treff ? '' : ov && ov.dynamisk ? 'Viser kart nettleseren allerede har hentet' : 'Viser lagret oversiktsbilde';
   }
   /* Måling til feilsøking: hvor jevnt kartet tegnes mens det flyttes, og hvor lang tid etterarbeidet tar. Vises under Tekniske valg. */
-  let maalRaf = 0, maalSist = 0, maalT = [], maalTekst = ['', ''];
-  const visMaaling = () => { $('maaling').textContent = maalTekst.filter(Boolean).join(' ') || 'Flytt kartet for å måle hvor jevnt det går.' };
+  let maalRaf = 0, maalSist = 0, maalT = [], maalTekst = ['', ''], tegnT0 = 0;
+  const visMaaling = () => {
+    const deler = Object.entries(bruk).filter(([, b]) => b.sum >= 1).sort((a, b) => b[1].sum - a[1].sum).map(([navn, b]) => `${navn} ${Math.round(b.sum)} ms (${b.n} ganger, lengst ${Math.round(b.maks)} ms)`);
+    $('maaling').textContent = [...maalTekst, deler.length ? `Tid brukt siden flyttingen startet: ${deler.join(', ')}.` : ''].filter(Boolean).join(' ') || 'Flytt kartet for å måle hvor jevnt det går.';
+  };
+  kart.on('precompose', () => { tegnT0 = performance.now() }); kart.on('postcompose', () => { if (tegnT0) tidSlutt('tegning', tegnT0) });
+  setInterval(() => { if (!iBevegelse) visMaaling() }, 1500);
   const maalBilde = t => { if (maalSist) maalT.push(t - maalSist); maalSist = t; maalRaf = requestAnimationFrame(maalBilde) };
   function maalFerdig() {
     cancelAnimationFrame(maalRaf); if (maalT.length < 5) return;
@@ -931,7 +939,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     maalTekst[0] = `Siste flytting: ${Math.round(1000 / median)} bilder per sekund, lengste opphold ${Math.round(a[a.length - 1])} ms, ${a.filter(v => v > 100).length} opphold over 0,1 s (${a.length} bilder).`; visMaaling();
   }
   $('versjon').textContent = `Utgave: ${VERSJON}.`;
-  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer); cancelAnimationFrame(maalRaf); maalT = []; maalSist = 0; maalRaf = requestAnimationFrame(maalBilde) });
+  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer); cancelAnimationFrame(maalRaf); maalT = []; maalSist = 0; bruk = {}; maalRaf = requestAnimationFrame(maalBilde) });
   kart.on('moveend', () => { iBevegelse = false; maalFerdig(); status(); kart.render(); if (etterVenter) planleggEtterarbeid() });
   view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktSynlig(true) });
   kart.on('rendercomplete', () => {
