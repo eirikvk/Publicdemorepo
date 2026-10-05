@@ -226,6 +226,8 @@ td.feil { color: var(--ink); font-weight: 600 }
     </section>
     <section>
       <h2>Tekniske valg</h2>
+      <p id="versjon"></p>
+      <p id="maaling" role="status">Flytt kartet for å måle hvor jevnt det går.</p>
       <label class="valg" for="smale"><input type="checkbox" id="smale">Vis smale striper i planlagt utbygging. Det er felt som ikke er bredere enn rundt 40 meter noe sted, ofte grøntdrag og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.</label>
     </section>
   </div>
@@ -260,6 +262,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
+  const VERSJON = '5. oktober kl. 23.25';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   const nf = (v, d = 1) => v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
   const kb = b => b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
@@ -601,7 +604,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     etterVenter = true; clearTimeout(etterTimer);
     etterTimer = setTimeout(async () => {
       if (iBevegelse || opptatt()) return planleggEtterarbeid();
-      const s = samle;
+      const s = samle, t0 = performance.now(), antall = s ? s.venter.length : 0;
       if (s && s.venter.length) {
         while (s.venter.length) {
           if (iBevegelse || s !== samle) return;   /* moveend tar opp tråden igjen */
@@ -610,7 +613,8 @@ td.feil { color: var(--ink); font-weight: 600 }
         if (s.kilde) s.kilde.oppdater(s.vis);
       }
       if (iBevegelse || s !== samle) return;
-      etterVenter = false; if (planPaa) regnAlt();
+      etterVenter = false; if (planPaa) await regnAlt();
+      maalTekst[1] = `Siste etterarbeid: ${Math.round(performance.now() - t0)} ms for ${antall} ${antall === 1 ? 'ny flis' : 'nye fliser'}.`; visMaaling();
     }, 500);
   }
   async function hentOversikt(k, mitt) {
@@ -917,8 +921,18 @@ td.feil { color: var(--ink); font-weight: 600 }
     oversiktSynlig(true); $('ute').hidden = treff || !valgt;
     $('siste').textContent = !treff ? '' : ov && ov.dynamisk ? 'Viser kart nettleseren allerede har hentet' : 'Viser lagret oversiktsbilde';
   }
-  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer) });
-  kart.on('moveend', () => { iBevegelse = false; status(); kart.render(); if (etterVenter) planleggEtterarbeid() });
+  /* Måling til feilsøking: hvor jevnt kartet tegnes mens det flyttes, og hvor lang tid etterarbeidet tar. Vises under Tekniske valg. */
+  let maalRaf = 0, maalSist = 0, maalT = [], maalTekst = ['', ''];
+  const visMaaling = () => { $('maaling').textContent = maalTekst.filter(Boolean).join(' ') || 'Flytt kartet for å måle hvor jevnt det går.' };
+  const maalBilde = t => { if (maalSist) maalT.push(t - maalSist); maalSist = t; maalRaf = requestAnimationFrame(maalBilde) };
+  function maalFerdig() {
+    cancelAnimationFrame(maalRaf); if (maalT.length < 5) return;
+    const a = maalT.slice().sort((x, y) => x - y), median = a[a.length >> 1];
+    maalTekst[0] = `Siste flytting: ${Math.round(1000 / median)} bilder per sekund, lengste opphold ${Math.round(a[a.length - 1])} ms, ${a.filter(v => v > 100).length} opphold over 0,1 s (${a.length} bilder).`; visMaaling();
+  }
+  $('versjon').textContent = `Utgave: ${VERSJON}.`;
+  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer); cancelAnimationFrame(maalRaf); maalT = []; maalSist = 0; maalRaf = requestAnimationFrame(maalBilde) });
+  kart.on('moveend', () => { iBevegelse = false; maalFerdig(); status(); kart.render(); if (etterVenter) planleggEtterarbeid() });
   view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktSynlig(true) });
   kart.on('rendercomplete', () => {
     if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || !tema.getVisible() || opptatt()) return;   /* aldri skjul oversikten midt i en bevegelse */
