@@ -7,21 +7,23 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
 <style>
-/* Klassefargene er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog.
+/* Klassefargene er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog,
+   og for vann hav, innsjøer og elver.
    Planlagt utbygging har mørkere slektninger av klassefargene: blågrønn for natur og brun for jordbruk. Parene er kontrollert for fargeblindhet. */
 /* Layout: velgere øverst, kartet som eneste panel til venstre, tallene åpent til høyre, metode og kall-logg under. */
 :root {
   --bg: #F2F4F1; --surface: #FBFCFA; --ink: #17201C; --ink-2: #47534E; --ink-3: #6F7B75; --line: #D3DAD5;
   --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #155E75; --pjor: #92400E; --accent: #2B4C7E;
+  --hav: #BDD7E7; --inn: #6BAED6; --elv: #08519C; --land: #B9B3A4;
   --display: "Familjen Grotesk", "Avenir Next", "Segoe UI", sans-serif;
   --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #121715; --surface: #1A201D; --ink: #E9EEEA; --ink-2: #B5BFB9; --ink-3: #88938D; --line: #2E3733;
-  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #3B9AC2; --pjor: #9F5512; --accent: #9DBDEE; color-scheme: dark } }
+  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #3B9AC2; --pjor: #9F5512; --accent: #9DBDEE; --land: #7A756A; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #121715; --surface: #1A201D; --ink: #E9EEEA; --ink-2: #B5BFB9; --ink-3: #88938D; --line: #2E3733;
-  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #3B9AC2; --pjor: #9F5512; --accent: #9DBDEE; color-scheme: dark }
+  --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #3B9AC2; --pjor: #9F5512; --accent: #9DBDEE; --land: #7A756A; color-scheme: dark }
 
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -91,6 +93,11 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .forklaring b { display: block; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums }
 .forklaring #tallnote { color: var(--ink-3) }
 .plan { opacity: .92 }
+.vann { display: flex; flex-direction: column; gap: 10px }
+.tegn { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums }
+.tegn span { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap }
+.tegn i { width: 12px; height: 12px; border-radius: 3px }
+.tegn b { font-weight: 600; color: var(--ink) }
 .hint { font-size: 13px; color: var(--ink-3) }
 
 .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 40px; border-top: 1px solid var(--line); padding-top: 28px }
@@ -137,7 +144,7 @@ td.feil { color: var(--ink); font-weight: 600 }
 
     <section class="nums" aria-label="Arealtall">
       <h2>Areal i kommunen, SSB <span id="aar"></span></h2>
-      <div class="total"><b id="tot">–</b><span>land og ferskvann</span></div>
+      <div class="total"><b id="tot">–</b><span>land</span></div>
       <div class="bar" id="bar" role="img"></div>
       <div class="rows" id="rows"></div>
       <div class="forklaring">
@@ -145,7 +152,13 @@ td.feil { color: var(--ink); font-weight: 600 }
         <div><i style="background:var(--pjor)"></i><p>Jordbruk som kommuneplanen setter av til framtidig utbygging <b id="tall-pjor"></b></p></div>
         <p id="tallnote"></p>
       </div>
-      <p class="hint">Trykk på et kartlag for å skjule eller vise det. De fire lagene er uavhengige, så planlagt utbygging kan vises alene. Havet er ikke farget og er ikke med i tallene. Planlaget er omtrentlig og bare til illustrasjon.</p>
+      <div class="vann">
+        <h2>Land og vann</h2>
+        <div class="bar" id="bar2" role="img"></div>
+        <div class="tegn" id="tegn2"></div>
+        <p class="hint" id="vannnote"></p>
+      </div>
+      <p class="hint">Trykk på et kartlag for å skjule eller vise det. De fire lagene er uavhengige, så planlagt utbygging kan vises alene. Vann vises i kartet med grunnkartets farger og er ikke med i tallene for bebygd, jordbruk og natur. Planlaget er omtrentlig og bare til illustrasjon.</p>
     </section>
   </div>
 
@@ -165,10 +178,11 @@ td.feil { color: var(--ink); font-weight: 600 }
         <tbody>
           <tr><td>Bebygd</td><td>Bebygd og opparbeidet areal</td><td>01–14</td></tr>
           <tr><td>Jordbruk</td><td>Dyrket mark og grasmark</td><td>15–16</td></tr>
-          <tr><td>Natur</td><td>Skog, hei, lite vegetert mark, våtmark, elv, innsjø og strand</td><td>17–22 og 24</td></tr>
+          <tr><td>Natur</td><td>Skog, hei, lite vegetert mark, våtmark og strand</td><td>17–21 og 24</td></tr>
+          <tr><td>Vann</td><td>Innsjøer, elver og hav</td><td>22.01 og 22.02. Hav er regnet ut.</td></tr>
         </tbody>
       </table></div>
-      <p>Tredelingen sendes som en stil i hvert kall, så NIBIO tegner tre klasser i stedet for elleve. Fargene settes i nettleseren og er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog.</p>
+      <p>Inndelingen sendes som en stil i hvert kall, så NIBIO tegner seks klasser i stedet for elleve: de tre på land, og hav, innsjø og elv. Fargene settes i nettleseren og er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog, og grunnkartets tre farger for vann.</p>
       <p>Planlagt endring hentes fra kommuneplanens arealdel hos DiBK: arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig. Nettleseren legger dette oppå dagens klasser og viser bare det som i dag er natur eller jordbruk, med en mørkere farge for hver av de to. Laget kan vises alene, uavhengig av de tre klassene.</p>
     </section>
     <section>
@@ -201,16 +215,21 @@ td.feil { color: var(--ink); font-weight: 600 }
   const SAMTIDIG = 4;     /* høyst fire kall mot NIBIO om gangen */
   const SVAKEST = 0.35;   /* svakeste farge for en piksel med bare litt planlagt utbygging i seg, så den ikke forsvinner helt */
   const MAKSTETTHET = 2;  /* telefoner har ofte tre piksler per punkt; to er nok og gir under halvparten så store bilder */
-  const DATAFARGE = { beb: '#ff0000', jor: '#00ff00', nat: '#0000ff' };  /* rene farger fra NIBIO, byttes til visningsfarger i nettleseren */
+  /* Rene farger fra NIBIO, byttes til visningsfarger i nettleseren. De seks er valgt slik at en blanding av to klasser
+     (kantpikslene) ikke kan forveksles med en blanding av to andre. */
+  const DATAFARGE = { beb: [255, 0, 0], jor: [0, 255, 0], nat: [0, 0, 255], hav: [255, 128, 255], inn: [0, 128, 255], elv: [255, 128, 128] };
   const KL = [
     ['beb', 'Bebygd', ['bebygdOpparbeidetAreal'], ['01', '02', '03', '04', '05', '06', '07', '08-09', '10-11', '12-13', '14']],
     ['jor', 'Jordbruk', ['dyrketmark', 'grasmark'], ['15-16']],
-    ['nat', 'Natur', ['skog', 'heiBuskmark', 'liteVegetertMark', 'vatmark', 'elverBekkerKanaler', 'innsjoerVannmagasiner', 'kyststrenderSvabergDyner'], ['17', '18', '19', '20', '21', '22', '24']]
+    ['nat', 'Natur', ['skog', 'heiBuskmark', 'liteVegetertMark', 'vatmark', 'kyststrenderSvabergDyner'], ['17', '18', '19', '20', '21', '24']]
   ];
+  /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
+  const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
+  const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
   const $ = id => document.getElementById(id);
   const nf = (v, d = 1) => v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
   const kb = b => b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
-  const vis = { beb: true, jor: true, nat: true };
+  const vis = { beb: true, jor: true, nat: true, hav: true, inn: true, elv: true };
   let fylker = [], valgt = null, valgNr = 0;
 
   /* Kall-logg: hvert kall mot en åpen kilde måles i nettleseren. */
@@ -230,25 +249,44 @@ td.feil { color: var(--ink); font-weight: 600 }
     } catch (e) { if (!stille) logg(kilde, hva, 0, 0, true); throw e }
   }
 
-  /* Stilen som sendes til NIBIO: tre regler med rene farger. Den er lik i alle kall. */
+  /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
   const farge = id => getComputedStyle(document.documentElement).getPropertyValue('--' + id).trim();
   const rgb = id => { const v = farge(id).replace('#', ''); return [0, 2, 4].map(i => parseInt(v.substr(i, 2), 16)) };
   const SLD = (() => {
-    const regler = KL.map(([id, , verdier]) => {
+    const hex = f => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
+    const regler = ALLE.map(([id, , verdier]) => {
       let f = verdier.map(v => `<ogc:PropertyIsEqualTo><ogc:PropertyName>okosystemtypeniva1</ogc:PropertyName><ogc:Literal>${v}</ogc:Literal></ogc:PropertyIsEqualTo>`).join('');
       if (verdier.length > 1) f = `<ogc:Or>${f}</ogc:Or>`;
-      return `<Rule><ogc:Filter>${f}</ogc:Filter><PolygonSymbolizer><Fill><CssParameter name="fill">${DATAFARGE[id]}</CssParameter></Fill></PolygonSymbolizer></Rule>`;
+      return `<Rule><ogc:Filter>${f}</ogc:Filter><PolygonSymbolizer><Fill><CssParameter name="fill">${hex(DATAFARGE[id])}</CssParameter></Fill></PolygonSymbolizer></Rule>`;
     }).join('');
     return `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;
   })();
 
   /* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger.
      Siden bytter ut tabellen og lar selve bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. */
+  /* Hver farge i bildet tolkes som en blanding av de to klassene den ligger nærmest linjen mellom.
+     Oppslaget regnes ut én gang, for 32 nivåer per fargekanal: klasse A, klasse B og hvor mye av A. */
+  const LA = new Uint8Array(32768), LB = new Uint8Array(32768), LT = new Uint8Array(32768);
+  {
+    const P = ALLE.map(([id]) => DATAFARGE[id]);
+    for (let q = 0; q < 32768; q++) {
+      const p = [(q >> 10) * 255 / 31, (q >> 5 & 31) * 255 / 31, (q & 31) * 255 / 31]; let best = Infinity;
+      for (let a = 0; a < P.length; a++) for (let b = a + 1; b < P.length; b++) {
+        let dd = 0, pd = 0; for (let k = 0; k < 3; k++) { const d = P[a][k] - P[b][k]; dd += d * d; pd += (p[k] - P[b][k]) * d }
+        const t = Math.max(0, Math.min(1, pd / dd)); let e = 0; for (let k = 0; k < 3; k++) { const d = p[k] - P[b][k] - t * (P[a][k] - P[b][k]); e += d * d }
+        if (e < best) { best = e; LA[q] = a; LB[q] = b; LT[q] = Math.round(t * 255) }
+      }
+    }
+  }
+  const oppslag = (r, g, b) => (r >> 3) << 10 | (g >> 3) << 5 | b >> 3;
+  const klasseAv = (r, g, b) => { const q = oppslag(r, g, b); return LT[q] >= 128 ? LA[q] : LB[q] };   /* klassen det er mest av i pikselen */
   function tilFarge(r, g, b, a, F) {
-    const s = r + g + b; if (!s || !a) return [0, 0, 0, 0];
-    const v = [r / s, g / s, b / s]; let syn = 0, R = 0, G = 0, B = 0;
-    for (let c = 0; c < 3; c++) if (F[c]) { syn += v[c]; R += v[c] * F[c][0]; G += v[c] * F[c][1]; B += v[c] * F[c][2] }
-    return syn > 0 ? [Math.round(R / syn), Math.round(G / syn), Math.round(B / syn), Math.round(a * syn)] : [0, 0, 0, 0];
+    if (!a) return [0, 0, 0, 0];
+    const q = oppslag(r, g, b), A = F[LA[q]], B = F[LB[q]], t = LT[q] / 255, va = A ? t : 0, vb = B ? 1 - t : 0, syn = va + vb;
+    if (!(syn > 0)) return [0, 0, 0, 0];
+    const f = [0, 0, 0, Math.round(a * syn)];
+    for (let k = 0; k < 3; k++) f[k] = Math.round(((A ? A[k] * va : 0) + (B ? B[k] * vb : 0)) / syn);
+    return f;
   }
   const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0 } return t })();
   function pngDel(type, data) {
@@ -258,7 +296,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     dv.setUint32(8 + data.length, (c ^ 0xFFFFFFFF) >>> 0); return o;
   }
   async function fargeleggBlob(buf) {
-    const F = KL.map(([id]) => vis[id] ? rgb(id) : null), u = new Uint8Array(buf), dv = new DataView(buf);
+    const F = ALLE.map(([id]) => vis[id] ? rgb(id) : null), u = new Uint8Array(buf), dv = new DataView(buf);
     let p = 8, plte = null, trns = null, type3 = false; const deler = [];
     while (p + 12 <= u.length) {
       const len = dv.getUint32(p), type = String.fromCharCode(u[p + 4], u[p + 5], u[p + 6], u[p + 7]);
@@ -394,9 +432,9 @@ td.feil { color: var(--ink); font-weight: 600 }
       const vent = !visSmale && !R && valgt && !oversikter[valgt.nr];   /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
       if (!vent) for (let py = 0, i = 0; py < 512; py++) for (let px = 0; px < 512; px++, i += 4) {
         if (P[i + 3] < 100 || K[i + 3] < 100) continue;                 /* utenfor planområdene, eller hav */
-        const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;   /* allerede bebygd i dag */
+        const k = klasseAv(K[i], K[i + 1], K[i + 2]); if (k !== JOR && k !== NAT) continue;   /* allerede bebygd i dag, eller vann */
         if (R) { const lx = ((tx * 512 + px) >> sh) - R.x0 * 512, ly = ((ty * 512 + py) >> sh) - R.y0 * 512; if (lx < 0 || ly < 0 || lx >= R.w || ly >= R.h || !R.naer[ly * R.w + lx]) continue }
-        const f = gr >= b ? pjor : pnat;
+        const f = k === JOR ? pjor : pnat;
         o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255;
       }
       g.putImageData(ut, 0, 0); await flisFraLerret(tile, c);
@@ -449,7 +487,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     }).catch(() => {});
   }
   function fargeleggLerret(k) {
-    const F = KL.map(([id]) => vis[id] ? rgb(id) : null), c = document.createElement('canvas'); c.width = k.width; c.height = k.height;
+    const F = ALLE.map(([id]) => vis[id] ? rgb(id) : null), c = document.createElement('canvas'); c.width = k.width; c.height = k.height;
     const d = k.getContext('2d').getImageData(0, 0, k.width, k.height), o = d.data;
     for (let i = 0; i < o.length; i += 4) { if (!o[i + 3]) continue; const f = tilFarge(o[i], o[i + 1], o[i + 2], o[i + 3], F); o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = f[3] }
     c.getContext('2d').putImageData(d, 0, 0); return new Promise(ok => c.toBlob(ok));
@@ -532,8 +570,8 @@ td.feil { color: var(--ink); font-weight: 600 }
         const start = (tc[2] - y0) * 512 * w + (tc[1] - x0) * 512;
         for (let i = 0, q = 0; i < K.length; i += 4, q++) {
           if (K[i + 3] < 100) continue;
-          const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) { n.beb++; continue }
-          const jor = gr >= b, plan = P[i + 3] >= 100;
+          const k = klasseAv(K[i], K[i + 1], K[i + 2]); if (!k) { n.beb++; continue } if (k !== JOR && k !== NAT) continue;   /* vann telles ikke */
+          const jor = k === JOR, plan = P[i + 3] >= 100;
           if (jor) { n.jor++; if (plan) n.pjor++ } else { n.nat++; if (plan) n.pnat++ }
           if (plan) d[start + (q >> 9) * w + (q & 511)] = jor ? 2 : 1;
         }
@@ -555,7 +593,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     const felles = 'Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
     if (dyn) {
       const a = km2(n.beb + n.jor + n.nat), rute = Math.round(Math.max(m, sm.res));
-      note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${nf(a)} km²${ssbSum ? ` av ${nf(ssbSum)} km² (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
+      note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${nf(a)} km² land${ssbSum ? ` av ${nf(ssbSum)} km² (${nf(Math.min(100, a / ssbSum * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
     } else note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. ${felles}`;
   }
   const visPlan = () => { planLag.setVisible(planPaa && !!klipp); regnPlan() };   /* resten av kartet står urørt når laget slås på */
@@ -588,9 +626,9 @@ td.feil { color: var(--ink); font-weight: 600 }
     }
     let d = tema.getVisible() ? tema.getData(e.pixel) : null;
     if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = oversiktLag.getData(e.pixel);
-    if (!d || d[3] < 40) { p.textContent = 'Ingen synlig klasse her (hav, skjult kartlag eller for langt ute).'; return }
+    if (!d || d[3] < 40) { p.textContent = 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).'; return }
     let best = null, min = 1e9;
-    KL.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
+    ALLE.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
     p.innerHTML = 'Valgt punkt: <b></b>'; p.firstElementChild.textContent = best;
   });
 
@@ -609,6 +647,21 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   $('smale').addEventListener('change', e => { visSmale = e.target.checked; tegnPlan() });
   $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan() });
+  /* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
+     kommunens flate (grensen fra Kartverket) minus land og ferskvann. */
+  let ferskvann = null, flate = 0;
+  function visVann() {
+    const bar = $('bar2'), tegn = $('tegn2'), note = $('vannnote'); bar.textContent = tegn.textContent = note.textContent = ''; bar.removeAttribute('aria-label');
+    if (!ssbSum || !ferskvann || !flate) return;
+    let hav = flate ? flate - ssbSum - ferskvann.inn - ferskvann.elv : 0; if (hav < Math.max(0.5, flate * 0.005)) hav = 0;   /* små avvik mellom grense og statistikk er ikke hav */
+    const deler = [['land', 'Land', ssbSum], ['inn', 'Innsjø', ferskvann.inn], ['elv', 'Elv', ferskvann.elv], ['hav', 'Hav', hav]].filter(d => d[2] > 0), sum = deler.reduce((s, d) => s + d[2], 0);
+    deler.forEach(([id, navn, v]) => {
+      const s = document.createElement('i'); s.style.cssText = `flex:${v} 1 0;background:var(--${id})`; s.title = `${navn}: ${nf(v)} km²`; bar.appendChild(s);
+      const t = document.createElement('span'); t.innerHTML = `<i style="background:var(--${id})"></i>${navn} <b></b>`; t.lastElementChild.textContent = `${id === 'hav' ? 'ca. ' : ''}${nf(v, v < 10 ? 2 : 1)} km²`; tegn.appendChild(t);
+    });
+    bar.setAttribute('aria-label', deler.map(([, n, v]) => `${n} ${nf(v / sum * 100)} prosent`).join(', '));
+    note.textContent = hav ? 'Land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate (grensen fra Kartverket) minus land og ferskvann.' : 'Land, innsjø og elv er SSBs tall. Kommunen har ikke hav.';
+  }
   function visTall(a, aar) {
     const sum = a[0] + a[1] + a[2], bar = $('bar'); bar.textContent = ''; ssbSum = sum;
     $('tot').textContent = nf(sum) + ' km²'; $('aar').textContent = aar;
@@ -620,16 +673,17 @@ td.feil { color: var(--ink); font-weight: 600 }
       $('pc-' + id).textContent = p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %';
     });
   }
-  function tomTall(tekst) { ssbSum = 0; $('tot').textContent = tekst; $('bar').textContent = ''; KL.forEach(([id]) => { $('km-' + id).textContent = '–'; $('pc-' + id).textContent = '–' }) }
+  function tomTall(tekst) { ssbSum = 0; ferskvann = null; visVann(); $('tot').textContent = tekst; $('bar').textContent = ''; KL.forEach(([id]) => { $('km-' + id).textContent = '–'; $('pc-' + id).textContent = '–' }) }
 
   async function hentTall(k, mitt) {
-    const koder = KL.flatMap(x => x[3]).join(',');
+    const koder = [...KL.flatMap(x => x[3]), ...VANN.map(x => x[3]).filter(Boolean)].join(',');
     try {
       const j = await hent('SSB', `Areal for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&valueCodes[Region]=${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=top(1)`);
       if (mitt !== valgNr) return;
       const ix = j.dimension.ArealKlasse.category.index, tid = j.dimension.Tid.category.index;
       const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
-      visTall(KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)), Array.isArray(tid) ? tid[0] : Object.keys(tid)[0]);
+      ferskvann = { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 };
+      visTall(KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)), Array.isArray(tid) ? tid[0] : Object.keys(tid)[0]); visVann();
     } catch (e) { if (mitt === valgNr) tomTall('Tallene kunne ikke hentes') }
   }
   async function hentGrense(k, mitt) {
@@ -638,6 +692,9 @@ td.feil { color: var(--ink); font-weight: 600 }
       if (mitt !== valgNr) return;
       const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
       grenseKilde.clear(); grenseKilde.addFeature(new ol.Feature(geom));
+      {   /* flaten i km²: arealet i UTM33 rettet for målestokken i kartprojeksjonen, som øker med avstanden fra sonens midtlinje */
+        const u = geom.getExtent(), k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2)); flate = geom.getArea() / (k * k) / 1e6; visVann();
+      }
       klipp = geom; tema.setExtent(geom.getExtent()); planLag.setExtent(geom.getExtent()); tema.setVisible(true); visPlan();
       if (!oversikter[k.nr]) nySamling(geom.getExtent());
       if (!k.boks) view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
@@ -654,7 +711,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     try { history.replaceState(null, '', '#' + nr) } catch (e) {}
     $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
     $('probe').textContent = 'Trykk på kartet for å se klassen.'; tomTall('Henter …');
-    grenseKilde.clear(); klipp = null; planRaster = null; tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
+    grenseKilde.clear(); klipp = null; flate = 0; planRaster = null; tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
     hentOversikt(k, mitt);
     if (k.boks) view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
     hentTall(k, mitt); hentGrense(k, mitt); status();
