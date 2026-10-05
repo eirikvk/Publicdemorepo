@@ -59,6 +59,7 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .ol-attribution, .ol-attribution:not(.ol-collapsed) { right: 10px; bottom: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; color: var(--ink-2) }
 .ol-attribution ul { color: var(--ink-2); text-shadow: none } .ol-attribution button { display: none }
 .ol-attribution.ol-collapsed ul { display: inline }
+.tema { opacity: .86 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bakgrunn { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) } }
 :root[data-theme="dark"] .bakgrunn { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) }
 
@@ -254,7 +255,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
      så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
   const raa = new Map();   /* rå flisbilder, slik at fargebytte og skjuling av klasser ikke krever nye kall */
-  const ko = []; let aktive = 0, nyeKall = false, rundeTimer = null, runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
+  const ko = []; let aktive = 0, nyeKall = false, feilIVisning = false, rundeTimer = null, runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   const flisnett = ol.tilegrid.createXYZ({ tileSize: 256, minZoom: FLISNIVA, maxZoom: 19 });
   function flisUrl(tc) {
     return WMS + '?' + new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'okosystemtype', styles: '', crs: 'EPSG:3857',
@@ -277,7 +278,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       if (!(r.headers.get('content-type') || '').startsWith('image')) throw new Error('ikke bilde');
       const buf = await r.arrayBuffer(); raa.set(src, buf); if (raa.size > 400) raa.delete(raa.keys().next().value);
       runde.n++; runde.bytes += buf.byteLength; return buf;
-    } catch (e) { runde.feil++; throw e }
+    } catch (e) { runde.feil++; feilIVisning = true; throw e }
     finally { aktive--; slipp(); if (!aktive && !ko.length) rundeTimer = setTimeout(rundeFerdig, 200) }
   }
   function lastFlis(tile, src) {
@@ -287,12 +288,12 @@ td.feil { color: var(--ink); font-weight: 600 }
     }).catch(() => tile.setState(3));
   }
   const nyFlisKilde = () => new ol.source.XYZ({ tileUrlFunction: flisUrl, tileGrid: flisnett, tilePixelRatio: 2, tileLoadFunction: lastFlis, transition: 0, projection: 'EPSG:3857' });
-  const tema = new ol.layer.Tile({ className: 'tema', source: nyFlisKilde(), opacity: 0.86, maxResolution: MAKSRES });
-  const fargeleggFliser = () => tema.setSource(nyFlisKilde());   /* flisene tegnes på nytt fra de rå bildene, uten nye kall */
+  const tema = new ol.layer.Tile({ className: 'tema', source: nyFlisKilde(), maxResolution: MAKSRES });
+  const fargeleggFliser = () => { oversiktLag.setVisible(true); tema.setSource(nyFlisKilde()) };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall */
 
   /* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv. */
   let oversikter = {}, ov = null, ovUrl = null;
-  const oversiktLag = new ol.layer.Image({ className: 'oversikt', opacity: 0.86 });
+  const oversiktLag = new ol.layer.Image({ className: 'tema' });   /* samme lerret som flisene, så flisene dekker oversikten der de er lastet */
   async function tegnOversikt() {
     if (!ov) return;
     const url = URL.createObjectURL(await fargeleggBlob(ov.buf)), gammel = ovUrl; ovUrl = url;
@@ -313,23 +314,24 @@ td.feil { color: var(--ink); font-weight: 600 }
   const slorKilde = new ol.source.Vector(), grenseKilde = new ol.source.Vector();
   const slor = new ol.layer.Vector({ className: 'slor', source: slorKilde, style: () => new ol.style.Style({ fill: new ol.style.Fill({ color: farge('slor') }) }) });
   const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) }) });
-  const view = new ol.View({ center: ol.proj.fromLonLat([15, 65]), zoom: 4, maxZoom: 19, enableRotation: false, constrainResolution: true });
+  const view = new ol.View({ center: ol.proj.fromLonLat([15, 65]), zoom: 4, maxZoom: 19, enableRotation: false });
   const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, slor, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
   const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); slor.changed(); grense.changed() };
 
-  /* Oversiktsbildet vises når kartet er zoomet ut. Når flisene for utsnittet er på plass, tar de over. */
+  /* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
+     alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
   function status() {
     if (view.getResolution() < MAKSRES) { $('ute').hidden = true; return }
     const o = valgt && oversikter[valgt.nr], treff = !!o && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
     oversiktLag.setVisible(true); $('ute').hidden = treff || !valgt; $('siste').textContent = treff ? 'Viser lagret oversiktsbilde' : '';
   }
-  kart.on('movestart', () => { nyeKall = false });
+  kart.on('movestart', () => { nyeKall = false; feilIVisning = false; oversiktLag.setVisible(true) });
   kart.on('moveend', status);
   kart.on('rendercomplete', () => {
-    if (view.getResolution() >= MAKSRES || !valgt) return;
-    oversiktLag.setVisible(false);
-    if (!nyeKall && !aktive && !ko.length) $('siste').textContent = 'Ingen nye kall. Flisene lå allerede i nettleseren.';
+    if (view.getResolution() >= MAKSRES || !valgt || aktive || ko.length) return;
+    if (!feilIVisning) oversiktLag.setVisible(false);
+    if (!nyeKall) $('siste').textContent = 'Ingen nye kall. Flisene lå allerede i nettleseren.';
   });
 
   /* Trykk på kartet: les fargen i punktet og finn klassen. */
