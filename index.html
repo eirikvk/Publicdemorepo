@@ -86,7 +86,7 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .forklaring { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2) }
 .forklaring div { display: flex; gap: 8px; align-items: flex-start }
 .forklaring i { flex: none; width: 14px; height: 14px; border-radius: 3px; margin-top: 3px }
-.forklaring b { font-weight: 600; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums }
+.forklaring b { display: block; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums }
 .forklaring #tallnote { color: var(--ink-3) }
 .plan { opacity: .92 }
 .hint { font-size: 13px; color: var(--ink-3) }
@@ -341,8 +341,35 @@ td.feil { color: var(--ink); font-weight: 600 }
     } else return null;
     return g.getImageData(0, 0, 512, 512).data;
   }
+  /* Zoomet ut er planfeltene mindre enn en skjermpiksel og ville forsvunnet. Derfor tegnes flisene på nivå 9 og grovere
+     fra et rutenett for hele kommunen (21 meter per rute, laget av arealutregningen). Hver flispiksel får farge hvis noen
+     av rutene under den er planlagt utbygd, og feltene utvides et par piksler. De ser dermed større ut enn de er. */
+  let planRaster = null;
+  function grovPlanFlis(tc) {
+    const R = planRaster; if (!R) return null;
+    const [z, x, y] = tc, f = 2 ** (R.z - z); let kl = new Uint8Array(512 * 512);
+    for (let py = 0; py < 512; py++) {
+      const Y = (y * 512 + py) * f - R.y0 * 512; if (Y + f <= 0 || Y >= R.h) continue;
+      for (let px = 0; px < 512; px++) {
+        const X = (x * 512 + px) * f - R.x0 * 512; if (X + f <= 0 || X >= R.w) continue;
+        let a = 0, b = 0;
+        for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++) for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) { const v = R.d[rad + i]; if (v === 1) a++; else if (v === 2) b++ }
+        if (a || b) kl[py * 512 + px] = b > a ? 2 : 1;
+      }
+    }
+    for (let runde = z >= R.z ? 1 : 2; runde > 0; runde--) {   /* utvid én piksel per runde */
+      const ny = kl.slice();
+      for (let py = 1; py < 511; py++) for (let px = 1, i = py * 512 + 1; px < 511; px++, i++) if (!kl[i]) ny[i] = kl[i - 1] || kl[i + 1] || kl[i - 512] || kl[i + 512];
+      kl = ny;
+    }
+    const c = lerret(), g = c.getContext('2d'), ut = g.createImageData(512, 512), o = ut.data, F = [null, rgb('pnat'), rgb('pjor')];
+    for (let i = 0; i < kl.length; i++) if (kl[i]) { const q = F[kl[i]]; o[4 * i] = q[0]; o[4 * i + 1] = q[1]; o[4 * i + 2] = q[2]; o[4 * i + 3] = 255 }
+    g.putImageData(ut, 0, 0); return c;
+  }
+  const flisFraLerret = async (tile, c) => { const url = URL.createObjectURL(await new Promise(ok => c.toBlob(ok))), img = tile.getImage(); img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); img.src = url };
   async function lastPlanFlis(tile, src) {
     try {
+      if (tile.getTileCoord()[0] <= 9) { const c = grovPlanFlis(tile.getTileCoord()); if (!c) throw new Error('rutenettet er ikke klart'); await flisFraLerret(tile, c); return }
       const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentPlan(src)]);
       if (!K) throw new Error('mangler dagens klasser');
       const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
@@ -355,9 +382,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         const f = gr >= b ? pjor : pnat;
         o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255;
       }
-      g.putImageData(ut, 0, 0);
-      const url = URL.createObjectURL(await new Promise(ok => c.toBlob(ok))), img = tile.getImage();
-      img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); img.src = url;
+      g.putImageData(ut, 0, 0); await flisFraLerret(tile, c);
     } catch (e) { tile.setState(3) }
   }
   const nyPlanKilde = () => new ol.source.XYZ({ tileUrlFunction: planUrl, tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: lastPlanFlis, transition: 0, projection: UTM });
@@ -430,27 +455,38 @@ td.feil { color: var(--ink); font-weight: 600 }
     const mitt = ++regnNr, tn = $('tall-pnat'), tj = $('tall-pjor'), note = $('tallnote'), Z = 9;
     tn.textContent = tj.textContent = note.textContent = '';
     if (!planPaa || !klipp) return;
+    if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
     if (!ov) { note.textContent = 'Arealet kan bare regnes ut for kommuner med lagret oversiktsbilde.'; return }
     tn.textContent = tj.textContent = 'regner …';
-    const koord = [], n = { nat: 0, jor: 0, pnat: 0, pjor: 0 }; plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
+    const koord = [], n = { nat: 0, jor: 0, pnat: 0, pjor: 0 }, nr = valgt.nr; plannett.forEachTileCoord(ov.ext, Z, tc => koord.push(tc.slice()));
+    const x0 = Math.min(...koord.map(t => t[1])), y0 = Math.min(...koord.map(t => t[2])), w = (Math.max(...koord.map(t => t[1])) - x0 + 1) * 512, h = (Math.max(...koord.map(t => t[2])) - y0 + 1) * 512, d = new Uint8Array(w * h);
     try {
       await Promise.all(koord.map(async tc => {
         const [K, buf] = await Promise.all([dagensKlasser(tc), hentPlan(planUrl(tc))]);
         const g = lerret().getContext('2d', { willReadFrequently: true }); g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
         const P = g.getImageData(0, 0, 512, 512).data;
-        for (let i = 0; i < K.length; i += 4) {
+        const start = (tc[2] - y0) * 512 * w + (tc[1] - x0) * 512;
+        for (let i = 0, q = 0; i < K.length; i += 4, q++) {
           if (K[i + 3] < 100) continue;
           const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;
           const jor = gr >= b, plan = P[i + 3] >= 100;
           if (jor) { n.jor++; if (plan) n.pjor++ } else { n.nat++; if (plan) n.pnat++ }
+          if (plan) d[start + (q >> 9) * w + (q & 511)] = jor ? 2 : 1;
         }
       }));
     } catch (e) { if (mitt === regnNr) { tn.textContent = tj.textContent = ''; note.textContent = 'Arealet kunne ikke regnes ut.' } return }
     if (mitt !== regnNr) return;
+    /* Til oversikten fjernes felt som er smalere enn to ruter (rundt 40 meter): først krympes alt én rute, så utvides det igjen.
+       Det tar bort de tynne stripene langs eksisterende bebyggelse, som ellers ville dominere når feltene forstørres. */
+    const krympet = new Uint8Array(w * h), ryddet = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) krympet[i] = d[i];
+    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && (krympet[i] || krympet[i - 1] || krympet[i + 1] || krympet[i - w] || krympet[i + w])) ryddet[i] = d[i];
+    let rn = 0, rj = 0; for (let i = 0; i < ryddet.length; i++) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
+    planRaster = { nr, z: Z, x0, y0, w, h, d: ryddet }; tegnPlan();
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0';
-    tn.textContent = `ca. ${nf(km2(n.pnat))} km², ${pst(n.pnat, n.nat)} % av naturen`;
-    tj.textContent = `ca. ${nf(km2(n.pjor))} km², ${pst(n.pjor, n.jor)} % av jordbruket`;
-    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Anslag til illustrasjon, ikke offisiell statistikk.`;
+    tn.textContent = `ca. ${nf(km2(n.pnat))} km² (${nf(km2(rn))} km² uten smale striper), ${pst(n.pnat, n.nat)} % av naturen`;
+    tj.textContent = `ca. ${nf(km2(n.pjor))} km² (${nf(km2(rj))} km² uten smale striper), ${pst(n.pjor, n.jor)} % av jordbruket`;
+    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. Zoomet ut vises bare de større feltene, forstørret så de synes. Anslag til illustrasjon, ikke offisiell statistikk.`;
   }
   const visPlan = () => { planLag.setVisible(planPaa && !!klipp); regnPlan() };   /* resten av kartet står urørt når laget slås på */
 
@@ -545,7 +581,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     try { history.replaceState(null, '', '#' + nr) } catch (e) {}
     $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
     $('probe').textContent = 'Trykk på kartet for å se klassen.'; tomTall('Henter …');
-    grenseKilde.clear(); klipp = null; tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
+    grenseKilde.clear(); klipp = null; planRaster = null; tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
     hentOversikt(k, mitt);
     if (k.boks) view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
     hentTall(k, mitt); hentGrense(k, mitt); status();
