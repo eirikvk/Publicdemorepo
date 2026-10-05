@@ -256,6 +256,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
      så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
   const raa = new Map();   /* rå flisbilder, slik at fargebytte og skjuling av klasser ikke krever nye kall */
+  const klare = new Set(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
   const ko = []; let aktive = 0, nyeKall = false, feilIVisning = false, iBevegelse = false, rundeTimer = null, runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   const flisnett = ol.tilegrid.createXYZ({ tileSize: 256, minZoom: FLISNIVA, maxZoom: 19 });
   function flisUrl(tc) {
@@ -285,24 +286,29 @@ td.feil { color: var(--ink); font-weight: 600 }
   function lastFlis(tile, src) {
     hentRaa(src).then(fargeleggBlob).then(blob => {
       const img = tile.getImage(), url = URL.createObjectURL(blob);
-      img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); img.src = url;
+      img.addEventListener('load', () => { URL.revokeObjectURL(url); klare.add(tile.getTileCoord().join('/')) }, { once: true }); img.src = url;
     }).catch(() => tile.setState(3));
   }
   const nyFlisKilde = () => new ol.source.XYZ({ tileUrlFunction: flisUrl, tileGrid: flisnett, tilePixelRatio: 2, tileLoadFunction: lastFlis, transition: 0, projection: 'EPSG:3857' });
   const tema = new ol.layer.Tile({ className: 'tema', source: nyFlisKilde(), maxResolution: MAKSRES });
-  const fargeleggFliser = () => { oversiktLag.setVisible(true); tema.setSource(nyFlisKilde()) };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall */
+  const fargeleggFliser = () => { oversiktSynlig(true); klare.clear(); tema.setSource(nyFlisKilde()) };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall */
 
   /* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv. */
-  let oversikter = {}, ov = null, ovUrl = null;
-  const oversiktLag = new ol.layer.Image({ className: 'tema' });   /* samme lerret som flisene, så flisene dekker oversikten der de er lastet */
+  let oversikter = {}, ov = null, ovUrl = null, ovRes = 0;
+  /* Samme lerret som flisene. Bildet glattes når det vises forminsket, og vises med rene piksler når det forstørres som plassholder. */
+  const oversiktLag = new ol.layer.Image({ className: 'tema' }), oversiktGrov = new ol.layer.Image({ className: 'tema' });
+  const oversiktSynlig = v => { oversiktLag.setVisible(v); oversiktGrov.setVisible(v) };
   async function tegnOversikt() {
     if (!ov) return;
     const url = URL.createObjectURL(await fargeleggBlob(ov.buf)), gammel = ovUrl; ovUrl = url;
+    ovRes = (ov.ext[2] - ov.ext[0]) / new DataView(ov.buf).getUint32(16);   /* kartmeter per piksel i det lagrede bildet */
+    oversiktLag.setMinResolution(ovRes); oversiktGrov.setMaxResolution(ovRes);
     oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: 'EPSG:3857' }));
+    oversiktGrov.setSource(new ol.source.ImageStatic({ url, imageExtent: ov.ext, projection: 'EPSG:3857', interpolate: false }));
     if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
   }
   async function hentOversikt(k, mitt) {
-    ov = null; oversiktLag.setSource(null); oversiktLag.setVisible(true);
+    ov = null; oversiktLag.setSource(null); oversiktGrov.setSource(null); oversiktSynlig(true);
     if (!oversikter[k.nr]) return;
     try {
       const buf = await hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
@@ -315,12 +321,26 @@ td.feil { color: var(--ink); font-weight: 600 }
   const grenseKilde = new ol.source.Vector();
   const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) }) });
   const view = new ol.View({ center: ol.proj.fromLonLat([15, 65]), zoom: 4, maxZoom: 19, enableRotation: false });
-  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
+  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, oversiktGrov, tema, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
   const tegnPaaNytt = () => { tegnOversikt(); fargeleggFliser(); grense.changed() };
 
   /* Utenfor valgt kommune vises bare bakgrunnskartet: flisene klippes mot kommunens flate,
      hentes bare innenfor kommunens utstrekning, og slås først på når grensen er lastet. */
+  /* Der en flis er ferdig lastet, fjernes oversiktsbildet under den før flisen tegnes. Ellers ville det grove
+     bildet stikke fram som en uskarp kant rundt alt som er gjennomsiktig i flisen, for eksempel langs sjøen. */
+  const dekket = ([z, x, y]) => { for (let d = 0; z - d >= FLISNIVA; d++) if (klare.has(`${z - d}/${x >> d}/${y >> d}`)) return true; return false };
+  tema.on('prerender', e => {
+    const fs = e.frameState, res = fs.viewState.resolution;
+    if (!ov || !oversiktLag.getVisible() || res >= MAKSRES) return;
+    const c = e.context;
+    flisnett.forEachTileCoord(fs.extent, flisnett.getZForResolution(res), tc => {
+      if (!dekket(tc)) return;
+      const u = flisnett.getTileCoordExtent(tc);
+      const a = ol.render.getRenderPixel(e, kart.getPixelFromCoordinate([u[0], u[3]])), b = ol.render.getRenderPixel(e, kart.getPixelFromCoordinate([u[2], u[1]]));
+      const x0 = Math.floor(a[0]), y0 = Math.floor(a[1]); c.clearRect(x0, y0, Math.ceil(b[0]) - x0, Math.ceil(b[1]) - y0);
+    });
+  });
   let klipp = null;
   const klippStil = new ol.style.Style({ fill: new ol.style.Fill({ color: '#000' }) });
   tema.on('postrender', e => {
@@ -334,14 +354,14 @@ td.feil { color: var(--ink); font-weight: 600 }
   function status() {
     if (view.getResolution() < MAKSRES) { $('ute').hidden = true; return }
     const o = valgt && oversikter[valgt.nr], treff = !!o && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
-    oversiktLag.setVisible(true); $('ute').hidden = treff || !valgt; $('siste').textContent = treff ? 'Viser lagret oversiktsbilde' : '';
+    oversiktSynlig(true); $('ute').hidden = treff || !valgt; $('siste').textContent = treff ? 'Viser lagret oversiktsbilde' : '';
   }
-  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktLag.setVisible(true) });
+  kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true) });
   kart.on('moveend', () => { iBevegelse = false; status(); kart.render() });
-  view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktLag.setVisible(true) });
+  view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) oversiktSynlig(true) });
   kart.on('rendercomplete', () => {
     if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || !tema.getVisible() || aktive || ko.length) return;   /* aldri skjul oversikten midt i en bevegelse */
-    if (!feilIVisning) oversiktLag.setVisible(false);
+    if (!feilIVisning) oversiktSynlig(false);
     if (!nyeKall) $('siste').textContent = 'Ingen nye kall. Flisene lå allerede i nettleseren.';
   });
 
@@ -350,7 +370,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     const p = $('probe');
     if (klipp && !klipp.intersectsCoordinate(e.coordinate)) { p.textContent = 'Utenfor kommunen.'; return }
     let d = tema.getVisible() ? tema.getData(e.pixel) : null;
-    if ((!d || d[3] < 40) && oversiktLag.getVisible() && oversiktLag.getSource()) d = oversiktLag.getData(e.pixel);
+    if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = (view.getResolution() < ovRes ? oversiktGrov : oversiktLag).getData(e.pixel);
     if (!d || d[3] < 40) { p.textContent = 'Ingen klasse her (hav, skjult klasse eller for langt ute).'; return }
     let best = null, min = 1e9;
     KL.filter(k => vis[k[0]]).forEach(([id, navn]) => { const c = rgb(id), a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2; if (a < min) { min = a; best = navn } });
