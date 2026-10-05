@@ -84,6 +84,8 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .row.lag[aria-pressed="false"] .sw { background: transparent }
 .row.lag[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }
 .forklaring { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2) }
+.valg { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--ink-2); cursor: pointer; max-width: 62ch }
+.valg input { margin: 4px 0 0; width: 18px; height: 18px; flex: none; accent-color: var(--accent) }
 .forklaring div { display: flex; gap: 8px; align-items: flex-start }
 .forklaring i { flex: none; width: 14px; height: 14px; border-radius: 3px; margin-top: 3px }
 .forklaring b { display: block; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums }
@@ -174,6 +176,10 @@ td.feil { color: var(--ink); font-weight: 600 }
       <p>Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra SSB og kartet fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.</p>
       <p id="omoversikt" hidden></p>
       <p>Kart: Nasjonalt grunnkart for arealanalyse, årsversjon 2025, NIBIO. Tall: SSB, tabell 09594. Kommuneplan: DiBK. Grenser og bakgrunnskart: Kartverket.</p>
+    </section>
+    <section>
+      <h2>Tekniske valg</h2>
+      <label class="valg" for="smale"><input type="checkbox" id="smale">Vis smale striper i planlagt utbygging. Det er felt under rundt 40 meters bredde, ofte grøntdrag og kanter langs eksisterende bebyggelse.</label>
     </section>
   </div>
 </div>
@@ -330,7 +336,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const plannett = new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256, minZoom: 5 });
   const planUrl = tc => PLAN + '?' + new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'kparealformalomrade', styles: 'polygon', crs: UTM,
     bbox: plannett.getTileCoordExtent(tc).map(v => v.toFixed(2)).join(','), width: 512, height: 512, format: 'image/png8', transparent: 'true', filter: PLANFILTER });
-  let ovBilde = null, planPaa = false;
+  let ovBilde = null, planPaa = true, visSmale = false;
   const lerret = () => { const c = document.createElement('canvas'); c.width = c.height = 512; return c };
   async function dagensKlasser(tc) {   /* dagens klasser i flisens piksler, i de rene fargene fra NIBIO */
     const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
@@ -347,13 +353,13 @@ td.feil { color: var(--ink); font-weight: 600 }
   let planRaster = null;
   function grovPlanFlis(tc) {
     const R = planRaster; if (!R) return null;
-    const [z, x, y] = tc, f = 2 ** (R.z - z); let kl = new Uint8Array(512 * 512);
+    const [z, x, y] = tc, f = 2 ** (R.z - z), D = visSmale ? R.alle : R.ryddet; let kl = new Uint8Array(512 * 512);
     for (let py = 0; py < 512; py++) {
       const Y = (y * 512 + py) * f - R.y0 * 512; if (Y + f <= 0 || Y >= R.h) continue;
       for (let px = 0; px < 512; px++) {
         const X = (x * 512 + px) * f - R.x0 * 512; if (X + f <= 0 || X >= R.w) continue;
         let a = 0, b = 0;
-        for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++) for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) { const v = R.d[rad + i]; if (v === 1) a++; else if (v === 2) b++ }
+        for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++) for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) { const v = D[rad + i]; if (v === 1) a++; else if (v === 2) b++ }
         if (a || b) kl[py * 512 + px] = b > a ? 2 : 1;
       }
     }
@@ -376,9 +382,12 @@ td.feil { color: var(--ink); font-weight: 600 }
       g.drawImage(await createImageBitmap(new Blob([planBuf])), 0, 0, 512, 512);
       const P = g.getImageData(0, 0, 512, 512).data, ut = g.createImageData(512, 512), o = ut.data;
       const pjor = rgb('pjor'), pnat = rgb('pnat');   /* uavhengig av hvilke klasser som vises i kartet */
-      for (let i = 0; i < o.length; i += 4) {
+      /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
+      const [tz, tx, ty] = tile.getTileCoord(), R = !visSmale && planRaster && valgt && planRaster.nr === valgt.nr ? planRaster : null, sh = R ? tz - R.z : 0;
+      for (let py = 0, i = 0; py < 512; py++) for (let px = 0; px < 512; px++, i += 4) {
         if (P[i + 3] < 100 || K[i + 3] < 100) continue;                 /* utenfor planområdene, eller hav */
         const r = K[i], gr = K[i + 1], b = K[i + 2]; if (r >= gr && r >= b) continue;   /* allerede bebygd i dag */
+        if (R) { const lx = ((tx * 512 + px) >> sh) - R.x0 * 512, ly = ((ty * 512 + py) >> sh) - R.y0 * 512; if (lx < 0 || ly < 0 || lx >= R.w || ly >= R.h || !R.naer[ly * R.w + lx]) continue }
         const f = gr >= b ? pjor : pnat;
         o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255;
       }
@@ -482,11 +491,13 @@ td.feil { color: var(--ink); font-weight: 600 }
     for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) krympet[i] = d[i];
     for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (d[i] && (krympet[i] || krympet[i - 1] || krympet[i + 1] || krympet[i - w] || krympet[i + w])) ryddet[i] = d[i];
     let rn = 0, rj = 0; for (let i = 0; i < ryddet.length; i++) { if (ryddet[i] === 1) rn++; else if (ryddet[i] === 2) rj++ }
-    planRaster = { nr, z: Z, x0, y0, w, h, d: ryddet }; tegnPlan();
+    const naer = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1, i = y * w + 1; x < w - 1; x++, i++) if (ryddet[i] || ryddet[i - 1] || ryddet[i + 1] || ryddet[i - w] || ryddet[i + w]) naer[i] = 1;
+    planRaster = { nr, z: Z, x0, y0, w, h, alle: d, ryddet, naer }; tegnPlan();
     const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0';
-    tn.textContent = `ca. ${nf(km2(n.pnat))} km² (${nf(km2(rn))} km² uten smale striper), ${pst(n.pnat, n.nat)} % av naturen`;
-    tj.textContent = `ca. ${nf(km2(n.pjor))} km² (${nf(km2(rj))} km² uten smale striper), ${pst(n.pjor, n.jor)} % av jordbruket`;
-    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. Zoomet ut vises bare de større feltene, forstørret så de synes. Anslag til illustrasjon, ikke offisiell statistikk.`;
+    tn.textContent = `ca. ${nf(km2(rn))} km², ${pst(rn, n.nat)} % av naturen (${nf(km2(n.pnat))} km² med smale striper)`;
+    tj.textContent = `ca. ${nf(km2(rj))} km², ${pst(rj, n.jor)} % av jordbruket (${nf(km2(n.pjor))} km² med smale striper)`;
+    note.textContent = `Regnet ut i nettleseren fra ${koord.length} kartfliser med piksler på ${Math.round(m)} meter. Smale striper er felt under rundt 40 meters bredde, ofte langs eksisterende bebyggelse. De vises ikke i kartet med mindre du slår dem på under Tekniske valg. Zoomet ut er feltene forstørret så de synes. Anslag til illustrasjon, ikke offisiell statistikk.`;
   }
   const visPlan = () => { planLag.setVisible(planPaa && !!klipp); regnPlan() };   /* resten av kartet står urørt når laget slås på */
 
@@ -533,9 +544,10 @@ td.feil { color: var(--ink); font-weight: 600 }
     rows.appendChild(b);
   });
   {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'row lag'; b.id = 'planknapp'; b.setAttribute('aria-pressed', 'false');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'row lag'; b.id = 'planknapp'; b.setAttribute('aria-pressed', 'true');
     b.innerHTML = '<span class="sw"></span><span class="nm">Planlagt utbygging</span><span class="km"></span><span class="pc"></span>'; rows.appendChild(b);
   }
+  $('smale').addEventListener('change', e => { visSmale = e.target.checked; tegnPlan() });
   $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan() });
   function visTall(a, aar) {
     const sum = a[0] + a[1] + a[2], bar = $('bar'); bar.textContent = '';
