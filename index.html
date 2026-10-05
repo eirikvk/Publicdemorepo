@@ -343,8 +343,15 @@ td.feil { color: var(--ink); font-weight: 600 }
       if (runde.feil) { logg(kilde, `${hva}, ${fliser(runde.feil)}`, 0, 0, true); if (!runde.n) $('siste').textContent = `Kallet mot ${kilde} feilet.` }
       $('laster').hidden = !opptatt(); runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
     }
-    const hent = async src => {
-      const har = lager.get(src); if (har) return har;
+    /* Kartlaget og planlaget trenger samme flis fra NIBIO samtidig. Et kall som alt er underveis, deles i stedet for å sendes to ganger. */
+    const underveis = new Map();
+    const hent = src => {
+      const har = lager.get(src); if (har) return Promise.resolve(har);
+      let p = underveis.get(src);
+      if (!p) { p = hentNy(src); underveis.set(src, p); p.then(() => underveis.delete(src), () => underveis.delete(src)) }
+      return p;
+    };
+    const hentNy = async src => {
       await new Promise(ok => { ko.push(ok); slipp() });
       clearTimeout(timer); if (!runde.t0) runde.t0 = performance.now(); nyeKall = true; $('laster').hidden = false;
       try {
