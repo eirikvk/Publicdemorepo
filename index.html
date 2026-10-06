@@ -15,7 +15,7 @@
 :root {
   --bg: #F2F4F1; --surface: #FBFCFA; --ink: #17201C; --ink-2: #47534E; --ink-3: #6F7B75; --line: #D3DAD5;
   --beb: #E86474; --jor: #FFD16E; --nat: #9ECC73; --pnat: #171C1A; --pjor: #92400E; --accent: #2B4C7E;
-  --hav: #BDD7E7; --inn: #6BAED6; --elv: #08519C; --land: #B9B3A4; --slor: #F7F8F5; --vern: #6A1B9A; --rein: #C2410C; --verdi: #C026D3; --verdi1: #7A1070; --verdi2: #C026D3; --verdi3: #E478E8; --verdi4: #EFAEF5; --graa0: #3E4348; --graa1: #4F555B; --graa2: #6D7379; --graa3: #8C9197; --graa4: #AAAFB4; --graa5: #C8CCD0; --inon2: #6DAF55; --inon1: #3E8E41; --inonv: #1F6130;
+  --hav: #BDD7E7; --inn: #6BAED6; --elv: #08519C; --land: #B9B3A4; --slor: #F7F8F5; --vern: #6A1B9A; --rein: #C2410C; --verdi: #C026D3; --verdi1: #7A1070; --verdi2: #C026D3; --verdi3: #E478E8; --verdi4: #EFAEF5; --gront: #3FB6A0; --graa0: #3E4348; --graa1: #4F555B; --graa2: #6D7379; --graa3: #8C9197; --graa4: #AAAFB4; --graa5: #C8CCD0; --inon2: #6DAF55; --inon1: #3E8E41; --inonv: #1F6130;
   --display: "Familjen Grotesk", "Avenir Next", "Segoe UI", sans-serif;
   --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
@@ -356,7 +356,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 18.30';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 19.15';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -650,7 +650,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     crs: UTM, bbox: u.map(v => v.toFixed(2)).join(','), width: w, height: h, format: 'image/png', transparent: 'true' });
   const graaTrinn = (r, a) => a < 128 ? 0 : r < 26 ? 6 : Math.min(5, Math.max(1, Math.round(r / 51)));   /* 0 ikke grått, 1–5 andel vegetasjon, 6 grått uten oppgitt andel */
   const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
-  let graa = null, graaPaa = false, graaNokkel = 0, graaRad = null, graaKryss = null; const graaMinne = new Map();
+  let graa = null, graaPaa = false, graaNokkel = 0, graaRad = null, graaKryss = null, graaGammel = false; const graaMinne = new Map();
   /* Trinn i et punkt: 0 ikke grått, 1–5 andel vegetasjon fra lavest til høyest, 6 grått uten oppgitt andel (veier og lignende). */
   const graaVed = (D, x, y) => { const px = Math.floor((x - D.u[0]) / D.res), py = Math.floor((D.u[3] - y) / D.res); return px < 0 || py < 0 || px >= D.w || py >= D.h ? 0 : D.kl[py * D.w + px] };
   async function lastGraaFlis(tile) {
@@ -660,21 +660,26 @@ td.feil { color: var(--ink); font-weight: 600 }
       const c = lerret(), g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = true;
       if (tc[0] >= FLISNIVA) {   /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
         g.drawImage(await createImageBitmap(new Blob([await hentGraaFlis(graaBilde([0, 1], u, 512, 512))])), 0, 0, 512, 512);
-        const t1 = performance.now(), bilde = g.getImageData(0, 0, 512, 512), o = bilde.data, F = [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')]; let noe = false;
-        for (let i = 0; i < o.length; i += 4) { const k = graaTrinn(o[i], o[i + 3]); if (!k) { o[i + 3] = 0; continue } const f = F[k]; o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; noe = true }
+        const K = await dagensKlasser(tc).catch(() => null);   /* dagens klasser: bebygd som ikke er grått, tegnes som grønt i bebygd område */
+        const t1 = performance.now(), bilde = g.getImageData(0, 0, 512, 512), o = bilde.data, F = [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')], GR = rgb('gront'); let noe = false;
+        for (let i = 0; i < o.length; i += 4) {
+          const a = o[i + 3], k = a >= 64 ? graaTrinn(o[i], 255) : 0, f = k ? F[k] : K && K[i + 3] >= 100 && klasseAv(K[i], K[i + 1], K[i + 2]) === 0 ? GR : null;
+          if (!f) { o[i + 3] = 0; continue } o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; noe = true;
+        }
         if (!noe) { tile.setState(TOM); return }
         g.putImageData(bilde, 0, 0); tile.setImage(c); tidSlutt('grått areal, fliser', t1); return;
       }
-      const t0 = performance.now();
+      const K = await dagensKlasser(tc).catch(() => null), t0 = performance.now(), GR = rgb('gront');
       tegnUtsnitt(g, D.c, (u[0] - D.u[0]) / D.res, (D.u[3] - u[3]) / D.res, (u[2] - u[0]) / D.res, (u[3] - u[1]) / D.res);   /* utjevnet maske: glatt kant rundt det grå */
       const P = g.getImageData(0, 0, 512, 512).data, ut = g.createImageData(512, 512), o = ut.data, F = [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')], m = (u[2] - u[0]) / 512; let tegnet = false;
       const kol = new Int32Array(512), w = D.w, h = D.h; for (let px = 0; px < 512; px++) kol[px] = Math.floor((u[0] + (px + .5) * m - D.u[0]) / D.res);
       for (let py = 0, i = 0; py < 512; py++) {
         const rad = Math.floor((D.u[3] - (u[3] - (py + .5) * m)) / D.res);
         for (let px = 0; px < 512; px++, i += 4) {
-          if (P[i] < 128 || P[i + 3] < 128) continue;
-          const x = kol[px]; if (x < 0 || x >= w || rad < 0 || rad >= h) continue;
-          const q = rad * w + x, k = D.kl[q] || (x > 0 && D.kl[q - 1]) || (x < w - 1 && D.kl[q + 1]) || (rad > 0 && D.kl[q - w]) || (rad < h - 1 && D.kl[q + w]) || 6, f = F[k];   /* i kanten kan masken nå litt lenger enn rutene */
+          const x = kol[px], inne = P[i + 3] >= 128 && x >= 0 && x < w && rad >= 0 && rad < h; let f = null;
+          if (inne && P[i] >= 128) { const q = rad * w + x; f = F[D.kl[q] || (x > 0 && D.kl[q - 1]) || (x < w - 1 && D.kl[q + 1]) || (rad > 0 && D.kl[q - w]) || (rad < h - 1 && D.kl[q + w]) || 6] }   /* i kanten kan masken nå litt lenger enn rutene */
+          else if (K && (!inne || P[i] < 64) && K[i + 3] >= 100 && klasseAv(K[i], K[i + 1], K[i + 2]) === 0) f = GR;
+          if (!f) continue;
           o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; tegnet = true;
         }
       }
@@ -841,7 +846,8 @@ td.feil { color: var(--ink); font-weight: 600 }
         if (s.kilde) s.kilde.oppdater(s.vis);   /* også når det ble avbrutt, så det som er gjort vises */
       }
       if (iBevegelse || s !== samle) return;
-      if (antall) inonGammel = true;
+      if (antall) inonGammel = graaGammel = true;
+      if (graaGammel && graaLag.getVisible() && view.getResolution() >= MAKSRES) { graaGammel = false; oppfriskGraa() }
       if (inonGammel && inonLag.getVisible() && view.getResolution() >= MAKSRES) oppfriskInon();   /* zoomet ut hentes dagens klasser fra bildet som nettopp fikk mer */
       if (opptatt()) return planleggEtterarbeid();   /* tallene venter til alt er hentet */
       etterVenter = false; await regnAlt();
@@ -1250,7 +1256,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     ut.push(['Natur', 'pnat', harPlan ? (T ? T.fnat : R.basis.rn) : null, T ? T.nnat : R.sum.rn, e === null ? R.iDag.nat : 0, '']);
     ut.push(['Jordbruk', 'pjor', harPlan ? (T ? T.fjor : R.basis.rj) : null, T ? T.njor : R.sum.rj, e === null ? R.iDag.jor : 0, '']);
     const GK = graaKryss && valgt && graaKryss.nr === valgt.nr && graaKryss.antallEgne === R.antallEgne ? graaKryss : null;
-    if (GK) { const x = X => e === null ? X : X.eg[e] || { graa: 0, gron: 0 }; ut.push(['Grått areal', 'graa2', harPlan ? x(GK.P).graa : null, x(GK.S).graa, 0, '']); ut.push(['– minst halvt grønt', '', harPlan ? x(GK.P).gron : null, x(GK.S).gron, 0, '']) }
+    if (GK) { const x = X => e === null ? X : X.eg[e] || { graa: 0, gron: 0, gront: 0 }; ut.push(['Grått areal', 'graa2', harPlan ? x(GK.P).graa : null, x(GK.S).graa, 0, '']); ut.push(['– minst halvt grønt', '', harPlan ? x(GK.P).gron : null, x(GK.S).gron, 0, '']); ut.push(['Grønt i bebygd', 'gront', harPlan ? x(GK.P).gront : null, x(GK.S).gront, 0, '']) }
     const verdi = [];
     NATURLAG.forEach(t => {
       const K = t.data && valgt && t.data.nr === valgt.nr ? t.data.kryss : null; if (!K || !K.P || !t.data.omrader.length) return;
@@ -1567,15 +1573,17 @@ td.feil { color: var(--ink); font-weight: 600 }
     const R = planRaster && valgt && planRaster.nr === valgt.nr && planRaster.pl && !utenPlan() ? planRaster : null, D = graa && valgt && graa.nr === valgt.nr && graa.tilstand === 'ok' ? graa : null;
     graaKryss = null;
     if (R && D) {
-      const t0 = performance.now(), nE = R.egetType ? R.antallEgne : 0, tom = () => ({ tot: 0, graa: 0, gron: 0 }), ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }), S = ny(), P = ny(), m = OPPLOSNINGER[R.z] / 2;
-      const legg = (T, e, k) => { T.tot++; if (k) T.graa++; if (k === 4 || k === 5) T.gron++; if (e) { const x = T.eg[e - 1]; x.tot++; if (k) x.graa++; if (k === 4 || k === 5) x.gron++ } };
+      const t0 = performance.now(), nE = R.egetType ? R.antallEgne : 0, tom = () => ({ tot: 0, graa: 0, gron: 0, gront: 0 }), ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }), S = ny(), P = ny(), m = OPPLOSNINGER[R.z] / 2;
+      const en = (x, k, c) => { x.tot++; if (k) x.graa++; else if (c === 1) x.gront++; if (k === 4 || k === 5) x.gron++ }, legg = (T, e, k, c) => { en(T, k, c); if (e) en(T.eg[e - 1], k, c) };
+      let bebygd = 0, gront = 0;   /* gront: bebygd i grunnkartet, men ikke grått. Det er grønne arealer som parker og idrettsanlegg. */
       for (let i = 0; i < R.kl.length; i++) {
         const c = R.kl[i]; if (c < 1 || c > 3) continue;
-        const b = R.pl[i], ty = nE ? R.egetType[i] : 0, s = ty === 1 ? 1 : ty === 2 ? 0 : b; if (!b && !s) continue;
+        const b = R.pl[i], ty = nE ? R.egetType[i] : 0, s = ty === 1 ? 1 : ty === 2 ? 0 : b; if (c !== 1 && !b && !s) continue;
         const k = graaVed(D, ORIGO[0] + (R.cx0 + i % R.w + .5) * m, ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + .5) * m), e = nE ? R.eget[i] : 0;
-        if (s) legg(S, e, k); if (b) legg(P, e, k);
+        if (c === 1) { bebygd++; if (!k) gront++ }
+        if (s) legg(S, e, k, c); if (b) legg(P, e, k, c);
       }
-      graaKryss = { nr: R.nr, S, P, antallEgne: nE, delvis: !!(ov && ov.dynamisk) }; tidSlutt('grått areal, kryssing', t0);
+      graaKryss = { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis: !!(ov && ov.dynamisk) }; tidSlutt('grått areal, kryssing', t0);
     }
     visGraa(); visEgne();
   }
@@ -1590,12 +1598,13 @@ td.feil { color: var(--ink); font-weight: 600 }
     if (!ok) { tekst.textContent = 'Grått areal kunne ikke hentes fra NIBIO.'; return }
     if (!har) { tekst.textContent = 'Kartet over grå arealer har ingen flater i kommunen.'; return }
     tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${ssbSum ? `, ${nf(D.sum / ssbSum * 100)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Tabellen viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
-    const rad = (id, navn, tall) => { const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span'); i.style.setProperty('--c', `var(--${id})`); n.append(i, navn); ar.textContent = tall; li.append(n, ar); liste.appendChild(li) };
+    const rad = (id, navn, tall, under) => { const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span'); i.style.setProperty('--c', `var(--${id})`); n.append(i, navn); ar.textContent = tall; li.append(n, ar); if (under) { const sm = document.createElement('small'); sm.textContent = under; li.appendChild(sm) } liste.appendChild(li) };
     GRAATRINN.forEach(([id, navn], i) => rad(id, navn, dekar(D.trinn[i + 1]))); if (D.trinn[6] > 0) rad('graa0', 'Uten oppgitt andel, som veier', dekar(D.trinn[6]));
+    rad('gront', 'Grønt i bebygd område', K ? (K.delvis ? 'minst ' : '') + dekar(K.gront * RUTE) : '', 'Ikke grått areal. Parker, idrettsanlegg, golfbaner og lignende, som grunnkartet regner som bebygd og opparbeidet. Det er grønt, men telles ikke som natur.');
     if (K && K.S.tot) {
       const S = K.S, b = document.createElement('b'), dk = n => iTekst(n * RUTE);
       b.textContent = `Av ca. ${dk(S.tot)} planlagt utbygging på land${K.delvis ? ' i hentet kart' : ''} ligger ca. ${dk(S.graa)} (${nf(S.graa / S.tot * 100, 0)} %) på grått areal.`;
-      plan.append(b, ` Det er gjenbruk av areal som alt er tatt i bruk. Ca. ${dk(S.gron)} av dette er flater med minst halvparten vegetasjon, så også gjenbruk kan ta grønt.${K.antallEgne ? ' Tallene inkluderer egne områder.' : ''} Her er all planlagt utbygging med, også på bebygd areal og i smale striper.`);
+      plan.append(b, ` Det er gjenbruk av areal som alt er tatt i bruk. Ca. ${dk(S.gron)} av dette er flater med minst halvparten vegetasjon, så også gjenbruk kan ta grønt.${S.gront ? ` I tillegg ligger ca. ${dk(S.gront)} på grønt i bebygd område.` : ''}${K.antallEgne ? ' Tallene inkluderer egne områder.' : ''} Her er all planlagt utbygging med, også på bebygd areal og i smale striper.`);
     } else plan.textContent = utenPlan() ? 'Kommunen har ingen kommuneplan hos DiBK å krysse med.' : 'Planlagt utbygging på grått areal regnes ut når kartet er hentet.';
   }
   /* Ett bilde av hele kommunen, med ruter på 20 meter eller opptil 2048 ruter på lengste side. Det gir både kartlaget og arealet per
@@ -1761,7 +1770,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     inonRad.blokk.innerHTML = '<p id="inonsum"></p><p id="inonmerk"></p><ul id="inonliste"></ul><p id="inonplan" hidden><b>Inngrepsfri natur kan ikke krysses med planlagt utbygging slik de andre temaene kan.</b> Sonene følger avstanden til nærmeste tyngre tekniske inngrep. Et nytt inngrep kan derfor flytte sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.</p><p class="hint">Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt innenfor sonene, også innsjøer, så andelen av landarealet er et omtrentlig mål. I kartet er det bare klassen natur som får sonefarge.</p>';
     rows.append(inonRad.rad, inonRad.blokk);
     graaRad = temaRad('graa', 'Grått areal', 'flate graa', k => { graaPaa = !graaPaa; k.setAttribute('aria-pressed', String(graaPaa)); visGraa() });
-    graaRad.blokk.innerHTML = '<p id="graasum"></p><ul id="graaliste"></ul><p id="graaplan" role="status"></p><p id="graamerk" hidden><b>Grått betyr ikke ledig.</b> Kartet skiller ikke mellom et boligområde i bruk og en nedlagt industritomt, og sier ikke noe om hva som kan bygges om. Det må leses sammen med lokal kunnskap.</p><p class="hint">Kilde: Kart over grå arealer, Miljødirektoratet, Kartverket, NIBIO og SSB (testversjon 1, 2025), hentet fra NIBIO som to bilder av hele kommunen, og som fliser når kartet er zoomet inn. Arealene er regnet ut i nettleseren. Andel bygninger er ikke med, fordi tjenesten foreløpig oppgir 0 for alle flater vi har slått opp. I kartet er lysere grått mer vegetasjon.</p>';
+    graaRad.blokk.innerHTML = '<p id="graasum"></p><ul id="graaliste"></ul><p id="graaplan" role="status"></p><p id="graamerk" hidden><b>Grått betyr ikke ledig.</b> Kartet skiller ikke mellom et boligområde i bruk og en nedlagt industritomt, og sier ikke noe om hva som kan bygges om. Det må leses sammen med lokal kunnskap.</p><p class="hint">Kilde: Kart over grå arealer, Miljødirektoratet, Kartverket, NIBIO og SSB (testversjon 1, 2025), hentet fra NIBIO som to bilder av hele kommunen, og som fliser når kartet er zoomet inn. Arealene er regnet ut i nettleseren. Andel bygninger er ikke med, fordi tjenesten foreløpig oppgir 0 for alle flater vi har slått opp. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd område. Det blågrønne er regnet ut som bebygd areal i grunnkartet som ikke er grått. I en stikkprøve på 140 punkter i Trondheim var 133 det grunnkartet kaller grønne arealer.</p>';
     rows.append(graaRad.rad, graaRad.blokk);
   }
   /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
