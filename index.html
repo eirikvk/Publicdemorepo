@@ -356,7 +356,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 22.11';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 23.16';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -381,14 +381,15 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Svarene huskes så lenge siden er åpen. Bytter man tilbake til en kommune, hentes verken grense, tall eller plansjekk på nytt.
      Ingenting lagres varig i nettleseren. */
   const svar = new Map();
-  async function hent(kilde, hva, url, stille, bytes, glem) {
-    if (svar.has(url)) return svar.get(url);
+  async function hent(kilde, hva, url, stille, bytes, glem, kropp) {
+    const nokkel = kropp ? url + ' ' + kropp : url;
+    if (svar.has(nokkel)) return svar.get(nokkel);
     const t0 = performance.now();
     try {
-      const r = await fetch(url); if (!r.ok) throw new Error(r.status);
+      const r = await fetch(url, kropp ? { method: 'POST', body: kropp } : undefined); if (!r.ok) throw new Error(r.status);
       const b = await r.blob(); logg(kilde, hva, performance.now() - t0, b.size);
       const verdi = bytes ? await b.arrayBuffer() : JSON.parse(await b.text());
-      if (!glem) { svar.set(url, verdi); if (svar.size > 80) svar.delete(svar.keys().next().value) }
+      if (!glem) { svar.set(nokkel, verdi); if (svar.size > 80) svar.delete(svar.keys().next().value) }
       return verdi;
     } catch (e) { if (!stille) logg(kilde, hva, 0, 0, true); throw e }
   }
@@ -1831,10 +1832,18 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   function tomTall(tekst) { ssbSum = 0; ferskvann = null; visVann(); $('tot').textContent = tekst; $('bar').textContent = ''; KL.forEach(([id]) => { $('km-' + id).textContent = '–'; $('pc-' + id).textContent = '–' }) }
 
+  /* SSB har to API-er til samme tabell. Det nye brukes først. Svarer det ikke, spørres det eldre om det samme.
+     Det eldre tar spørringen som tekst i et POST-kall, og har ikke «fra og med år», så tidsserien kommer med alle år. */
+  const SSB0 = 'https://data.ssb.no/api/v0/no/table/09594';
+  async function hentSSB(hva, nytt, region, koder, tid) {
+    try { return await hent('SSB', hva, nytt) } catch (e) {}
+    const valg = (code, filter, values) => ({ code, selection: { filter, values } });
+    return hent('SSB', hva + ', eldre API', SSB0, false, false, false, JSON.stringify({ query: [valg('Region', ...region), valg('ArealKlasse', 'item', koder), valg('ContentsCode', 'item', ['Areal']), valg('Tid', ...tid)], response: { format: 'json-stat2' } }));
+  }
   async function hentTall(k, mitt) {
     const koder = [...KL.flatMap(x => x[3]), ...VANN.map(x => x[3]).filter(Boolean)].join(',');
     try {
-      const j = await hent('SSB', `Areal for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&valueCodes[Region]=${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=top(1)`);
+      const j = await hentSSB(`Areal for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&valueCodes[Region]=${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=top(1)`, ['item', [k.nr]], koder.split(','), ['top', ['1']]);
       if (mitt !== valgNr) return;
       const ix = j.dimension.ArealKlasse.category.index, tid = j.dimension.Tid.category.index;
       const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
@@ -1850,12 +1859,12 @@ td.feil { color: var(--ink); font-weight: 600 }
   async function hentHistorie(k, mitt) {
     const koder = [...KL.flatMap(x => x[3]), ...VANN.map(x => x[3]).filter(Boolean)].join(',');
     try {
-      const j = await hent('SSB', `Areal fra 2017 for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=K-${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=from(2017)`);
+      const j = await hentSSB(`Areal fra 2017 for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=K-${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=from(2017)`, ['agg:KommSummer', ['K-' + k.nr]], koder.split(','), ['all', ['*']]);
       if (mitt !== valgNr) return;
       const liste = x => Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b]), kl = liste(j.dimension.ArealKlasse.category.index), aar = liste(j.dimension.Tid.category.index), nT = aar.length;
       const v = (c, t) => j.value[kl.indexOf(c) * nT + t] || 0, sum = t => KL.map(x => x[3].reduce((s, c) => s + v(c, t), 0)), alt = t => sum(t).reduce((s, x) => s + x, 0) + v('22.01', t) + v('22.02', t);
-      if (aar[0] !== '2017' || nT < 2 || !alt(0) || !alt(nT - 1)) return;
-      historie = { nr: k.nr, fra: aar[0], til: aar[nT - 1], a0: sum(0), a1: sum(nT - 1), endret: Math.abs(alt(nT - 1) - alt(0)) / alt(nT - 1) > 0.005 };
+      const f = aar.indexOf('2017'); if (f < 0 || nT - f < 2 || !alt(f) || !alt(nT - 1)) return;
+      historie = { nr: k.nr, fra: aar[f], til: aar[nT - 1], a0: sum(f), a1: sum(nT - 1), endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > 0.005 };
       visUtvikling();
     } catch (e) {}   /* uten historiske tall vises ikke blokken */
   }
