@@ -27,6 +27,6 @@ def bytt(fil, monster, ny):
     return n
 
 
-bytt('js/felles.js', r"const VERSJON = '[^']*'", f"const VERSJON = '{tekst}'")
+bytt('js/felles.js', r"const VERSJON =\s*'[^']*'", f"const VERSJON = '{tekst}'")
 n = bytt('index.html', r'\?v=\d+', f'?v={merke}')
 print(f'Utgave: {tekst} ({n} adresser i index.html)')

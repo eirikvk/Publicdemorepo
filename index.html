@@ -6,7 +6,7 @@
 <title>Bebygd, jordbruk, natur – direkte</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
-<link rel="stylesheet" href="stil.css?v=202610062353">
+<link rel="stylesheet" href="stil.css?v=202610062359">
 </head>
 <body>
 <div class="wrap">
@@ -26,11 +26,11 @@
   <div class="main">
     <section class="map" aria-label="Kart">
       <div class="stage">
-        <div id="kart"></div>
+        <div id="kartflate"></div>
         <div class="chip" id="laster" hidden>Henter kart …</div>
-        <button type="button" class="bytt" id="bytt" hidden></button>
+        <button type="button" class="bytt" id="byttknapp" hidden></button>
         <div class="chip" id="zoomet" role="status" hidden>Siden er forstørret. Knip sammen for å zoome ut, så virker kartet igjen.</div>
-        <div class="chip" id="vist" hidden><b></b><button type="button" id="vistliste">Til listen</button><button type="button" id="vistlukk" aria-label="Fjern markeringen i kartet">×</button></div>
+        <div class="chip" id="vistmerke" hidden><b></b><button type="button" id="vistliste">Til listen</button><button type="button" id="vistlukk" aria-label="Fjern markeringen i kartet">×</button></div>
         <div class="chip" id="ute" hidden>Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.</div>
       </div>
       <div class="mapfoot">
@@ -38,7 +38,7 @@
         <div class="probe" id="probe">Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.</div>
         <div id="siste" class="tek"></div>
       </div>
-      <div class="egne" id="egne">
+      <div class="egne" id="egnedel">
         <div class="knapper">
           <button type="button" class="tekknapp" id="tegnknapp">Tegn eget område</button>
           <button type="button" class="tekknapp" id="lastknapp">Last opp plan</button>
@@ -58,7 +58,7 @@
       <h2>Areal i kommunen, SSB <span id="aar"></span></h2>
       <div class="total"><b id="tot">–</b><span>land</span></div>
       <div class="bar" id="bar" role="img"></div>
-      <div class="rows" id="rows"></div>
+      <div class="rows" id="tallrader"></div>
       <!-- Innholdet i detaljene for de to temaene som hentes som bilder av hele kommunen. Radene bygges i js/start.js. -->
       <template id="mal-inon">
       <p id="inonsum"></p>
@@ -102,7 +102,7 @@
       <h2>Kall mot åpne kilder</h2>
       <div class="tw"><table>
         <thead><tr><th>Kilde</th><th>Hva</th><th class="r">Tid</th><th class="r">Størrelse</th></tr></thead>
-        <tbody id="logg"></tbody>
+        <tbody id="kallogg"></tbody>
       </table></div>
       <p>Viser de siste kallene nettleseren din har gjort. Kartfliser nettleseren allerede har, hentes ikke på nytt. Grenser, tall, plansjekk, verneområder og villreinområder huskes også så lenge siden er åpen. Bakgrunnskartet er ferdige fliser fra Kartverket og er ikke med i listen.</p>
     </section>
@@ -139,17 +139,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
-<script src="js/felles.js?v=202610062353"></script>
-<script src="js/farger.js?v=202610062353"></script>
-<script src="js/fliser.js?v=202610062353"></script>
-<script src="js/oversikt.js?v=202610062353"></script>
-<script src="js/plan.js?v=202610062353"></script>
-<script src="js/naturtema.js?v=202610062353"></script>
-<script src="js/inon.js?v=202610062353"></script>
-<script src="js/graa.js?v=202610062353"></script>
-<script src="js/egne.js?v=202610062353"></script>
-<script src="js/kart.js?v=202610062353"></script>
-<script src="js/tall.js?v=202610062353"></script>
-<script src="js/start.js?v=202610062353"></script>
+<script src="js/felles.js?v=202610062359"></script>
+<script src="js/farger.js?v=202610062359"></script>
+<script src="js/fliser.js?v=202610062359"></script>
+<script src="js/oversikt.js?v=202610062359"></script>
+<script src="js/plan.js?v=202610062359"></script>
+<script src="js/naturtema.js?v=202610062359"></script>
+<script src="js/inon.js?v=202610062359"></script>
+<script src="js/graa.js?v=202610062359"></script>
+<script src="js/egne.js?v=202610062359"></script>
+<script src="js/kart.js?v=202610062359"></script>
+<script src="js/tall.js?v=202610062359"></script>
+<script src="js/start.js?v=202610062359"></script>
 </body>
 </html>

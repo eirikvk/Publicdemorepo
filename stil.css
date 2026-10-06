@@ -195,7 +195,7 @@ table {
   overflow: hidden;
   background: var(--bg);
 }
-#kart {
+#kartflate {
   position: absolute;
   inset: 0;
 }
@@ -727,11 +727,11 @@ table {
 }
 .naturblokk li .gjor button:focus-visible,
 .naturblokk li .gjor a:focus-visible,
-#vist button:focus-visible {
+#vistmerke button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-#vist {
+#vistmerke {
   left: 10px;
   right: auto;
   bottom: 44px;
@@ -746,14 +746,14 @@ table {
   pointer-events: auto;
   border-color: var(--ink-3);
 }
-#vist b {
+#vistmerke b {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
-#vist button {
+#vistmerke button {
   flex: none;
   min-height: 36px;
   padding: 6px 10px;
@@ -767,7 +767,7 @@ table {
   text-underline-offset: 3px;
   cursor: pointer;
 }
-#vist #vistlukk {
+#vistmerke #vistlukk {
   text-decoration: none;
   font-size: 18px;
   line-height: 1;

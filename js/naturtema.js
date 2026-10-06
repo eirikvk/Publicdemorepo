@@ -893,7 +893,7 @@ const markLag = new ol.layer.Vector({
 function fjernMerket() {
   markKilde.clear();
   vist = null;
-  $('vist').hidden = true;
+  $('vistmerke').hidden = true;
 }
 function visIKartet(t, o, liId) {
   if (!t.paa) {
@@ -908,7 +908,7 @@ function visIKartet(t, o, liId) {
   markKilde.addFeature(new ol.Feature(o.f.getGeometry()));
   vist = { t, liId };
   view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig() ? 0 : 400 });
-  $('vist').hidden = false;
-  $('vist').firstElementChild.textContent = o.navn;
+  $('vistmerke').hidden = false;
+  $('vistmerke').firstElementChild.textContent = o.navn;
   tilKartet(true);
 }

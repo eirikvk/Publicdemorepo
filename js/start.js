@@ -1,6 +1,6 @@
 /* Tallpanelet, knappene, valg av kommune og oppstart. */
 /* Tallpanelet */
-const rows = $('rows');
+const rows = $('tallrader');
 KL.forEach(([id, navn]) => {
   const b = document.createElement('button');
   b.type = 'button';
@@ -38,14 +38,14 @@ KL.forEach(([id, navn]) => {
     k.setAttribute('aria-pressed', String(inonPaa));
     visInon();
   });
-  inonRad.blokk.append($('mal-inon').content.cloneNode(true));
+  inonRad.blokk.append(...$('mal-inon').content.children); /* bare elementene, ikke linjeskiftene mellom dem */
   rows.append(inonRad.rad, inonRad.blokk);
   graaRad = temaRad('graa', 'Grått areal', 'flate graa', k => {
     graaPaa = !graaPaa;
     k.setAttribute('aria-pressed', String(graaPaa));
     visGraa();
   });
-  graaRad.blokk.append($('mal-graa').content.cloneNode(true));
+  graaRad.blokk.append(...$('mal-graa').content.children); /* bare elementene, ikke linjeskiftene mellom dem */
   rows.append(graaRad.rad, graaRad.blokk);
 }
 /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.

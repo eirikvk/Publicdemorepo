@@ -24,7 +24,7 @@ const view = new ol.View({
   enableRotation: false
 });
 const kart = new ol.Map({
-  target: 'kart',
+  target: 'kartflate',
   layers: [
     bakgrunn,
     oversiktLag,
@@ -250,7 +250,7 @@ kart.on('rendercomplete', () => {
 /* Kartet som kommunevelger: et trykk utenfor valgt kommune slår opp kommunen i punktet hos Kartverket og viser en knapp
    rett over punktet, med en prikk der man trykket. Byttet skjer først når man trykker på knappen, så et bomtrykk ved grensen ikke bytter kommune.
    Knappen holdes innenfor kartflaten og unna zoomknappene, og følger punktet når kartet flyttes. */
-const bytt = $('bytt'),
+const bytt = $('byttknapp'),
   prikk = document.createElement('div');
 prikk.className = 'punkt';
 const byttLag = new ol.Overlay({ element: prikk, positioning: 'center-center', stopEvent: false });

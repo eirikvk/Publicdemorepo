@@ -33,7 +33,8 @@ NIBIO er lisensiert «Norge digitalt begrenset».
 
 Skriptene er vanlige skript, ikke moduler. De deler ett navnerom og lastes i den rekkefølgen `index.html` lister dem.
 En fil kan bruke alt fra filene over seg når den lastes, og alt fra alle filene når siden kjører. Navn på toppnivå må
-derfor være unike på tvers av filene.
+derfor være unike på tvers av filene. De må heller ikke være like en `id` i `index.html`: nettleseren lager selv et
+globalt navn for hvert element med `id`, og eldre utgaver av Safari nektet å laste et skript som brukte samme navn.
 
 ## Legge ut en endring
 

@@ -118,7 +118,7 @@ async function tallpanel(p) {
   const ut = {};
   ut.total = await p.tekst('.total');
   ut.aar = await p.tekst('#aar');
-  ut.klasser = await p.tekst('#rows > button.row');
+  ut.klasser = await p.tekst('#tallrader > button.row');
   ut.planstatus = await p.tekst('#planstatus');
   ut.planinfo = await p.tekst('#planinfo');
   ut.natur = await p.tekst('#tall-pnat');
@@ -179,7 +179,7 @@ const SCENARIER = {
       .catch(() => R.feil.push('trondheim: ble ikke ferdig utregnet'));
     await p.rolig();
     R.tekst.start = await tallpanel(p);
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('1-oversikt');
     await trykk(p, '#vernknapp');
     await trykk(p, '#verdiknapp');
@@ -196,7 +196,7 @@ const SCENARIER = {
     await trykk(p, '#graaknapp');
     await trykk(p, '#verdiknapp');
     await R.bilde('6-plan-verdi-inne');
-    await p.locator('#kart').tap({ position: { x: 150, y: 300 } });
+    await p.locator('#kartflate').tap({ position: { x: 150, y: 300 } });
     await p.waitForTimeout(900);
     R.tekst.punkt = await p.tekst('#probe');
     await trykk(p, '#verdiknapp');
@@ -210,7 +210,7 @@ const SCENARIER = {
       [320, 380],
       [110, 420]
     ]) {
-      await p.locator('#kart').tap({ position: { x, y } });
+      await p.locator('#kartflate').tap({ position: { x, y } });
       await p.waitForTimeout(350);
     }
     await trykk(p, '#tegnferdig', 2500);
@@ -221,13 +221,13 @@ const SCENARIER = {
       utvikling: await p.tabell('#utvtab'),
       graa: await p.tekst('#graaapne')
     };
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('7-eget');
     await p.locator('#egneliste li button', { hasText: 'Ikke utbygging' }).click();
     await p.waitForTimeout(2500);
     await p.rolig();
     R.tekst.tegnetFri = { ...(await egne(p)), natur: await p.tekst('#tall-pnat') };
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('8-eget-fri');
     await p.locator('#egneliste li button', { hasText: 'Slett' }).click();
     await p.waitForTimeout(2000);
@@ -246,7 +246,7 @@ const SCENARIER = {
       graa: await p.tekst('#graablokk')
     };
     await p.flytt(270500, 7031500, 84.6);
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('9-opplastet');
     await p.locator('#egneliste li button', { hasText: 'Slett' }).click();
     await p.waitForTimeout(2000);
@@ -257,8 +257,8 @@ const SCENARIER = {
     await p.locator('#vernliste li button').first().click();
     await p.waitForTimeout(1500);
     await p.rolig();
-    R.tekst.vist = await p.tekst('#vist');
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    R.tekst.vist = await p.tekst('#vistmerke');
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('10-vist');
   },
   /* Kommune uten lagret oversiktsbilde: kartet og tallene bygges av det som hentes når man zoomer inn. */
@@ -276,7 +276,7 @@ const SCENARIER = {
     await p.rolig();
     R.tekst.start = await tallpanel(p);
     const [x, y, res] = await p.evaluate(() => [...kart.getView().getCenter(), kart.getView().getResolution()]);
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await trykk(p, '#inonknapp');
     await p.flytt(x, y, 12);
     await R.bilde('1-inne');
@@ -305,7 +305,7 @@ const SCENARIER = {
       .catch(() => R.feil.push('oslo: ble ikke ferdig'));
     await p.rolig();
     R.tekst.start = await tallpanel(p);
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('1-oversikt');
     /* bytt kommune med velgeren, og tilbake igjen */
     await p.selectOption('#fylke', '50');
@@ -314,7 +314,7 @@ const SCENARIER = {
     await p.waitForTimeout(6000);
     await p.rolig();
     R.tekst.malvik = await tallpanel(p);
-    await p.locator('#kart').scrollIntoViewIfNeeded();
+    await p.locator('#kartflate').scrollIntoViewIfNeeded();
     await R.bilde('2-malvik');
   }
 };
@@ -329,7 +329,7 @@ async function kjor(kilde, ut, bare) {
       R = { tekst: {}, feil: [] },
       p = await nySide(nettleser, kilde, R.feil);
     R.bilde = async n => {
-      await p.locator('#kart').screenshot({ path: path.join(ut, `${navn}-${n}.png`) });
+      await p.locator('#kartflate').screenshot({ path: path.join(ut, `${navn}-${n}.png`) });
     };
     try {
       await SCENARIER[navn](p, R);
