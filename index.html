@@ -108,10 +108,22 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 /* Verneområder og villreinområder tegnes som omriss med hvit kant, så klassene under fortsatt synes. Formen skiller dem fra de andre lagene, ikke bare fargen. */
 .row.naturrad .sw { border-width: 3px; background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: 0 0 0 1px var(--ink-3) }
 .row.naturrad.flate .sw { background: var(--c) }
-.row.naturrad[aria-pressed="false"] .sw { background: transparent }
-.row.naturrad[aria-pressed="false"] .nm { text-decoration: none; color: var(--ink) }   /* av er utgangspunktet, så navnet strykes ikke */
+/* Naturtemaene har to knapper i raden: fargeruten slår temaet av og på i kartet, og resten av raden åpner detaljene under.
+   Fargeruten har trykkflate ut i margen, så den er lett å treffe uten at navnene flytter seg i forhold til radene over. */
+.row.naturrad { grid-template-columns: auto minmax(0, 1fr); gap: 0; padding: 0; cursor: default; align-items: stretch }
+.lagknapp { display: flex; align-items: flex-start; margin-left: -12px; padding: 16px 12px 14px; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent }
+.apne { display: grid; grid-template-columns: minmax(0, 1fr) auto 4.6em; gap: 2px 12px; align-items: center; padding: 14px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent }
+.apne .nm::after { content: ''; display: inline-block; width: 7px; height: 7px; margin: 0 0 3px 10px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg) }
+.apne[aria-expanded="true"] .nm::after { transform: rotate(-135deg); margin-bottom: -1px }
+.apne .un { grid-column: 1 / -1; font-size: 13px; color: var(--ink-3) }
+.apne .un:empty { display: none }
+.lagknapp:focus-visible, .apne:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px }
+.row.naturrad .lagknapp[aria-pressed="false"] .sw { background: transparent }
+.row.naturrad.apen { border-bottom-color: transparent }
+.rows > .naturblokk { padding: 0 0 18px; border-bottom: 1px solid var(--line) }
+.temahode { padding: 20px 0 10px; font-size: 13px; color: var(--ink-3); border-bottom: 1px solid var(--line) }
+.temahode b { display: block; font: 600 13px/1.3 var(--body); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px }
 .naturblokk { display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: var(--ink-2) }
-#naturblokker { display: contents }
 .naturblokk b { font-weight: 600; color: var(--ink) }
 .naturblokk ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line) }
 .naturblokk li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums }
@@ -125,7 +137,7 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .naturblokk .valg { font-size: 14px }
 .naturblokk ul:empty { display: none }
 .row.naturrad.inon .sw { border: 0; background: linear-gradient(90deg, var(--inon2) 33%, var(--inon1) 33% 66%, var(--inonv) 66%); box-shadow: 0 0 0 1px var(--ink-3) }
-.row.naturrad.inon[aria-pressed="false"] .sw { background: transparent; box-shadow: inset 0 0 0 3px var(--inon1), 0 0 0 1px var(--ink-3) }
+.row.naturrad.inon .lagknapp[aria-pressed="false"] .sw { background: transparent; box-shadow: inset 0 0 0 3px var(--inon1), 0 0 0 1px var(--ink-3) }
 .tegn { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums }
 .tegn span { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap }
 .tegn i { width: 12px; height: 12px; border-radius: 3px }
@@ -212,8 +224,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         <div class="tegn" id="tegn2"></div>
         <p class="hint" id="vannnote"></p>
       </div>
-      <div id="naturblokker"></div>
-      <p class="hint">Trykk på et kartlag for å skjule eller vise det. Lagene er uavhengige, så planlagt utbygging kan vises alene. Vann vises i kartet med grunnkartets farger og er ikke med i tallene for bebygd, jordbruk og natur. Planlaget er omtrentlig og bare til illustrasjon.</p>
+      <p class="hint">Trykk på en arealklasse eller på planlagt utbygging for å skjule eller vise den i kartet. Lagene er uavhengige, så planlagt utbygging kan vises alene. Vann vises i kartet med grunnkartets farger og er ikke med i tallene for bebygd, jordbruk og natur. Planlaget er omtrentlig og bare til illustrasjon.</p>
     </section>
   </div>
 
@@ -285,7 +296,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 08.40';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 09.20';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -563,7 +574,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   const inonSone = (r, g, b) => { let best = 0, min = 1e9; for (let i = 0; i < 3; i++) { const f = INONSONER[i][2], d = (r - f[0]) ** 2 + (g - f[1]) ** 2 + (b - f[2]) ** 2; if (d < min) { min = d; best = i } } return best };
   const inonBilde = (u, w, h) => INON + '?' + new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'status', styles: '', crs: UTM,
     bbox: u.map(v => v.toFixed(2)).join(','), width: w, height: h, format: 'image/png8', transparent: 'true', format_options: 'antialias:none' });
-  let inon = null, inonPaa = false, inonGammel = false, inonNokkel = 0;
+  let inon = null, inonPaa = false, inonGammel = false, inonNokkel = 0, inonRad = null;
   /* Kommunebildet er gjort om til tre masker i hver sin fargekanal: minst 1 km, minst 3 km og minst 5 km fra inngrep. Når en flis
      forstørres fra bildet, jevner nettleseren ut hver maske for seg, og grensen settes der masken er halvveis. Sonegrensene blir
      dermed glatte kurver også når kartet er zoomet langt inn, selv om bildet har ruter på 20 meter eller mer. */
@@ -727,8 +738,20 @@ td.feil { color: var(--ink); font-weight: 600 }
      ikke bare et bilde. Hvert datasett blir et kartlag med egen knapp og egen del i tallpanelet, og krysses med planlagt utbygging.
      Et nytt datasett av samme slag legges til som en ny linje i listen under. */
   const MD = 'https://kart.miljodirektoratet.no/arcgis/rest/services/';
+  /* Én rad per naturtema, bygd likt: fargeruten viser temaet i kartet, og resten av raden åpner detaljene. Raden svarer på det samme
+     for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er, og hvor mye planlagt utbygging som ligger innenfor. */
+  function temaRad(id, navn, klasse, vedBryter) {
+    const rad = document.createElement('div'); rad.className = 'row naturrad ' + klasse; rad.style.setProperty('--c', `var(--${id})`);
+    rad.innerHTML = `<button type="button" class="lagknapp" id="${id}knapp" aria-pressed="false"><span class="sw"></span></button><button type="button" class="apne" id="${id}apne" aria-expanded="false" aria-controls="${id}blokk"><span class="nm"></span><span class="km"></span><span class="pc"></span><span class="un"></span></button>`;
+    const knapp = rad.firstChild, apne = rad.lastChild, blokk = document.createElement('div'); blokk.className = 'naturblokk'; blokk.id = id + 'blokk'; blokk.hidden = true; blokk.setAttribute('role', 'region'); blokk.setAttribute('aria-label', navn);
+    knapp.setAttribute('aria-label', `Vis ${navn.toLowerCase()} i kartet`); apne.querySelector('.nm').textContent = navn;
+    knapp.addEventListener('click', () => vedBryter(knapp));
+    apne.addEventListener('click', () => { const ap = apne.getAttribute('aria-expanded') !== 'true'; apne.setAttribute('aria-expanded', String(ap)); blokk.hidden = !ap; rad.classList.toggle('apen', ap) });
+    return { rad, knapp, blokk };
+  }
+  const andelTekst = p => p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %';
   const NATURLAG = [
-    { id: 'vern', navn: 'Verneområder', en: 'verneområde', fl: 'verneområder', best: 'verneområdene', url: MD + 'vern/MapServer/0/query', felt: 'offisieltNavn,verneform,vernedato,faktaark', slakk: 5,
+    { id: 'vern', navn: 'Verneområder', en: 'verneområde', fl: 'verneområder', best: 'verneområdene', vann: true, url: MD + 'vern/MapServer/0/query', felt: 'offisieltNavn,verneform,vernedato,faktaark', slakk: 5,
       kildetekst: 'Miljødirektoratet, naturvernområder',
       les: p => ({ navn: p.offisieltNavn || 'Uten navn', url: p.faktaark || '',
         under: [String(p.verneform || '').replace(/([a-zæøå])([A-ZÆØÅ])/g, '$1 $2').toLowerCase().replace(/omraade/g, 'område').replace(/^./, c => c.toUpperCase()), p.vernedato ? 'vernet ' + new Date(p.vernedato).getUTCFullYear() : ''].filter(Boolean).join(', ') }) },
@@ -763,13 +786,10 @@ td.feil { color: var(--ink); font-weight: 600 }
       ? new ol.layer.Tile({ className: 'plan', visible: false, source: new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, transition: 0, projection: UTM, tileLoadFunction: tile => tegnFlateflis(t, tile) }) })
       : new ol.layer.Vector({ className: 'plan', source: t.kilde, visible: false, renderBuffer: 4000, style: (f, res) => {
           const u = f.getGeometry().getExtent(); return Math.max(u[2] - u[0], u[3] - u[1]) < 8 * res ? t.merke : t.strek } });
-    const k = t.knapp = document.createElement('button'); k.type = 'button'; k.className = 'row naturrad' + (t.flate ? ' flate' : ''); k.id = t.id + 'knapp'; k.style.setProperty('--c', `var(--${t.id})`); k.setAttribute('aria-pressed', 'false');
-    k.innerHTML = '<span class="sw"></span><span class="nm"></span><span class="km"></span><span class="pc"></span>'; k.querySelector('.nm').textContent = t.navn;
-    k.addEventListener('click', () => { t.paa = !t.paa; k.setAttribute('aria-pressed', String(t.paa)); visNatur(t) });
-    const b = t.blokk = document.createElement('div'); b.className = 'naturblokk'; b.id = t.id + 'blokk'; b.hidden = true;
-    b.innerHTML = `<h2></h2><p id="${t.id}sum"></p><ul id="${t.id}tegn"></ul><p id="${t.id}merk"></p>${t.dekning ? `<label class="valg" for="${t.id}slor" hidden><input type="checkbox" id="${t.id}slor" checked>Legg et lyst slør over det som ikke er kartlagt, når laget er på.</label>` : ''}<p id="${t.id}plan" role="status"></p><p id="${t.id}gap" role="status"></p><ul id="${t.id}liste"></ul><p class="hint"></p>`;
-    b.querySelector('h2').textContent = t.navn; b.querySelector('.hint').textContent = `Kilde: ${t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i nettleseren.`;
-    $('naturblokker').appendChild(b);
+    const r = temaRad(t.id, t.navn, t.flate ? 'flate' : '', k => { t.paa = !t.paa; k.setAttribute('aria-pressed', String(t.paa)); visNatur(t) });
+    t.rad = r.rad; t.knapp = r.knapp; const b = t.blokk = r.blokk;
+    b.innerHTML = `<p id="${t.id}sum"></p><ul id="${t.id}tegn"></ul><p id="${t.id}merk"></p>${t.dekning ? `<label class="valg" for="${t.id}slor" hidden><input type="checkbox" id="${t.id}slor" checked>Legg et lyst slør over det som ikke er kartlagt, når laget er på.</label>` : ''}<p id="${t.id}plan" role="status"></p><p id="${t.id}gap" role="status"></p><ul id="${t.id}liste"></ul><p class="hint"></p>`;
+    b.querySelector('.hint').textContent = `Kilde: ${t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i nettleseren.${t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}`;
     if (t.dekning) b.querySelector('input').addEventListener('change', e => { slorPaa = e.target.checked; visNatur(t) });
     return t;
   });
@@ -919,13 +939,14 @@ td.feil { color: var(--ink); font-weight: 600 }
   function visNatur(t) {
     const D = t.data, ok = !!D && !!valgt && D.nr === valgt.nr, o = ok ? D.omrader : [], sum = ok ? D.sum || 0 : 0, km = dekar;
     const daa = n => iTekst(n * (OPPLOSNINGER[9] / 2) ** 2 / 1e6), el = n => $(t.id + n);   /* fra antall ruter på 21 meter, brukes i setninger */
-    t.lag.setVisible(t.paa && !!klipp && ok && o.length > 0); t.blokk.hidden = !ok || (!o.length && !D.feil);   /* uten områder holder det at knappen sier «ingen» */
+    t.lag.setVisible(t.paa && !!klipp && ok && o.length > 0);
     if (t.dekning) { const kartlagt = ok && !!D.ekstra && D.ekstra.km2 > 0; dekLag.setVisible(t.paa && slorPaa && !!klipp && kartlagt); t.blokk.querySelector('label').hidden = !kartlagt; el('tegn').textContent = el('gap').textContent = '' }
-    t.knapp.querySelector('.km').textContent = !ok ? '' : D.feil ? 'ikke hentet' : o.length ? km(sum) : 'ingen';
-    if (!ok) return;
-    const liste = el('liste'); liste.textContent = '';
+    const rad = n => t.rad.querySelector('.' + n), liste = el('liste'); liste.textContent = '';
+    rad('km').textContent = !ok ? '' : D.feil ? 'ikke hentet' : o.length ? km(sum) : 'ingen';
+    rad('pc').textContent = ok && !D.feil && o.length && ssbSum ? andelTekst(sum / ssbSum * 100) : ''; rad('un').textContent = '';
+    if (!ok) { el('sum').textContent = valgt ? 'Henter …' : ''; ['tegn', 'merk', 'plan', 'gap'].forEach(n => { el(n).textContent = '' }); return }
     el('sum').textContent = D.feil ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.` : !o.length ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${t.avLand ? (ssbSum ? `, ${nf(sum / ssbSum * 100)} % av landarealet` : '') : flate ? `, ${nf(sum / flate * 100)} % av flaten med sjø` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
+      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${ssbSum ? `, ${nf(sum / ssbSum * 100)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
     if (t.klasser && D.klasser && o.length) t.klasser.forEach(([navn, id], v) => {   /* tegnforklaring: tone, verdikategori, areal, antall og planlagt utbygging innenfor */
       const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span'), sm = document.createElement('small'), mine = o.filter(x => x.v === v), pl = mine.reduce((s, x) => s + x.plan, 0);
       i.style.setProperty('--c', `var(--${id})`); n.append(i, navn); ar.textContent = km(D.klasser[v]); sm.textContent = `${nf(mine.length, 0)} ${mine.length === 1 ? 'lokalitet' : 'lokaliteter'}`;
@@ -952,6 +973,8 @@ td.feil { color: var(--ink); font-weight: 600 }
       b.textContent = `Av ca. ${daa(G.nat)} planlagt utbygging på natur${der} ligger ca. ${daa(G.ukjent)} (${nf(G.ukjent / G.nat * 100, 0)} %) i områder som ikke er kartlagt.`;
       el('gap').append(b, ' Der vet vi ikke om det finnes verdifull natur. Smale striper er ikke med.');
     }
+    rad('un').textContent = !o.length ? '' : ingenPlan() ? 'ingen kommuneplan å krysse med' : !planPaa ? 'planlagt utbygging er slått av' : !D.regnet ? 'planlagt utbygging er ikke regnet ut ennå'
+      : (plan ? `ca. ${dekar(plan * (OPPLOSNINGER[9] / 2) ** 2 / 1e6)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') + (ov && ov.dynamisk ? ', i hentet kart' : '');
     const vises = t.samlet ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan) : o;   /* av mange små lokaliteter listes bare de som berøres */
     const maks = t.samlet ? 15 : 40; vises.slice(0, maks).forEach(x => {
       const li = document.createElement('li'), a = document.createElement(x.url ? 'a' : 'b'), ar = document.createElement('span'), sm = document.createElement('small');
@@ -1187,14 +1210,16 @@ td.feil { color: var(--ink); font-weight: 600 }
     oppfriskInon(); visInon();
   }
   function visInon() {
-    const D = inon && valgt && inon.nr === valgt.nr ? inon : null, ok = !!D && D.tilstand === 'ok', kn = $('inonknapp'), b = $('inonblokk'), liste = $('inonliste');
-    inonLag.setVisible(inonPaa && vis.nat && !!klipp && ok && D.sum > 0);
-    kn.querySelector('.km').textContent = !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : D.sum > 0 ? dekar(D.sum) : 'ingen';
-    b.hidden = !D || D.tilstand === 'henter'; liste.textContent = ''; if (b.hidden) return;
-    const tekst = $('inonsum'), merk = $('inonmerk'); merk.textContent = '';
+    const D = inon && valgt && inon.nr === valgt.nr ? inon : null, ok = !!D && D.tilstand === 'ok', R = inonRad.rad, liste = $('inonliste'), tekst = $('inonsum'), merk = $('inonmerk'), har = ok && D.sum > 0;
+    inonLag.setVisible(inonPaa && vis.nat && !!klipp && har);
+    R.querySelector('.km').textContent = !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : har ? dekar(D.sum) : 'ingen';
+    R.querySelector('.pc').textContent = har && ssbSum ? andelTekst(D.sum / ssbSum * 100) : '';
+    R.querySelector('.un').textContent = har ? 'krysses ikke med planlagt utbygging, se detaljer' : '';
+    liste.textContent = merk.textContent = ''; $('inonplan').hidden = !har;
+    if (!D || D.tilstand === 'henter') { tekst.textContent = valgt ? 'Henter …' : ''; return }
     if (!ok) { tekst.textContent = 'Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.'; return }
-    if (!(D.sum > 0)) { tekst.textContent = 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'; return }
-    tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${ssbSum && ferskvann ? ` (${nf(D.sum / (ssbSum + ferskvann.inn + ferskvann.elv) * 100)} % av land og ferskvann)` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
+    if (!har) { tekst.textContent = 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'; return }
+    tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${ssbSum ? `, ${nf(D.sum / ssbSum * 100)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
     merk.textContent = !vis.nat ? 'Laget følger klassen natur, som er slått av i kartet nå.' : inonPaa ? 'I kartet vises naturen nå i fire grønntoner:' : 'Når laget er på, vises naturen i kartet i fire grønntoner:';
     const rad = (id, navn, under, tall) => {
       const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span'), sm = document.createElement('small');
@@ -1298,13 +1323,11 @@ td.feil { color: var(--ink); font-weight: 600 }
   {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'row lag'; b.id = 'planknapp'; b.setAttribute('aria-pressed', 'true');
     b.innerHTML = '<span class="sw"></span><span class="nm">Planlagt utbygging</span><span class="km"></span><span class="pc"></span>'; rows.appendChild(b);
-    NATURLAG.forEach(t => rows.appendChild(t.knapp));
-    const k = document.createElement('button'); k.type = 'button'; k.className = 'row naturrad flate inon'; k.id = 'inonknapp'; k.setAttribute('aria-pressed', 'false');
-    k.innerHTML = '<span class="sw"></span><span class="nm">Inngrepsfri natur</span><span class="km"></span><span class="pc"></span>'; rows.appendChild(k);
-    k.addEventListener('click', () => { inonPaa = !inonPaa; k.setAttribute('aria-pressed', String(inonPaa)); visInon() });
-    const bl = document.createElement('div'); bl.className = 'naturblokk'; bl.id = 'inonblokk'; bl.hidden = true;
-    bl.innerHTML = '<h2>Inngrepsfri natur</h2><p id="inonsum"></p><p id="inonmerk"></p><ul id="inonliste"></ul><p class="hint">Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt innenfor sonene, også innsjøer. I kartet er det bare klassen natur som får sonefarge.</p>';
-    $('naturblokker').appendChild(bl);
+    const hode = document.createElement('div'); hode.className = 'temahode'; hode.innerHTML = '<b>Naturtema</b>Areal i kommunen, andel av landarealet og planlagt utbygging innenfor. Fargeruten viser temaet i kartet. Trykk på navnet for detaljer.'; rows.appendChild(hode);
+    NATURLAG.forEach(t => rows.append(t.rad, t.blokk));
+    inonRad = temaRad('inon', 'Inngrepsfri natur', 'flate inon', k => { inonPaa = !inonPaa; k.setAttribute('aria-pressed', String(inonPaa)); visInon() });
+    inonRad.blokk.innerHTML = '<p id="inonsum"></p><p id="inonmerk"></p><ul id="inonliste"></ul><p id="inonplan" hidden><b>Inngrepsfri natur kan ikke krysses med planlagt utbygging slik de andre temaene kan.</b> Sonene følger avstanden til nærmeste tyngre tekniske inngrep. Et nytt inngrep kan derfor flytte sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.</p><p class="hint">Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt innenfor sonene, også innsjøer, så andelen av landarealet er et omtrentlig mål. I kartet er det bare klassen natur som får sonefarge.</p>';
+    rows.append(inonRad.rad, inonRad.blokk);
   }
   /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
      Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på. */
