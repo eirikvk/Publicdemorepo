@@ -38,16 +38,14 @@ KL.forEach(([id, navn]) => {
     k.setAttribute('aria-pressed', String(inonPaa));
     visInon();
   });
-  inonRad.blokk.innerHTML =
-    '<p id="inonsum"></p><p id="inonmerk"></p><ul id="inonliste"></ul><p id="inonplan" hidden><b>Inngrepsfri natur kan ikke krysses med planlagt utbygging slik de andre temaene kan.</b> Sonene følger avstanden til nærmeste tyngre tekniske inngrep. Et nytt inngrep kan derfor flytte sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.</p><p class="hint">Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt innenfor sonene, også innsjøer, så andelen av landarealet er et omtrentlig mål. I kartet er det bare klassen natur som får sonefarge.</p>';
+  inonRad.blokk.append($('mal-inon').content.cloneNode(true));
   rows.append(inonRad.rad, inonRad.blokk);
   graaRad = temaRad('graa', 'Grått areal', 'flate graa', k => {
     graaPaa = !graaPaa;
     k.setAttribute('aria-pressed', String(graaPaa));
     visGraa();
   });
-  graaRad.blokk.innerHTML =
-    '<p id="graasum"></p><ul id="graaliste"></ul><p id="graaplan" role="status"></p><p id="graamerk" hidden><b>Grått betyr ikke ledig.</b> Kartet skiller ikke mellom et boligområde i bruk og en nedlagt industritomt, og sier ikke noe om hva som kan bygges om. Det må leses sammen med lokal kunnskap.</p><p class="hint">Kilde: Kart over grå arealer, Miljødirektoratet, Kartverket, NIBIO og SSB (testversjon 1, 2025), hentet fra NIBIO som to bilder av hele kommunen, og som fliser når kartet er zoomet inn. Arealene er regnet ut i nettleseren. Andel bygninger er ikke med, fordi tjenesten foreløpig oppgir 0 for alle flater vi har slått opp. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd område. Det blågrønne er regnet ut som bebygd areal i grunnkartet som ikke er grått. I en stikkprøve på 140 punkter i Trondheim var 133 det grunnkartet kaller grønne arealer.</p>';
+  graaRad.blokk.append($('mal-graa').content.cloneNode(true));
   rows.append(graaRad.rad, graaRad.blokk);
 }
 /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
