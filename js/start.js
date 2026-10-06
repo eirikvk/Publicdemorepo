@@ -1,0 +1,108 @@
+/* Tallpanelet, knappene, valg av kommune og oppstart. */
+/* Tallpanelet */
+const rows = $('rows');
+KL.forEach(([id, navn]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'row'; b.id = 'vis-' + id;
+  b.style.setProperty('--c', `var(--${id})`); b.setAttribute('aria-pressed', 'true');
+  b.innerHTML = `<span class="sw"></span><span class="nm">${navn}</span><span class="km" id="km-${id}">–</span><span class="pc" id="pc-${id}">–</span>`;
+  b.addEventListener('click', () => { vis[id] = !vis[id]; b.setAttribute('aria-pressed', String(vis[id])); tegnOversikt(); fargeleggFliser(); if (id === 'nat') visInon() });
+  rows.appendChild(b);
+});
+{
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'row lag'; b.id = 'planknapp'; b.setAttribute('aria-pressed', 'true');
+  b.innerHTML = '<span class="sw"></span><span class="nm">Planlagt utbygging</span><span class="km"></span><span class="pc"></span>'; rows.appendChild(b);
+  const hode = document.createElement('div'); hode.className = 'temahode'; hode.innerHTML = '<b>Tema</b>Areal i kommunen, andel av landarealet og planlagt utbygging innenfor. Fargeruten viser temaet i kartet. Trykk ellers på raden for detaljer.'; rows.appendChild(hode);
+  NATURLAG.forEach(t => rows.append(t.rad, t.blokk));
+  inonRad = temaRad('inon', 'Inngrepsfri natur', 'flate inon', k => { inonPaa = !inonPaa; k.setAttribute('aria-pressed', String(inonPaa)); visInon() });
+  inonRad.blokk.innerHTML = '<p id="inonsum"></p><p id="inonmerk"></p><ul id="inonliste"></ul><p id="inonplan" hidden><b>Inngrepsfri natur kan ikke krysses med planlagt utbygging slik de andre temaene kan.</b> Sonene følger avstanden til nærmeste tyngre tekniske inngrep. Et nytt inngrep kan derfor flytte sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.</p><p class="hint">Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt innenfor sonene, også innsjøer, så andelen av landarealet er et omtrentlig mål. I kartet er det bare klassen natur som får sonefarge.</p>';
+  rows.append(inonRad.rad, inonRad.blokk);
+  graaRad = temaRad('graa', 'Grått areal', 'flate graa', k => { graaPaa = !graaPaa; k.setAttribute('aria-pressed', String(graaPaa)); visGraa() });
+  graaRad.blokk.innerHTML = '<p id="graasum"></p><ul id="graaliste"></ul><p id="graaplan" role="status"></p><p id="graamerk" hidden><b>Grått betyr ikke ledig.</b> Kartet skiller ikke mellom et boligområde i bruk og en nedlagt industritomt, og sier ikke noe om hva som kan bygges om. Det må leses sammen med lokal kunnskap.</p><p class="hint">Kilde: Kart over grå arealer, Miljødirektoratet, Kartverket, NIBIO og SSB (testversjon 1, 2025), hentet fra NIBIO som to bilder av hele kommunen, og som fliser når kartet er zoomet inn. Arealene er regnet ut i nettleseren. Andel bygninger er ikke med, fordi tjenesten foreløpig oppgir 0 for alle flater vi har slått opp. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd område. Det blågrønne er regnet ut som bebygd areal i grunnkartet som ikke er grått. I en stikkprøve på 140 punkter i Trondheim var 133 det grunnkartet kaller grønne arealer.</p>';
+  rows.append(graaRad.rad, graaRad.blokk);
+}
+/* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
+   Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på. */
+{
+  const kn = $('tekknapp'), sett = paa => { document.documentElement.classList.toggle('teknisk', paa); kn.setAttribute('aria-expanded', String(paa)); kn.textContent = paa ? 'Skjul teknisk informasjon' : 'Vis teknisk informasjon' };
+  sett(new URLSearchParams(location.search).has('teknisk'));
+  kn.addEventListener('click', () => {
+    const paa = kn.getAttribute('aria-expanded') !== 'true'; sett(paa);
+    try { const u = new URL(location.href); if (paa) u.searchParams.set('teknisk', ''); else u.searchParams.delete('teknisk'); history.replaceState(null, '', u.pathname + u.search.replace(/=(&|$)/g, '$1') + u.hash) } catch (e) {}
+  });
+}
+$('tegnknapp').addEventListener('click', startTegning);
+$('lastknapp').addEventListener('click', () => $('planfil').click());
+$('planfil').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; lastOppPlan(f) });
+{
+  const st = document.querySelector('.stage');
+  st.addEventListener('dragover', e => { e.preventDefault(); st.classList.add('slipp') }); st.addEventListener('dragleave', () => st.classList.remove('slipp'));
+  st.addEventListener('drop', e => { e.preventDefault(); st.classList.remove('slipp'); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) lastOppPlan(f) });
+}
+$('tegnavbryt').addEventListener('click', () => { sluttTegning(); $('tegnknapp').focus() });
+$('tegnangre').addEventListener('click', () => { if (tegn) tegn.removeLastPoint() });
+$('tegnferdig').addEventListener('click', () => { if (tegn) tegn.finishDrawing() });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tegner()) sluttTegning() });
+$('vistlukk').addEventListener('click', fjernMerket);
+$('vistliste').addEventListener('click', () => {
+  if (!vist) return; const t = vist.t, apne = t.rad.querySelector('.apne'); if (apne.getAttribute('aria-expanded') !== 'true') apne.click();
+  const li = document.getElementById(vist.liId) || t.blokk, rolig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  li.scrollIntoView({ behavior: rolig ? 'auto' : 'smooth', block: 'center' }); const kn = li.querySelector('button'); if (kn) kn.focus({ preventScroll: true });
+});
+$('smale').addEventListener('change', e => { visSmale = e.target.checked; oppfriskPlan() });
+$('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); planLag.setVisible(planPaa && !!klipp && !utenPlan()); nyttSlor() });
+async function hentGrense(k, mitt, behold) {
+  try {
+    const j = await hent('Kartverket', `Grense for ${k.navn}`, `${KV}/kommuner/${k.nr}/omrade?utkoordsys=25833`);
+    if (mitt !== valgNr) return;
+    const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
+    grenseKilde.clear(); grenseKilde.addFeature(new ol.Feature(geom));
+    {   /* flaten i km²: arealet i UTM33 rettet for målestokken i kartprojeksjonen, som øker med avstanden fra sonens midtlinje */
+      const u = geom.getExtent(), k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2)); flate = geom.getArea() / (k * k) / 1e6; visVann();
+    }
+    klipp = geom; tema.setExtent(geom.getExtent()); planLag.setExtent(geom.getExtent()); inonLag.setExtent(geom.getExtent()); graaLag.setExtent(geom.getExtent()); dekLag.setExtent(geom.getExtent()); tema.setVisible(true); visPlan(); sjekkPlan(k, geom, mitt); sjekkInon(k, geom, mitt); sjekkGraa(k, geom, mitt); NATURLAG.forEach(t => hentNatur(t, k, geom, mitt));
+    if (!oversikter[k.nr]) nySamling(k.nr, geom.getExtent());
+    if (!k.boks && !behold) view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
+  } catch (e) { if (mitt === valgNr) { $('probe').textContent = 'Kommunegrensen kunne ikke hentes.'; tema.setVisible(true) } }
+}
+
+const fSel = $('fylke'), kSel = $('kommune');
+const finn = nr => { for (const f of fylker) for (const k of f.kommuner) if (k.nr === nr) return [f, k]; return null };
+function fyllKommuner(f, nr) { kSel.length = 0; f.kommuner.forEach(k => kSel.add(new Option(k.navn, k.nr))); kSel.value = nr || f.kommuner[0].nr }
+function velg(nr, behold) {   /* behold: kartet blir stående der det er, brukes når kommunen velges i kartet */
+  const t = finn(nr); if (!t) return;
+  const [f, k] = t, mitt = ++valgNr; valgt = k; lukkBytt();
+  if (fSel.value !== f.nr) { fSel.value = f.nr; fyllKommuner(f, nr) } kSel.value = nr;
+  try { history.replaceState(null, '', '#' + nr) } catch (e) {}
+  $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
+  $('probe').textContent = 'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.'; tomTall('Henter …');
+  grenseKilde.clear(); klipp = null; flate = 0; planRaster = null; historie = null; planSum = null; visUtvikling(); clearTimeout(etterTimer); etterVenter = false; planInfo = null; sluttTegning(); visEgneLag(); visPlanInfo(); visEgne(); fjernMerket(); inon = null; visInon(); graa = null; graaKryss = null; visGraa(); NATURLAG.forEach(t => { t.data = null; t.kilde.clear(); visNatur(t) }); tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
+  hentOversikt(k, mitt);
+  if (k.boks && !behold) view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
+  hentTall(k, mitt); hentHistorie(k, mitt); hentGrense(k, mitt, behold); kartStatus();
+}
+fSel.addEventListener('change', () => { const f = fylker.find(x => x.nr === fSel.value); fyllKommuner(f); velg(kSel.value) });
+kSel.addEventListener('change', () => velg(kSel.value));
+
+const boksAv = b => { const c = b && b.coordinates && b.coordinates[0]; if (!c) return null; const x = c.map(q => q[0]), y = c.map(q => q[1]); return [Math.min(...x), Math.min(...y), Math.max(...x), Math.max(...y)] };
+hent('Egen fil', 'Fylker og kommuner', 'kommuner.json', true)
+  .then(j => j.map(f => ({ nr: f[0], navn: f[1], kommuner: f[2].map(k => ({ nr: k[0], navn: k[1], boks: k.slice(2) })) })))
+  .catch(() => hent('Kartverket', 'Fylker og kommuner', `${KV}/fylkerkommuner`)
+    .then(j => j.map(f => ({ nr: f.fylkesnummer, navn: f.fylkesnavn, kommuner: f.kommuner.map(k => ({ nr: k.kommunenummer, navn: k.kommunenavnNorsk, boks: boksAv(k.avgrensningsboks) })) }))))
+  .then(async liste => {
+  const reg = await hent('Egen fil', 'Register over oversiktsbilder', 'oversikt.json', true).catch(() => null);
+  if (reg && reg.kommuner) oversikter = reg.kommuner;
+  fylker = liste.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+  fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
+  fSel.length = 0; fylker.forEach(f => fSel.add(new Option(f.navn, f.nr)));
+  const medBilde = Object.keys(oversikter).filter(nr => finn(nr));
+  if (medBilde.length) {
+    const o = $('omoversikt'), hvem = medBilde.length === 1 ? finn(medBilde[0])[1].navn : medBilde.length + ' kommuner';
+    o.textContent = `For ${hvem} ligger også et ferdig oversiktsbilde lagret (${reg.versjon}, hentet ${reg.hentet}). Det vises når kartet er zoomet ut, og fliser fra NIBIO tar over når du zoomer inn.`; o.hidden = false;
+  }
+  let forst = (location.hash || '').replace('#', '');
+  if (!finn(forst)) forst = finn('5001') ? '5001' : fylker[0].kommuner[0].nr;
+  const f0 = finn(forst)[0]; fSel.value = f0.nr; fyllKommuner(f0, forst); velg(forst);
+}).catch(() => { $('navn').textContent = 'Kommunelisten kunne ikke hentes'; $('under').textContent = 'Sjekk nettforbindelsen og last siden på nytt.' });
+
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', tegnPaaNytt);
+new MutationObserver(tegnPaaNytt).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
