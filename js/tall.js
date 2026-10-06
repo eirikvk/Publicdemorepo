@@ -29,16 +29,16 @@ function tomTall(tekst) { ssbSum = 0; ferskvann = null; visVann(); $('tot').text
 
 /* SSB har to API-er til samme tabell. Det nye brukes først. Svarer det ikke, spørres det eldre om det samme.
    Det eldre tar spørringen som tekst i et POST-kall, og har ikke «fra og med år», så tidsserien kommer med alle år. */
+const SSBKODER = [...KL.flatMap(x => x[3]), ...VANN.map(x => x[3]).filter(Boolean)];   /* arealklassene som hentes: de tre på land, og innsjø og elv */
 const SSB0 = 'https://data.ssb.no/api/v0/no/table/09594';
-async function hentSSB(hva, nytt, region, koder, tid) {
+async function hentSSB(hva, nytt, region, tid) {
   try { return await hent('SSB', hva, nytt) } catch (e) {}
   const valg = (code, filter, values) => ({ code, selection: { filter, values } });
-  return hent('SSB', hva + ', eldre API', SSB0, false, false, false, JSON.stringify({ query: [valg('Region', ...region), valg('ArealKlasse', 'item', koder), valg('ContentsCode', 'item', ['Areal']), valg('Tid', ...tid)], response: { format: 'json-stat2' } }));
+  return hent('SSB', hva + ', eldre API', SSB0, false, false, false, JSON.stringify({ query: [valg('Region', ...region), valg('ArealKlasse', 'item', SSBKODER), valg('ContentsCode', 'item', ['Areal']), valg('Tid', ...tid)], response: { format: 'json-stat2' } }));
 }
 async function hentTall(k, mitt) {
-  const koder = [...KL.flatMap(x => x[3]), ...VANN.map(x => x[3]).filter(Boolean)].join(',');
   try {
-    const j = await hentSSB(`Areal for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&valueCodes[Region]=${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=top(1)`, ['item', [k.nr]], koder.split(','), ['top', ['1']]);
+    const j = await hentSSB(`Areal for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&valueCodes[Region]=${k.nr}&valueCodes[ArealKlasse]=${SSBKODER.join(',')}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=top(1)`, ['item', [k.nr]], ['top', ['1']]);
     if (mitt !== valgNr) return;
     const ix = j.dimension.ArealKlasse.category.index, tid = j.dimension.Tid.category.index;
     const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
@@ -52,9 +52,8 @@ async function hentTall(k, mitt) {
    Er kommunens samlede flate likevel en annen i 2017, er grensen flyttet, og da vises ingen sammenligning. */
 let historie = null, planSum = null;
 async function hentHistorie(k, mitt) {
-  const koder = [...KL.flatMap(x => x[3]), ...VANN.map(x => x[3]).filter(Boolean)].join(',');
   try {
-    const j = await hentSSB(`Areal fra 2017 for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=K-${k.nr}&valueCodes[ArealKlasse]=${koder}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=from(2017)`, ['agg:KommSummer', ['K-' + k.nr]], koder.split(','), ['all', ['*']]);
+    const j = await hentSSB(`Areal fra 2017 for ${k.navn}`, `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=K-${k.nr}&valueCodes[ArealKlasse]=${SSBKODER.join(',')}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=from(2017)`, ['agg:KommSummer', ['K-' + k.nr]], ['all', ['*']]);
     if (mitt !== valgNr) return;
     const liste = x => Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b]), kl = liste(j.dimension.ArealKlasse.category.index), aar = liste(j.dimension.Tid.category.index), nT = aar.length;
     const v = (c, t) => j.value[kl.indexOf(c) * nT + t] || 0, sum = t => KL.map(x => x[3].reduce((s, c) => s + v(c, t), 0)), alt = t => sum(t).reduce((s, x) => s + x, 0) + v('22.01', t) + v('22.02', t);
@@ -64,13 +63,12 @@ async function hentHistorie(k, mitt) {
   } catch (e) {}   /* uten historiske tall vises ikke blokken */
 }
 function visUtvikling() {
-  const H = historie && valgt && historie.nr === valgt.nr ? historie : null, tab = $('utvtab'), tekst = $('utvsum'), note = $('utvnote');
+  const H = gjeldende(historie), tab = $('utvtab'), tekst = $('utvsum'), note = $('utvnote');
   $('utvikling').hidden = !H; tab.textContent = tekst.textContent = note.textContent = ''; if (!H) return;
   tab.hidden = H.endret;
   if (H.endret) { tekst.textContent = `Kommunens flate er ikke den samme i SSBs tall for ${H.fra} og ${H.til}, trolig fordi grensen er flyttet. Tallene kan derfor ikke sammenlignes.`; return }
   const P = planSum && planSum.nr === valgt.nr && !utenPlan() ? planSum : null, etter = P ? [H.a1[0] + P.nat + P.jor, H.a1[1] - P.jor, H.a1[2] - P.nat] : null;
   const hele = km2 => nf(Math.round(km2 * 1000), 0), endr = km2 => { const d = Math.round(km2 * 1000); return d ? (d < 0 ? '−' : '+') + nf(Math.abs(d), 0) : '0' };
-  const celle = (rad, tall, d, type = 'td') => { const c = document.createElement(type); c.textContent = tall; if (d !== undefined) { const m = document.createElement('small'); m.textContent = d; c.appendChild(m) } rad.appendChild(c); return c };
   const hode = tab.createTHead().insertRow(); [['daa'], [H.fra], [H.til], [P && P.egne ? 'Med planlagt utbygging og egne områder' : 'Med planlagt utbygging']].forEach(([t]) => { celle(hode, t, undefined, 'th').scope = 'col' });
   const kropp = tab.createTBody();
   KL.forEach(([id, navn], i) => {

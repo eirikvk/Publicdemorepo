@@ -45,20 +45,18 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && tegner()) 
 $('vistlukk').addEventListener('click', fjernMerket);
 $('vistliste').addEventListener('click', () => {
   if (!vist) return; const t = vist.t, apne = t.rad.querySelector('.apne'); if (apne.getAttribute('aria-expanded') !== 'true') apne.click();
-  const li = document.getElementById(vist.liId) || t.blokk, rolig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  li.scrollIntoView({ behavior: rolig ? 'auto' : 'smooth', block: 'center' }); const kn = li.querySelector('button'); if (kn) kn.focus({ preventScroll: true });
+  const li = document.getElementById(vist.liId) || t.blokk;
+  li.scrollIntoView({ behavior: rolig() ? 'auto' : 'smooth', block: 'center' }); const kn = li.querySelector('button'); if (kn) kn.focus({ preventScroll: true });
 });
-$('smale').addEventListener('change', e => { visSmale = e.target.checked; oppfriskPlan() });
-$('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); planLag.setVisible(planPaa && !!klipp && !utenPlan()); nyttSlor() });
+$('smale').addEventListener('change', e => { visSmale = e.target.checked; friskOpp(planLag) });
+$('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlanLag(); nyttSlor() });
 async function hentGrense(k, mitt, behold) {
   try {
     const j = await hent('Kartverket', `Grense for ${k.navn}`, `${KV}/kommuner/${k.nr}/omrade?utkoordsys=25833`);
     if (mitt !== valgNr) return;
     const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
     grenseKilde.clear(); grenseKilde.addFeature(new ol.Feature(geom));
-    {   /* flaten i km²: arealet i UTM33 rettet for målestokken i kartprojeksjonen, som øker med avstanden fra sonens midtlinje */
-      const u = geom.getExtent(), k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2)); flate = geom.getArea() / (k * k) / 1e6; visVann();
-    }
+    flate = geom.getArea() / utm33(geom); visVann();   /* flaten i km², rettet for målestokken i kartprojeksjonen */
     klipp = geom; tema.setExtent(geom.getExtent()); planLag.setExtent(geom.getExtent()); inonLag.setExtent(geom.getExtent()); graaLag.setExtent(geom.getExtent()); dekLag.setExtent(geom.getExtent()); tema.setVisible(true); visPlan(); sjekkPlan(k, geom, mitt); sjekkInon(k, geom, mitt); sjekkGraa(k, geom, mitt); NATURLAG.forEach(t => hentNatur(t, k, geom, mitt));
     if (!oversikter[k.nr]) nySamling(k.nr, geom.getExtent());
     if (!k.boks && !behold) view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });

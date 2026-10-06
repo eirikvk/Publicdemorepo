@@ -7,7 +7,7 @@ const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, s
 const view = new ol.View({ projection: UTM, center: ol.proj.fromLonLat([15, 65], UTM), resolutions: OPPLOSNINGER.slice(2), resolution: OPPLOSNINGER[4], enableRotation: false });
 const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, inonLag, graaLag, dekLag, ...flateLag, planLag, ...omrissLag, grense, egneLag, markLag], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
   controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
-const tegnPaaNytt = () => { fargeMinne = {}; rgbMinne = {}; tegnOversikt(); fargeleggFliser(); oppfriskPlan(); oppfriskInon(); oppfriskGraa(); heltSlor = null; dekLag.getSource().setKey(String(++dekNokkel)); grense.changed() };
+const tegnPaaNytt = () => { fargeMinne = {}; rgbMinne = {}; tegnOversikt(); fargeleggFliser(); [planLag, inonLag, graaLag].forEach(friskOpp); heltSlor = null; friskOpp(dekLag); grense.changed() };
 /* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen.
    Kartet slipper derfor knip og dra igjennom til nettleseren så lenge siden er forstørret. Knappene for zoom og trykk i kartet virker fortsatt. */
 if (window.visualViewport) {

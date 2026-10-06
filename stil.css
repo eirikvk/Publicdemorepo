@@ -48,8 +48,6 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 .sidezoom .map { touch-action: auto }
 .mapfoot { display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums }
 .probe b { font-weight: 600; color: var(--ink) }
-.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ink-2); cursor: pointer }
-.opt input { margin: 3px 0 0; accent-color: var(--accent) }
 
 .ol-control button { width: 44px; height: 44px; font-size: 22px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin: 0 0 6px }
 .ol-control button:hover, .ol-control button:focus { color: var(--ink); background: var(--surface); outline: 2px solid var(--accent) }

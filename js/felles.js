@@ -26,7 +26,7 @@ const KL = [
 /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
 const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
 const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-const VERSJON = '6. oktober kl. 23.30';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+const VERSJON = '6. oktober kl. 23.53';   /* settes av verktoy/utgave.py ved hver endring, så man ser hvilken utgave en fane kjører */
 const $ = id => document.getElementById(id);
 /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
 let bruk = {};
@@ -59,8 +59,31 @@ async function hent(kilde, hva, url, stille, bytes, glem, kropp) {
     const r = await fetch(url, kropp ? { method: 'POST', body: kropp } : undefined); if (!r.ok) throw new Error(r.status);
     const b = await r.blob(); logg(kilde, hva, performance.now() - t0, b.size);
     const verdi = bytes ? await b.arrayBuffer() : JSON.parse(await b.text());
-    if (!glem) { svar.set(nokkel, verdi); if (svar.size > 80) svar.delete(svar.keys().next().value) }
+    if (!glem) husk(svar, nokkel, verdi, 80);
     return verdi;
   } catch (e) { if (!stille) logg(kilde, hva, 0, 0, true); throw e }
 }
 const RUTE = (OPPLOSNINGER[9] / 2) ** 2 / 1e6;   /* km² per rute i rutenettet */
+
+/* Flatene i en geometri som liste, enten den er én flate eller flere: fra GeoJSON, og fra OpenLayers. */
+const flerflate = g => g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
+const flater = geom => geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()];
+/* Arealet i kartet er litt større enn i terrenget, og mer jo lenger fra midtlinjen i UTM-sonen. */
+const utm33 = geom => { const u = geom.getExtent(), k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2)); return k * k * 1e6 };   /* m² i kartet per km² i terrenget */
+/* Rutenett over et utsnitt e: høyst maks ruter på lengste side, og ruter på minst `minst` meter. u er utsnittet rutene dekker. */
+const rutenett = (e, maks, minst = 0) => { const res = Math.max(minst, Math.max(e[2] - e[0], e[3] - e[1]) / maks), w = Math.ceil((e[2] - e[0]) / res), h = Math.ceil((e[3] - e[1]) / res); return { res, w, h, u: [e[0], e[3] - h * res, e[0] + w * res, e[3]] } };
+/* Et lerret som pikslene skal leses fra. */
+const tegneflate = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c.getContext('2d', { willReadFrequently: true }) };
+/* Minne med fast plass: det eldste går ut når det blir fullt, og det som legges inn på nytt, regnes som nytt. */
+const husk = (minne, nokkel, verdi, plass) => { minne.delete(nokkel); minne.set(nokkel, verdi); if (minne.size > plass) minne.delete(minne.keys().next().value) };
+/* Resultater merkes med kommunenummeret de gjelder. Dette gir resultatet hvis det gjelder kommunen som er valgt nå, ellers ingenting. */
+const gjeldende = x => x && valgt && x.nr === valgt.nr ? x : null;
+/* Brukeren har bedt om mindre bevegelse: da flyttes ikke kart og side mykt. */
+const rolig = () => !!window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const tilKartet = mykt => document.querySelector('.stage').scrollIntoView({ behavior: mykt && !rolig() ? 'smooth' : 'auto', block: 'nearest' });
+/* En celle i en tabell, med et mindre tall under hvis det er oppgitt. */
+function celle(rad, tekst, under, type = 'td') {
+  const c = document.createElement(type); c.textContent = tekst;
+  if (under) { const m = document.createElement('small'); m.textContent = under; c.appendChild(m) }
+  rad.appendChild(c); return c;
+}

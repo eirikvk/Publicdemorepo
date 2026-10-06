@@ -36,7 +36,7 @@ function lagHenter(kilde, hva) {
     try {
       const r = await fetch(src); if (!r.ok) throw new Error(r.status);
       if (!(r.headers.get('content-type') || '').startsWith('image')) throw new Error('ikke bilde');
-      const buf = await r.arrayBuffer(); lager.set(src, buf); if (lager.size > 400) lager.delete(lager.keys().next().value);
+      const buf = await r.arrayBuffer(); husk(lager, src, buf, 400);
       runde.n++; runde.bytes += buf.byteLength; return buf;
     } catch (e) { runde.feil++; feilIVisning = true; throw e }
     finally { aktive--; slipp(); if (!aktive && !ko.length) timer = setTimeout(ferdig, 200) }
@@ -55,7 +55,7 @@ const tema = new ol.layer.Tile({ className: 'tema', source: nyFlisKilde(), maxRe
 const plannett = new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256, minZoom: 5 });
 function kommuneSti(g, geom, u, s) {   /* kommuneflaten som sti i et lerret der u er utsnittet og s er piksler per meter */
   g.beginPath();
-  for (const flate of geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()]) for (const ring of flate) {
+  for (const flate of flater(geom)) for (const ring of flate) {
     ring.forEach(([x, y], i) => i ? g.lineTo((x - u[0]) * s, (u[3] - y) * s) : g.moveTo((x - u[0]) * s, (u[3] - y) * s)); g.closePath();
   }
 }
@@ -80,6 +80,18 @@ async function dagensKlasser(tc) {   /* dagens klasser i flisens piksler, i de r
   } else return null;
   const t0 = performance.now(), data = g.getImageData(0, 0, 512, 512).data; tidSlutt('dagens klasser', t0); return data;
 }
-const flisFraLerret = (tile, c) => tile.setImage(c);   /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
 const TOM = 4;   /* OpenLayers' tilstand for en flis uten innhold */
+/* Kilde for et lag som tegnes i nettleseren. Flisene har ingen adresse, bare plass i rutenettet. */
+const tegnetKilde = tegnFlis => new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: tegnFlis, transition: 0, projection: UTM });
+/* Tegner flisene i et lag på nytt. De gamle står til de nye er klare. */
+let friskNr = 0;
+const utdaterte = new Set();
+const friskOpp = lag => { utdaterte.delete(lag); lag.getSource().setKey(String(++friskNr)) };
+/* Zoomet ut tegnes inngrepsfri natur og grått areal oppå dagens klasser fra det sammensatte kartet. Fliser som ble tegnet før
+   kartet fikk mer innhold, er derfor utdaterte. Lagene merkes når en ny flis legges inn, og tegnes på nytt neste gang kartet står
+   stille zoomet ut med laget på. Uten dette ble de stående tomme når man zoomet inn, så seg rundt og zoomet ut igjen. */
+function friskOppGamle() {
+  if (iBevegelse || view.getResolution() < MAKSRES) return;
+  for (const lag of [...utdaterte]) if (lag.getVisible()) friskOpp(lag);
+}
 const fargeleggFliser = () => { oversiktSynlig(true); klare.clear(); tema.setSource(nyFlisKilde()) };   /* flisene tegnes på nytt fra de rå bildene, uten nye kall. Planlaget røres ikke: det avhenger ikke av hvilke klasser som vises. */

@@ -15,6 +15,18 @@ function temaRad(id, navn, klasse, vedBryter) {
   return { rad, knapp, blokk };
 }
 const andelTekst = p => p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %';
+/* Tallene i raden for et tema som hentes som ett bilde av kommunen: areal og andel av landarealet, eller hvorfor de mangler. */
+function radTall(rad, D, har) {
+  rad.querySelector('.km').textContent = !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : har ? dekar(D.sum) : 'ingen';
+  rad.querySelector('.pc').textContent = har && ssbSum ? andelTekst(D.sum / ssbSum * 100) : '';
+}
+/* En linje i en tegnforklaring: fargerute og navn, tall til høyre, og en forklaring under hvis det er oppgitt. */
+function fargelinje(liste, id, navn, tall, under) {
+  const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span');
+  i.style.setProperty('--c', `var(--${id})`); n.append(i, navn); ar.textContent = tall; li.append(n, ar);
+  if (under) { const sm = document.createElement('small'); sm.textContent = under; li.appendChild(sm) }
+  liste.appendChild(li); return li;
+}
 const NATURLAG = [
   { id: 'vern', navn: 'Verneområder', en: 'verneområde', fl: 'verneområder', best: 'verneområdene', vann: true, url: MD + 'vern/MapServer/0/query', felt: 'offisieltNavn,verneform,vernedato,faktaark', slakk: 5,
     kildetekst: 'Miljødirektoratet, naturvernområder',
@@ -48,7 +60,7 @@ const NATURLAG = [
   t.merke = [new ol.style.Style({ geometry: midt, image: new ol.style.Circle({ radius: 7, fill: new ol.style.Fill({ color: 'rgba(255,255,255,.92)' }) }) }),
     new ol.style.Style({ geometry: midt, image: new ol.style.Circle({ radius: 4, stroke: new ol.style.Stroke({ color: farge(t.id), width: 2.75 }) }) })];
   t.lag = t.flate
-    ? new ol.layer.Tile({ className: 'plan', visible: false, source: new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, transition: 0, projection: UTM, tileLoadFunction: tile => tegnFlateflis(t, tile) }) })
+    ? new ol.layer.Tile({ className: 'plan', visible: false, source: tegnetKilde(tile => tegnFlateflis(t, tile)) })
     : new ol.layer.Vector({ className: 'plan', source: t.kilde, visible: false, renderBuffer: 4000, style: (f, res) => {
         const u = f.getGeometry().getExtent(); return Math.max(u[2] - u[0], u[3] - u[1]) < 8 * res ? t.merke : t.strek } });
   const r = temaRad(t.id, t.navn, t.flate ? 'flate' : '', k => { t.paa = !t.paa; k.setAttribute('aria-pressed', String(t.paa)); if (!t.paa && vist && vist.t === t) fjernMerket(); visNatur(t) });
@@ -60,7 +72,7 @@ const NATURLAG = [
 });
 /* Slør over det som ikke er kartlagt: flisene fylles med en lys farge, og de kartlagte flatene stanses ut. Fliser uten noe kartlagt
    deler ett og samme bilde, så laget koster lite der hele flisen er ukjent. Laget ligger under naturflatene og planlaget. */
-const dekKilde = new ol.source.Vector(); let slorPaa = true, dekNokkel = 0, heltSlor = null;
+const dekKilde = new ol.source.Vector(); let slorPaa = true, heltSlor = null;
 const slorFarge = () => `rgba(${rgb('slor').join(',')},.55)`;
 function tegnSlorflis(tile) {
   const u = plannett.getTileCoordExtent(tile.getTileCoord()), fl = dekKilde.getFeaturesInExtent(u);
@@ -70,16 +82,16 @@ function tegnSlorflis(tile) {
   for (const f of fl) { kommuneSti(g, f.getGeometry(), u, s); g.fill('evenodd') }
   tile.setImage(c); tidSlutt('slør, fliser', t0);
 }
-const dekLag = new ol.layer.Tile({ className: 'plan', visible: false, source: new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, transition: 0, projection: UTM, tileLoadFunction: tegnSlorflis }) });
+const dekLag = new ol.layer.Tile({ className: 'plan', visible: false, source: tegnetKilde(tegnSlorflis) });
 function settDekning(t) {   /* de kartlagte flatene for valgt kommune inn i sløret */
-  const E = t.data && t.data.ekstra; dekKilde.clear(); if (E && E.f) dekKilde.addFeatures(E.f); dekLag.getSource().setKey(String(++dekNokkel));
+  const E = t.data && t.data.ekstra; dekKilde.clear(); if (E && E.f) dekKilde.addFeatures(E.f); friskOpp(dekLag);
 }
 /* Rekkefølge i kartet: fylte flater ligger under planlaget, så planlagt utbygging oppå verdifull natur synes. Omriss ligger øverst. */
 const flateLag = NATURLAG.filter(t => t.flate).map(t => t.lag), omrissLag = NATURLAG.filter(t => !t.flate).map(t => t.lag);
 function naturMaske(g, kommune) {   /* området som et lite rutenett med dekning per rute. kommune oppgis bare hvis flaten ikke alt er klippet. */
   const e = kommune ? ol.extent.getIntersection(g.getExtent(), kommune.getExtent()) : g.getExtent(); if (ol.extent.isEmpty(e)) return null;
   const res = Math.max(10, Math.max(e[2] - e[0], e[3] - e[1]) / 1500), w = Math.ceil((e[2] - e[0]) / res) + 1, h = Math.ceil((e[3] - e[1]) / res) + 1, u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
-  const c = document.createElement('canvas'); c.width = w; c.height = h; const k = c.getContext('2d', { willReadFrequently: true });
+  const k = tegneflate(w, h);
   kommuneSti(k, g, u, 1 / res); k.fill('evenodd');
   if (kommune) { k.globalCompositeOperation = 'destination-in'; kommuneSti(k, kommune, u, 1 / res); k.fill('evenodd') }
   const d = k.getImageData(0, 0, w, h).data, a = new Uint8Array(w * h); let sum = 0; for (let i = 0; i < a.length; i++) { a[i] = d[4 * i + 3]; sum += a[i] }
@@ -88,19 +100,17 @@ function naturMaske(g, kommune) {   /* området som et lite rutenett med dekning
 /* Hver flate klippes mot kommunegrensen én gang, og resultatet huskes så lenge siden er åpen: navn, opplysninger, areal i kommunen,
    den klippede flaten og maskene. Velges kommunen igjen, trengs verken kall mot Miljødirektoratet eller ny utregning. */
 function klippNatur(t, j, geom) {
-  const kom = geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()], u = geom.getExtent();
-  const k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2));   /* målestokken i UTM33, som for kommunens flate */
+  const kom = flater(geom), m2 = utm33(geom);
   return j.features.map(f => {
     const g = f.geometry; if (!g || !g.coordinates) return null;
     const hele = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
     let koord = null, uklippet = false, km2;
     try { koord = polygonClipping.intersection(hele, kom) } catch (e) { koord = null }
-    if (koord) { if (!koord.length) return null; km2 = new ol.geom.MultiPolygon(koord).getArea() / (k * k) / 1e6 }
+    if (koord) { if (!koord.length) return null; km2 = new ol.geom.MultiPolygon(koord).getArea() / m2 }
     else { koord = hele; uklippet = true; const m = naturMaske(new ol.geom.MultiPolygon(hele), geom); if (!m || !(m.km2 > 0)) return null; km2 = m.km2 }   /* klippingen feilet: flaten klippes i kartet i stedet */
     return km2 > 0 ? { koord, uklippet, km2, ...t.les(f.properties || {}) } : null;
   }).filter(Boolean).sort((a, b) => b.km2 - a.km2);
 }
-let flisNokkel = 0;
 function tegnFlateflis(t, tile) {   /* enkeltflatene som berører flisen, tegnet tett og så gjort litt gjennomsiktige samlet, så overlapp ikke blir mørkere */
   const t0 = performance.now(), u = plannett.getTileCoordExtent(tile.getTileCoord()), fl = t.kilde.getFeaturesInExtent(u);
   if (!fl.length) { tile.setState(TOM); return }
@@ -111,16 +121,14 @@ function tegnFlateflis(t, tile) {   /* enkeltflatene som berører flisen, tegnet
   g.globalCompositeOperation = 'destination-in'; g.fillStyle = 'rgba(0,0,0,.82)'; g.fillRect(0, 0, 512, 512);
   tile.setImage(c); tidSlutt(t.navn.toLowerCase() + ', fliser', t0);
 }
-const flerflate = g => g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
-const utm33 = geom => { const u = geom.getExtent(), k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2)); return k * k * 1e6 };   /* m² i kartet per km² i terrenget */
 /* Mange små flater som overlapper: arealet finnes ved å tegne dem i et rutenett over kommunen og summere dekningen i rutene.
    Én tegning per verdikategori, der alle flater med minst den verdien tegnes som én sammenhengende form og klippes mot kommunen.
    Forskjellen mellom tegningene gir arealet per kategori uten dobbeltelling: der lokaliteter overlapper, teller den høyeste verdien,
    slik kartet også viser det. Dette er mye raskere enn å slå sammen tusen flater geometrisk, som låste siden i opptil et sekund.
    Enkeltflatene beholdes for navn, liste og kryssing med planlagt utbygging. */
 function klasseAreal(omrader, antall, geom, innenfor) {   /* innenfor: en flate arealet også skal klippes mot, for eksempel det kartlagte */
-  const m2 = utm33(geom), e = geom.getExtent(), res = Math.max(10, Math.max(e[2] - e[0], e[3] - e[1]) / 1536), w = Math.ceil((e[2] - e[0]) / res), h = Math.ceil((e[3] - e[1]) / res), u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
-  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true }), kum = [];
+  const m2 = utm33(geom), { res, w, h, u } = rutenett(geom.getExtent(), 1536, 10);
+  const g = tegneflate(w, h), kum = [];
   const med = ring => { let a = 0; for (let i = 0; i < ring.length - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1]; return a > 0 };   /* omløpsretning */
   for (let v = 0; v < antall && omrader.length; v++) {
     g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, h); g.beginPath();
@@ -150,13 +158,13 @@ function samleNatur(t, j, geom) {
 async function hentDekning(k, geom) {
   const j = await hent('Miljødirektoratet', `Kartlagt område i ${k.navn}`, MD + 'naturtyper_nin/MapServer/1/query?' + new URLSearchParams({ where: '1=1', geometry: geom.getExtent().map(v => Math.round(v)).join(','), geometryType: 'esriGeometryEnvelope', inSR: 25833, outSR: 25833, spatialRel: 'esriSpatialRelIntersects', outFields: 'Årstall', maxAllowableOffset: 10, geometryPrecision: 0, f: 'geojson' }));
   const fl = (j.features || []).filter(f => f.geometry && f.geometry.coordinates); if (!fl.length) return { km2: 0 };
-  const kom = flerflate({ type: geom.getType(), coordinates: geom.getCoordinates() }), u = polygonClipping.intersection(polygonClipping.union(...fl.map(f => flerflate(f.geometry))), kom);
+  const kom = flater(geom), u = polygonClipping.intersection(polygonClipping.union(...fl.map(f => flerflate(f.geometry))), kom);
   const aar = fl.map(f => parseInt((f.properties || {})['Årstall'], 10)).filter(v => v > 1900);
   return { km2: u.length ? new ol.geom.MultiPolygon(u).getArea() / utm33(geom) : 0, fra: aar.length ? Math.min(...aar) : null, til: aar.length ? Math.max(...aar) : null,
     flate: u, f: u.map(p => new ol.Feature(new ol.geom.Polygon(p))), maske: null };
 }
 async function hentNatur(t, k, geom, mitt) {
-  t.data = null; t.kilde.clear(); if (t.flate) t.lag.getSource().setKey(String(++flisNokkel)); if (t.dekning) settDekning(t); visNatur(t);
+  t.data = null; t.kilde.clear(); if (t.flate) friskOpp(t.lag); if (t.dekning) settDekning(t); visNatur(t);
   try {
     let pakke = t.minne.get(k.nr);
     if (!pakke) {
@@ -168,9 +176,9 @@ async function hentNatur(t, k, geom, mitt) {
         const r = samleNatur(t, j, geom), omrader = r.omrader.map(med);
         pakke = { omrader, sum: r.sum, klasser: r.klasser, vis: omrader.map(o => o.f), ufullstendig: !!j.exceededTransferLimit };
       } else { const omrader = klippNatur(t, j, geom).map(med); pakke = { omrader, sum: omrader.reduce((s, o) => s + o.km2, 0), vis: omrader.map(o => o.f) } }
-      t.minne.set(k.nr, pakke); if (t.minne.size > 30) t.minne.delete(t.minne.keys().next().value);
+      husk(t.minne, k.nr, pakke, 30);
     }
-    t.data = { nr: k.nr, ...pakke, pakke }; t.kilde.addFeatures(pakke.vis); if (t.flate) t.lag.getSource().setKey(String(++flisNokkel)); if (t.dekning) settDekning(t);
+    t.data = { nr: k.nr, ...pakke, pakke }; t.kilde.addFeatures(pakke.vis); if (t.flate) friskOpp(t.lag); if (t.dekning) settDekning(t);
     if (t.ekstra && pakke.ekstra === undefined) { pakke.ekstra = null; t.ekstra(k, geom).then(v => {
       if (t.klasser && v && v.flate && v.flate.length) try { v.inne = klasseAreal(pakke.omrader, t.klasser.length, geom, new ol.geom.MultiPolygon(v.flate)).klasser } catch (e) {}
       pakke.ekstra = v; if (t.data && t.data.pakke === pakke) { t.data.ekstra = v; if (t.dekning) settDekning(t); regnNatur(t) } }).catch(() => {}) }
@@ -227,10 +235,9 @@ function visNatur(t) {
   el('sum').textContent = D.feil ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.` : !o.length ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
     : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${ssbSum ? `, ${nf(sum / ssbSum * 100)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
   if (t.klasser && D.klasser && o.length) t.klasser.forEach(([navn, id], v) => {   /* tegnforklaring: tone, verdikategori, areal, antall og planlagt utbygging innenfor */
-    const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span'), sm = document.createElement('small'), mine = o.filter(x => x.v === v), pl = mine.reduce((s, x) => s + x.plan, 0);
-    i.style.setProperty('--c', `var(--${id})`); n.append(i, navn); ar.textContent = km(D.klasser[v]); sm.textContent = `${nf(mine.length, 0)} ${mine.length === 1 ? 'lokalitet' : 'lokaliteter'}`;
-    if (pl && D.regnet && !utenPlan()) { const b = document.createElement('b'); b.textContent = ` · ca. ${daa(pl)} planlagt utbygging`; sm.appendChild(b) }
-    li.append(n, ar, sm); el('tegn').appendChild(li);
+    const mine = o.filter(x => x.v === v), pl = mine.reduce((s, x) => s + x.plan, 0);
+    const li = fargelinje(el('tegn'), id, navn, km(D.klasser[v]), `${nf(mine.length, 0)} ${mine.length === 1 ? 'lokalitet' : 'lokaliteter'}`);
+    if (pl && D.regnet && !utenPlan()) { const b = document.createElement('b'); b.textContent = ` · ca. ${daa(pl)} planlagt utbygging`; li.lastChild.appendChild(b) }
   });
   const E = D.ekstra, merk = el('merk'), hel = t.dekning ? el('helhet') : null, helhet = !!hel && !!E && E.km2 > 0 && !!E.inne && !!D.klasser && ssbSum > 0 && o.length > 0;
   if (hel) { hel.hidden = !helhet; hel.textContent = '' }
@@ -300,9 +307,8 @@ const markLag = new ol.layer.Vector({ className: 'merket', source: markKilde, st
 function fjernMerket() { markKilde.clear(); vist = null; $('vist').hidden = true }
 function visIKartet(t, o, liId) {
   if (!t.paa) { t.paa = true; t.knapp.setAttribute('aria-pressed', 'true'); visNatur(t); const li = document.getElementById(liId), kn = li && li.querySelector('button'); if (kn) kn.focus({ preventScroll: true }) }   /* listen ble tegnet på nytt: fokus tilbake på knappen */
-  const rolig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   markKilde.clear(); markKilde.addFeature(new ol.Feature(o.f.getGeometry())); vist = { t, liId };
-  view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig ? 0 : 400 });
+  view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig() ? 0 : 400 });
   $('vist').hidden = false; $('vist').firstElementChild.textContent = o.navn;
-  document.querySelector('.stage').scrollIntoView({ behavior: rolig ? 'auto' : 'smooth', block: 'nearest' });
+  tilKartet(true);
 }

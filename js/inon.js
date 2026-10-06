@@ -1,4 +1,3 @@
-/* Inngrepsfri natur. */
 /* Inngrepsfri natur (INON) fra Miljødirektoratet: natur som ligger minst én kilometer fra tyngre tekniske inngrep, delt i tre soner
    etter avstand. Sonene hentes som ett bilde av hele kommunen når kommunen velges, og huskes så lenge siden er åpen. Kartflisene
    lages av det bildet i nettleseren, så laget gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå
@@ -12,7 +11,7 @@ const INONSONER = [   /* kode i tjenesten, farge her, farge i tjenestens bilder,
 const inonSone = (r, g, b) => { let best = 0, min = 1e9; for (let i = 0; i < 3; i++) { const f = INONSONER[i][2], d = (r - f[0]) ** 2 + (g - f[1]) ** 2 + (b - f[2]) ** 2; if (d < min) { min = d; best = i } } return best };
 const inonBilde = (u, w, h) => INON + '?' + new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: 'status', styles: '', crs: UTM,
   bbox: u.map(v => v.toFixed(2)).join(','), width: w, height: h, format: 'image/png8', transparent: 'true', format_options: 'antialias:none' });
-let inon = null, inonPaa = false, inonGammel = false, inonNokkel = 0, inonRad = null;
+let inon = null, inonPaa = false, inonRad = null;
 /* Kommunebildet er gjort om til tre masker i hver sin fargekanal: minst 1 km, minst 3 km og minst 5 km fra inngrep. Når en flis
    forstørres fra bildet, jevner nettleseren ut hver maske for seg, og grensen settes der masken er halvveis. Sonegrensene blir
    dermed glatte kurver også når kartet er zoomet langt inn, selv om bildet har ruter på 20 meter eller mer. */
@@ -35,8 +34,7 @@ async function lastInonFlis(tile) {
     g.putImageData(ut, 0, 0); tile.setImage(c); tidSlutt('inngrepsfri natur, fliser', t0);
   } catch (e) { tile.setState(3) }
 }
-const inonLag = new ol.layer.Tile({ className: 'tema', visible: false, source: new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: lastInonFlis, transition: 0, projection: UTM }) });
-const oppfriskInon = () => { inonGammel = false; inonLag.getSource().setKey(String(++inonNokkel)) };
+const inonLag = new ol.layer.Tile({ className: 'tema', visible: false, source: tegnetKilde(lastInonFlis) });
 /* Ett bilde av hele kommunen, med ruter på 20 meter eller opptil 2048 ruter på lengste side. Det gir både kartlaget og arealet per
    sone. Det ferdige resultatet huskes for de siste kommunene så lenge siden er åpen, så et nytt valg av samme kommune koster ingenting. */
 const inonMinne = new Map();
@@ -55,13 +53,13 @@ function jevn(P, w, h) {   /* myker opp maskene litt (vekter 1-2-1 begge veier),
 }
 
 async function sjekkInon(k, geom, mitt) {
-  const har = inonMinne.get(k.nr); if (har) { inonMinne.delete(k.nr); inonMinne.set(k.nr, har); inon = har; oppfriskInon(); visInon(); return }
+  const har = inonMinne.get(k.nr); if (har) { husk(inonMinne, k.nr, har, 3); inon = har; friskOpp(inonLag); visInon(); return }
   inon = { nr: k.nr, tilstand: 'henter' }; visInon();
   try {
-    const e = geom.getExtent(), res = Math.max(20, Math.max(e[2] - e[0], e[3] - e[1]) / 2048), w = Math.ceil((e[2] - e[0]) / res), h = Math.ceil((e[3] - e[1]) / res), u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
+    const { res, w, h, u } = rutenett(geom.getExtent(), 2048, 20);
     const buf = await hent('Miljødirektoratet', `Inngrepsfri natur i ${k.navn}`, inonBilde(u, w, h), false, true);
     if (mitt !== valgNr) return;
-    const t0 = performance.now(), lag = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c.getContext('2d', { willReadFrequently: true }) }, a = lag(), b = lag();
+    const t0 = performance.now(), a = tegneflate(w, h), b = tegneflate(w, h);
     a.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h); kommuneSti(b, geom, u, 1 / res); b.fill('evenodd');
     const bilde = a.getImageData(0, 0, w, h), P = bilde.data, M = b.getImageData(0, 0, w, h).data, n = [0, 0, 0];
     let forrige = -1, sone = 0;
@@ -74,16 +72,15 @@ async function sjekkInon(k, geom, mitt) {
     jevn(P, w, h); jevn(P, w, h); a.putImageData(bilde, 0, 0);
     const soner = n.map(v => Math.round(v * res * res / utm33(geom) * 100) / 100);   /* nærmeste 10 dekar, som SSBs tall */
     inon = { nr: k.nr, tilstand: 'ok', soner, sum: Math.round((soner[0] + soner[1] + soner[2]) * 100) / 100, c: a.canvas, u, res };
-    inonMinne.set(k.nr, inon); if (inonMinne.size > 3) inonMinne.delete(inonMinne.keys().next().value);
+    husk(inonMinne, k.nr, inon, 3);
     tidSlutt('inngrepsfri natur, kommunebilde', t0);
   } catch (e) { if (mitt !== valgNr) return; inon = { nr: k.nr, tilstand: 'feil' } }
-  oppfriskInon(); visInon();
+  friskOpp(inonLag); visInon();
 }
 function visInon() {
-  const D = inon && valgt && inon.nr === valgt.nr ? inon : null, ok = !!D && D.tilstand === 'ok', R = inonRad.rad, liste = $('inonliste'), tekst = $('inonsum'), merk = $('inonmerk'), har = ok && D.sum > 0;
+  const D = gjeldende(inon), ok = !!D && D.tilstand === 'ok', R = inonRad.rad, liste = $('inonliste'), tekst = $('inonsum'), merk = $('inonmerk'), har = ok && D.sum > 0;
   inonLag.setVisible(inonPaa && vis.nat && !!klipp && har); friskOppGamle();
-  R.querySelector('.km').textContent = !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : har ? dekar(D.sum) : 'ingen';
-  R.querySelector('.pc').textContent = har && ssbSum ? andelTekst(D.sum / ssbSum * 100) : '';
+  radTall(R, D, har);
   R.querySelector('.un').textContent = har ? 'krysses ikke med planlagt utbygging' : '';
   liste.textContent = merk.textContent = ''; $('inonplan').hidden = !har;
   if (!D || D.tilstand === 'henter') { tekst.textContent = valgt ? 'Henter …' : ''; return }
@@ -91,10 +88,6 @@ function visInon() {
   if (!har) { tekst.textContent = 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'; return }
   tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${ssbSum ? `, ${nf(D.sum / ssbSum * 100)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
   merk.textContent = !vis.nat ? 'Laget følger klassen natur, som er slått av i kartet nå.' : inonPaa ? 'I kartet vises naturen nå i fire grønntoner:' : 'Når laget er på, vises naturen i kartet i fire grønntoner:';
-  const rad = (id, navn, under, tall) => {
-    const li = document.createElement('li'), n = document.createElement('b'), i = document.createElement('i'), ar = document.createElement('span'), sm = document.createElement('small');
-    i.style.setProperty('--c', `var(--${id})`); n.append(i, navn); ar.textContent = tall; sm.textContent = under; li.append(n, ar, sm); liste.appendChild(li);
-  };
-  rad('nat', 'Annen natur', 'Nærmere enn 1 km fra inngrep', '');
-  [2, 1, 0].forEach(i => rad(INONSONER[i][1], INONSONER[i][4], INONSONER[i][3], dekar(D.soner[i])));
+  fargelinje(liste, 'nat', 'Annen natur', '', 'Nærmere enn 1 km fra inngrep');
+  [2, 1, 0].forEach(i => fargelinje(liste, INONSONER[i][1], INONSONER[i][4], dekar(D.soner[i]), INONSONER[i][3]));
 }

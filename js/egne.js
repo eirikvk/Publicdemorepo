@@ -24,10 +24,10 @@ function startTegning() {
   tegn = new ol.interaction.Draw({ type: 'Polygon', stopClick: true, minPoints: 3, style: tegnStil });
   tegn.on('drawend', e => { const geom = e.feature.getGeometry(); setTimeout(() => { sluttTegning(); nyttEget(geom) }, 0) });
   kart.addInteraction(tegn); visTegneknapper();
-  document.querySelector('.stage').scrollIntoView({ behavior: 'auto', block: 'nearest' });
+  tilKartet();
 }
 function visEgneLag() { egneKilde.clear(); egneKilde.addFeatures(mine().filter(g => g.f).map(g => g.f)) }
-function egneEndret() { visEgneLag(); visPlanInfo(); visEgne(); planLag.setVisible(planPaa && !!klipp && !utenPlan()); regnAlt() }
+function egneEndret() { visEgneLag(); visPlanInfo(); visEgne(); visPlan() }
 function nyttEget(geom) {
   if (!valgt) return;
   if (!(geom.getArea() > 400)) { $('egnestatus').textContent = 'Området ble for lite til å regnes ut. Tegn et større område.'; return }
@@ -100,7 +100,6 @@ function egneRader(e) {   /* e: null for hele kommunen, ellers nummeret i listen
 function egenTabell(rader, navnPlan, navnNy) {
   const ramme = document.createElement('div'), tab = document.createElement('table'); ramme.className = 'utvikling sml'; ramme.appendChild(tab);
   const tall = n => n ? dekar(n * RUTE).replace(' daa', '') : '0', endr = d => !d ? '0' : (d < 0 ? '−' : '+') + tall(Math.abs(d));
-  const celle = (rad, tekst, under, type = 'td') => { const c = document.createElement(type); c.textContent = tekst; if (under) { const m = document.createElement('small'); m.textContent = under; c.appendChild(m) } rad.appendChild(c); return c };
   const hode = tab.createTHead().insertRow(); ['Planlagt utbygging på, daa', navnPlan, navnNy, 'Endring'].forEach(t => { celle(hode, t, '', 'th').scope = 'col' });
   const kropp = tab.createTBody(); let gruppe = '';
   rader.forEach(([navn, farge, plan, ny, av, gr]) => {
@@ -135,7 +134,7 @@ function visEgne() {
       if (g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && T.nat + T.jor && !(T.nnat + T.njor)) p('Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.');
     }
     const gjor = document.createElement('div'); gjor.className = 'knapper';
-    gjor.append(knapp('Vis i kartet', () => { view.fit(klipp ? ol.extent.getIntersection(g.ext, klipp.getExtent()) : g.ext, { padding: [56, 56, 56, 56], minResolution: OPPLOSNINGER[13], duration: 300 }); document.querySelector('.stage').scrollIntoView({ behavior: 'auto', block: 'nearest' }) }));
+    gjor.append(knapp('Vis i kartet', () => { view.fit(klipp ? ol.extent.getIntersection(g.ext, klipp.getExtent()) : g.ext, { padding: [56, 56, 56, 56], minResolution: OPPLOSNINGER[13], duration: 300 }); tilKartet() }));
     const slett = knapp('Slett', () => { egne.splice(egne.indexOf(g), 1); egneEndret(); $('tegnknapp').focus() }); slett.setAttribute('aria-label', `Slett ${g.navn}`); gjor.appendChild(slett);
     li.appendChild(gjor); liste.appendChild(li);
   });

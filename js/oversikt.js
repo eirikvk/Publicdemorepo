@@ -86,7 +86,7 @@ function leggISamling(tc, buf) {
   const s = samle, n = tc.join('/'); if (!s || s.har.has(n)) return Promise.resolve();
   return createImageBitmap(new Blob([buf])).then(bm => {
     if (s !== samle || s.har.has(n)) { if (bm.close) bm.close(); return }
-    const t0 = performance.now(); s.har.add(n); inonGammel = graaGammel = true;
+    const t0 = performance.now(); s.har.add(n); utdaterte.add(inonLag).add(graaLag);
     /* Flisen legges på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
     const u = flisnett.getTileCoordExtent(tc), px = v => Math.round((v - s.ext[0]) / s.res), py = v => Math.round((s.ext[3] - v) / s.res);
     const X = px(u[0]), Y = py(u[3]), W = px(u[2]) - X, H = py(u[1]) - Y;
@@ -105,14 +105,6 @@ function fargeleggVentende(s) {
   if (!s || !s.venter.length) return;
   while (s.venter.length) fargeleggSamling(s, ...s.venter.shift());
   if (s.kilde) s.kilde.oppdater(s.vis);
-}
-/* Zoomet ut tegnes inngrepsfri natur og grått areal oppå dagens klasser fra det sammensatte kartet. Fliser som ble tegnet før
-   kartet fikk mer innhold, er derfor utdaterte. De merkes når en ny flis legges inn, og tegnes på nytt neste gang kartet står
-   stille zoomet ut med laget på. Uten dette ble de stående tomme når man zoomet inn, så seg rundt og zoomet ut igjen. */
-function friskOppGamle() {
-  if (iBevegelse || view.getResolution() < MAKSRES) return;
-  if (graaGammel && graaLag.getVisible()) { graaGammel = false; oppfriskGraa() }
-  if (inonGammel && inonLag.getVisible()) oppfriskInon();
 }
 let etterTimer = null, etterVenter = false;
 function planleggEtterarbeid() {

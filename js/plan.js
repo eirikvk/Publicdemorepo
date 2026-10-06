@@ -42,7 +42,7 @@ function iEllerInntil(R, x, y) {   /* ligger ruta i et beholdt felt, eller rett 
 }
 async function lastPlanFlis(tile, src) {
   try {
-    if (tile.getTileCoord()[0] <= 9) { const t0 = performance.now(), c = grovPlanFlis(tile.getTileCoord()); tidSlutt('planfliser', t0); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } flisFraLerret(tile, c); return }
+    if (tile.getTileCoord()[0] <= 9) { const t0 = performance.now(), c = grovPlanFlis(tile.getTileCoord()); tidSlutt('planfliser', t0); if (!c) throw new Error('rutenettet er ikke klart'); if (c.tom) { tile.setState(TOM); return } tile.setImage(c); return }   /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
     const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentPlan(src)]);
     if (!K) throw new Error('mangler dagens klasser');
     const c = lerret(), g = c.getContext('2d', { willReadFrequently: true }), bm = await createImageBitmap(new Blob([planBuf])), t0 = performance.now();
@@ -50,7 +50,7 @@ async function lastPlanFlis(tile, src) {
     const P = g.getImageData(0, 0, 512, 512).data, ut = g.createImageData(512, 512), o = ut.data;
     const pjor = rgb('pjor'), pnat = rgb('pnat');   /* uavhengig av hvilke klasser som vises i kartet */
     /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
-    const [tz, tx, ty] = tile.getTileCoord(), R = !visSmale && planRaster && valgt && planRaster.nr === valgt.nr ? planRaster : null, sh = R ? tz - R.z : 0;
+    const [tz, tx, ty] = tile.getTileCoord(), R = !visSmale && gjeldende(planRaster), sh = R ? tz - R.z : 0;
     let tegnet = false;
     const vent = !visSmale && !R && valgt && !oversikter[valgt.nr];   /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
     const EM = egenMaske(plannett.getTileCoordExtent(tile.getTileCoord()));   /* egne områder i flisen: 1 utbygging, 2 ikke utbygging */
@@ -63,14 +63,12 @@ async function lastPlanFlis(tile, src) {
       o[i] = f[0]; o[i + 1] = f[1]; o[i + 2] = f[2]; o[i + 3] = 255; tegnet = true;
     }
     if (!tegnet) { tile.setState(TOM); tidSlutt('planfliser', t0); return }   /* de fleste fliser har ingen planlagt utbygging. Tomme fliser tegnes ikke, så laget koster ingenting der. */
-    g.putImageData(ut, 0, 0); flisFraLerret(tile, c); tidSlutt('planfliser', t0);
+    g.putImageData(ut, 0, 0); tile.setImage(c); tidSlutt('planfliser', t0);
   } catch (e) { tile.setState(3) }
 }
 const nyPlanKilde = () => new ol.source.XYZ({ tileUrlFunction: planUrl, tileGrid: plannett, tilePixelRatio: 2, tileLoadFunction: lastPlanFlis, transition: 0, projection: UTM });
 const planLag = new ol.layer.Tile({ className: 'plan', source: nyPlanKilde(), visible: false });
 const tegnPlan = () => planLag.setSource(nyPlanKilde());
-let planNokkel = 0;
-const oppfriskPlan = () => planLag.getSource().setKey(String(++planNokkel));   /* tegner flisene på nytt, og de gamle står til de nye er klare */
 /* Omtrentlig areal, regnet ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå dagens klasser,
    og pikslene telles. Med lagret oversiktsbilde gjelder det hele kommunen. Uten gjelder det den delen av kommunen
    nettleseren har hentet kart for, og tallene regnes ut på nytt hver gang det kommer mer kart.
@@ -160,7 +158,7 @@ async function regnPlan() {
       if (b === 1) T.fnat++; else if (b === 2) T.fjor++; if (ny === 1) T.nnat++; else if (ny === 2) T.njor++;
     }
   }
-  planRaster = { nr, z: Z, cx0, cy0, w, h, alle: d, ryddet, celler: Int32Array.from(celler), eget, egetType, kl, pl, antallEgne: E.length, basis, sum: { rn, rj }, iDag: { nat: n.nat, jor: n.jor } }; oppfriskPlan(); tidSlutt('plantall', tStart);
+  planRaster = { nr, z: Z, cx0, cy0, w, h, alle: d, ryddet, celler: Int32Array.from(celler), eget, egetType, kl, pl, antallEgne: E.length, basis, sum: { rn, rj }, iDag: { nat: n.nat, jor: n.jor } }; friskOpp(planLag); tidSlutt('plantall', tStart);
   const m = OPPLOSNINGER[Z] / 2, km2 = v => v * m * m / 1e6, pst = (a, b) => b ? nf(a / b * 100) : '0', der = dyn ? ' i det hentede kartet' : '';
   planSum = { nr, nat: km2(rn), jor: km2(rj), delvis: dyn, egne: E.length }; visUtvikling();
   $('egnemerk').textContent = !E.length ? '' : `Tallene for planlagt utbygging inkluderer ${E.length === 1 ? 'ett eget område' : E.length + ' egne områder'}. ${ingenPlan() ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene: ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
@@ -179,7 +177,7 @@ async function regnPlan() {
 let planInfo = null;
 const ingenPlan = () => !!planInfo && !!valgt && planInfo.nr === valgt.nr && planInfo.tilstand === 'ingen';
 function visPlanInfo() {
-  const s = $('planstatus'), pi = $('planinfo'), i = planInfo && valgt && planInfo.nr === valgt.nr ? planInfo : null, ingen = ingenPlan(), navn = valgt ? valgt.navn : '';
+  const s = $('planstatus'), pi = $('planinfo'), i = gjeldende(planInfo), ingen = ingenPlan(), navn = valgt ? valgt.navn : '';
   s.className = ingen ? 'mangler' : ''; $('planknapp').querySelector('.km').textContent = ingen ? 'ingen plan' : ''; pi.hidden = !ingen;
   $('linje-pnat').hidden = $('linje-pjor').hidden = utenPlan();
   pi.textContent = ingen ? `DiBK har ingen kommuneplan for ${navn}. Planlagt utbygging vises derfor ikke.` : '';
@@ -191,11 +189,11 @@ function visPlanInfo() {
 async function sjekkPlan(k, geom, mitt) {
   planInfo = { nr: k.nr, tilstand: 'sjekker' }; visPlanInfo();
   try {
-    const e = geom.getExtent(), res = Math.max(e[2] - e[0], e[3] - e[1]) / 256, w = Math.ceil((e[2] - e[0]) / res), h = Math.ceil((e[3] - e[1]) / res), u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
+    const { res, w, h, u } = rutenett(geom.getExtent(), 256);
     const felles = { service: 'WMS', version: '1.3.0', layers: 'kparealformalomrade', styles: 'polygon', crs: UTM, bbox: u.map(v => v.toFixed(1)).join(','), width: w, height: h };
     const buf = await hent('DiBK', `Dekning av kommuneplan for ${k.navn}`, PLAN + '?' + new URLSearchParams({ ...felles, request: 'GetMap', format: 'image/png8', transparent: 'true' }), false, true);
     if (mitt !== valgNr) return;
-    const lag = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c.getContext('2d', { willReadFrequently: true }) }, a = lag(), b = lag();
+    const a = tegneflate(w, h), b = tegneflate(w, h);
     a.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h); kommuneSti(b, geom, u, 1 / res); b.fill('evenodd');
     const P = a.getImageData(0, 0, w, h).data, M = b.getImageData(0, 0, w, h).data, treff = []; let inne = 0;
     for (let q = 0; q < w * h; q++) if (M[4 * q + 3] >= 128) { inne++; if (P[4 * q + 3] >= 100) treff.push(q) }
@@ -215,5 +213,6 @@ async function sjekkPlan(k, geom, mitt) {
   visPlanInfo(); visPlan(); visUtvikling(); if (ingenPlan()) nyttSlor();
 }
 const regnAlt = () => regnPlan().then(() => { NATURLAG.forEach(regnNatur); regnGraa() });   /* påvirkningen på naturlagene følger plantallene */
-const visPlan = () => { planLag.setVisible(planPaa && !!klipp && !utenPlan()); regnAlt() };
+const visPlanLag = () => planLag.setVisible(planPaa && !!klipp && !utenPlan());
+const visPlan = () => { visPlanLag(); regnAlt() };
 const nyttSlor = () => { if (KL.some(([id]) => !vis[id])) { tegnOversikt(); fargeleggFliser() } };   /* sløret over skjulte klasser følger planlaget */   /* resten av kartet står urørt når laget slås på */
