@@ -135,6 +135,15 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 #verdiknapp .sw { border: 0; background: linear-gradient(90deg, var(--verdi4) 25%, var(--verdi3) 25% 50%, var(--verdi2) 50% 75%, var(--verdi1) 75%); box-shadow: 0 0 0 1px var(--ink-3) }
 #verdiknapp[aria-pressed="false"] .sw { background: transparent; box-shadow: inset 0 0 0 3px var(--verdi2), 0 0 0 1px var(--ink-3) }
 .naturblokk .valg { font-size: 14px }
+/* To tydelige valg per område: se det i kartet, eller åpne faktaarket hos Miljødirektoratet i en ny fane. */
+.naturblokk li .gjor { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px }
+.naturblokk li .gjor button, .naturblokk li .gjor a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 14px; border: 1px solid var(--ink-3); border-radius: 8px; background: var(--surface); color: var(--ink); font: 500 14px/1.2 var(--body); text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent }
+.naturblokk li .gjor svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.naturblokk li .gjor button:focus-visible, .naturblokk li .gjor a:focus-visible, #vist button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
+#vist { left: 10px; right: auto; bottom: 44px; transform: none; max-width: calc(100% - 20px); display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 12px; border-radius: 10px; text-align: left; pointer-events: auto; border-color: var(--ink-3) }
+#vist b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+#vist button { flex: none; min-height: 36px; padding: 6px 10px; border: 0; border-radius: 7px; background: none; color: var(--ink); font: 500 13px/1.2 var(--body); text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; cursor: pointer }
+#vist #vistlukk { text-decoration: none; font-size: 18px; line-height: 1; padding: 6px 11px }
 /* Helhetsbildet for verdsatt natur: hvor mye som er kartlagt, og hvor mye verdsatt natur som finnes der det er kartlagt og der det ikke er det. */
 .helhet { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--ink-3); border-radius: 8px; background: var(--surface); color: var(--ink-2) }
 .helhet h3 { margin: 0; font: 600 15px/1.3 var(--body); color: var(--ink) }
@@ -203,6 +212,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         <div class="chip" id="laster" hidden>Henter kart …</div>
         <button type="button" class="bytt" id="bytt" hidden></button>
         <div class="chip" id="zoomet" role="status" hidden>Siden er forstørret. Knip sammen for å zoome ut, så virker kartet igjen.</div>
+        <div class="chip" id="vist" hidden><b></b><button type="button" id="vistliste">Til listen</button><button type="button" id="vistlukk" aria-label="Fjern markeringen i kartet">×</button></div>
         <div class="chip" id="ute" hidden>Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.</div>
       </div>
       <div class="mapfoot">
@@ -307,7 +317,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 10.00';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 10.30';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -797,7 +807,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       ? new ol.layer.Tile({ className: 'plan', visible: false, source: new ol.source.XYZ({ tileUrlFunction: tc => tc.join('/'), tileGrid: plannett, tilePixelRatio: 2, transition: 0, projection: UTM, tileLoadFunction: tile => tegnFlateflis(t, tile) }) })
       : new ol.layer.Vector({ className: 'plan', source: t.kilde, visible: false, renderBuffer: 4000, style: (f, res) => {
           const u = f.getGeometry().getExtent(); return Math.max(u[2] - u[0], u[3] - u[1]) < 8 * res ? t.merke : t.strek } });
-    const r = temaRad(t.id, t.navn, t.flate ? 'flate' : '', k => { t.paa = !t.paa; k.setAttribute('aria-pressed', String(t.paa)); visNatur(t) });
+    const r = temaRad(t.id, t.navn, t.flate ? 'flate' : '', k => { t.paa = !t.paa; k.setAttribute('aria-pressed', String(t.paa)); if (!t.paa && vist && vist.t === t) fjernMerket(); visNatur(t) });
     t.rad = r.rad; t.knapp = r.knapp; const b = t.blokk = r.blokk;
     b.innerHTML = `<p id="${t.id}sum"></p><ul id="${t.id}tegn"></ul><div id="${t.id}helhet" class="helhet" hidden></div><p id="${t.id}merk"></p>${t.dekning ? `<label class="valg" for="${t.id}slor" hidden><input type="checkbox" id="${t.id}slor" checked>Legg et lyst slør over det som ikke er kartlagt, når laget er på.</label>` : ''}<p id="${t.id}plan" role="status"></p><p id="${t.id}gap" role="status"></p><ul id="${t.id}liste"></ul><p class="hint"></p>`;
     b.querySelector('.hint').textContent = `Kilde: ${t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i nettleseren.${t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}`;
@@ -1017,21 +1027,41 @@ td.feil { color: var(--ink); font-weight: 600 }
       : (plan ? `ca. ${dekar(plan * (OPPLOSNINGER[9] / 2) ** 2 / 1e6)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') + (ov && ov.dynamisk ? ', i hentet kart' : ''));
     const vises = t.samlet ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan) : o;   /* av mange små lokaliteter listes bare de som berøres */
     const maks = t.samlet ? 15 : 40; vises.slice(0, maks).forEach(x => {
-      const li = document.createElement('li'), a = document.createElement(x.url ? 'a' : 'b'), ar = document.createElement('span'), sm = document.createElement('small');
-      a.textContent = x.navn; if (x.url) { a.href = x.url; a.target = '_blank'; a.rel = 'noopener' } ar.textContent = km(x.km2);
+      const li = document.createElement('li'), a = document.createElement('b'), ar = document.createElement('span'), sm = document.createElement('small'), gjor = document.createElement('div');
+      a.textContent = x.navn; ar.textContent = km(x.km2); li.id = `${t.id}-omr-${o.indexOf(x)}`;
       sm.textContent = x.under || '';
       if (x.plan) { const b = document.createElement('b'); b.textContent = ` · ca. ${daa(x.plan)} planlagt utbygging`; sm.appendChild(b) }
-      li.append(a, ar, sm); liste.appendChild(li);
+      gjor.className = 'gjor';
+      const kn = document.createElement('button'); kn.type = 'button'; kn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.7a4.5 4.5 0 0 0-9 0c0 3.5 4.5 7.7 4.5 7.7z"/><circle cx="8" cy="6.7" r="1.6"/></svg>Vis i kartet';
+      kn.setAttribute('aria-label', `Vis ${x.navn} i kartet`); kn.addEventListener('click', () => visIKartet(t, x, li.id)); gjor.appendChild(kn);
+      if (x.url) { const l = document.createElement('a'); l.href = x.url; l.target = '_blank'; l.rel = 'noopener'; l.innerHTML = 'Åpne faktaark<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 3.5h-3v9h9v-3M9.5 3.5h3v3M12.5 3.5l-5.5 5.5"/></svg>'; l.setAttribute('aria-label', `Åpne faktaark for ${x.navn} hos Miljødirektoratet, i ny fane`); l.title = 'Åpnes i ny fane'; gjor.appendChild(l) }
+      li.append(a, ar, sm, gjor); liste.appendChild(li);
     });
     if (vises.length > maks) { const li = document.createElement('li'); li.textContent = `… og ${vises.length - maks} til`; liste.appendChild(li) }
   }
   const bakgrunn = new ol.layer.Tile({ className: 'bakgrunn', source: new ol.source.XYZ({ projection: UTM, crossOrigin: 'anonymous', attributions: '© Kartverket, NIBIO, DiBK',
     tileGrid: new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256 }),
     tileUrlFunction: ([z, x, y]) => `https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/utm33n/${String(z).padStart(2, '0')}/${y}/${x}.png` }) });
+  /* Ett område valgt fra en liste: kartet flyttes dit, området får en tydelig ramme, og en liten merkelapp i kartet sier hva som vises
+     og gir veien tilbake til listen. Markeringen står til et annet område velges, temaet slås av eller kommunen byttes. */
+  const markKilde = new ol.source.Vector(); let vist = null;
+  const markStrek = [new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 8 }) }), new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#171C1A', width: 3.5 }) })];
+  const markMidt = f => new ol.geom.Point(ol.extent.getCenter(f.getGeometry().getExtent()));
+  const markRing = [new ol.style.Style({ geometry: markMidt, image: new ol.style.Circle({ radius: 13, stroke: new ol.style.Stroke({ color: '#fff', width: 8 }) }) }), new ol.style.Style({ geometry: markMidt, image: new ol.style.Circle({ radius: 13, stroke: new ol.style.Stroke({ color: '#171C1A', width: 3.5 }) }) })];
+  const markLag = new ol.layer.Vector({ className: 'merket', source: markKilde, style: (f, res) => { const u = f.getGeometry().getExtent(); return Math.max(u[2] - u[0], u[3] - u[1]) < 16 * res ? markRing : markStrek } });
+  function fjernMerket() { markKilde.clear(); vist = null; $('vist').hidden = true }
+  function visIKartet(t, o, liId) {
+    if (!t.paa) { t.paa = true; t.knapp.setAttribute('aria-pressed', 'true'); visNatur(t); const li = document.getElementById(liId), kn = li && li.querySelector('button'); if (kn) kn.focus({ preventScroll: true }) }   /* listen ble tegnet på nytt: fokus tilbake på knappen */
+    const rolig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    markKilde.clear(); markKilde.addFeature(new ol.Feature(o.f.getGeometry())); vist = { t, liId };
+    view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig ? 0 : 400 });
+    $('vist').hidden = false; $('vist').firstElementChild.textContent = o.navn;
+    document.querySelector('.stage').scrollIntoView({ behavior: rolig ? 'auto' : 'smooth', block: 'nearest' });
+  }
   const grenseKilde = new ol.source.Vector();
   const grense = new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) }) });
   const view = new ol.View({ projection: UTM, center: ol.proj.fromLonLat([15, 65], UTM), resolutions: OPPLOSNINGER.slice(2), resolution: OPPLOSNINGER[4], enableRotation: false });
-  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, inonLag, dekLag, ...flateLag, planLag, ...omrissLag, grense], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
+  const kart = new ol.Map({ target: 'kart', layers: [bakgrunn, oversiktLag, tema, inonLag, dekLag, ...flateLag, planLag, ...omrissLag, grense, markLag], view, pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [new ol.control.Zoom({ zoomInTipLabel: 'Zoom inn', zoomOutTipLabel: 'Zoom ut' }), new ol.control.ScaleLine(), new ol.control.Attribution({ collapsible: false })] });
   const tegnPaaNytt = () => { fargeMinne = {}; rgbMinne = {}; tegnOversikt(); fargeleggFliser(); oppfriskPlan(); oppfriskInon(); heltSlor = null; dekLag.getSource().setKey(String(++dekNokkel)); grense.changed() };
   /* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen.
@@ -1379,6 +1409,12 @@ td.feil { color: var(--ink); font-weight: 600 }
       try { const u = new URL(location.href); if (paa) u.searchParams.set('teknisk', ''); else u.searchParams.delete('teknisk'); history.replaceState(null, '', u.pathname + u.search.replace(/=(&|$)/g, '$1') + u.hash) } catch (e) {}
     });
   }
+  $('vistlukk').addEventListener('click', fjernMerket);
+  $('vistliste').addEventListener('click', () => {
+    if (!vist) return; const t = vist.t, apne = t.rad.querySelector('.apne'); if (apne.getAttribute('aria-expanded') !== 'true') apne.click();
+    const li = document.getElementById(vist.liId) || t.blokk, rolig = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    li.scrollIntoView({ behavior: rolig ? 'auto' : 'smooth', block: 'center' }); const kn = li.querySelector('button'); if (kn) kn.focus({ preventScroll: true });
+  });
   $('smale').addEventListener('change', e => { visSmale = e.target.checked; oppfriskPlan() });
   $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); planLag.setVisible(planPaa && !!klipp && !ingenPlan()); nyttSlor() });
   /* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
@@ -1482,7 +1518,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     try { history.replaceState(null, '', '#' + nr) } catch (e) {}
     $('navn').textContent = k.navn; $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
     $('probe').textContent = 'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.'; tomTall('Henter …');
-    grenseKilde.clear(); klipp = null; flate = 0; planRaster = null; historie = null; planSum = null; visUtvikling(); clearTimeout(etterTimer); etterVenter = false; planInfo = null; visPlanInfo(); inon = null; visInon(); NATURLAG.forEach(t => { t.data = null; t.kilde.clear(); visNatur(t) }); tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
+    grenseKilde.clear(); klipp = null; flate = 0; planRaster = null; historie = null; planSum = null; visUtvikling(); clearTimeout(etterTimer); etterVenter = false; planInfo = null; visPlanInfo(); fjernMerket(); inon = null; visInon(); NATURLAG.forEach(t => { t.data = null; t.kilde.clear(); visNatur(t) }); tema.setVisible(false); tema.setExtent(undefined); visPlan(); $('siste').textContent = '';
     hentOversikt(k, mitt);
     if (k.boks && !behold) view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
     hentTall(k, mitt); hentHistorie(k, mitt); hentGrense(k, mitt, behold); status();
