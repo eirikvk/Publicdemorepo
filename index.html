@@ -277,7 +277,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 03.20';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 03.40';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -463,15 +463,22 @@ td.feil { color: var(--ink); font-weight: 600 }
     }
   }
   const lerret = () => { const c = document.createElement('canvas'); c.width = c.height = 512; return c };
+  /* Tegner et utsnitt av et bilde over hele flisen. Utsnittet klippes til bildet her, og målet krympes tilsvarende. Standarden sier at
+     nettleseren skal gjøre det selv, men Safari har tegnet ingenting når utsnittet stikker utenfor bildet, og det gjør det for alle
+     fliser langs kanten av kommunen når kartet er zoomet ut. */
+  function tegnUtsnitt(g, bilde, sx, sy, sw, sh) {
+    const x0 = Math.max(0, sx), y0 = Math.max(0, sy), x1 = Math.min(bilde.width, sx + sw), y1 = Math.min(bilde.height, sy + sh); if (!(x1 > x0 && y1 > y0)) return;
+    const fx = 512 / sw, fy = 512 / sh; g.drawImage(bilde, x0, y0, x1 - x0, y1 - y0, (x0 - sx) * fx, (y0 - sy) * fy, (x1 - x0) * fx, (y1 - y0) * fy);
+  }
   async function dagensKlasser(tc) {   /* dagens klasser i flisens piksler, i de rene fargene fra NIBIO */
     const c = lerret(), g = c.getContext('2d', { willReadFrequently: true });
     if (tc[0] >= FLISNIVA) g.drawImage(await createImageBitmap(new Blob([await hentRaa(flisUrl(tc))])), 0, 0, 512, 512);
     else if (ov && ov.buf) {
       const u = plannett.getTileCoordExtent(tc); ovBilde = ovBilde || createImageBitmap(new Blob([ov.buf]));
-      g.drawImage(await ovBilde, (u[0] - ov.ext[0]) / ovRes, (ov.ext[3] - u[3]) / ovRes, (u[2] - u[0]) / ovRes, (u[3] - u[1]) / ovRes, 0, 0, 512, 512);
+      tegnUtsnitt(g, await ovBilde, (u[0] - ov.ext[0]) / ovRes, (ov.ext[3] - u[3]) / ovRes, (u[2] - u[0]) / ovRes, (u[3] - u[1]) / ovRes);
     } else if (ov && ov.lerret && klipp) {   /* nettleserens eget oversiktsbilde: bare det som er hentet, og bare innenfor kommunen */
       const u = plannett.getTileCoordExtent(tc), r = (ov.ext[2] - ov.ext[0]) / ov.lerret.width, s = 512 / (u[2] - u[0]);
-      g.drawImage(ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r, 0, 0, 512, 512);
+      tegnUtsnitt(g, ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r);
       g.globalCompositeOperation = 'destination-in'; kommuneSti(g, klipp, u, s); g.fill('evenodd'); g.globalCompositeOperation = 'source-over';
     } else return null;
     const t0 = performance.now(), data = g.getImageData(0, 0, 512, 512).data; tidSlutt('dagens klasser', t0); return data;
@@ -557,7 +564,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       const D = inon && valgt && inon.nr === valgt.nr && inon.tilstand === 'ok' && inon.c ? inon : null, tc = tile.getTileCoord(), u = plannett.getTileCoordExtent(tc);
       if (!D || !ol.extent.intersects(u, D.u)) { tile.setState(TOM); return }
       const c = lerret(), g = c.getContext('2d', { willReadFrequently: true }), t0 = performance.now(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-      g.drawImage(D.c, (u[0] - D.u[0]) / D.res, (D.u[3] - u[3]) / D.res, (u[2] - u[0]) / D.res, (u[3] - u[1]) / D.res, 0, 0, 512, 512);
+      tegnUtsnitt(g, D.c, (u[0] - D.u[0]) / D.res, (D.u[3] - u[3]) / D.res, (u[2] - u[0]) / D.res, (u[3] - u[1]) / D.res);
       const P = g.getImageData(0, 0, 512, 512).data; let noe = false;
       for (let i = 0; i < P.length; i += 4) if (P[i] >= 128 && P[i + 3] >= 128) { noe = true; break }
       if (!noe) { tile.setState(TOM); return }   /* ingen inngrepsfri natur her: dagens klasser trengs ikke */
