@@ -277,7 +277,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 03.10';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 03.20';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -1068,12 +1068,19 @@ td.feil { color: var(--ink); font-weight: 600 }
      sone. Det ferdige resultatet huskes for de siste kommunene så lenge siden er åpen, så et nytt valg av samme kommune koster ingenting. */
   const inonMinne = new Map();
   function jevn(P, w, h) {   /* myker opp maskene litt (vekter 1-2-1 begge veier), så sonegrensene ikke får trappetrinn fra rutene når kartet er zoomet langt inn */
-    const rad = new Uint8Array(Math.max(w, h));
-    for (let k = 0; k < 3; k++) {
-      for (let y = 0; y < h; y++) { const o = 4 * y * w + k; for (let x = 0; x < w; x++) rad[x] = P[o + 4 * x]; for (let x = 0; x < w; x++) P[o + 4 * x] = (rad[x > 0 ? x - 1 : 0] + 2 * rad[x] + rad[x < w - 1 ? x + 1 : x] + 2) >> 2 }
-      for (let x = 0; x < w; x++) { const o = 4 * x + k, d = 4 * w; for (let y = 0; y < h; y++) rad[y] = P[o + d * y]; for (let y = 0; y < h; y++) P[o + d * y] = (rad[y > 0 ? y - 1 : 0] + 2 * rad[y] + rad[y < h - 1 ? y + 1 : y] + 2) >> 2 }
+    const n = 4 * w, over = new Uint8Array(n), denne = new Uint8Array(n);
+    for (let y = 0; y < h; y++) {   /* bortover, rad for rad */
+      const o = y * n; denne.set(P.subarray(o, o + n));
+      for (let x = 0; x < n; x += 4) { const a = x ? x - 4 : x, b = x < n - 4 ? x + 4 : x; P[o + x] = (denne[a] + 2 * denne[x] + denne[b] + 2) >> 2; P[o + x + 1] = (denne[a + 1] + 2 * denne[x + 1] + denne[b + 1] + 2) >> 2; P[o + x + 2] = (denne[a + 2] + 2 * denne[x + 2] + denne[b + 2] + 2) >> 2 }
+    }
+    over.set(P.subarray(0, n));
+    for (let y = 0; y < h; y++) {   /* nedover: raden over er tatt vare på før den ble skrevet over */
+      const o = y * n, u = y < h - 1 ? o + n : o; denne.set(P.subarray(o, o + n));
+      for (let x = 0; x < n; x += 4) { P[o + x] = (over[x] + 2 * denne[x] + P[u + x] + 2) >> 2; P[o + x + 1] = (over[x + 1] + 2 * denne[x + 1] + P[u + x + 1] + 2) >> 2; P[o + x + 2] = (over[x + 2] + 2 * denne[x + 2] + P[u + x + 2] + 2) >> 2 }
+      over.set(denne);
     }
   }
+
   async function sjekkInon(k, geom, mitt) {
     const har = inonMinne.get(k.nr); if (har) { inonMinne.delete(k.nr); inonMinne.set(k.nr, har); inon = har; oppfriskInon(); visInon(); return }
     inon = { nr: k.nr, tilstand: 'henter' }; visInon();
