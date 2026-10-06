@@ -1,0 +1,14 @@
+{
+  "name": "naturregnskap-demo",
+  "private": true,
+  "description": "Verktøy til utvikling. Selve siden trenger ikke noe av dette: den er rene filer uten byggesteg.",
+  "scripts": {
+    "formater": "prettier --write js stil.css verktoy/*.js",
+    "sjekk-format": "prettier --check js stil.css verktoy/*.js",
+    "test": "node verktoy/regresjon.js ut/ny --mot HEAD"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0",
+    "prettier": "3.9.9"
+  }
+}
