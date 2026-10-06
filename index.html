@@ -143,6 +143,9 @@ h1, h2, h3, p, dl, dd, table { margin: 0 }
 
 .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 40px; border-top: 1px solid var(--line); padding-top: 28px }
 .notes section { display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+:root:not(.teknisk) .tek { display: none }   /* teknisk informasjon til feilsøking vises bare når den er slått på */
+.tekknapp { align-self: flex-start; min-height: 44px; padding: 10px 16px; border: 1px solid var(--ink-3); border-radius: 8px; background: var(--surface); color: var(--ink); font: 500 15px/1.2 var(--body); cursor: pointer }
+.tekknapp:hover, .tekknapp:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
 .notes h2 { font: 600 18px/1.25 var(--display) }
 .notes p { color: var(--ink-2); font-size: 15px; max-width: 62ch }
 .tw { overflow-x: auto }
@@ -182,7 +185,7 @@ td.feil { color: var(--ink); font-weight: 600 }
       <div class="mapfoot">
         <div id="planinfo" role="status" hidden></div>
         <div class="probe" id="probe">Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.</div>
-        <div id="siste"></div>
+        <div id="siste" class="tek"></div>
       </div>
     </section>
 
@@ -215,7 +218,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   </div>
 
   <div class="notes">
-    <section>
+    <section class="tek" id="teknisk">
       <h2>Kall mot åpne kilder</h2>
       <div class="tw"><table>
         <thead><tr><th>Kilde</th><th>Hva</th><th class="r">Tid</th><th class="r">Størrelse</th></tr></thead>
@@ -245,8 +248,9 @@ td.feil { color: var(--ink); font-weight: 600 }
     </section>
     <section>
       <h2>Tekniske valg</h2>
-      <p id="versjon"></p>
-      <p id="maaling" role="status">Flytt kartet for å måle hvor jevnt det går.</p>
+      <button type="button" class="tekknapp" id="tekknapp" aria-expanded="false">Vis teknisk informasjon</button>
+      <p id="versjon" class="tek"></p>
+      <p id="maaling" class="tek" role="status">Flytt kartet for å måle hvor jevnt det går.</p>
       <label class="valg" for="smale"><input type="checkbox" id="smale">Vis smale striper i planlagt utbygging. Det er felt som ikke er bredere enn rundt 40 meter noe sted, ofte grøntdrag og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.</label>
     </section>
   </div>
@@ -281,7 +285,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 08.15';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 08.40';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -1301,6 +1305,16 @@ td.feil { color: var(--ink); font-weight: 600 }
     const bl = document.createElement('div'); bl.className = 'naturblokk'; bl.id = 'inonblokk'; bl.hidden = true;
     bl.innerHTML = '<h2>Inngrepsfri natur</h2><p id="inonsum"></p><p id="inonmerk"></p><ul id="inonliste"></ul><p class="hint">Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt innenfor sonene, også innsjøer. I kartet er det bare klassen natur som får sonefarge.</p>';
     $('naturblokker').appendChild(bl);
+  }
+  /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
+     Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på. */
+  {
+    const kn = $('tekknapp'), sett = paa => { document.documentElement.classList.toggle('teknisk', paa); kn.setAttribute('aria-expanded', String(paa)); kn.textContent = paa ? 'Skjul teknisk informasjon' : 'Vis teknisk informasjon' };
+    sett(new URLSearchParams(location.search).has('teknisk'));
+    kn.addEventListener('click', () => {
+      const paa = kn.getAttribute('aria-expanded') !== 'true'; sett(paa);
+      try { const u = new URL(location.href); if (paa) u.searchParams.set('teknisk', ''); else u.searchParams.delete('teknisk'); history.replaceState(null, '', u.pathname + u.search.replace(/=(&|$)/g, '$1') + u.hash) } catch (e) {}
+    });
   }
   $('smale').addEventListener('change', e => { visSmale = e.target.checked; oppfriskPlan() });
   $('planknapp').addEventListener('click', e => { planPaa = !planPaa; e.currentTarget.setAttribute('aria-pressed', String(planPaa)); visPlan(); nyttSlor(); NATURLAG.forEach(visNatur) });
