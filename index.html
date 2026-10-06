@@ -356,7 +356,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   /* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
   const VANN = [['hav', 'Hav', ['hav']], ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'], ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']];
   const ALLE = [...KL, ...VANN], JOR = 1, NAT = 2;   /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
-  const VERSJON = '6. oktober kl. 23.16';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
+  const VERSJON = '6. oktober kl. 23.30';   /* oppdateres for hånd ved hver endring, så man ser hvilken utgave en fane kjører */
   const $ = id => document.getElementById(id);
   /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
   let bruk = {};
@@ -816,7 +816,7 @@ td.feil { color: var(--ink); font-weight: 600 }
     const s = samle, n = tc.join('/'); if (!s || s.har.has(n)) return Promise.resolve();
     return createImageBitmap(new Blob([buf])).then(bm => {
       if (s !== samle || s.har.has(n)) { if (bm.close) bm.close(); return }
-      const t0 = performance.now(); s.har.add(n);
+      const t0 = performance.now(); s.har.add(n); inonGammel = graaGammel = true;
       /* Flisen legges på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
       const u = flisnett.getTileCoordExtent(tc), px = v => Math.round((v - s.ext[0]) / s.res), py = v => Math.round((s.ext[3] - v) / s.res);
       const X = px(u[0]), Y = py(u[3]), W = px(u[2]) - X, H = py(u[1]) - Y;
@@ -836,6 +836,14 @@ td.feil { color: var(--ink); font-weight: 600 }
     while (s.venter.length) fargeleggSamling(s, ...s.venter.shift());
     if (s.kilde) s.kilde.oppdater(s.vis);
   }
+  /* Zoomet ut tegnes inngrepsfri natur og grått areal oppå dagens klasser fra det sammensatte kartet. Fliser som ble tegnet før
+     kartet fikk mer innhold, er derfor utdaterte. De merkes når en ny flis legges inn, og tegnes på nytt neste gang kartet står
+     stille zoomet ut med laget på. Uten dette ble de stående tomme når man zoomet inn, så seg rundt og zoomet ut igjen. */
+  function friskOppGamle() {
+    if (iBevegelse || view.getResolution() < MAKSRES) return;
+    if (graaGammel && graaLag.getVisible()) { graaGammel = false; oppfriskGraa() }
+    if (inonGammel && inonLag.getVisible()) oppfriskInon();
+  }
   let etterTimer = null, etterVenter = false;
   function planleggEtterarbeid() {
     etterVenter = true; clearTimeout(etterTimer);
@@ -847,9 +855,7 @@ td.feil { color: var(--ink); font-weight: 600 }
         if (s.kilde) s.kilde.oppdater(s.vis);   /* også når det ble avbrutt, så det som er gjort vises */
       }
       if (iBevegelse || s !== samle) return;
-      if (antall) inonGammel = graaGammel = true;
-      if (graaGammel && graaLag.getVisible() && view.getResolution() >= MAKSRES) { graaGammel = false; oppfriskGraa() }
-      if (inonGammel && inonLag.getVisible() && view.getResolution() >= MAKSRES) oppfriskInon();   /* zoomet ut hentes dagens klasser fra bildet som nettopp fikk mer */
+      friskOppGamle();
       if (opptatt()) return planleggEtterarbeid();   /* tallene venter til alt er hentet */
       etterVenter = false; await regnAlt();
       maalTekst[1] = `Siste etterarbeid: ${Math.round(performance.now() - t0)} ms for ${antall} ${antall === 1 ? 'ny flis' : 'nye fliser'}.`; visMaaling();
@@ -1590,7 +1596,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   function visGraa() {
     const D = graa && valgt && graa.nr === valgt.nr ? graa : null, ok = !!D && D.tilstand === 'ok', R = graaRad.rad, liste = $('graaliste'), tekst = $('graasum'), plan = $('graaplan'), har = ok && D.sum > 0, K = graaKryss && valgt && graaKryss.nr === valgt.nr ? graaKryss : null;
-    graaLag.setVisible(graaPaa && !!klipp && har);
+    graaLag.setVisible(graaPaa && !!klipp && har); friskOppGamle();
     R.querySelector('.km').textContent = !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : har ? dekar(D.sum) : 'ingen';
     R.querySelector('.pc').textContent = har && ssbSum ? andelTekst(D.sum / ssbSum * 100) : '';
     R.querySelector('.un').textContent = har && K && K.S.tot ? `${nf(K.S.graa / K.S.tot * 100, 0)} % av planlagt utbygging ligger på grått areal${K.delvis ? ', i hentet kart' : ''}` : '';
@@ -1652,7 +1658,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   function visInon() {
     const D = inon && valgt && inon.nr === valgt.nr ? inon : null, ok = !!D && D.tilstand === 'ok', R = inonRad.rad, liste = $('inonliste'), tekst = $('inonsum'), merk = $('inonmerk'), har = ok && D.sum > 0;
-    inonLag.setVisible(inonPaa && vis.nat && !!klipp && har);
+    inonLag.setVisible(inonPaa && vis.nat && !!klipp && har); friskOppGamle();
     R.querySelector('.km').textContent = !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : har ? dekar(D.sum) : 'ingen';
     R.querySelector('.pc').textContent = har && ssbSum ? andelTekst(D.sum / ssbSum * 100) : '';
     R.querySelector('.un').textContent = har ? 'krysses ikke med planlagt utbygging' : '';
@@ -1697,7 +1703,7 @@ td.feil { color: var(--ink); font-weight: 600 }
   }
   $('versjon').textContent = `Utgave: ${VERSJON}.`;
   kart.on('movestart', () => { iBevegelse = true; nyeKall = false; feilIVisning = false; oversiktSynlig(true); clearTimeout(etterTimer); cancelAnimationFrame(maalRaf); maalT = []; maalSist = 0; bruk = {}; maalRaf = requestAnimationFrame(maalBilde) });
-  kart.on('moveend', () => { iBevegelse = false; maalFerdig(); status(); kart.render(); if (etterVenter) planleggEtterarbeid() });
+  kart.on('moveend', () => { iBevegelse = false; maalFerdig(); status(); kart.render(); friskOppGamle(); if (etterVenter) planleggEtterarbeid() });
   view.on('change:resolution', () => { if (view.getResolution() >= MAKSRES) { oversiktSynlig(true); fargeleggVentende(samle) } });
   kart.on('rendercomplete', () => {
     if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || !tema.getVisible() || opptatt()) return;   /* aldri skjul oversikten midt i en bevegelse */
