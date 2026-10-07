@@ -175,16 +175,13 @@ const tegnPlan = () => planLag.setSource(nyPlanKilde());
    og pikslene telles. Med lagret oversiktsbilde gjelder det hele kommunen. Uten gjelder det den delen av kommunen
    nettleseren har hentet kart for, og tallene regnes ut på nytt hver gang det kommer mer kart.
    Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
-let regnNr = 0,
-  ssbSum = 0;
-async function regnBlokk(tc, fliser) {
-  /* én flis på nivå 9: dagens klasser lagt oppå planen. fliser er de hentede kartflisene innenfor, eller null når hele kommunen er kjent. */
-  const [K, buf] = await Promise.all([dagensKlasser(tc), ingenPlan() ? null : hentPlan(planUrl(tc))]);
-  if (!K) throw new Error('mangler dagens klasser');
-  const g = lerret().getContext('2d', { willReadFrequently: true });
-  if (buf) g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
-  const P = g.getImageData(0, 0, 512, 512).data,
-    d = new Uint8Array(262144),
+let regnNr = 0;
+/* Hva som skal stå om planlagt utbygging i tallpanelet. tilstand er tom, zoom, regner, feil eller ok. Tallene selv ligger i planRaster. */
+let planTall = null;
+/* Én flis på nivå 9: dagens klasser lagt oppå planen. K er dagens klasser og P planen, begge som piksler. fliser er de hentede
+   kartflisene innenfor, eller null når hele kommunen er kjent. Ren regning. */
+function tellBlokk(K, P, tc, fliser) {
+  const d = new Uint8Array(262144),
     kl = new Uint8Array(262144),
     pl = new Uint8Array(262144),
     n = {
@@ -225,10 +222,17 @@ async function regnBlokk(tc, fliser) {
     }
     if (plan) d[q] = jor ? 2 : 1;
   }
-  return { sig: fliser ? fliser.length : -1, d, kl, pl, n, utenPlan: !buf };
+  return { sig: fliser ? fliser.length : -1, d, kl, pl, n };
+}
+async function hentBlokk(tc, fliser) {
+  const [K, buf] = await Promise.all([dagensKlasser(tc), ingenPlan() ? null : hentPlan(planUrl(tc))]);
+  if (!K) throw new Error('mangler dagens klasser');
+  const g = lerret().getContext('2d', { willReadFrequently: true });
+  if (buf) g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
+  return { ...tellBlokk(K, g.getImageData(0, 0, 512, 512).data, tc, fliser), utenPlan: !buf };
 }
 function ryddStriper(d, w) {
-  /* fjerner smale striper fra rutenettet, se forklaringen i regnPlan */
+  /* fjerner smale striper fra rutenettet, se forklaringen i byggPlanRaster. Ren regning. */
   const celler = [];
   for (let i = 0; i < d.length; i++) {
     const v = d[i];
@@ -263,68 +267,12 @@ function ryddStriper(d, w) {
   }
   return { celler, ryddet, rn, rj };
 }
-async function regnPlan() {
-  const mitt = ++regnNr,
-    tn = $('tall-pnat'),
-    tj = $('tall-pjor'),
-    note = $('tallnote'),
-    Z = 9;
-  const tom = () => {
-    tn.textContent = tj.textContent = note.textContent = '';
-  };
-  if (!klipp || utenPlan()) return tom(); /* knappen for planlagt utbygging styrer bare kartlaget, ikke tallene */
-  const E = mine();
-  if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
-  if (!ov) {
-    tom();
-    if (!oversikter[valgt.nr])
-      note.textContent =
-        'Zoom inn i kartet for å få et anslag. Arealet regnes ut for den delen av kommunen nettleseren har hentet kart for.';
-    return;
-  }
-  const dyn = !!ov.dynamisk,
-    sm = dyn ? samle : null,
-    kant = dyn ? 1 : 0,
-    nr = valgt.nr,
-    denne = ov;
-  if (dyn && !sm) return;
-  if (!(dyn && planRaster)) {
-    tom();
-    tn.textContent = tj.textContent = 'regner …';
-  } /* nye tall erstatter de gamle uten at teksten blinker */
-  /* Rutenettet bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
-     fliser innenfor den, så et nytt utsnitt koster én eller to blokker og ikke hele det hentede området. */
-  const blokker = dyn ? sm.blokker : denne.blokker || (denne.blokker = new Map()),
-    under = new Map();
-  if (dyn)
-    for (const v of sm.har) {
-      const [z, x, y] = v.split('/').map(Number),
-        k = `${x >> (z - Z)}/${y >> (z - Z)}`;
-      if (!under.has(k)) under.set(k, []);
-      under.get(k).push([z, x, y]);
-    }
-  else plannett.forEachTileCoord(denne.ext, Z, tc => under.set(`${tc[1]}/${tc[2]}`, null));
-  try {
-    await Promise.all(
-      [...under].map(async ([k, fliser]) => {
-        const har = blokker.get(k),
-          sig = fliser ? fliser.length : -1;
-        if (har && har.sig === sig && har.kl && har.pl && har.utenPlan === ingenPlan()) return;
-        const [x, y] = k.split('/').map(Number),
-          blokk = await regnBlokk([Z, x, y], fliser);
-        blokker.set(k, blokk);
-      })
-    );
-  } catch (e) {
-    if (mitt === regnNr) {
-      tn.textContent = tj.textContent = '';
-      note.textContent = 'Arealet kunne ikke regnes ut.';
-    }
-    return;
-  }
-  if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
-  const tStart = performance.now(),
-    nokler = [...under.keys()].map(k => k.split('/').map(Number)),
+/* Setter blokkene sammen til ett rutenett for kommunen, legger inn egne områder og rydder bort smale striper. nokler er [x, y]
+   for flisene på nivå 9, delvis sier at bare en del av kommunen er hentet, og rute er rutestørrelsen i meter slik den skal oppgis.
+   Ren regning: leser ingenting fra siden og gir alt tilbake i ett objekt. */
+function byggPlanRaster(nr, nokler, blokker, delvis, E, rute) {
+  const Z = 9,
+    kant = delvis ? 1 : 0,
     tx0 = Math.min(...nokler.map(t => t[0])),
     ty0 = Math.min(...nokler.map(t => t[1]));
   const cx0 = tx0 * 512 - kant,
@@ -337,7 +285,7 @@ async function regnPlan() {
   const kl = new Uint8Array(w * h),
     pl = new Uint8Array(w * h),
     n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
-  if (dyn) d.fill(3);
+  if (delvis) d.fill(3);
   for (const [x, y] of nokler) {
     const b = blokker.get(`${x}/${y}`),
       start = ((y - ty0) * 512 + kant) * w + (x - tx0) * 512 + kant;
@@ -365,14 +313,13 @@ async function regnPlan() {
      Så beholdes alt som henger sammen med en kjerne. Et større felt beholdes dermed helt, også der det smalner av, og bare
      felt uten kjerne faller bort. */
   const { celler, ryddet, rn, rj } = ryddStriper(d, w);
-  if (E.length) {
-    E.forEach(g => {
-      g.tall = { nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0, fnat: 0, fjor: 0, nnat: 0, njor: 0 };
-    });
+  /* Per eget område: hva som ligger der i dag, hva planen alene tar (f) og hva som går med nå (n). */
+  const egneTall = E.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0, fnat: 0, fjor: 0, nnat: 0, njor: 0 }));
+  if (E.length)
     for (let i = 0; i < eget.length; i++) {
       const e = eget[i];
       if (!e) continue;
-      const T = E[e - 1].tall,
+      const T = egneTall[e - 1],
         c = kl[i],
         b = basis.ryddet[i],
         ny = ryddet[i];
@@ -386,8 +333,7 @@ async function regnPlan() {
       if (ny === 1) T.nnat++;
       else if (ny === 2) T.njor++;
     }
-  }
-  planRaster = {
+  return {
     nr,
     z: Z,
     cx0,
@@ -404,30 +350,118 @@ async function regnPlan() {
     antallEgne: E.length,
     basis,
     sum: { rn, rj },
-    iDag: { nat: n.nat, jor: n.jor }
+    iDag: { nat: n.nat, jor: n.jor },
+    n,
+    delvis,
+    fliser: nokler.length,
+    rute,
+    egneTall
   };
+}
+/* Samordner utregningen: finner ut hva som kan regnes ut nå, henter blokkene som mangler, bygger rutenettet og ber om ny tegning. */
+async function regnPlan() {
+  const mitt = ++regnNr,
+    Z = 9;
+  const sett = tilstand => {
+    planTall = { tilstand };
+    visPlanTall();
+  };
+  if (!klipp || utenPlan()) return sett('tom'); /* knappen for planlagt utbygging styrer bare kartlaget, ikke tallene */
+  const E = mine();
+  if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
+  if (!ov) return sett(oversikter[valgt.nr] ? 'tom' : 'zoom');
+  const dyn = !!ov.dynamisk,
+    sm = dyn ? samle : null,
+    nr = valgt.nr,
+    denne = ov;
+  if (dyn && !sm) return;
+  if (!(dyn && planRaster)) sett('regner'); /* nye tall erstatter de gamle uten at teksten blinker */
+  /* Rutenettet bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
+     fliser innenfor den, så et nytt utsnitt koster én eller to blokker og ikke hele det hentede området. */
+  const blokker = dyn ? sm.blokker : denne.blokker || (denne.blokker = new Map()),
+    under = new Map();
+  if (dyn)
+    for (const v of sm.har) {
+      const [z, x, y] = v.split('/').map(Number),
+        k = `${x >> (z - Z)}/${y >> (z - Z)}`;
+      if (!under.has(k)) under.set(k, []);
+      under.get(k).push([z, x, y]);
+    }
+  else plannett.forEachTileCoord(denne.ext, Z, tc => under.set(`${tc[1]}/${tc[2]}`, null));
+  try {
+    await Promise.all(
+      [...under].map(async ([k, fliser]) => {
+        const har = blokker.get(k),
+          sig = fliser ? fliser.length : -1;
+        if (har && har.sig === sig && har.kl && har.pl && har.utenPlan === ingenPlan()) return;
+        const [x, y] = k.split('/').map(Number),
+          blokk = await hentBlokk([Z, x, y], fliser);
+        blokker.set(k, blokk);
+      })
+    );
+  } catch (e) {
+    if (mitt === regnNr) sett('feil');
+    return;
+  }
+  if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
+  const tStart = performance.now(),
+    m = OPPLOSNINGER[Z] / 2,
+    km2 = v => (v * m * m) / 1e6;
+  planRaster = byggPlanRaster(
+    nr,
+    [...under.keys()].map(k => k.split('/').map(Number)),
+    blokker,
+    dyn,
+    E,
+    Math.round(dyn ? Math.max(m, sm.res) : m)
+  );
+  E.forEach((g, i) => {
+    g.tall = planRaster.egneTall[i];
+  });
   friskOpp(planLag);
   tidSlutt('plantall', tStart);
-  const m = OPPLOSNINGER[Z] / 2,
+  planSum = { nr, nat: km2(planRaster.sum.rn), jor: km2(planRaster.sum.rj), delvis: dyn, egne: E.length };
+  sett('ok');
+  visUtvikling();
+  visEgne();
+}
+/* Tegner tallene for planlagt utbygging i tallpanelet, fra planTall og planRaster. */
+function visPlanTall() {
+  const tn = $('tall-pnat'),
+    tj = $('tall-pjor'),
+    note = $('tallnote'),
+    tilstand = planTall ? planTall.tilstand : 'tom',
+    R = gjeldende(planRaster);
+  if (tilstand !== 'ok' || !R) {
+    tn.textContent = tj.textContent = tilstand === 'regner' ? 'regner …' : '';
+    note.textContent =
+      tilstand === 'zoom'
+        ? 'Zoom inn i kartet for å få et anslag. Arealet regnes ut for den delen av kommunen nettleseren har hentet kart for.'
+        : tilstand === 'feil'
+          ? 'Arealet kunne ikke regnes ut.'
+          : '';
+    return;
+  }
+  const m = OPPLOSNINGER[R.z] / 2,
     km2 = v => (v * m * m) / 1e6,
     pst = (a, b) => (b ? nf((a / b) * 100) : '0'),
-    der = dyn ? ' i det hentede kartet' : '';
-  planSum = { nr, nat: km2(rn), jor: km2(rj), delvis: dyn, egne: E.length };
-  visUtvikling();
-  $('egnemerk').textContent = !E.length
+    der = R.delvis ? ' i det hentede kartet' : '';
+  const n = R.n,
+    { rn, rj } = R.sum,
+    basis = R.basis,
+    antall = R.antallEgne;
+  $('egnemerk').textContent = !antall
     ? ''
-    : `Tallene for planlagt utbygging inkluderer ${E.length === 1 ? 'ett eget område' : E.length + ' egne områder'}. ${ingenPlan() ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene: ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
-  visEgne();
-  tn.textContent = `ca. ${iTekst(km2(rn))}, ${pst(rn, n.nat)} % av naturen${der}${E.length ? '' : ` (${iTekst(km2(n.pnat))} med smale striper)`}`;
-  tj.textContent = `ca. ${iTekst(km2(rj))}, ${pst(rj, n.jor)} % av jordbruket${der}${E.length ? '' : ` (${iTekst(km2(n.pjor))} med smale striper)`}`;
+    : `Tallene for planlagt utbygging inkluderer ${antall === 1 ? 'ett eget område' : antall + ' egne områder'}. ${ingenPlan() ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene: ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
+  tn.textContent = `ca. ${iTekst(km2(rn))}, ${pst(rn, n.nat)} % av naturen${der}${antall ? '' : ` (${iTekst(km2(n.pnat))} med smale striper)`}`;
+  tj.textContent = `ca. ${iTekst(km2(rj))}, ${pst(rj, n.jor)} % av jordbruket${der}${antall ? '' : ` (${iTekst(km2(n.pjor))} med smale striper)`}`;
   const felles =
     'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
-  if (dyn) {
-    const a = km2(n.beb + n.jor + n.nat),
-      rute = Math.round(Math.max(m, sm.res));
-    note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${ssbSum ? ` av ${iTekst(ssbSum)} (${nf(Math.min(100, (a / ssbSum) * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${rute} meter. ${felles}`;
+  if (R.delvis) {
+    const a = km2(n.beb + n.jor + n.nat);
+    note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${ssbSum ? ` av ${iTekst(ssbSum)} (${nf(Math.min(100, (a / ssbSum) * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${R.rute} meter. ${felles}`;
   } else
-    note.textContent = `Regnet ut i nettleseren fra ${under.size} kartfliser med piksler på ${Math.round(m)} meter. ${felles}`;
+    note.textContent = `Regnet ut i nettleseren fra ${R.fliser} kartfliser med piksler på ${R.rute} meter. ${felles}`;
 }
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker.
    Langs grensen stikker naboenes planer litt inn, så under 15 prosent regnes som at kommunen ikke har plan der.

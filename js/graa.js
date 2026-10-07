@@ -168,6 +168,23 @@ async function lastGraaFlis(tile) {
   }
 }
 const graaLag = new ol.layer.Tile({ className: 'tema', visible: false, source: tegnetKilde(lastGraaFlis) });
+/* Tolker de to bildene av kommunen. P er bildet av alt grått areal, V bildet av flatene med oppgitt andel vegetasjon og M kommunens
+   flate, alle som piksler i samme rutenett. Gir trinnet per rute og arealet per trinn i km². P gjøres samtidig om til en utjevnet
+   maske over det grå, som kartlaget tegnes fra. Ren regning. */
+function tolkGraa(P, V, M, w, h, res, m2) {
+  const kl = new Uint8Array(w * h),
+    n = new Int32Array(7);
+  for (let i = 0, q = 0; i < P.length; i += 4, q++) {
+    const t = V[i + 3] >= 128 ? graaTrinn(Math.max(26, V[i]), 255) : P[i + 3] >= 128 ? 6 : 0;
+    kl[q] = t;
+    if (t && M[i + 3] >= 128) n[t]++;
+    P[i] = P[i + 1] = P[i + 2] = t ? 255 : 0;
+    P[i + 3] = 255;
+  }
+  jevn(P, w, h);
+  const trinn = Array.from(n, v => Math.round(((v * res * res) / m2) * 100) / 100);
+  return { kl, trinn, sum: Math.round(trinn.reduce((x, y) => x + y, 0) * 100) / 100 };
+}
 async function sjekkGraa(k, geom, mitt) {
   const har = graaMinne.get(k.nr);
   if (har) {
@@ -191,38 +208,15 @@ async function sjekkGraa(k, geom, mitt) {
       a = tegneflate(w, h),
       b = tegneflate(w, h);
     a.drawImage(await createImageBitmap(new Blob([b1])), 0, 0, w, h);
-    const A = a.getImageData(0, 0, w, h),
-      P = A.data;
+    const A = a.getImageData(0, 0, w, h);
     b.drawImage(await createImageBitmap(new Blob([b2])), 0, 0, w, h);
     const V = b.getImageData(0, 0, w, h).data;
     b.clearRect(0, 0, w, h);
     kommuneSti(b, geom, u, 1 / res);
     b.fill('evenodd');
-    const M = b.getImageData(0, 0, w, h).data;
-    const kl = new Uint8Array(w * h),
-      n = new Int32Array(7);
-    for (let i = 0, q = 0; i < P.length; i += 4, q++) {
-      const k2 = V[i + 3] >= 128 ? graaTrinn(Math.max(26, V[i]), 255) : P[i + 3] >= 128 ? 6 : 0;
-      kl[q] = k2;
-      if (k2 && M[i + 3] >= 128) n[k2]++;
-      P[i] = P[i + 1] = P[i + 2] = k2 ? 255 : 0;
-      P[i + 3] = 255;
-    }
-    jevn(P, w, h);
+    const tall = tolkGraa(A.data, V, b.getImageData(0, 0, w, h).data, w, h, res, utm33(geom));
     a.putImageData(A, 0, 0);
-    const trinn = Array.from(n, v => Math.round(((v * res * res) / utm33(geom)) * 100) / 100);
-    graa = {
-      nr: k.nr,
-      tilstand: 'ok',
-      trinn,
-      sum: Math.round(trinn.reduce((x, y) => x + y, 0) * 100) / 100,
-      c: a.canvas,
-      kl,
-      u,
-      res,
-      w,
-      h
-    };
+    graa = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res, w, h };
     husk(graaMinne, k.nr, graa, 3);
     tidSlutt('grått areal, kommunebilde', t0);
   } catch (e) {
@@ -236,53 +230,50 @@ async function sjekkGraa(k, geom, mitt) {
 /* Planlagt utbygging krysset med grått areal: hvor mye av all planlagt utbygging på land som ligger på areal som alt er grått,
    altså gjenbruk, og hvor mye av det som er minst halvparten vegetasjon. Regnes for kommuneplanen alene og med egne områder.
    Her er alle ruter med planlagt utbygging med, også der det er bebygd i dag, og uten regelen om smale striper. */
+function kryssGraa(R, D, delvis) {
+  /* R: rutenettet for planen. D: grått areal for kommunen. Ren regning. */
+  const nE = R.egetType ? R.antallEgne : 0,
+    tom = () => ({ tot: 0, graa: 0, gron: 0, gront: 0 }),
+    ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }),
+    S = ny(),
+    P = ny(),
+    m = OPPLOSNINGER[R.z] / 2;
+  const en = (x, k, c) => {
+      x.tot++;
+      if (k) x.graa++;
+      else if (c === 1) x.gront++;
+      if (k === 4 || k === 5) x.gron++;
+    },
+    legg = (T, e, k, c) => {
+      en(T, k, c);
+      if (e) en(T.eg[e - 1], k, c);
+    };
+  let bebygd = 0,
+    gront = 0; /* gront: bebygd i grunnkartet, men ikke grått. Det er grønne arealer som parker og idrettsanlegg. */
+  for (let i = 0; i < R.kl.length; i++) {
+    const c = R.kl[i];
+    if (c < 1 || c > 3) continue;
+    const b = R.pl[i],
+      ty = nE ? R.egetType[i] : 0,
+      s = ty === 1 ? 1 : ty === 2 ? 0 : b;
+    if (c !== 1 && !b && !s) continue;
+    const k = graaVed(D, ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * m, ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + 0.5) * m),
+      e = nE ? R.eget[i] : 0;
+    if (c === 1) {
+      bebygd++;
+      if (!k) gront++;
+    }
+    if (s) legg(S, e, k, c);
+    if (b) legg(P, e, k, c);
+  }
+  return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis };
+}
 function regnGraa() {
   const R = planRaster && valgt && planRaster.nr === valgt.nr && planRaster.pl && !utenPlan() ? planRaster : null,
-    D = graa && valgt && graa.nr === valgt.nr && graa.tilstand === 'ok' ? graa : null;
-  graaKryss = null;
-  if (R && D) {
-    const t0 = performance.now(),
-      nE = R.egetType ? R.antallEgne : 0,
-      tom = () => ({ tot: 0, graa: 0, gron: 0, gront: 0 }),
-      ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }),
-      S = ny(),
-      P = ny(),
-      m = OPPLOSNINGER[R.z] / 2;
-    const en = (x, k, c) => {
-        x.tot++;
-        if (k) x.graa++;
-        else if (c === 1) x.gront++;
-        if (k === 4 || k === 5) x.gron++;
-      },
-      legg = (T, e, k, c) => {
-        en(T, k, c);
-        if (e) en(T.eg[e - 1], k, c);
-      };
-    let bebygd = 0,
-      gront = 0; /* gront: bebygd i grunnkartet, men ikke grått. Det er grønne arealer som parker og idrettsanlegg. */
-    for (let i = 0; i < R.kl.length; i++) {
-      const c = R.kl[i];
-      if (c < 1 || c > 3) continue;
-      const b = R.pl[i],
-        ty = nE ? R.egetType[i] : 0,
-        s = ty === 1 ? 1 : ty === 2 ? 0 : b;
-      if (c !== 1 && !b && !s) continue;
-      const k = graaVed(
-          D,
-          ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * m,
-          ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + 0.5) * m
-        ),
-        e = nE ? R.eget[i] : 0;
-      if (c === 1) {
-        bebygd++;
-        if (!k) gront++;
-      }
-      if (s) legg(S, e, k, c);
-      if (b) legg(P, e, k, c);
-    }
-    graaKryss = { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis: !!(ov && ov.dynamisk) };
-    tidSlutt('grått areal, kryssing', t0);
-  }
+    D = graa && valgt && graa.nr === valgt.nr && graa.tilstand === 'ok' ? graa : null,
+    t0 = performance.now();
+  graaKryss = R && D ? kryssGraa(R, D, !!(ov && ov.dynamisk)) : null;
+  if (graaKryss) tidSlutt('grått areal, kryssing', t0);
   visGraa();
   visEgne();
 }

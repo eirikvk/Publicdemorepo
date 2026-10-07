@@ -52,7 +52,7 @@ const ALLE = [...KL, ...VANN],
   JOR = 1,
   NAT = 2; /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
 /* Settes av verktoy/utgave.py ved hver endring, så man ser hvilken utgave en fane kjører */
-const VERSJON = '6. oktober kl. 23.59';
+const VERSJON = '7. oktober kl. 07.11';
 const $ = id => document.getElementById(id);
 /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
 let bruk = {};

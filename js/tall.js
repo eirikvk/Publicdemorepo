@@ -1,23 +1,72 @@
 /* Tallene fra SSB: arealklasser, land og vann, og anslått utvikling. */
-/* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
+/* Tilstand. Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
    kommunens flate (grensen fra Kartverket) minus land og ferskvann. */
+/* ssbSum er landarealet i km², summen av de tre klassene fra SSB, og 0 til tallene er hentet.
+   arealtall er tallene for valgt kommune: { tilstand: 'henter' | 'feil' | 'ok', a: [bebygd, jordbruk, natur] i km², aar }. */
+let ssbSum = 0,
+  arealtall = null;
 let ferskvann = null,
   flate = 0;
-function visVann() {
-  const bar = $('bar2'),
-    tegn = $('tegn2'),
-    note = $('vannnote');
-  bar.textContent = tegn.textContent = note.textContent = '';
-  bar.removeAttribute('aria-label');
-  if (!ssbSum || !ferskvann || !flate) return;
-  let hav = flate ? flate - ssbSum - ferskvann.inn - ferskvann.elv : 0;
+
+/* Regning: funksjonene under tolker svar og regner ut tall. De leser ikke fra siden og skriver ikke til den. */
+function tolkAreal(j) {
+  const ix = j.dimension.ArealKlasse.category.index,
+    tid = j.dimension.Tid.category.index;
+  const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
+  return {
+    a: KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)),
+    aar: Array.isArray(tid) ? tid[0] : Object.keys(tid)[0],
+    ferskvann: { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 }
+  };
+}
+function tolkHistorie(j, nr) {
+  /* arealet per klasse i 2017 og i siste år, eller ingenting hvis serien ikke rekker tilbake til 2017 */
+  const liste = x => (Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b])),
+    kl = liste(j.dimension.ArealKlasse.category.index),
+    aar = liste(j.dimension.Tid.category.index),
+    nT = aar.length;
+  const v = (c, t) => j.value[kl.indexOf(c) * nT + t] || 0,
+    sum = t => KL.map(x => x[3].reduce((s, c) => s + v(c, t), 0)),
+    alt = t => sum(t).reduce((s, x) => s + x, 0) + v('22.01', t) + v('22.02', t);
+  const f = aar.indexOf('2017');
+  if (f < 0 || nT - f < 2 || !alt(f) || !alt(nT - 1)) return null;
+  return {
+    nr,
+    fra: aar[f],
+    til: aar[nT - 1],
+    a0: sum(f),
+    a1: sum(nT - 1),
+    endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > 0.005
+  };
+}
+function tolkVann(flate, land, ferskvann) {
+  /* delene av kommunens flate, i km². Hav er det som blir igjen. */
+  if (!land || !ferskvann || !flate) return null;
+  let hav = flate - land - ferskvann.inn - ferskvann.elv;
   if (hav < Math.max(0.5, flate * 0.005)) hav = 0; /* små avvik mellom grense og statistikk er ikke hav */
-  const deler = [
-      ['land', 'Land', ssbSum],
+  return {
+    hav,
+    deler: [
+      ['land', 'Land', land],
       ['inn', 'Innsjø', ferskvann.inn],
       ['elv', 'Elv', ferskvann.elv],
       ['hav', 'Hav', hav]
-    ].filter(d => d[2] > 0),
+    ].filter(d => d[2] > 0)
+  };
+}
+/* Arealet per klasse hvis alt planen setter av, bygges: natur og jordbruk går over til bebygd. */
+const etterPlan = (a, P) => [a[0] + P.nat + P.jor, a[1] - P.jor, a[2] - P.nat];
+
+/* Tegning: funksjonene under viser tilstanden på siden. */
+function visVann() {
+  const bar = $('bar2'),
+    forklaring = $('tegn2'),
+    note = $('vannnote');
+  bar.textContent = forklaring.textContent = note.textContent = '';
+  bar.removeAttribute('aria-label');
+  const V = tolkVann(flate, ssbSum, ferskvann);
+  if (!V) return;
+  const { deler, hav } = V,
     sum = deler.reduce((s, d) => s + d[2], 0);
   deler.forEach(([id, navn, v]) => {
     const s = document.createElement('i');
@@ -27,20 +76,29 @@ function visVann() {
     const t = document.createElement('span');
     t.innerHTML = `<i style="background:var(--${id})"></i>${navn} <b></b>`;
     t.lastElementChild.textContent = `${id === 'hav' ? 'ca. ' : ''}${dekar(v)}`;
-    tegn.appendChild(t);
+    forklaring.appendChild(t);
   });
   bar.setAttribute('aria-label', deler.map(([, n, v]) => `${n} ${nf((v / sum) * 100)} prosent`).join(', '));
   note.textContent = hav
     ? 'Land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate (grensen fra Kartverket) minus land og ferskvann.'
     : 'Land, innsjø og elv er SSBs tall. Kommunen har ikke hav.';
 }
-function visTall(a, aar) {
-  const sum = a[0] + a[1] + a[2],
+function visTall() {
+  const T = arealtall,
     bar = $('bar');
   bar.textContent = '';
-  ssbSum = sum;
+  if (!T || T.tilstand !== 'ok') {
+    $('tot').textContent = T && T.tilstand === 'feil' ? 'Tallene kunne ikke hentes' : 'Henter …';
+    KL.forEach(([id]) => {
+      $('km-' + id).textContent = '–';
+      $('pc-' + id).textContent = '–';
+    });
+    return;
+  }
+  const a = T.a,
+    sum = a[0] + a[1] + a[2];
   $('tot').textContent = dekar(sum);
-  $('aar').textContent = aar;
+  $('aar').textContent = T.aar;
   bar.setAttribute('aria-label', KL.map(([, n], i) => `${n} ${nf((a[i] / sum) * 100)} prosent`).join(', '));
   KL.forEach(([id, navn], i) => {
     const p = (a[i] / sum) * 100,
@@ -52,16 +110,13 @@ function visTall(a, aar) {
     $('pc-' + id).textContent = p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %';
   });
 }
-function tomTall(tekst) {
+function nullstillTall(tilstand) {
+  /* ingen tall å vise: de hentes, eller hentingen feilet */
   ssbSum = 0;
   ferskvann = null;
+  arealtall = { tilstand };
   visVann();
-  $('tot').textContent = tekst;
-  $('bar').textContent = '';
-  KL.forEach(([id]) => {
-    $('km-' + id).textContent = '–';
-    $('pc-' + id).textContent = '–';
-  });
+  visTall();
 }
 
 /* SSB har to API-er til samme tabell. Det nye brukes først. Svarer det ikke, spørres det eldre om det samme.
@@ -103,20 +158,17 @@ async function hentTall(k, mitt) {
       ['top', ['1']]
     );
     if (mitt !== valgNr) return;
-    const ix = j.dimension.ArealKlasse.category.index,
-      tid = j.dimension.Tid.category.index;
-    const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
-    ferskvann = { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 };
-    visTall(
-      KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)),
-      Array.isArray(tid) ? tid[0] : Object.keys(tid)[0]
-    );
+    const T = tolkAreal(j);
+    ferskvann = T.ferskvann;
+    arealtall = { tilstand: 'ok', a: T.a, aar: T.aar };
+    ssbSum = T.a[0] + T.a[1] + T.a[2];
+    visTall();
     visVann();
     NATURLAG.forEach(visNatur);
     visInon();
     visGraa();
   } catch (e) {
-    if (mitt === valgNr) tomTall('Tallene kunne ikke hentes');
+    if (mitt === valgNr) nullstillTall('feil');
   }
 }
 /* Anslått utvikling på tre tidspunkt: SSBs tall for 2017, SSBs nyeste tall, og nyeste tall med planlagt utbygging trukket fra natur
@@ -134,23 +186,9 @@ async function hentHistorie(k, mitt) {
       ['all', ['*']]
     );
     if (mitt !== valgNr) return;
-    const liste = x => (Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b])),
-      kl = liste(j.dimension.ArealKlasse.category.index),
-      aar = liste(j.dimension.Tid.category.index),
-      nT = aar.length;
-    const v = (c, t) => j.value[kl.indexOf(c) * nT + t] || 0,
-      sum = t => KL.map(x => x[3].reduce((s, c) => s + v(c, t), 0)),
-      alt = t => sum(t).reduce((s, x) => s + x, 0) + v('22.01', t) + v('22.02', t);
-    const f = aar.indexOf('2017');
-    if (f < 0 || nT - f < 2 || !alt(f) || !alt(nT - 1)) return;
-    historie = {
-      nr: k.nr,
-      fra: aar[f],
-      til: aar[nT - 1],
-      a0: sum(f),
-      a1: sum(nT - 1),
-      endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > 0.005
-    };
+    const H = tolkHistorie(j, k.nr);
+    if (!H) return;
+    historie = H;
     visUtvikling();
   } catch (e) {} /* uten historiske tall vises ikke blokken */
 }
@@ -168,7 +206,7 @@ function visUtvikling() {
     return;
   }
   const P = planSum && planSum.nr === valgt.nr && !utenPlan() ? planSum : null,
-    etter = P ? [H.a1[0] + P.nat + P.jor, H.a1[1] - P.jor, H.a1[2] - P.nat] : null;
+    etter = P ? etterPlan(H.a1, P) : null;
   const hele = km2 => nf(Math.round(km2 * 1000), 0),
     endr = km2 => {
       const d = Math.round(km2 * 1000);

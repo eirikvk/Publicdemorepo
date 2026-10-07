@@ -185,7 +185,7 @@ function velg(nr, behold) {
   $('navn').textContent = k.navn;
   $('under').textContent = `${f.navn} fylke · kommunenummer ${k.nr}`;
   $('probe').textContent = 'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.';
-  tomTall('Henter …');
+  nullstillTall('henter');
   grenseKilde.clear();
   klipp = null;
   flate = 0;

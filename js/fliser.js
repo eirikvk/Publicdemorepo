@@ -209,6 +209,38 @@ async function dagensKlasser(tc) {
   tidSlutt('dagens klasser', t0);
   return data;
 }
+/* Myker opp en maske litt, på stedet. Brukes for kommunebildene til inngrepsfri natur og grått areal. */
+function jevn(P, w, h) {
+  /* myker opp maskene litt (vekter 1-2-1 begge veier), så sonegrensene ikke får trappetrinn fra rutene når kartet er zoomet langt inn */
+  const n = 4 * w,
+    over = new Uint8Array(n),
+    denne = new Uint8Array(n);
+  for (let y = 0; y < h; y++) {
+    /* bortover, rad for rad */
+    const o = y * n;
+    denne.set(P.subarray(o, o + n));
+    for (let x = 0; x < n; x += 4) {
+      const a = x ? x - 4 : x,
+        b = x < n - 4 ? x + 4 : x;
+      P[o + x] = (denne[a] + 2 * denne[x] + denne[b] + 2) >> 2;
+      P[o + x + 1] = (denne[a + 1] + 2 * denne[x + 1] + denne[b + 1] + 2) >> 2;
+      P[o + x + 2] = (denne[a + 2] + 2 * denne[x + 2] + denne[b + 2] + 2) >> 2;
+    }
+  }
+  over.set(P.subarray(0, n));
+  for (let y = 0; y < h; y++) {
+    /* nedover: raden over er tatt vare på før den ble skrevet over */
+    const o = y * n,
+      u = y < h - 1 ? o + n : o;
+    denne.set(P.subarray(o, o + n));
+    for (let x = 0; x < n; x += 4) {
+      P[o + x] = (over[x] + 2 * denne[x] + P[u + x] + 2) >> 2;
+      P[o + x + 1] = (over[x + 1] + 2 * denne[x + 1] + P[u + x + 1] + 2) >> 2;
+      P[o + x + 2] = (over[x + 2] + 2 * denne[x + 2] + P[u + x + 2] + 2) >> 2;
+    }
+    over.set(denne);
+  }
+}
 const TOM = 4; /* OpenLayers' tilstand for en flis uten innhold */
 /* Kilde for et lag som tegnes i nettleseren. Flisene har ingen adresse, bare plass i rutenettet. */
 const tegnetKilde = tegnFlis =>

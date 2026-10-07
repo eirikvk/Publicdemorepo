@@ -520,52 +520,48 @@ async function hentNatur(t, k, geom, mitt) {
   regnNatur(t);
 }
 /* Påvirkning: hver rute med planlagt utbygging (21 meter) slås opp i maskene. Ruter i smale striper telles for seg. */
-function regnNatur(t) {
-  const D = t.data;
-  if (!D || !valgt || D.nr !== valgt.nr) return visNatur(t);
-  const R = planRaster && planRaster.nr === valgt.nr && !utenPlan() ? planRaster : null,
-    B = R && R.basis ? R.basis : null,
-    nE = R && R.eget ? R.antallEgne : 0,
-    nK = t.klasser ? t.klasser.length : 1;
-  const t0 = performance.now(),
-    tom = () => ({ alt: new Int32Array(nK), eg: Array.from({ length: nE }, () => new Int32Array(nK)) }),
+function kryssNatur(D, R, nK, medDekning, kommune) {
+  /* D: områdene i temaet. R: rutenettet for planen. nK: antall verdiklasser. kommune: flaten uklippede områder klippes mot.
+     Ren regning: gir tallene tilbake. Det eneste den endrer, er maskene, som lages første gang de trengs og huskes. */
+  const B = R.basis || null,
+    nE = R.eget ? R.antallEgne : 0,
+    O = D.omrader;
+  const tom = () => ({ alt: new Int32Array(nK), eg: Array.from({ length: nE }, () => new Int32Array(nK)) }),
     S = tom(),
     P = tom(); /* S: med egne områder. P: kommuneplanen alene. */
-  D.omrader.forEach(o => {
-    o.plan = 0;
-    o.smal = 0;
-  });
-  D.regnet = !!R;
-  D.kryss = R ? { S, P: B ? P : null } : null;
-  const m = R ? OPPLOSNINGER[R.z] / 2 : 0,
+  const plan = new Int32Array(O.length),
+    smal = new Int32Array(O.length);
+  const m = OPPLOSNINGER[R.z] / 2,
     X = i => ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * m,
     Y = i => ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + 0.5) * m,
     fjernet = i => B.ryddet[i] && R.alle[i] !== 1 && R.alle[i] !== 2; /* i planen, tatt ut av et eget område */
-  if (R && D.omrader.length) {
+  if (O.length) {
     const treff = i => {
+      /* nummeret til området ruta ligger i, eller -1 */
       const x = X(i),
         y = Y(i);
-      for (const o of D.omrader) {
+      for (let a = 0; a < O.length; a++) {
+        const o = O[a];
         if (x < o.ext[0] || x > o.ext[2] || y < o.ext[1] || y > o.ext[3]) continue;
-        const M = o.maske || (o.maske = naturMaske(o.f.getGeometry(), o.uklippet ? klipp : null));
+        const M = o.maske || (o.maske = naturMaske(o.f.getGeometry(), o.uklippet ? kommune : null));
         if (!M) continue; /* masken lages først når en planrute ligger i nærheten */
         const px = Math.floor((x - M.u[0]) / M.res),
           py = Math.floor((M.u[3] - y) / M.res);
         if (px < 0 || py < 0 || px >= M.w || py >= M.h || M.a[py * M.w + px] < 128) continue;
-        return o;
+        return a;
       }
-      return null;
+      return -1;
     };
     for (const i of R.celler) {
-      const o = treff(i);
-      if (!o) continue;
-      const v = o.v || 0,
+      const a = treff(i);
+      if (a < 0) continue;
+      const v = O[a].v || 0,
         e = nE ? R.eget[i] : 0;
       if (R.ryddet[i]) {
-        o.plan++;
+        plan[a]++;
         S.alt[v]++;
         if (e) S.eg[e - 1][v]++;
-      } else o.smal++;
+      } else smal[a]++;
       if (B && B.ryddet[i]) {
         P.alt[v]++;
         if (e) P.eg[e - 1][v]++;
@@ -574,16 +570,16 @@ function regnNatur(t) {
     if (B)
       for (const i of B.celler) {
         if (!fjernet(i)) continue;
-        const o = treff(i);
-        if (!o) continue;
-        const v = o.v || 0,
+        const a = treff(i);
+        if (a < 0) continue;
+        const v = O[a].v || 0,
           e = R.eget[i];
         P.alt[v]++;
         if (e) P.eg[e - 1][v]++;
       }
   }
-  D.gap = null;
-  if (R && t.dekning && D.ekstra) {
+  let gap = null;
+  if (medDekning && D.ekstra) {
     /* ruter med planlagt utbygging på natur, uten smale striper, delt på kartlagt og ikke kartlagt */
     const E = D.ekstra,
       M = E.flate && E.flate.length ? E.maske || (E.maske = naturMaske(new ol.geom.MultiPolygon(E.flate), null)) : null;
@@ -614,8 +610,24 @@ function regnNatur(t) {
       if (b) tell(GP, i, uk);
     }
     if (B) for (const i of B.celler) if (B.ryddet[i] === 1 && fjernet(i)) tell(GP, i, ukjentRute(i));
-    D.gap = { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
+    gap = { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
   }
+  return { kryss: { S, P: B ? P : null }, gap, plan, smal };
+}
+function regnNatur(t) {
+  /* samordner: krysser temaet med planen hvis den er regnet ut, legger tallene i temaets data og ber om ny tegning */
+  const D = t.data;
+  if (!D || !valgt || D.nr !== valgt.nr) return visNatur(t);
+  const R = planRaster && planRaster.nr === valgt.nr && !utenPlan() ? planRaster : null,
+    t0 = performance.now();
+  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, klipp) : null;
+  D.omrader.forEach((o, a) => {
+    o.plan = r ? r.plan[a] : 0;
+    o.smal = r ? r.smal[a] : 0;
+  });
+  D.regnet = !!R;
+  D.kryss = r ? r.kryss : null;
+  D.gap = r ? r.gap : null;
   visNatur(t);
   visEgne();
   tidSlutt(t.navn.toLowerCase(), t0);

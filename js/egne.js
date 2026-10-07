@@ -145,6 +145,68 @@ function finnProjeksjon(j, punkt, mot) {
   }
   return best;
 }
+/* Tolker innholdet i en planfil. valgtNr er kommunen som er valgt nå, erKommune sier om et nummer er en kommune, og midtAv gir et
+   punkt midt i en kommune, brukt til å gjette projeksjonen. Gir { feil } med en melding, eller flatene og opplysningene om planen.
+   Ren regning: endrer ingenting. */
+function lesPlanfil(j, valgtNr, erKommune, midtAv) {
+  const alle = (j.type === 'FeatureCollection' ? j.features : j.type === 'Feature' ? [j] : j.features) || [];
+  const polygoner = alle.filter(
+    f =>
+      f &&
+      f.geometry &&
+      (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') &&
+      f.geometry.coordinates &&
+      f.geometry.coordinates.length
+  );
+  if (!polygoner.length)
+    return {
+      feil: 'Fant ingen flater i filen. Den må være GeoJSON med polygoner, som filen fra DiBKs nedlasting av plandata.'
+    };
+  const medFormal = polygoner.filter(
+      f => siffer(egenskap(f.properties || {}, 'arealformål', 'arealformal', 'arealformaal', 'Arealformål')) !== ''
+    ),
+    bruk = medFormal.length ? medFormal : polygoner;
+  const knr = siffer(
+      bruk
+        .map(f => egenskap(f.properties || {}, 'arealplanId.kommunenummer', 'kommunenummer'))
+        .find(v => v !== undefined)
+    ).padStart(4, '0'),
+    funnet = /^\d{4}$/.test(knr) && knr !== '0000' && erKommune(knr),
+    nr = funnet ? knr : valgtNr;
+  if (!nr) return { feil: 'Velg en kommune først.' };
+  const g0 = bruk[0].geometry,
+    punkt = g0.type === 'Polygon' ? g0.coordinates[0][0] : g0.coordinates[0][0][0];
+  const proj = finnProjeksjon(j, punkt, midtAv(nr)),
+    les = new ol.format.GeoJSON(),
+    deler = [];
+  let bygg = 0,
+    km2 = 0,
+    ext = ol.extent.createEmpty();
+  for (const f of bruk) {
+    let geom;
+    try {
+      geom = les.readGeometry(f.geometry, { dataProjection: proj, featureProjection: UTM });
+    } catch (e) {
+      continue;
+    }
+    const p = f.properties || {},
+      formal = siffer(egenskap(p, 'arealformål', 'arealformal', 'arealformaal', 'Arealformål')),
+      status = siffer(egenskap(p, 'arealbruksstatus', 'arealbrukstatus', 'Arealbruksstatus'));
+    const type = !medFormal.length || (/^[12]/.test(formal) && (status === '' || status === '2')) ? 'bygg' : 'fri';
+    if (type === 'bygg') bygg++;
+    const e = geom.getExtent();
+    ol.extent.extend(ext, e);
+    km2 += geom.getArea() / utm33(geom);
+    deler.push({ geom, type, ext: e });
+  }
+  if (!deler.length) return { feil: 'Flatene i filen kunne ikke leses.' };
+  const planid = String(
+    bruk
+      .map(f => egenskap(f.properties || {}, 'arealplanId.planidentifikasjon', 'planidentifikasjon'))
+      .find(v => v !== undefined) || ''
+  );
+  return { nr, funnet, deler, ext, km2, planid, bygg, annet: deler.length - bygg, utenFormal: !medFormal.length, proj };
+}
 async function lastOppPlan(fil) {
   const melding = t => {
     $('egnestatus').textContent = t;
@@ -154,87 +216,28 @@ async function lastOppPlan(fil) {
     if (fil.size > 120e6) return melding('Filen er for stor til å leses i nettleseren (over 120 MB).');
     melding(`Leser ${fil.name} …`);
     await new Promise(ok => setTimeout(ok, 30));
-    const j = JSON.parse(await fil.text()),
-      alle = (j.type === 'FeatureCollection' ? j.features : j.type === 'Feature' ? [j] : j.features) || [];
-    const flater = alle.filter(
-      f =>
-        f &&
-        f.geometry &&
-        (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') &&
-        f.geometry.coordinates &&
-        f.geometry.coordinates.length
-    );
-    if (!flater.length)
-      return melding(
-        'Fant ingen flater i filen. Den må være GeoJSON med polygoner, som filen fra DiBKs nedlasting av plandata.'
-      );
-    const medFormal = flater.filter(
-        f => siffer(egenskap(f.properties || {}, 'arealformål', 'arealformal', 'arealformaal', 'Arealformål')) !== ''
-      ),
-      bruk = medFormal.length ? medFormal : flater;
-    const knr = siffer(
-        bruk
-          .map(f => egenskap(f.properties || {}, 'arealplanId.kommunenummer', 'kommunenummer'))
-          .find(v => v !== undefined)
-      ).padStart(4, '0'),
-      funnet = /^\d{4}$/.test(knr) && knr !== '0000' ? finn(knr) : null,
-      nr = funnet ? knr : valgt && valgt.nr;
-    if (!nr) return melding('Velg en kommune først.');
-    const k = finn(nr)[1],
-      g0 = bruk[0].geometry,
-      punkt = g0.type === 'Polygon' ? g0.coordinates[0][0] : g0.coordinates[0][0][0];
-    const mot =
-      valgt && valgt.nr === nr && klipp
+    const midtAv = nr => {
+      const k = finn(nr)[1];
+      return valgt && valgt.nr === nr && klipp
         ? ol.extent.getCenter(klipp.getExtent())
         : k.boks
           ? ol.proj.transform([(k.boks[0] + k.boks[2]) / 2, (k.boks[1] + k.boks[3]) / 2], 'EPSG:4326', UTM)
           : null;
-    const proj = finnProjeksjon(j, punkt, mot),
-      les = new ol.format.GeoJSON(),
-      deler = [];
-    let bygg = 0,
-      km2 = 0,
-      ext = ol.extent.createEmpty();
-    for (const f of bruk) {
-      let geom;
-      try {
-        geom = les.readGeometry(f.geometry, { dataProjection: proj, featureProjection: UTM });
-      } catch (e) {
-        continue;
-      }
-      const p = f.properties || {},
-        formal = siffer(egenskap(p, 'arealformål', 'arealformal', 'arealformaal', 'Arealformål')),
-        status = siffer(egenskap(p, 'arealbruksstatus', 'arealbrukstatus', 'Arealbruksstatus'));
-      const type = !medFormal.length || (/^[12]/.test(formal) && (status === '' || status === '2')) ? 'bygg' : 'fri';
-      if (type === 'bygg') bygg++;
-      const e = geom.getExtent();
-      ol.extent.extend(ext, e);
-      km2 += geom.getArea() / utm33(geom);
-      deler.push({ geom, type, ext: e });
-    }
-    if (!deler.length) return melding('Flatene i filen kunne ikke leses.');
-    const planid = String(
-      bruk
-        .map(f => egenskap(f.properties || {}, 'arealplanId.planidentifikasjon', 'planidentifikasjon'))
-        .find(v => v !== undefined) || ''
-    );
+    };
+    const P = lesPlanfil(JSON.parse(await fil.text()), valgt ? valgt.nr : null, nr => !!finn(nr), midtAv);
+    if (P.feil) return melding(P.feil);
+    const { nr, funnet, ...plan } = P,
+      k = finn(nr)[1];
     egne.push({
       id: ++egenTeller,
       nr,
       navn: fil.name.replace(/\.(geo)?json$/i, ''),
       kilde: 'fil',
-      deler,
-      ext,
-      km2,
       tall: null,
-      planid,
-      bygg,
-      annet: deler.length - bygg,
-      utenFormal: !medFormal.length,
-      proj
+      ...plan
     });
     melding(
-      `${fil.name}: ${nf(deler.length, 0)} flater lest${funnet && (!valgt || valgt.nr !== nr) ? `, og kommunen er byttet til ${k.navn}` : ''}.`
+      `${fil.name}: ${nf(plan.deler.length, 0)} flater lest${funnet && (!valgt || valgt.nr !== nr) ? `, og kommunen er byttet til ${k.navn}` : ''}.`
     );
     if (!valgt || valgt.nr !== nr) velg(nr);
     else egneEndret();

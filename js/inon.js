@@ -105,38 +105,35 @@ const inonLag = new ol.layer.Tile({ className: 'tema', visible: false, source: t
 /* Ett bilde av hele kommunen, med ruter på 20 meter eller opptil 2048 ruter på lengste side. Det gir både kartlaget og arealet per
    sone. Det ferdige resultatet huskes for de siste kommunene så lenge siden er åpen, så et nytt valg av samme kommune koster ingenting. */
 const inonMinne = new Map();
-function jevn(P, w, h) {
-  /* myker opp maskene litt (vekter 1-2-1 begge veier), så sonegrensene ikke får trappetrinn fra rutene når kartet er zoomet langt inn */
-  const n = 4 * w,
-    over = new Uint8Array(n),
-    denne = new Uint8Array(n);
-  for (let y = 0; y < h; y++) {
-    /* bortover, rad for rad */
-    const o = y * n;
-    denne.set(P.subarray(o, o + n));
-    for (let x = 0; x < n; x += 4) {
-      const a = x ? x - 4 : x,
-        b = x < n - 4 ? x + 4 : x;
-      P[o + x] = (denne[a] + 2 * denne[x] + denne[b] + 2) >> 2;
-      P[o + x + 1] = (denne[a + 1] + 2 * denne[x + 1] + denne[b + 1] + 2) >> 2;
-      P[o + x + 2] = (denne[a + 2] + 2 * denne[x + 2] + denne[b + 2] + 2) >> 2;
-    }
-  }
-  over.set(P.subarray(0, n));
-  for (let y = 0; y < h; y++) {
-    /* nedover: raden over er tatt vare på før den ble skrevet over */
-    const o = y * n,
-      u = y < h - 1 ? o + n : o;
-    denne.set(P.subarray(o, o + n));
-    for (let x = 0; x < n; x += 4) {
-      P[o + x] = (over[x] + 2 * denne[x] + P[u + x] + 2) >> 2;
-      P[o + x + 1] = (over[x + 1] + 2 * denne[x + 1] + P[u + x + 1] + 2) >> 2;
-      P[o + x + 2] = (over[x + 2] + 2 * denne[x + 2] + P[u + x + 2] + 2) >> 2;
-    }
-    over.set(denne);
-  }
-}
 
+/* Tolker bildet av sonene. P er bildet fra tjenesten og M kommunens flate, som piksler i samme rutenett. Gir arealet per sone i km²,
+   og gjør samtidig P om til tre utjevnede masker i hver sin fargekanal, som kartlaget tegnes fra. Ren regning. */
+function tolkInon(P, M, w, h, res, m2) {
+  const n = [0, 0, 0];
+  let forrige = -1,
+    sone = 0;
+  for (let i = 0; i < P.length; i += 4) {
+    if (P[i + 3] < 128) {
+      P[i] = P[i + 1] = P[i + 2] = 0;
+      P[i + 3] = 255;
+      continue;
+    }
+    const kode = (P[i] << 16) | (P[i + 1] << 8) | P[i + 2];
+    if (kode !== forrige) {
+      forrige = kode;
+      sone = inonSone(P[i], P[i + 1], P[i + 2]);
+    } /* 0 villmarkspreget, 1 sone 1, 2 sone 2 */
+    if (M[i + 3] >= 128) n[sone]++;
+    P[i] = 255;
+    P[i + 1] = sone <= 1 ? 255 : 0;
+    P[i + 2] = sone === 0 ? 255 : 0;
+    P[i + 3] = 255;
+  }
+  jevn(P, w, h);
+  jevn(P, w, h);
+  const soner = n.map(v => Math.round(((v * res * res) / m2) * 100) / 100); /* nærmeste 10 dekar, som SSBs tall */
+  return { soner, sum: Math.round((soner[0] + soner[1] + soner[2]) * 100) / 100 };
+}
 async function sjekkInon(k, geom, mitt) {
   const har = inonMinne.get(k.nr);
   if (har) {
@@ -159,43 +156,9 @@ async function sjekkInon(k, geom, mitt) {
     kommuneSti(b, geom, u, 1 / res);
     b.fill('evenodd');
     const bilde = a.getImageData(0, 0, w, h),
-      P = bilde.data,
-      M = b.getImageData(0, 0, w, h).data,
-      n = [0, 0, 0];
-    let forrige = -1,
-      sone = 0;
-    for (let i = 0; i < P.length; i += 4) {
-      if (P[i + 3] < 128) {
-        P[i] = P[i + 1] = P[i + 2] = 0;
-        P[i + 3] = 255;
-        continue;
-      }
-      const farge = (P[i] << 16) | (P[i + 1] << 8) | P[i + 2];
-      if (farge !== forrige) {
-        forrige = farge;
-        sone = inonSone(P[i], P[i + 1], P[i + 2]);
-      } /* 0 villmarkspreget, 1 sone 1, 2 sone 2 */
-      if (M[i + 3] >= 128) n[sone]++;
-      P[i] = 255;
-      P[i + 1] = sone <= 1 ? 255 : 0;
-      P[i + 2] = sone === 0 ? 255 : 0;
-      P[i + 3] = 255;
-    }
-    jevn(P, w, h);
-    jevn(P, w, h);
+      tall = tolkInon(bilde.data, b.getImageData(0, 0, w, h).data, w, h, res, utm33(geom));
     a.putImageData(bilde, 0, 0);
-    const soner = n.map(
-      v => Math.round(((v * res * res) / utm33(geom)) * 100) / 100
-    ); /* nærmeste 10 dekar, som SSBs tall */
-    inon = {
-      nr: k.nr,
-      tilstand: 'ok',
-      soner,
-      sum: Math.round((soner[0] + soner[1] + soner[2]) * 100) / 100,
-      c: a.canvas,
-      u,
-      res
-    };
+    inon = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res };
     husk(inonMinne, k.nr, inon, 3);
     tidSlutt('inngrepsfri natur, kommunebilde', t0);
   } catch (e) {
