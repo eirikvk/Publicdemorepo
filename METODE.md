@@ -119,6 +119,34 @@ Kartet er ikke et tall i seg selv, men alle kryssinger bygger på det.
   Trondheim, og siden bruker derfor egen stil uten strek. Etter rettelsen ga opplasting av de samme flatene som vektor 1,5 %
   avvik fra tallet regnet fra tjenestens bilder.
 
+### Kontroll mot vektoranalyse
+
+7. oktober 2026 ble tallene sammenlignet med en vektoranalyse fra Miljødirektoratet: kartet «NGA_KPA_endringer», der
+kommuneplanens arealdel er lagt geometrisk oppå grunnkartet for 20 kommuner i Trøndelag. Fra den ble arealet av framtidig
+bebyggelse, anlegg og samferdsel per økosystemtype regnet ut og satt opp mot sidens tall. Selbu er holdt utenfor, fordi de to
+kildene har ulike planer der. Resten har samme plan-id i begge.
+
+| For 19 kommuner samlet | Vektor | Siden | Avvik |
+|---|---|---|---|
+| Planlagt utbygging på land i alt | 49 658 daa | 49 247 daa | −0,8 % |
+| På natur, med smale striper | 41 199 daa | 42 302 daa | +2,7 % |
+| På natur, uten smale striper (tallet siden viser) | 41 199 daa | 41 206 daa | 0,0 % |
+| På jordbruk, uten smale striper | 2 562 daa | 2 388 daa | −6,8 % |
+| På areal som alt er bebygd | 5 897 daa | 4 243 daa | −28 % |
+
+- For natur ligger tallet siden viser, innenfor 5 % av vektoranalysen i 14 av 17 kommuner med over 100 dekar. Medianen er 2,6 %.
+- Rutenettet overser bebygde flater som er smalere enn en rute, særlig veier. De blir regnet som natur eller jordbruk i tallet
+  med smale striper. I Oppdal ligger 1 020 dekar framtidig vegformål på veier som finnes, og tallet med smale striper ble
+  674 dekar natur mot 195 i vektoranalysen. Regelen om smale striper tar bort det meste av dette, og tallet siden viser, ble 156.
+- Regelen om smale striper tar også bort noe som er reelt: smale felt og nye veier. I Heim, der 324 dekar natur ligger i
+  samferdselsformål, viser siden 11 % for lite. For jordbruk er tallet samlet 7 % for lavt.
+- Å telle andeler av hver klasse per rute i stedet for flertallsklassen ble prøvd. Det tok det samlede avviket med smale
+  striper fra +1,5 % til +0,1 % når Oppdal holdes utenfor, men hjalp ikke på veiene.
+
+Forbehold ved kontrollen: vektoranalysen er et arbeidskart uten beskrivelse, og det er ikke kjent hvilken versjon av grunnkartet
+den bygger på. Planene i den er kopiert fra DiBK 11. januar 2026 for de fleste kommunene, mot 2. februar 2026 i tjenesten
+siden bruker.
+
 ## Verneområder og villreinområder
 
 - **Kilde:** Miljødirektoratets karttjenester: naturvernområder (`vern`) og leveområder for villrein (`villrein`).
