@@ -40,15 +40,16 @@ const inonBilde = (u, w, h) =>
     transparent: 'true',
     format_options: 'antialias:none'
   });
-let inon = null,
-  inonPaa = false,
-  inonRad = null;
+let inonRad = null;
 /* Kommunebildet er gjort om til tre masker i hver sin fargekanal: minst 1 km, minst 3 km og minst 5 km fra inngrep. Når en flis
    forstørres fra bildet, jevner nettleseren ut hver maske for seg, og grensen settes der masken er halvveis. Sonegrensene blir
    dermed glatte kurver også når kartet er zoomet langt inn, selv om bildet har ruter på 20 meter eller mer. */
 async function lastInonFlis(tile) {
   try {
-    const D = inon && valgt && inon.nr === valgt.nr && inon.tilstand === 'ok' && inon.c ? inon : null,
+    const D =
+        app.inon && app.valgt && app.inon.nr === app.valgt.nr && app.inon.tilstand === 'ok' && app.inon.c
+          ? app.inon
+          : null,
       tc = tile.getTileCoord(),
       u = plannett.getTileCoordExtent(tc);
     if (!D || !ol.extent.intersects(u, D.u)) {
@@ -138,12 +139,12 @@ async function sjekkInon(k, geom, mitt) {
   const har = inonMinne.get(k.nr);
   if (har) {
     husk(inonMinne, k.nr, har, 3);
-    inon = har;
+    app.inon = har;
     friskOpp(inonLag);
     visInon();
     return;
   }
-  inon = { nr: k.nr, tilstand: 'henter' };
+  app.inon = { nr: k.nr, tilstand: 'henter' };
   visInon();
   try {
     const { res, w, h, u } = rutenett(geom.getExtent(), 2048, 20);
@@ -158,32 +159,32 @@ async function sjekkInon(k, geom, mitt) {
     const bilde = a.getImageData(0, 0, w, h),
       tall = tolkInon(bilde.data, b.getImageData(0, 0, w, h).data, w, h, res, utm33(geom));
     a.putImageData(bilde, 0, 0);
-    inon = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res };
-    husk(inonMinne, k.nr, inon, 3);
+    app.inon = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res };
+    husk(inonMinne, k.nr, app.inon, 3);
     tidSlutt('inngrepsfri natur, kommunebilde', t0);
   } catch (e) {
     if (mitt !== valgNr) return;
-    inon = { nr: k.nr, tilstand: 'feil' };
+    app.inon = { nr: k.nr, tilstand: 'feil' };
   }
   friskOpp(inonLag);
   visInon();
 }
 function visInon() {
-  const D = gjeldende(inon),
+  const D = gjeldende(app.inon),
     ok = !!D && D.tilstand === 'ok',
     R = inonRad.rad,
     liste = $('inonliste'),
     tekst = $('inonsum'),
     merk = $('inonmerk'),
     har = ok && D.sum > 0;
-  inonLag.setVisible(inonPaa && vis.nat && !!klipp && har);
+  inonLag.setVisible(app.inonPaa && app.vis.nat && !!app.klipp && har);
   friskOppGamle();
   radTall(R, D, har);
   R.querySelector('.un').textContent = har ? 'krysses ikke med planlagt utbygging' : '';
   liste.textContent = merk.textContent = '';
   $('inonplan').hidden = !har;
   if (!D || D.tilstand === 'henter') {
-    tekst.textContent = valgt ? 'Henter …' : '';
+    tekst.textContent = app.valgt ? 'Henter …' : '';
     return;
   }
   if (!ok) {
@@ -195,10 +196,10 @@ function visInon() {
       'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.';
     return;
   }
-  tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${ssbSum ? `, ${nf((D.sum / ssbSum) * 100)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
-  merk.textContent = !vis.nat
+  tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${app.ssbSum ? `, ${nf((D.sum / app.ssbSum) * 100)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
+  merk.textContent = !app.vis.nat
     ? 'Laget følger klassen natur, som er slått av i kartet nå.'
-    : inonPaa
+    : app.inonPaa
       ? 'I kartet vises naturen nå i fire grønntoner:'
       : 'Når laget er på, vises naturen i kartet i fire grønntoner:';
   fargelinje(liste, 'nat', 'Annen natur', '', 'Nærmere enn 1 km fra inngrep');

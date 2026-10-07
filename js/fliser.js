@@ -182,25 +182,32 @@ async function dagensKlasser(tc) {
   const c = lerret(),
     g = c.getContext('2d', { willReadFrequently: true });
   if (tc[0] >= FLISNIVA) g.drawImage(await createImageBitmap(new Blob([await hentRaa(flisUrl(tc))])), 0, 0, 512, 512);
-  else if (ov && ov.buf) {
+  else if (app.ov && app.ov.buf) {
     const u = plannett.getTileCoordExtent(tc);
-    ovBilde = ovBilde || createImageBitmap(new Blob([ov.buf]));
+    ovBilde = ovBilde || createImageBitmap(new Blob([app.ov.buf]));
     tegnUtsnitt(
       g,
       await ovBilde,
-      (u[0] - ov.ext[0]) / ovRes,
-      (ov.ext[3] - u[3]) / ovRes,
+      (u[0] - app.ov.ext[0]) / ovRes,
+      (app.ov.ext[3] - u[3]) / ovRes,
       (u[2] - u[0]) / ovRes,
       (u[3] - u[1]) / ovRes
     );
-  } else if (ov && ov.lerret && klipp) {
+  } else if (app.ov && app.ov.lerret && app.klipp) {
     /* nettleserens eget oversiktsbilde: bare det som er hentet, og bare innenfor kommunen */
     const u = plannett.getTileCoordExtent(tc),
-      r = (ov.ext[2] - ov.ext[0]) / ov.lerret.width,
+      r = (app.ov.ext[2] - app.ov.ext[0]) / app.ov.lerret.width,
       s = 512 / (u[2] - u[0]);
-    tegnUtsnitt(g, ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r);
+    tegnUtsnitt(
+      g,
+      app.ov.lerret,
+      (u[0] - app.ov.ext[0]) / r,
+      (app.ov.ext[3] - u[3]) / r,
+      (u[2] - u[0]) / r,
+      (u[3] - u[1]) / r
+    );
     g.globalCompositeOperation = 'destination-in';
-    kommuneSti(g, klipp, u, s);
+    kommuneSti(g, app.klipp, u, s);
     g.fill('evenodd');
     g.globalCompositeOperation = 'source-over';
   } else return null;

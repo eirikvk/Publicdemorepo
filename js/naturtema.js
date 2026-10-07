@@ -35,7 +35,7 @@ const andelTekst = p => (p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %');
 function radTall(rad, D, har) {
   rad.querySelector('.km').textContent =
     !D || D.tilstand === 'henter' ? '' : D.tilstand === 'feil' ? 'ikke hentet' : har ? dekar(D.sum) : 'ingen';
-  rad.querySelector('.pc').textContent = har && ssbSum ? andelTekst((D.sum / ssbSum) * 100) : '';
+  rad.querySelector('.pc').textContent = har && app.ssbSum ? andelTekst((D.sum / app.ssbSum) * 100) : '';
 }
 /* En linje i en tegnforklaring: fargerute og navn, tall til høyre, og en forklaring under hvis det er oppgitt. */
 function fargelinje(liste, id, navn, tall, under) {
@@ -179,7 +179,7 @@ const NATURLAG = [
   const r = temaRad(t.id, t.navn, t.flate ? 'flate' : '', k => {
     t.paa = !t.paa;
     k.setAttribute('aria-pressed', String(t.paa));
-    if (!t.paa && vist && vist.t === t) fjernMerket();
+    if (!t.paa && app.vist && app.vist.t === t) fjernMerket();
     visNatur(t);
   });
   t.rad = r.rad;
@@ -190,7 +190,7 @@ const NATURLAG = [
     `Kilde: ${t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i nettleseren.${t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}`;
   if (t.dekning)
     b.querySelector('input').addEventListener('change', e => {
-      slorPaa = e.target.checked;
+      app.slorPaa = e.target.checked;
       visNatur(t);
     });
   return t;
@@ -198,8 +198,7 @@ const NATURLAG = [
 /* Slør over det som ikke er kartlagt: flisene fylles med en lys farge, og de kartlagte flatene stanses ut. Fliser uten noe kartlagt
    deler ett og samme bilde, så laget koster lite der hele flisen er ukjent. Laget ligger under naturflatene og planlaget. */
 const dekKilde = new ol.source.Vector();
-let slorPaa = true,
-  heltSlor = null;
+let heltSlor = null;
 const slorFarge = () => `rgba(${rgb('slor').join(',')},.55)`;
 function tegnSlorflis(tile) {
   const u = plannett.getTileCoordExtent(tile.getTileCoord()),
@@ -617,10 +616,10 @@ function kryssNatur(D, R, nK, medDekning, kommune) {
 function regnNatur(t) {
   /* samordner: krysser temaet med planen hvis den er regnet ut, legger tallene i temaets data og ber om ny tegning */
   const D = t.data;
-  if (!D || !valgt || D.nr !== valgt.nr) return visNatur(t);
-  const R = planRaster && planRaster.nr === valgt.nr && !utenPlan() ? planRaster : null,
+  if (!D || !app.valgt || D.nr !== app.valgt.nr) return visNatur(t);
+  const R = app.planRaster && app.planRaster.nr === app.valgt.nr && !utenPlan() ? app.planRaster : null,
     t0 = performance.now();
-  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, klipp) : null;
+  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, app.klipp) : null;
   D.omrader.forEach((o, a) => {
     o.plan = r ? r.plan[a] : 0;
     o.smal = r ? r.smal[a] : 0;
@@ -632,18 +631,53 @@ function regnNatur(t) {
   visEgne();
   tidSlutt(t.navn.toLowerCase(), t0);
 }
+/* Tallene som vises for et naturtema, regnet ut fra områdene. D er temaets data, klasser verdiklassene hvis temaet har det,
+   medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Ren regning. */
+function byggNaturTall(D, klasser, medDekning, samlet, land) {
+  const o = D.omrader,
+    E = D.ekstra;
+  /* per verdiklasse: antall lokaliteter og ruter med planlagt utbygging */
+  const perKlasse =
+    klasser && D.klasser && o.length
+      ? klasser.map((_, v) => {
+          const av = o.filter(x => x.v === v);
+          return { antall: av.length, plan: av.reduce((s, x) => s + x.plan, 0) };
+        })
+      : null;
+  /* Helhetsbildet: landarealet L delt i kartlagt K og ikke kartlagt U, og verdsatt natur per verdi innenfor og utenfor det kartlagte. */
+  let helhet = null;
+  if (medDekning && E && E.km2 > 0 && E.inne && D.klasser && land > 0 && o.length > 0) {
+    const L = land,
+      K = Math.min(E.km2, L),
+      U = Math.max(0, L - K),
+      inne = E.inne,
+      ute = D.klasser.map((a, v) => Math.max(0, a - inne[v]));
+    helhet = { L, K, U, inne, ute, si: inne.reduce((a, b) => a + b, 0), su: ute.reduce((a, b) => a + b, 0) };
+  }
+  return {
+    klasser: perKlasse,
+    helhet,
+    plan: o.reduce((s, x) => s + x.plan, 0),
+    smal: o.reduce((s, x) => s + x.smal, 0),
+    berort: o.filter(x => x.plan)
+      .length /* ruter med planlagt utbygging, ruter i smale striper og antall områder som berøres */,
+    vises: samlet
+      ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan)
+      : o /* av mange små lokaliteter listes bare de som berøres */
+  };
+}
 function visNatur(t) {
   const D = t.data,
-    ok = !!D && !!valgt && D.nr === valgt.nr,
+    ok = !!D && !!app.valgt && D.nr === app.valgt.nr,
     o = ok ? D.omrader : [],
     sum = ok ? D.sum || 0 : 0,
     km = dekar;
   const daa = n => iTekst((n * (OPPLOSNINGER[9] / 2) ** 2) / 1e6),
     el = n => $(t.id + n); /* fra antall ruter på 21 meter, brukes i setninger */
-  t.lag.setVisible(t.paa && !!klipp && ok && o.length > 0);
+  t.lag.setVisible(t.paa && !!app.klipp && ok && o.length > 0);
   if (t.dekning) {
     const kartlagt = ok && !!D.ekstra && D.ekstra.km2 > 0;
-    dekLag.setVisible(t.paa && slorPaa && !!klipp && kartlagt);
+    dekLag.setVisible(t.paa && app.slorPaa && !!app.klipp && kartlagt);
     t.blokk.querySelector('label').hidden = !kartlagt;
     el('tegn').textContent = el('gap').textContent = '';
   }
@@ -651,32 +685,32 @@ function visNatur(t) {
     liste = el('liste');
   liste.textContent = '';
   rad('km').textContent = !ok ? '' : D.feil ? 'ikke hentet' : o.length ? km(sum) : 'ingen';
-  rad('pc').textContent = ok && !D.feil && o.length && ssbSum ? andelTekst((sum / ssbSum) * 100) : '';
+  rad('pc').textContent = ok && !D.feil && o.length && app.ssbSum ? andelTekst((sum / app.ssbSum) * 100) : '';
   rad('un').textContent = '';
   if (!ok) {
-    el('sum').textContent = valgt ? 'Henter …' : '';
+    el('sum').textContent = app.valgt ? 'Henter …' : '';
     ['tegn', 'merk', 'plan', 'gap'].forEach(n => {
       el(n).textContent = '';
     });
     el('helhet').hidden = true;
     return;
   }
+  const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum);
   el('sum').textContent = D.feil
     ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.`
     : !o.length
       ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${ssbSum ? `, ${nf((sum / ssbSum) * 100)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
-  if (t.klasser && D.klasser && o.length)
+      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${app.ssbSum ? `, ${nf((sum / app.ssbSum) * 100)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
+  if (N.klasser)
     t.klasser.forEach(([navn, id], v) => {
       /* tegnforklaring: tone, verdikategori, areal, antall og planlagt utbygging innenfor */
-      const mine = o.filter(x => x.v === v),
-        pl = mine.reduce((s, x) => s + x.plan, 0);
+      const { antall, plan: pl } = N.klasser[v];
       const li = fargelinje(
         el('tegn'),
         id,
         navn,
         km(D.klasser[v]),
-        `${nf(mine.length, 0)} ${mine.length === 1 ? 'lokalitet' : 'lokaliteter'}`
+        `${nf(antall, 0)} ${antall === 1 ? 'lokalitet' : 'lokaliteter'}`
       );
       if (pl && D.regnet && !utenPlan()) {
         const b = document.createElement('b');
@@ -687,7 +721,7 @@ function visNatur(t) {
   const E = D.ekstra,
     merk = el('merk'),
     hel = t.dekning ? el('helhet') : null,
-    helhet = !!hel && !!E && E.km2 > 0 && !!E.inne && !!D.klasser && ssbSum > 0 && o.length > 0;
+    helhet = !!hel && !!N.helhet;
   if (hel) {
     hel.hidden = !helhet;
     hel.textContent = '';
@@ -695,13 +729,7 @@ function visNatur(t) {
   if (helhet) {
     /* Tre striper: landarealet delt i kartlagt og ikke kartlagt, og så hver del for seg med verdsatt natur etter verdi.
        Det vi ikke vet noe om, tegnes som en tom ramme. Slik skilles «ingenting funnet» fra «ikke lett». */
-    const L = ssbSum,
-      K = Math.min(E.km2, L),
-      U = Math.max(0, L - K),
-      inne = E.inne,
-      ute = D.klasser.map((a, v) => Math.max(0, a - inne[v])),
-      si = inne.reduce((a, b) => a + b, 0),
-      su = ute.reduce((a, b) => a + b, 0);
+    const { L, K, U, inne, ute, si, su } = N.helhet;
     const pst = (a, b) => (b > 0 ? nf((a / b) * 100) : '0'),
       lag = (type, tekst) => {
         const x = document.createElement(type);
@@ -782,10 +810,9 @@ function visNatur(t) {
       ? ''
       : !(E.km2 > 0)
         ? 'Kommunen er ikke kartlagt etter Miljødirektoratets instruks. Laget viser da bare eldre registreringer og utvalgte naturtyper.'
-        : `Ca. ${ssbSum ? nf(Math.min(100, (E.km2 / ssbSum) * 100)) + ' % av landarealet' : iTekst(E.km2)} er kartlagt etter Miljødirektoratets instruks${E.fra ? ` (${E.fra === E.til ? E.fra : E.fra + '–' + E.til})` : ''}. Utenfor det kartlagte kan det finnes verdifull natur som ikke er registrert.`;
-  const plan = o.reduce((s, x) => s + x.plan, 0),
-    smal = o.reduce((s, x) => s + x.smal, 0),
-    der = ov && ov.dynamisk ? ' i den delen av kommunen det er hentet kart for' : '',
+        : `Ca. ${app.ssbSum ? nf(Math.min(100, (E.km2 / app.ssbSum) * 100)) + ' % av landarealet' : iTekst(E.km2)} er kartlagt etter Miljødirektoratets instruks${E.fra ? ` (${E.fra === E.til ? E.fra : E.fra + '–' + E.til})` : ''}. Utenfor det kartlagte kan det finnes verdifull natur som ikke er registrert.`;
+  const { plan, smal } = N,
+    der = app.ov && app.ov.dynamisk ? ' i den delen av kommunen det er hentet kart for' : '',
     vp = el('plan');
   vp.textContent = '';
   if (o.length) {
@@ -794,7 +821,7 @@ function visNatur(t) {
         'Kommunen har ingen kommuneplan hos DiBK, så påvirkning fra planlagt utbygging kan ikke vurderes.';
     else if (!D.regnet) vp.textContent = 'Påvirkning fra planlagt utbygging regnes ut når kartet er hentet.';
     else {
-      const ant = o.filter(x => x.plan).length,
+      const ant = N.berort,
         b = document.createElement('b');
       b.textContent = plan
         ? `Ca. ${daa(plan)} planlagt utbygging ligger innenfor ${ant === 1 ? 'ett ' + t.en : ant + ' ' + t.fl}${der}.`
@@ -816,9 +843,9 @@ function visNatur(t) {
   }
   rad('un').textContent = !o.length
     ? ''
-    : (t.dekning && E && ssbSum
+    : (t.dekning && E && app.ssbSum
         ? (E.km2 > 0
-            ? `${nf(Math.min(100, (E.km2 / ssbSum) * 100), 0)} % av landarealet er kartlagt`
+            ? `${nf(Math.min(100, (E.km2 / app.ssbSum) * 100), 0)} % av landarealet er kartlagt`
             : 'ikke kartlagt etter dagens instruks') + '\n'
         : '') +
       (utenPlan()
@@ -827,10 +854,8 @@ function visNatur(t) {
           ? 'planlagt utbygging ikke regnet ut ennå'
           : (plan
               ? `ca. ${dekar((plan * (OPPLOSNINGER[9] / 2) ** 2) / 1e6)} planlagt utbygging innenfor`
-              : 'ingen planlagt utbygging innenfor') + (ov && ov.dynamisk ? ', i hentet kart' : ''));
-  const vises = t.samlet
-    ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan)
-    : o; /* av mange små lokaliteter listes bare de som berøres */
+              : 'ingen planlagt utbygging innenfor') + (app.ov && app.ov.dynamisk ? ', i hentet kart' : ''));
+  const vises = N.vises;
   const maks = t.samlet ? 15 : 40;
   vises.slice(0, maks).forEach(x => {
     const li = document.createElement('li'),
@@ -878,7 +903,7 @@ function visNatur(t) {
 /* Ett område valgt fra en liste: kartet flyttes dit, området får en tydelig ramme, og en liten merkelapp i kartet sier hva som vises
    og gir veien tilbake til listen. Markeringen står til et annet område velges, temaet slås av eller kommunen byttes. */
 const markKilde = new ol.source.Vector();
-let vist = null;
+
 const markStrek = [
   new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 8 }) }),
   new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#171C1A', width: 3.5 }) })
@@ -904,7 +929,7 @@ const markLag = new ol.layer.Vector({
 });
 function fjernMerket() {
   markKilde.clear();
-  vist = null;
+  app.vist = null;
   $('vistmerke').hidden = true;
 }
 function visIKartet(t, o, liId) {
@@ -918,7 +943,7 @@ function visIKartet(t, o, liId) {
   } /* listen ble tegnet på nytt: fokus tilbake på knappen */
   markKilde.clear();
   markKilde.addFeature(new ol.Feature(o.f.getGeometry()));
-  vist = { t, liId };
+  app.vist = { t, liId };
   view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig() ? 0 : 400 });
   $('vistmerke').hidden = false;
   $('vistmerke').firstElementChild.textContent = o.navn;

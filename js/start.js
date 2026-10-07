@@ -10,8 +10,8 @@ KL.forEach(([id, navn]) => {
   b.setAttribute('aria-pressed', 'true');
   b.innerHTML = `<span class="sw"></span><span class="nm">${navn}</span><span class="km" id="km-${id}">–</span><span class="pc" id="pc-${id}">–</span>`;
   b.addEventListener('click', () => {
-    vis[id] = !vis[id];
-    b.setAttribute('aria-pressed', String(vis[id]));
+    app.vis[id] = !app.vis[id];
+    b.setAttribute('aria-pressed', String(app.vis[id]));
     tegnOversikt();
     fargeleggFliser();
     if (id === 'nat') visInon();
@@ -34,15 +34,15 @@ KL.forEach(([id, navn]) => {
   rows.appendChild(hode);
   NATURLAG.forEach(t => rows.append(t.rad, t.blokk));
   inonRad = temaRad('inon', 'Inngrepsfri natur', 'flate inon', k => {
-    inonPaa = !inonPaa;
-    k.setAttribute('aria-pressed', String(inonPaa));
+    app.inonPaa = !app.inonPaa;
+    k.setAttribute('aria-pressed', String(app.inonPaa));
     visInon();
   });
   inonRad.blokk.append(...$('mal-inon').content.children); /* bare elementene, ikke linjeskiftene mellom dem */
   rows.append(inonRad.rad, inonRad.blokk);
   graaRad = temaRad('graa', 'Grått areal', 'flate graa', k => {
-    graaPaa = !graaPaa;
-    k.setAttribute('aria-pressed', String(graaPaa));
+    app.graaPaa = !app.graaPaa;
+    k.setAttribute('aria-pressed', String(app.graaPaa));
     visGraa();
   });
   graaRad.blokk.append(...$('mal-graa').content.children); /* bare elementene, ikke linjeskiftene mellom dem */
@@ -105,22 +105,22 @@ document.addEventListener('keydown', e => {
 });
 $('vistlukk').addEventListener('click', fjernMerket);
 $('vistliste').addEventListener('click', () => {
-  if (!vist) return;
-  const t = vist.t,
+  if (!app.vist) return;
+  const t = app.vist.t,
     apne = t.rad.querySelector('.apne');
   if (apne.getAttribute('aria-expanded') !== 'true') apne.click();
-  const li = document.getElementById(vist.liId) || t.blokk;
+  const li = document.getElementById(app.vist.liId) || t.blokk;
   li.scrollIntoView({ behavior: rolig() ? 'auto' : 'smooth', block: 'center' });
   const kn = li.querySelector('button');
   if (kn) kn.focus({ preventScroll: true });
 });
 $('smale').addEventListener('change', e => {
-  visSmale = e.target.checked;
+  app.visSmale = e.target.checked;
   friskOpp(planLag);
 });
 $('planknapp').addEventListener('click', e => {
-  planPaa = !planPaa;
-  e.currentTarget.setAttribute('aria-pressed', String(planPaa));
+  app.planPaa = !app.planPaa;
+  e.currentTarget.setAttribute('aria-pressed', String(app.planPaa));
   visPlanLag();
   nyttSlor();
 });
@@ -131,9 +131,9 @@ async function hentGrense(k, mitt, behold) {
     const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
     grenseKilde.clear();
     grenseKilde.addFeature(new ol.Feature(geom));
-    flate = geom.getArea() / utm33(geom);
+    app.flate = geom.getArea() / utm33(geom);
     visVann(); /* flaten i km², rettet for målestokken i kartprojeksjonen */
-    klipp = geom;
+    app.klipp = geom;
     tema.setExtent(geom.getExtent());
     planLag.setExtent(geom.getExtent());
     inonLag.setExtent(geom.getExtent());
@@ -145,7 +145,7 @@ async function hentGrense(k, mitt, behold) {
     sjekkInon(k, geom, mitt);
     sjekkGraa(k, geom, mitt);
     NATURLAG.forEach(t => hentNatur(t, k, geom, mitt));
-    if (!oversikter[k.nr]) nySamling(k.nr, geom.getExtent());
+    if (!app.oversikter[k.nr]) nySamling(k.nr, geom.getExtent());
     if (!k.boks && !behold) view.fit(geom.getExtent(), { padding: [16, 16, 16, 16], duration: 350 });
   } catch (e) {
     if (mitt === valgNr) {
@@ -158,7 +158,7 @@ async function hentGrense(k, mitt, behold) {
 const fSel = $('fylke'),
   kSel = $('kommune');
 const finn = nr => {
-  for (const f of fylker) for (const k of f.kommuner) if (k.nr === nr) return [f, k];
+  for (const f of app.fylker) for (const k of f.kommuner) if (k.nr === nr) return [f, k];
   return null;
 };
 function fyllKommuner(f, nr) {
@@ -172,7 +172,7 @@ function velg(nr, behold) {
   if (!t) return;
   const [f, k] = t,
     mitt = ++valgNr;
-  valgt = k;
+  app.valgt = k;
   lukkBytt();
   if (fSel.value !== f.nr) {
     fSel.value = f.nr;
@@ -187,24 +187,24 @@ function velg(nr, behold) {
   $('probe').textContent = 'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.';
   nullstillTall('henter');
   grenseKilde.clear();
-  klipp = null;
-  flate = 0;
-  planRaster = null;
-  historie = null;
-  planSum = null;
+  app.klipp = null;
+  app.flate = 0;
+  app.planRaster = null;
+  app.historie = null;
+  app.planSum = null;
   visUtvikling();
   clearTimeout(etterTimer);
   etterVenter = false;
-  planInfo = null;
+  app.planInfo = null;
   sluttTegning();
   visEgneLag();
   visPlanInfo();
   visEgne();
   fjernMerket();
-  inon = null;
+  app.inon = null;
   visInon();
-  graa = null;
-  graaKryss = null;
+  app.graa = null;
+  app.graaKryss = null;
   visGraa();
   NATURLAG.forEach(t => {
     t.data = null;
@@ -224,7 +224,7 @@ function velg(nr, behold) {
   kartStatus();
 }
 fSel.addEventListener('change', () => {
-  const f = fylker.find(x => x.nr === fSel.value);
+  const f = app.fylker.find(x => x.nr === fSel.value);
   fyllKommuner(f);
   velg(kSel.value);
 });
@@ -256,12 +256,12 @@ hent('Egen fil', 'Fylker og kommuner', 'kommuner.json', true)
   )
   .then(async liste => {
     const reg = await hent('Egen fil', 'Register over oversiktsbilder', 'oversikt.json', true).catch(() => null);
-    if (reg && reg.kommuner) oversikter = reg.kommuner;
-    fylker = liste.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
-    fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
+    if (reg && reg.kommuner) app.oversikter = reg.kommuner;
+    app.fylker = liste.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+    app.fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
     fSel.length = 0;
-    fylker.forEach(f => fSel.add(new Option(f.navn, f.nr)));
-    const medBilde = Object.keys(oversikter).filter(nr => finn(nr));
+    app.fylker.forEach(f => fSel.add(new Option(f.navn, f.nr)));
+    const medBilde = Object.keys(app.oversikter).filter(nr => finn(nr));
     if (medBilde.length) {
       const o = $('omoversikt'),
         hvem = medBilde.length === 1 ? finn(medBilde[0])[1].navn : medBilde.length + ' kommuner';
@@ -269,7 +269,7 @@ hent('Egen fil', 'Fylker og kommuner', 'kommuner.json', true)
       o.hidden = false;
     }
     let forst = (location.hash || '').replace('#', '');
-    if (!finn(forst)) forst = finn('5001') ? '5001' : fylker[0].kommuner[0].nr;
+    if (!finn(forst)) forst = finn('5001') ? '5001' : app.fylker[0].kommuner[0].nr;
     const f0 = finn(forst)[0];
     fSel.value = f0.nr;
     fyllKommuner(f0, forst);

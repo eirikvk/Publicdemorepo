@@ -1,6 +1,6 @@
 /* Sjekker at regning og tegning holdes fra hverandre. Funksjoner som regner, skal kunne flyttes til en annen løsning uten å ta
    med seg siden: de får alt de trenger som argumenter og gir svaret tilbake. De skal derfor ikke lese eller skrive sidens
-   innhold, ikke røre kartet, ikke hente fra nettet og ikke bruke delt tilstand (variabler på toppnivå laget med let).
+   innhold, ikke røre kartet, ikke hente fra nettet og ikke bruke delt tilstand (app, og variabler på toppnivå laget med let).
 
    En funksjon regnes som regning når navnet begynner med tolk, kryss, bygg, tell eller les, eller står i listen under.
    Kjør: node verktoy/sjekk-regning.js */
@@ -24,7 +24,7 @@ const OGSAA = [
   'tilFarge',
   'klasseAv'
 ];
-const FORBUDT = ['$', 'document', 'window', 'kart', 'view', 'hent', 'fetch', 'logg', 'friskOpp'];
+const FORBUDT = ['app', '$', 'document', 'window', 'kart', 'view', 'hent', 'fetch', 'logg', 'friskOpp'];
 const TEGNING = /^vis[A-ZÆØÅ]/;
 
 const monster = (p, ut) => {

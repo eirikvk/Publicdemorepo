@@ -1,8 +1,8 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og tabellene som sammenligner med kommuneplanen. */
-/* Egne områder tegnet i kartet. De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. */
-const egne = [];
+/* Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. */
+
 let egenTeller = 0;
-const mine = () => (valgt ? egne.filter(g => g.nr === valgt.nr) : []);
+const mine = () => (app.valgt ? app.egne.filter(g => g.nr === app.valgt.nr) : []);
 const utenPlan = () =>
   ingenPlan() &&
   !mine().length; /* uten kommuneplan og uten egne områder finnes det ingen planlagt utbygging å regne på */
@@ -60,7 +60,7 @@ function sluttTegning() {
   visTegneknapper();
 }
 function startTegning() {
-  if (!valgt || !klipp || tegner()) return;
+  if (!app.valgt || !app.klipp || tegner()) return;
   lukkBytt();
   tegn = new ol.interaction.Draw({ type: 'Polygon', stopClick: true, minPoints: 3, style: tegnStil });
   tegn.on('drawend', e => {
@@ -89,7 +89,7 @@ function egneEndret() {
   visPlan();
 }
 function nyttEget(geom) {
-  if (!valgt) return;
+  if (!app.valgt) return;
   if (!(geom.getArea() > 400)) {
     $('egnestatus').textContent = 'Området ble for lite til å regnes ut. Tegn et større område.';
     return;
@@ -98,7 +98,7 @@ function nyttEget(geom) {
   const lopenr = mine().reduce((m, x) => Math.max(m, x.lopenr || 0), 0) + 1;
   const g = {
     id: ++egenTeller,
-    nr: valgt.nr,
+    nr: app.valgt.nr,
     lopenr,
     navn: `Eget område ${lopenr}`,
     kilde: 'tegnet',
@@ -108,7 +108,7 @@ function nyttEget(geom) {
     tall: null
   };
   g.f = new ol.Feature({ geometry: geom, lopenr, type: 'bygg' });
-  egne.push(g);
+  app.egne.push(g);
   egneEndret();
 }
 /* Opplastet plan i samme GeoJSON-format som DiBKs nedlasting av plandata: flater med arealformål og arealbruksstatus.
@@ -218,17 +218,17 @@ async function lastOppPlan(fil) {
     await new Promise(ok => setTimeout(ok, 30));
     const midtAv = nr => {
       const k = finn(nr)[1];
-      return valgt && valgt.nr === nr && klipp
-        ? ol.extent.getCenter(klipp.getExtent())
+      return app.valgt && app.valgt.nr === nr && app.klipp
+        ? ol.extent.getCenter(app.klipp.getExtent())
         : k.boks
           ? ol.proj.transform([(k.boks[0] + k.boks[2]) / 2, (k.boks[1] + k.boks[3]) / 2], 'EPSG:4326', UTM)
           : null;
     };
-    const P = lesPlanfil(JSON.parse(await fil.text()), valgt ? valgt.nr : null, nr => !!finn(nr), midtAv);
+    const P = lesPlanfil(JSON.parse(await fil.text()), app.valgt ? app.valgt.nr : null, nr => !!finn(nr), midtAv);
     if (P.feil) return melding(P.feil);
     const { nr, funnet, ...plan } = P,
       k = finn(nr)[1];
-    egne.push({
+    app.egne.push({
       id: ++egenTeller,
       nr,
       navn: fil.name.replace(/\.(geo)?json$/i, ''),
@@ -237,9 +237,9 @@ async function lastOppPlan(fil) {
       ...plan
     });
     melding(
-      `${fil.name}: ${nf(plan.deler.length, 0)} flater lest${funnet && (!valgt || valgt.nr !== nr) ? `, og kommunen er byttet til ${k.navn}` : ''}.`
+      `${fil.name}: ${nf(plan.deler.length, 0)} flater lest${funnet && (!app.valgt || app.valgt.nr !== nr) ? `, og kommunen er byttet til ${k.navn}` : ''}.`
     );
-    if (!valgt || valgt.nr !== nr) velg(nr);
+    if (!app.valgt || app.valgt.nr !== nr) velg(nr);
     else egneEndret();
   } catch (e) {
     melding('Filen kunne ikke leses som GeoJSON.');
@@ -248,12 +248,12 @@ async function lastOppPlan(fil) {
 /* Resultatet for egne områder, etter samme mal som for kommuneplanen: natur og jordbruk som går med, og hvor mye av det som ligger
    i verneområder, villreinområder, verdsatt natur per verdi og natur som ikke er kartlagt. Hver rad viser kommuneplanen alene,
    tallet med egne områder og endringen mellom dem. Natur og jordbruk vises også som andel av det som finnes i kommunen i dag. */
-function egneRader(e) {
-  /* e: null for hele kommunen, ellers nummeret i listen over egne områder. Rad: navn, farge, plan, ny, andel av, gruppe */
-  const R = planRaster,
-    T = e === null ? null : mine()[e].tall,
-    harPlan = !ingenPlan(),
-    ut = [];
+/* Radene i sammenligningen mellom kommuneplanen og egne områder. e er null for hele kommunen, ellers nummeret til området, og T er
+   tallene for det området. R er rutenettet, GK kryssingen med grått areal, tema temaene som er krysset med planen ({ navn, id,
+   klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er navn, farge, planen alene, med egne områder,
+   hva andelen regnes av, og gruppe. Ren regning. */
+function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
+  const ut = [];
   ut.push([
     'Natur',
     'pnat',
@@ -270,45 +270,53 @@ function egneRader(e) {
     e === null ? R.iDag.jor : 0,
     ''
   ]);
-  const GK =
-    graaKryss && valgt && graaKryss.nr === valgt.nr && graaKryss.antallEgne === R.antallEgne ? graaKryss : null;
   if (GK) {
     const x = X => (e === null ? X : X.eg[e] || { graa: 0, gron: 0, gront: 0 });
     ut.push(['Grått areal', 'graa2', harPlan ? x(GK.P).graa : null, x(GK.S).graa, 0, '']);
     ut.push(['– minst halvt grønt', '', harPlan ? x(GK.P).gron : null, x(GK.S).gron, 0, '']);
     ut.push(['Grønt i bebygd', 'gront', harPlan ? x(GK.P).gront : null, x(GK.S).gront, 0, '']);
   }
-  const verdi = [];
-  NATURLAG.forEach(t => {
-    const K = t.data && valgt && t.data.nr === valgt.nr ? t.data.kryss : null;
-    if (!K || !K.P || !t.data.omrader.length) return;
-    const hent = (X, v) => (e === null ? X.alt[v] : X.eg[e] ? X.eg[e][v] : 0);
+  const verdi = [],
+    ruter = (X, v) => (e === null ? X.alt[v] : X.eg[e] ? X.eg[e][v] : 0);
+  for (const t of tema) {
+    const K = t.kryss;
     if (t.klasser)
       t.klasser.forEach(([navn, id], v) =>
-        verdi.push([navn, id, harPlan ? hent(K.P, v) : null, hent(K.S, v), 0, 'Av dette i verdsatt natur'])
+        verdi.push([navn, id, harPlan ? ruter(K.P, v) : null, ruter(K.S, v), 0, 'Av dette i verdsatt natur'])
       );
-    else
-      ut.push([
-        t.navn === 'Villrein' ? 'Villreinområder' : t.navn,
-        t.id,
-        harPlan ? hent(K.P, 0) : null,
-        hent(K.S, 0),
-        0,
-        'Av dette i'
-      ]);
-  });
-  const V = NATURLAG.find(t => t.dekning),
-    G = V && V.data && valgt && V.data.nr === valgt.nr ? V.data.gap : null;
-  if (G && G.plan)
+    else ut.push([t.navn, t.id, harPlan ? ruter(K.P, 0) : null, ruter(K.S, 0), 0, 'Av dette i']);
+  }
+  if (gap && gap.plan)
     ut.push([
       'Ikke kartlagt natur',
       '',
-      harPlan ? (e === null ? G.plan.ukjent : G.plan.eg[e] ? G.plan.eg[e].ukjent : 0) : null,
-      e === null ? G.ukjent : G.eg[e] ? G.eg[e].ukjent : 0,
+      harPlan ? (e === null ? gap.plan.ukjent : gap.plan.eg[e] ? gap.plan.eg[e].ukjent : 0) : null,
+      e === null ? gap.ukjent : gap.eg[e] ? gap.eg[e].ukjent : 0,
       0,
       'Av dette i'
     ]);
   return ut.concat(verdi);
+}
+function egneRader(e) {
+  /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */
+  const R = app.planRaster,
+    GK =
+      app.graaKryss && app.valgt && app.graaKryss.nr === app.valgt.nr && app.graaKryss.antallEgne === R.antallEgne
+        ? app.graaKryss
+        : null;
+  const data = t => (t.data && app.valgt && t.data.nr === app.valgt.nr ? t.data : null);
+  const tema = NATURLAG.filter(t => {
+    const D = data(t);
+    return D && D.kryss && D.kryss.P && D.omrader.length;
+  }).map(t => ({
+    navn: t.navn === 'Villrein' ? 'Villreinområder' : t.navn,
+    id: t.id,
+    klasser: t.klasser,
+    kryss: t.data.kryss
+  }));
+  const V = NATURLAG.find(t => t.dekning),
+    DV = V ? data(V) : null;
+  return byggEgneRader(e, e === null ? null : mine()[e].tall, R, !ingenPlan(), GK, tema, DV ? DV.gap : null);
 }
 function egenTabell(rader, navnPlan, navnNy) {
   const ramme = document.createElement('div'),
@@ -352,8 +360,12 @@ function visEgne() {
   const liste = $('egneliste'),
     E = mine(),
     R =
-      planRaster && valgt && planRaster.nr === valgt.nr && planRaster.eget && planRaster.antallEgne === E.length
-        ? planRaster
+      app.planRaster &&
+      app.valgt &&
+      app.planRaster.nr === app.valgt.nr &&
+      app.planRaster.eget &&
+      app.planRaster.antallEgne === E.length
+        ? app.planRaster
         : null,
     samlet = $('egnesamlet');
   liste.textContent = samlet.textContent = '';
@@ -408,7 +420,7 @@ function visEgne() {
           ? `Opplastet fil med ${nf(g.deler.length, 0)} flater. Filen har ingen arealformål, så alle flatene regnes som utbygging.`
           : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${nf(g.deler.length, 0)} flater: ${nf(g.bygg, 0)} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${nf(g.annet, 0)} som ikke utbygging. Innenfor flatene erstatter filen kommuneplanen.`
       );
-    if (!T) p(ingenPlan() || ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
+    if (!T) p(ingenPlan() || app.ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
     else {
       const kjent = T.nat + T.jor + T.beb + T.vann;
       p(
@@ -435,7 +447,7 @@ function visEgne() {
     gjor.className = 'knapper';
     gjor.append(
       knapp('Vis i kartet', () => {
-        view.fit(klipp ? ol.extent.getIntersection(g.ext, klipp.getExtent()) : g.ext, {
+        view.fit(app.klipp ? ol.extent.getIntersection(g.ext, app.klipp.getExtent()) : g.ext, {
           padding: [56, 56, 56, 56],
           minResolution: OPPLOSNINGER[13],
           duration: 300
@@ -444,7 +456,7 @@ function visEgne() {
       })
     );
     const slett = knapp('Slett', () => {
-      egne.splice(egne.indexOf(g), 1);
+      app.egne.splice(app.egne.indexOf(g), 1);
       egneEndret();
       $('tegnknapp').focus();
     });
@@ -462,7 +474,7 @@ function visEgne() {
       n = document.createElement('p');
     h.textContent = 'Samlet for kommunen';
     n.className = 'hint';
-    n.textContent = `Planen er kommuneplanen fra DiBK alene. Prosenten under tallene er andelen av dagens natur eller jordbruk i kommunen${ov && ov.dynamisk ? ', i den delen nettleseren har hentet kart for' : ''}. Endring er forskjellen fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i bruk. Smale striper er ikke med for natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.`;
+    n.textContent = `Planen er kommuneplanen fra DiBK alene. Prosenten under tallene er andelen av dagens natur eller jordbruk i kommunen${app.ov && app.ov.dynamisk ? ', i den delen nettleseren har hentet kart for' : ''}. Endring er forskjellen fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i bruk. Smale striper er ikke med for natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.`;
     samlet.append(
       h,
       egenTabell(egneRader(null), 'Planen', E.length === 1 && E[0].kilde === 'fil' ? 'Med opplastet' : 'Med egne'),

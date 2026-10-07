@@ -52,8 +52,40 @@ const ALLE = [...KL, ...VANN],
   JOR = 1,
   NAT = 2; /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
 /* Settes av verktoy/utgave.py ved hver endring, så man ser hvilken utgave en fane kjører */
-const VERSJON = '7. oktober kl. 07.11';
+const VERSJON = '7. oktober kl. 07.35';
 const $ = id => document.getElementById(id);
+/* All delt tilstand for siden, samlet på ett sted. Tegnefunksjonene leser herfra, og samordningen skriver hit. Regnefunksjonene
+   bruker den ikke: de får det de trenger som argumenter. Det som bare er hjelpemidler for én fil, som minner, tellere og tidtakere,
+   ligger som vanlige variabler i filen de hører til. Temaene fra Miljødirektoratet har sine data i NATURLAG, ett objekt per tema. */
+const app = {
+  fylker: [] /* fylkene med kommunene sine, fra kommuner.json */,
+  valgt: null /* kommunen som er valgt: { nr, navn, boks } */,
+  klipp: null /* kommunens flate som geometri, satt når grensen er hentet */,
+  flate: 0 /* kommunens flate i km², land og vann */,
+  vis: { beb: true, jor: true, nat: true, hav: true, inn: true, elv: true } /* arealklassene som vises i kartet */,
+  oversikter: {} /* kommunene som har lagret oversiktsbilde, med utsnittet bildet dekker */,
+  ov: null /* oversiktsbildet for valgt kommune: det lagrede, eller det nettleseren setter sammen (dynamisk) */,
+  arealtall:
+    null /* tallene fra SSB: { tilstand: 'henter' | 'feil' | 'ok', a: [bebygd, jordbruk, natur] i km², aar } */,
+  ssbSum: 0 /* landarealet i km², summen av de tre klassene. 0 til tallene er hentet. */,
+  ferskvann: null /* { inn, elv } i km², fra SSB */,
+  historie: null /* arealet per klasse i 2017 og i siste år */,
+  planPaa: true /* om planlagt utbygging vises i kartet */,
+  visSmale: false /* om smale striper vises i kartet */,
+  planInfo: null /* om DiBK har en kommuneplan for kommunen, og hvilken */,
+  planRaster: null /* rutenettet for planlagt utbygging i hele kommunen, med tallene som er regnet ut fra det */,
+  planSum: null /* planlagt utbygging på natur og jordbruk i km², til tabellen over utvikling */,
+  planTall:
+    null /* hva som skal stå om planlagt utbygging i tallpanelet: tilstand er tom, zoom, regner, feil eller ok */,
+  egne: [] /* egne områder, tegnet i kartet eller lastet opp. De finnes så lenge siden er åpen. */,
+  inon: null /* inngrepsfri natur i kommunen: tilstand, areal per sone og bildet kartlaget tegnes fra */,
+  inonPaa: false,
+  graa: null /* grått areal i kommunen: tilstand, areal per trinn og rutene med trinn */,
+  graaPaa: false,
+  graaKryss: null /* planlagt utbygging krysset med grått areal */,
+  slorPaa: true /* om det som ikke er kartlagt, får et slør når verdsatt natur vises */,
+  vist: null /* området som er valgt fra en liste og markert i kartet */
+};
 /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. */
 let bruk = {};
 const tidSlutt = (navn, t0) => {
@@ -72,10 +104,8 @@ const dekar = (km2, enhet = 'daa') => {
 };
 const iTekst = km2 => dekar(km2, 'dekar');
 const kb = b => (b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB');
-const vis = { beb: true, jor: true, nat: true, hav: true, inn: true, elv: true };
-let fylker = [],
-  valgt = null,
-  valgNr = 0;
+
+let valgNr = 0;
 
 /* Kall-logg: hvert kall mot en åpen kilde måles i nettleseren. */
 const rader = [];
@@ -151,7 +181,7 @@ const husk = (minne, nokkel, verdi, plass) => {
   if (minne.size > plass) minne.delete(minne.keys().next().value);
 };
 /* Resultater merkes med kommunenummeret de gjelder. Dette gir resultatet hvis det gjelder kommunen som er valgt nå, ellers ingenting. */
-const gjeldende = x => (x && valgt && x.nr === valgt.nr ? x : null);
+const gjeldende = x => (x && app.valgt && x.nr === app.valgt.nr ? x : null);
 /* Brukeren har bedt om mindre bevegelse: da flyttes ikke kart og side mykt. */
 const rolig = () => !!window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const tilKartet = mykt =>

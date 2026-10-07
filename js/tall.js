@@ -1,12 +1,7 @@
 /* Tallene fra SSB: arealklasser, land og vann, og anslått utvikling. */
-/* Tilstand. Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
-   kommunens flate (grensen fra Kartverket) minus land og ferskvann. */
-/* ssbSum er landarealet i km², summen av de tre klassene fra SSB, og 0 til tallene er hentet.
-   arealtall er tallene for valgt kommune: { tilstand: 'henter' | 'feil' | 'ok', a: [bebygd, jordbruk, natur] i km², aar }. */
-let ssbSum = 0,
-  arealtall = null;
-let ferskvann = null,
-  flate = 0;
+/* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
+   kommunens flate (grensen fra Kartverket) minus land og ferskvann. Tilstanden ligger i app: arealtall, ssbSum, ferskvann,
+   flate, historie og planSum. */
 
 /* Regning: funksjonene under tolker svar og regner ut tall. De leser ikke fra siden og skriver ikke til den. */
 function tolkAreal(j) {
@@ -64,7 +59,7 @@ function visVann() {
     note = $('vannnote');
   bar.textContent = forklaring.textContent = note.textContent = '';
   bar.removeAttribute('aria-label');
-  const V = tolkVann(flate, ssbSum, ferskvann);
+  const V = tolkVann(app.flate, app.ssbSum, app.ferskvann);
   if (!V) return;
   const { deler, hav } = V,
     sum = deler.reduce((s, d) => s + d[2], 0);
@@ -84,7 +79,7 @@ function visVann() {
     : 'Land, innsjø og elv er SSBs tall. Kommunen har ikke hav.';
 }
 function visTall() {
-  const T = arealtall,
+  const T = app.arealtall,
     bar = $('bar');
   bar.textContent = '';
   if (!T || T.tilstand !== 'ok') {
@@ -112,9 +107,9 @@ function visTall() {
 }
 function nullstillTall(tilstand) {
   /* ingen tall å vise: de hentes, eller hentingen feilet */
-  ssbSum = 0;
-  ferskvann = null;
-  arealtall = { tilstand };
+  app.ssbSum = 0;
+  app.ferskvann = null;
+  app.arealtall = { tilstand };
   visVann();
   visTall();
 }
@@ -159,9 +154,9 @@ async function hentTall(k, mitt) {
     );
     if (mitt !== valgNr) return;
     const T = tolkAreal(j);
-    ferskvann = T.ferskvann;
-    arealtall = { tilstand: 'ok', a: T.a, aar: T.aar };
-    ssbSum = T.a[0] + T.a[1] + T.a[2];
+    app.ferskvann = T.ferskvann;
+    app.arealtall = { tilstand: 'ok', a: T.a, aar: T.aar };
+    app.ssbSum = T.a[0] + T.a[1] + T.a[2];
     visTall();
     visVann();
     NATURLAG.forEach(visNatur);
@@ -175,8 +170,7 @@ async function hentTall(k, mitt) {
    og jordbruk og lagt til bebygd. SSB advarer mot å lese forskjeller mellom årganger som endring, så dette er et anslag og merkes slik.
    Tallene for 2017 hentes med SSBs sammenslåtte tidsserier, så de gjelder dagens kommune også der kommuner er slått sammen.
    Er kommunens samlede flate likevel en annen i 2017, er grensen flyttet, og da vises ingen sammenligning. */
-let historie = null,
-  planSum = null;
+
 async function hentHistorie(k, mitt) {
   try {
     const j = await hentSSB(
@@ -188,12 +182,12 @@ async function hentHistorie(k, mitt) {
     if (mitt !== valgNr) return;
     const H = tolkHistorie(j, k.nr);
     if (!H) return;
-    historie = H;
+    app.historie = H;
     visUtvikling();
   } catch (e) {} /* uten historiske tall vises ikke blokken */
 }
 function visUtvikling() {
-  const H = gjeldende(historie),
+  const H = gjeldende(app.historie),
     tab = $('utvtab'),
     tekst = $('utvsum'),
     note = $('utvnote');
@@ -205,7 +199,7 @@ function visUtvikling() {
     tekst.textContent = `Kommunens flate er ikke den samme i SSBs tall for ${H.fra} og ${H.til}, trolig fordi grensen er flyttet. Tallene kan derfor ikke sammenlignes.`;
     return;
   }
-  const P = planSum && planSum.nr === valgt.nr && !utenPlan() ? planSum : null,
+  const P = app.planSum && app.planSum.nr === app.valgt.nr && !utenPlan() ? app.planSum : null,
     etter = P ? etterPlan(H.a1, P) : null;
   const hele = km2 => nf(Math.round(km2 * 1000), 0),
     endr = km2 => {
@@ -245,7 +239,7 @@ function visUtvikling() {
       ? ` Bygges alt kommuneplanen setter av, går ca. ${iTekst(P.nat)} natur og ca. ${iTekst(P.jor)} jordbruk over til bebygd.${P.delvis ? ' Det gjelder bare den delen av kommunen nettleseren har hentet kart for.' : ''}`
       : utenPlan()
         ? ' DiBK har ingen kommuneplan for kommunen, så siste kolonne er tom.'
-        : !oversikter[valgt.nr]
+        : !app.oversikter[app.valgt.nr]
           ? ' Zoom inn i kartet for å få et anslag på planlagt utbygging i siste kolonne.'
           : ' Siste kolonne fylles ut når planlagt utbygging er regnet ut.');
   note.textContent = `Anslag, ikke statistikk over endring. SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. Noe av forskjellen fra ${H.fra} kan derfor skyldes bedre kartlegging. SSB har varslet egne tabeller for arealendringer. Planlagt utbygging er regnet ut i nettleseren uten smale striper.`;

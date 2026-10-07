@@ -31,19 +31,18 @@ const planUrl = tc =>
     transparent: 'true',
     filter: PLANFILTER
   });
-let planPaa = true,
-  visSmale = false;
+
 /* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra et rutenett
    for hele kommunen (21 meter per rute, laget av arealutregningen). En flispiksel får farge bare hvis det faktisk ligger
    planlagt utbygging innenfor den, og styrken følger hvor stor del av pikselen det gjelder. Feltene blir dermed aldri
    større enn de er, og de forsvinner heller ikke: små felt vises som svake enkeltpiksler. */
-let planRaster = null;
+
 function grovPlanFlis(tc) {
-  const R = planRaster;
+  const R = app.planRaster;
   if (!R) return null;
   const [z, x, y] = tc,
     f = 2 ** (R.z - z),
-    D = visSmale ? R.alle : R.ryddet,
+    D = app.visSmale ? R.alle : R.ryddet,
     F = [rgb('pnat'), rgb('pjor')];
   const c = lerret(),
     g = c.getContext('2d'),
@@ -120,14 +119,16 @@ async function lastPlanFlis(tile, src) {
       pnat = rgb('pnat'); /* uavhengig av hvilke klasser som vises i kartet */
     /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
     const [tz, tx, ty] = tile.getTileCoord(),
-      R = !visSmale && gjeldende(planRaster),
+      R = !app.visSmale && gjeldende(app.planRaster),
       sh = R ? tz - R.z : 0;
     let tegnet = false;
     const vent =
-      !visSmale &&
+      !app.visSmale &&
       !R &&
-      valgt &&
-      !oversikter[valgt.nr]; /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
+      app.valgt &&
+      !app.oversikter[
+        app.valgt.nr
+      ]; /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
     const EM = egenMaske(
       plannett.getTileCoordExtent(tile.getTileCoord())
     ); /* egne områder i flisen: 1 utbygging, 2 ikke utbygging */
@@ -176,8 +177,7 @@ const tegnPlan = () => planLag.setSource(nyPlanKilde());
    nettleseren har hentet kart for, og tallene regnes ut på nytt hver gang det kommer mer kart.
    Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 let regnNr = 0;
-/* Hva som skal stå om planlagt utbygging i tallpanelet. tilstand er tom, zoom, regner, feil eller ok. Tallene selv ligger i planRaster. */
-let planTall = null;
+
 /* Én flis på nivå 9: dagens klasser lagt oppå planen. K er dagens klasser og P planen, begge som piksler. fliser er de hentede
    kartflisene innenfor, eller null når hele kommunen er kjent. Ren regning. */
 function tellBlokk(K, P, tc, fliser) {
@@ -363,19 +363,20 @@ async function regnPlan() {
   const mitt = ++regnNr,
     Z = 9;
   const sett = tilstand => {
-    planTall = { tilstand };
+    app.planTall = { tilstand };
     visPlanTall();
   };
-  if (!klipp || utenPlan()) return sett('tom'); /* knappen for planlagt utbygging styrer bare kartlaget, ikke tallene */
+  if (!app.klipp || utenPlan())
+    return sett('tom'); /* knappen for planlagt utbygging styrer bare kartlaget, ikke tallene */
   const E = mine();
-  if (planRaster && planRaster.nr !== valgt.nr) planRaster = null;
-  if (!ov) return sett(oversikter[valgt.nr] ? 'tom' : 'zoom');
-  const dyn = !!ov.dynamisk,
+  if (app.planRaster && app.planRaster.nr !== app.valgt.nr) app.planRaster = null;
+  if (!app.ov) return sett(app.oversikter[app.valgt.nr] ? 'tom' : 'zoom');
+  const dyn = !!app.ov.dynamisk,
     sm = dyn ? samle : null,
-    nr = valgt.nr,
-    denne = ov;
+    nr = app.valgt.nr,
+    denne = app.ov;
   if (dyn && !sm) return;
-  if (!(dyn && planRaster)) sett('regner'); /* nye tall erstatter de gamle uten at teksten blinker */
+  if (!(dyn && app.planRaster)) sett('regner'); /* nye tall erstatter de gamle uten at teksten blinker */
   /* Rutenettet bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
      fliser innenfor den, så et nytt utsnitt koster én eller to blokker og ikke hele det hentede området. */
   const blokker = dyn ? sm.blokker : denne.blokker || (denne.blokker = new Map()),
@@ -403,11 +404,11 @@ async function regnPlan() {
     if (mitt === regnNr) sett('feil');
     return;
   }
-  if (mitt !== regnNr || nr !== (valgt && valgt.nr)) return;
+  if (mitt !== regnNr || nr !== (app.valgt && app.valgt.nr)) return;
   const tStart = performance.now(),
     m = OPPLOSNINGER[Z] / 2,
     km2 = v => (v * m * m) / 1e6;
-  planRaster = byggPlanRaster(
+  app.planRaster = byggPlanRaster(
     nr,
     [...under.keys()].map(k => k.split('/').map(Number)),
     blokker,
@@ -416,11 +417,11 @@ async function regnPlan() {
     Math.round(dyn ? Math.max(m, sm.res) : m)
   );
   E.forEach((g, i) => {
-    g.tall = planRaster.egneTall[i];
+    g.tall = app.planRaster.egneTall[i];
   });
   friskOpp(planLag);
   tidSlutt('plantall', tStart);
-  planSum = { nr, nat: km2(planRaster.sum.rn), jor: km2(planRaster.sum.rj), delvis: dyn, egne: E.length };
+  app.planSum = { nr, nat: km2(app.planRaster.sum.rn), jor: km2(app.planRaster.sum.rj), delvis: dyn, egne: E.length };
   sett('ok');
   visUtvikling();
   visEgne();
@@ -430,8 +431,8 @@ function visPlanTall() {
   const tn = $('tall-pnat'),
     tj = $('tall-pjor'),
     note = $('tallnote'),
-    tilstand = planTall ? planTall.tilstand : 'tom',
-    R = gjeldende(planRaster);
+    tilstand = app.planTall ? app.planTall.tilstand : 'tom',
+    R = gjeldende(app.planRaster);
   if (tilstand !== 'ok' || !R) {
     tn.textContent = tj.textContent = tilstand === 'regner' ? 'regner …' : '';
     note.textContent =
@@ -459,21 +460,22 @@ function visPlanTall() {
     'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
   if (R.delvis) {
     const a = km2(n.beb + n.jor + n.nat);
-    note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${ssbSum ? ` av ${iTekst(ssbSum)} (${nf(Math.min(100, (a / ssbSum) * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${R.rute} meter. ${felles}`;
+    note.textContent = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${app.ssbSum ? ` av ${iTekst(app.ssbSum)} (${nf(Math.min(100, (a / app.ssbSum) * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${R.rute} meter. ${felles}`;
   } else
     note.textContent = `Regnet ut i nettleseren fra ${R.fliser} kartfliser med piksler på ${R.rute} meter. ${felles}`;
 }
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker.
    Langs grensen stikker naboenes planer litt inn, så under 15 prosent regnes som at kommunen ikke har plan der.
    Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
-let planInfo = null;
-const ingenPlan = () => !!planInfo && !!valgt && planInfo.nr === valgt.nr && planInfo.tilstand === 'ingen';
+
+const ingenPlan = () =>
+  !!app.planInfo && !!app.valgt && app.planInfo.nr === app.valgt.nr && app.planInfo.tilstand === 'ingen';
 function visPlanInfo() {
   const s = $('planstatus'),
     pi = $('planinfo'),
-    i = gjeldende(planInfo),
+    i = gjeldende(app.planInfo),
     ingen = ingenPlan(),
-    navn = valgt ? valgt.navn : '';
+    navn = app.valgt ? app.valgt.navn : '';
   s.className = ingen ? 'mangler' : '';
   $('planknapp').querySelector('.km').textContent = ingen ? 'ingen plan' : '';
   pi.hidden = !ingen;
@@ -490,7 +492,7 @@ function visPlanInfo() {
           : `Kommuneplan hentet fra DiBK${i.kilde ? ': ' + i.kilde : ''}.${i.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
 }
 async function sjekkPlan(k, geom, mitt) {
-  planInfo = { nr: k.nr, tilstand: 'sjekker' };
+  app.planInfo = { nr: k.nr, tilstand: 'sjekker' };
   visPlanInfo();
   try {
     const { res, w, h, u } = rutenett(geom.getExtent(), 256);
@@ -555,10 +557,10 @@ async function sjekkPlan(k, geom, mitt) {
         }
       } catch (e) {}
     if (mitt !== valgNr) return;
-    planInfo = { nr: k.nr, tilstand: dekning < 0.15 ? 'ingen' : 'ok', dekning, kilde };
+    app.planInfo = { nr: k.nr, tilstand: dekning < 0.15 ? 'ingen' : 'ok', dekning, kilde };
   } catch (e) {
     if (mitt !== valgNr) return;
-    planInfo = { nr: k.nr, tilstand: 'feil' };
+    app.planInfo = { nr: k.nr, tilstand: 'feil' };
   }
   visPlanInfo();
   visPlan();
@@ -570,13 +572,13 @@ const regnAlt = () =>
     NATURLAG.forEach(regnNatur);
     regnGraa();
   }); /* påvirkningen på naturlagene følger plantallene */
-const visPlanLag = () => planLag.setVisible(planPaa && !!klipp && !utenPlan());
+const visPlanLag = () => planLag.setVisible(app.planPaa && !!app.klipp && !utenPlan());
 const visPlan = () => {
   visPlanLag();
   regnAlt();
 };
 const nyttSlor = () => {
-  if (KL.some(([id]) => !vis[id])) {
+  if (KL.some(([id]) => !app.vis[id])) {
     tegnOversikt();
     fargeleggFliser();
   }

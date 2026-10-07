@@ -1,9 +1,8 @@
 /* Oversiktsbildet som vises når kartet er zoomet ut: det lagrede, eller det nettleseren setter sammen selv. */
 let ovBilde = null;
-/* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv. */
-let oversikter = {},
-  ov = null,
-  ovUrl = null,
+/* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv.
+   Registeret ligger i app.oversikter og bildet for valgt kommune i app.ov. */
+let ovUrl = null,
   ovRes = 0;
 /* Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når det
    forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
@@ -52,7 +51,7 @@ oversiktLag.on('postrender', e => {
    for eksempel når man bytter fra en kommune med oversiktsbilde til en uten. */
 const oversiktSynlig = v => oversiktLag.setVisible(v && !!oversiktLag.getSource());
 async function tegnOversikt() {
-  const denne = ov;
+  const denne = app.ov;
   if (!denne) return;
   if (denne.lerret) {
     const s = samle;
@@ -64,7 +63,7 @@ async function tegnOversikt() {
     return;
   }
   const blob = await fargeleggBlob(denne.buf);
-  if (denne !== ov) return;
+  if (denne !== app.ov) return;
   const url = URL.createObjectURL(blob),
     gammel = ovUrl;
   ovUrl = url;
@@ -120,7 +119,7 @@ function nySamling(nr, ext) {
   }
   samle = s;
   if (s.har.size) {
-    ov = { lerret: s.c, ext: s.ext, dynamisk: true };
+    app.ov = { lerret: s.c, ext: s.ext, dynamisk: true };
     tegnOversikt();
     kartStatus();
     regnAlt();
@@ -213,8 +212,8 @@ function leggISamling(tc, buf) {
       s.venter.push([X, Y, W, H]); /* fargelegges når kartet står stille */
       if (view.getResolution() >= MAKSRES)
         fargeleggVentende(s); /* zoomet ut vises det sammensatte kartet, så flisen må inn med en gang */
-      if (!ov || ov.lerret !== s.c) {
-        ov = { lerret: s.c, ext: s.ext, dynamisk: true };
+      if (!app.ov || app.ov.lerret !== s.c) {
+        app.ov = { lerret: s.c, ext: s.ext, dynamisk: true };
         visSamling(s);
         kartStatus();
       }
@@ -260,20 +259,20 @@ function planleggEtterarbeid() {
   }, 400);
 }
 async function hentOversikt(k, mitt) {
-  ov = null;
+  app.ov = null;
   ovBilde = null;
   samle = null;
   oversiktLag.setSource(null);
   oversiktSynlig(true);
-  if (!oversikter[k.nr]) return;
+  if (!app.oversikter[k.nr]) return;
   try {
     const buf = await hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
     if (mitt !== valgNr) return;
-    ov = { buf, ext: oversikter[k.nr] };
+    app.ov = { buf, ext: app.oversikter[k.nr] };
     await tegnOversikt();
   } catch (e) {
     if (mitt === valgNr) {
-      delete oversikter[k.nr];
+      delete app.oversikter[k.nr];
       kartStatus();
     }
   }

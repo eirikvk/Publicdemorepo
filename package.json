@@ -6,11 +6,12 @@
     "formater": "prettier --write js stil.css verktoy/*.js",
     "sjekk-format": "prettier --check js stil.css verktoy/*.js",
     "test": "node verktoy/regresjon.js ut/ny --mot HEAD",
-    "sjekk": "node verktoy/sjekk-regning.js"
+    "sjekk": "node verktoy/sjekk-navn.js && node verktoy/sjekk-regning.js"
   },
   "devDependencies": {
     "acorn": "^8.0.0",
     "acorn-walk": "^8.0.0",
+    "eslint-scope": "^8.0.0",
     "playwright": "^1.50.0",
     "prettier": "3.9.9"
   }

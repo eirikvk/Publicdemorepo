@@ -44,10 +44,7 @@ const graaTrinn = (r, a) =>
           Math.max(1, Math.round(r / 51))
         ); /* 0 ikke grått, 1–5 andel vegetasjon, 6 grått uten oppgitt andel */
 const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
-let graa = null,
-  graaPaa = false,
-  graaRad = null,
-  graaKryss = null;
+let graaRad = null;
 const graaMinne = new Map();
 /* Trinn i et punkt: 0 ikke grått, 1–5 andel vegetasjon fra lavest til høyest, 6 grått uten oppgitt andel (veier og lignende). */
 const graaVed = (D, x, y) => {
@@ -57,7 +54,7 @@ const graaVed = (D, x, y) => {
 };
 async function lastGraaFlis(tile) {
   try {
-    const D = graa && valgt && graa.nr === valgt.nr && graa.tilstand === 'ok' ? graa : null,
+    const D = app.graa && app.valgt && app.graa.nr === app.valgt.nr && app.graa.tilstand === 'ok' ? app.graa : null,
       tc = tile.getTileCoord(),
       u = plannett.getTileCoordExtent(tc);
     if (!D || !ol.extent.intersects(u, D.u)) {
@@ -189,13 +186,13 @@ async function sjekkGraa(k, geom, mitt) {
   const har = graaMinne.get(k.nr);
   if (har) {
     husk(graaMinne, k.nr, har, 3);
-    graa = har;
+    app.graa = har;
     friskOpp(graaLag);
     visGraa();
     regnGraa();
     return;
   }
-  graa = { nr: k.nr, tilstand: 'henter' };
+  app.graa = { nr: k.nr, tilstand: 'henter' };
   visGraa();
   try {
     const { res, w, h, u } = rutenett(geom.getExtent(), 2048, 20);
@@ -216,12 +213,12 @@ async function sjekkGraa(k, geom, mitt) {
     b.fill('evenodd');
     const tall = tolkGraa(A.data, V, b.getImageData(0, 0, w, h).data, w, h, res, utm33(geom));
     a.putImageData(A, 0, 0);
-    graa = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res, w, h };
-    husk(graaMinne, k.nr, graa, 3);
+    app.graa = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res, w, h };
+    husk(graaMinne, k.nr, app.graa, 3);
     tidSlutt('grått areal, kommunebilde', t0);
   } catch (e) {
     if (mitt !== valgNr) return;
-    graa = { nr: k.nr, tilstand: 'feil' };
+    app.graa = { nr: k.nr, tilstand: 'feil' };
   }
   friskOpp(graaLag);
   visGraa();
@@ -269,24 +266,27 @@ function kryssGraa(R, D, delvis) {
   return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis };
 }
 function regnGraa() {
-  const R = planRaster && valgt && planRaster.nr === valgt.nr && planRaster.pl && !utenPlan() ? planRaster : null,
-    D = graa && valgt && graa.nr === valgt.nr && graa.tilstand === 'ok' ? graa : null,
+  const R =
+      app.planRaster && app.valgt && app.planRaster.nr === app.valgt.nr && app.planRaster.pl && !utenPlan()
+        ? app.planRaster
+        : null,
+    D = app.graa && app.valgt && app.graa.nr === app.valgt.nr && app.graa.tilstand === 'ok' ? app.graa : null,
     t0 = performance.now();
-  graaKryss = R && D ? kryssGraa(R, D, !!(ov && ov.dynamisk)) : null;
-  if (graaKryss) tidSlutt('grått areal, kryssing', t0);
+  app.graaKryss = R && D ? kryssGraa(R, D, !!(app.ov && app.ov.dynamisk)) : null;
+  if (app.graaKryss) tidSlutt('grått areal, kryssing', t0);
   visGraa();
   visEgne();
 }
 function visGraa() {
-  const D = gjeldende(graa),
+  const D = gjeldende(app.graa),
     ok = !!D && D.tilstand === 'ok',
     R = graaRad.rad,
     liste = $('graaliste'),
     tekst = $('graasum'),
     plan = $('graaplan'),
     har = ok && D.sum > 0,
-    K = gjeldende(graaKryss);
-  graaLag.setVisible(graaPaa && !!klipp && har);
+    K = gjeldende(app.graaKryss);
+  graaLag.setVisible(app.graaPaa && !!app.klipp && har);
   friskOppGamle();
   radTall(R, D, har);
   R.querySelector('.un').textContent =
@@ -296,7 +296,7 @@ function visGraa() {
   liste.textContent = plan.textContent = '';
   $('graamerk').hidden = !har;
   if (!D || D.tilstand === 'henter') {
-    tekst.textContent = valgt ? 'Henter …' : '';
+    tekst.textContent = app.valgt ? 'Henter …' : '';
     return;
   }
   if (!ok) {
@@ -307,7 +307,7 @@ function visGraa() {
     tekst.textContent = 'Kartet over grå arealer har ingen flater i kommunen.';
     return;
   }
-  tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${ssbSum ? `, ${nf((D.sum / ssbSum) * 100)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Tabellen viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
+  tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${app.ssbSum ? `, ${nf((D.sum / app.ssbSum) * 100)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Tabellen viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
   const rad = (id, navn, tall, under) => fargelinje(liste, id, navn, tall, under);
   GRAATRINN.forEach(([id, navn], i) => rad(id, navn, dekar(D.trinn[i + 1])));
   if (D.trinn[6] > 0) rad('graa0', 'Uten oppgitt andel, som veier', dekar(D.trinn[6]));

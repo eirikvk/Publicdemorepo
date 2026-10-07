@@ -86,7 +86,7 @@ const dekket = ([z, x, y]) => {
 tema.on('prerender', e => {
   const fs = e.frameState,
     res = fs.viewState.resolution;
-  if (!ov || !oversiktLag.getVisible() || res >= MAKSRES) return;
+  if (!app.ov || !oversiktLag.getVisible() || res >= MAKSRES) return;
   const c = e.context;
   flisnett.forEachTileCoord(fs.extent, flisnett.getZForResolution(res), tc => {
     if (!dekket(tc)) return;
@@ -98,7 +98,7 @@ tema.on('prerender', e => {
     c.clearRect(x0, y0, Math.ceil(b[0]) - x0, Math.ceil(b[1]) - y0);
   });
 });
-let klipp = null;
+
 const klippStil = new ol.style.Style({ fill: new ol.style.Fill({ color: '#000' }) });
 /* Klippingen er det dyreste i hvert bilde når kartet flyttes, så den gjøres så sjelden som mulig:
    ikke i det hele tatt når kommunegrensen er utenfor utsnittet, og ellers én gang per lerret i stedet for én gang per lag. */
@@ -109,11 +109,11 @@ let klippBilde = null,
 function grenseISyne(fs) {
   if (klippBilde === fs) return klippTrengs;
   klippBilde = fs;
-  if (klippFor !== klipp) {
-    klippFor = klipp;
-    klippRinger = (klipp.getType() === 'MultiPolygon' ? klipp.getCoordinates().flat() : klipp.getCoordinates()).map(r =>
-      Float64Array.from(r.flat())
-    );
+  if (klippFor !== app.klipp) {
+    klippFor = app.klipp;
+    klippRinger = (
+      app.klipp.getType() === 'MultiPolygon' ? app.klipp.getCoordinates().flat() : app.klipp.getCoordinates()
+    ).map(r => Float64Array.from(r.flat()));
   }
   const m = 4 * fs.viewState.resolution,
     x0 = fs.extent[0] - m,
@@ -129,19 +129,19 @@ function grenseISyne(fs) {
       if ((ax < x0 && bx < x0) || (ax > x1 && bx > x1) || (ay < y0 && by < y0) || (ay > y1 && by > y1)) continue;
       return (klippTrengs = true); /* en del av grensen kan ligge i utsnittet */
     }
-  return (klippTrengs = !klipp.intersectsCoordinate(
+  return (klippTrengs = !app.klipp.intersectsCoordinate(
     fs.viewState.center
   )); /* helt innenfor: ingenting å klippe. Helt utenfor: alt skal bort. */
 }
 const klippTilKommunen = e => {
-  if (!klipp || !grenseISyne(e.frameState)) return;
+  if (!app.klipp || !grenseISyne(e.frameState)) return;
   const t0 = performance.now(),
     c = e.context,
     vc = ol.render.getVectorContext(e);
   c.save();
   c.globalCompositeOperation = 'destination-in';
   vc.setStyle(klippStil);
-  vc.drawGeometry(klipp);
+  vc.drawGeometry(app.klipp);
   c.restore();
   tidSlutt('klipping', t0);
 };
@@ -165,13 +165,13 @@ function kartStatus() {
     $('ute').hidden = true;
     return;
   }
-  const o = (ov && ov.ext) || (valgt && oversikter[valgt.nr]),
+  const o = (app.ov && app.ov.ext) || (app.valgt && app.oversikter[app.valgt.nr]),
     treff = !!o && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
   oversiktSynlig(true);
-  $('ute').hidden = treff || !valgt;
+  $('ute').hidden = treff || !app.valgt;
   $('siste').textContent = !treff
     ? ''
-    : ov && ov.dynamisk
+    : app.ov && app.ov.dynamisk
       ? 'Viser kart nettleseren allerede har hentet'
       : 'Viser lagret oversiktsbilde';
 }
@@ -241,7 +241,7 @@ view.on('change:resolution', () => {
   }
 });
 kart.on('rendercomplete', () => {
-  if (iBevegelse || view.getResolution() >= MAKSRES || !valgt || !tema.getVisible() || opptatt())
+  if (iBevegelse || view.getResolution() >= MAKSRES || !app.valgt || !tema.getVisible() || opptatt())
     return; /* aldri skjul oversikten midt i en bevegelse */
   if (!feilIVisning) oversiktSynlig(false);
   if (!nyeKall) $('siste').textContent = 'Ingen nye kall. Flisene lå allerede i nettleseren.';
@@ -304,7 +304,7 @@ async function finnKommune(koord) {
     );
     if (mitt !== byttSok) return;
     const t = finn(j.kommunenummer);
-    if (!t || (valgt && t[1].nr === valgt.nr)) throw new Error('ingen annen kommune');
+    if (!t || (app.valgt && t[1].nr === app.valgt.nr)) throw new Error('ingen annen kommune');
     byttNr = t[1].nr;
     bytt.textContent = `Bytt til ${t[1].navn}`;
     byttKoord = koord;
@@ -320,7 +320,7 @@ async function finnKommune(koord) {
 kart.on('singleclick', e => {
   if (tegner()) return; /* under tegning er trykk i kartet hjørner i området */
   const p = $('probe');
-  if (klipp && !klipp.intersectsCoordinate(e.coordinate)) {
+  if (app.klipp && !app.klipp.intersectsCoordinate(e.coordinate)) {
     finnKommune(e.coordinate);
     return;
   }
@@ -340,7 +340,7 @@ kart.on('singleclick', e => {
     })
       .filter(Boolean)
       .join('');
-  const pl = planPaa && planLag.getVisible() ? planLag.getData(e.pixel) : null;
+  const pl = app.planPaa && planLag.getVisible() ? planLag.getData(e.pixel) : null;
   if (pl && pl[3] > 40) {
     const av = c => (pl[0] - c[0]) ** 2 + (pl[1] - c[1]) ** 2 + (pl[2] - c[2]) ** 2;
     p.innerHTML = 'Valgt punkt: <b></b>';
@@ -349,14 +349,14 @@ kart.on('singleclick', e => {
     return;
   }
   let d = tema.getVisible() ? tema.getData(e.pixel) : null;
-  if ((!d || d[3] < 40) && ov && oversiktLag.getVisible()) d = oversiktLag.getData(e.pixel);
+  if ((!d || d[3] < 40) && app.ov && oversiktLag.getVisible()) d = oversiktLag.getData(e.pixel);
   if (!d || d[3] < 40) {
     p.textContent = 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).';
     return;
   }
   let best = null,
     min = 1e9;
-  [...ALLE.filter(k => vis[k[0]]), ['slor', null]].forEach(([id, navn]) => {
+  [...ALLE.filter(k => app.vis[k[0]]), ['slor', null]].forEach(([id, navn]) => {
     const c = rgb(id),
       a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2;
     if (a < min) {

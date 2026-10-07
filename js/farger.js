@@ -71,8 +71,8 @@ const klasseAv = (r, g, b) => {
    så bakgrunnskartet dempes der og de mørke planfeltene synes tydelig også når de står alene. Fjerde tall er hvor tett fargen er. */
 const SLOR = 0.82;
 const klassefarger = () => {
-  const slor = planPaa && !ingenPlan() ? [...rgb('slor'), SLOR] : null;
-  return ALLE.map(([id]) => (vis[id] ? rgb(id) : slor));
+  const slor = app.planPaa && !ingenPlan() ? [...rgb('slor'), SLOR] : null;
+  return ALLE.map(([id]) => (app.vis[id] ? rgb(id) : slor));
 };
 function tilFarge(r, g, b, a, F) {
   if (!a) return [0, 0, 0, 0];
