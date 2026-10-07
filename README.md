@@ -37,6 +37,14 @@ derfor være unike på tvers av filene. De må heller ikke være like en `id` i 
 globalt navn for hvert element med `id`, og eldre utgaver av Safari nektet å laste et skript som brukte samme navn.
 `node verktoy/sjekk-navn.js` kontrollerer begge deler, og at ingen fil bruker et navn som ikke finnes.
 
+## Dokumentasjon
+
+- [METODE.md](METODE.md) beskriver hvert tall siden viser: hva som hentes, hva som regnes ut, og hvor sikkert det er.
+- [AVHENGIGHETER.md](AVHENGIGHETER.md) lister biblioteker, tjenester og verktøy, med lisenser og det som gjelder sikkerhet og
+  personvern.
+
+Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
+
 ## Regning og tegning
 
 Koden holder tre ting fra hverandre, og navnet på en funksjon sier hvilken den er:

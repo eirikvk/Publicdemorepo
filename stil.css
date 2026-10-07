@@ -1087,6 +1087,10 @@ table {
   font-size: 15px;
   max-width: 62ch;
 }
+.notes a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
 .tw {
   overflow-x: auto;
 }
