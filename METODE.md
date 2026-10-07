@@ -143,6 +143,22 @@ kildene har ulike planer der. Resten har samme plan-id i begge.
 - Å telle andeler av hver klasse per rute i stedet for flertallsklassen ble prøvd. Det tok det samlede avviket med smale
   striper fra +1,5 % til +0,1 % når Oppdal holdes utenfor, men hjalp ikke på veiene.
 
+**Finere ruter.** Rutene på 21 meter kommer av at planen hentes som fliser på nivå 9 med 512 piksler. Samme metode ble prøvd
+på finere nivå, med grunnkartet hentet som fliser fra NIBIO og bare der det ligger planlagt utbygging. Tallene er planlagt
+utbygging på natur med smale striper, i dekar:
+
+| Kommune | Vektor | 21 m | 10,6 m | 5,3 m | 2,6 m |
+|---|---|---|---|---|---|
+| Skaun | 3 335 | 3 340 | 3 353 | 3 330 | |
+| Meråker | 2 749 | 2 850 | 2 782 | 2 753 | |
+| Ørland | 9 750 | 10 012 | 9 822 | 9 756 | |
+| Heim | 1 506 | 1 610 | 1 557 | 1 521 | |
+| Oppdal | 195 | 674 | 485 | 304 | 227 |
+
+Avviket halveres omtrent for hvert nivå. På 5,3 meter er det 1 % eller mindre i fire av fem kommuner. Veiene i Oppdal krever
+2,6 meter for å komme under 20 %. Fordi bare fliser med planlagt utbygging hentes, dobles antall fliser omtrent per nivå i
+stedet for å firedobles. For Oppdal ble det 38, 75 og 130 kartfliser fra NIBIO på de tre nivåene, og for Heim 119 og 229.
+
 Forbehold ved kontrollen: vektoranalysen er et arbeidskart uten beskrivelse, og det er ikke kjent hvilken versjon av grunnkartet
 den bygger på. Planene i den er kopiert fra DiBK 11. januar 2026 for de fleste kommunene, mot 2. februar 2026 i tjenesten
 siden bruker.
