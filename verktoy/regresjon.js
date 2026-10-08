@@ -65,7 +65,7 @@ export const SIDEN = {
   lastOpp: (p, fil) => p.setInputFiles('#planfil', fil),
   visForste: async (p, id) => {
     await p.locator(`#tema-${id} > summary`).click();
-    await p.locator(`#tema-${id} .omrader li button`).first().click();
+    await p.locator(`#tema-${id} li button`).first().click();
   },
   byttKommune: async (p, fylke, nr, navn) => {
     const k = p.getByRole('combobox', { name: 'Kommune' });
@@ -85,7 +85,7 @@ export const SIDEN = {
           .join('\n');
       const ut = {
         total: t('.total'),
-        klasser: t('.klasser'),
+        klasser: t('[aria-labelledby="areal-tittel"] ul'),
         planlagt: t('.planlagt'),
         utvikling: t('.utvikling'),
         vann: t('.vann'),

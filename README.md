@@ -70,7 +70,7 @@ Komponentene:
 | `Tallpanel.jsx` | Arealet fra SSB, planlagt utbygging, anslått utvikling og land og vann |
 | `Temaer.jsx` | Temaene som rader som kan åpnes, med detaljer og lister over områder |
 | `Notater.jsx` | Kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer og tabellceller |
+| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall og tabellceller |
 | `md.js` | Komponentene fra designsystemet som siden bruker |
 | `lager.js` | Kroken som kobler komponentene til tilstanden i motoren |
 
@@ -151,8 +151,9 @@ og følger med som før.
 Reglene står også øverst i `src/stil.css`. De bygger på designsystemets sider om farger, typografi og komponenter, og på
 Miljødirektoratets profil og språkprofil.
 
-- **Skrift.** Sidetittelen (kommunenavnet) er `heading-l`, og `heading-xl` på bred skjerm. Seksjoner har `heading-s` (klassen
-  `seksjonstittel`), kort og bokser `heading-xs` (`korttittel`). Brødtekst er 16 px. Kilder, hjelpetekst og tabeller er 14 px,
+- **Skrift.** Overskriftene bruker designsystemets klasser direkte: sidetittelen `md-typography-heading-l` (og `heading-xl` på
+  bred skjerm), seksjoner `md-typography-heading-s`, kort `md-typography-heading-xs` og små overskrifter
+  `md-typography-label-s`. Brødtekst og lister er 16 px. Kilder, hjelpetekst, forklaringer under en linje og tabeller er 14 px,
   og 12 px brukes bare for små tall under tallene i tabellene og i teknisk visning. Uthevinger har vekt 600.
 - **Flater.** Siden er hvit. Rader som kan åpnes, har designsystemets egen flate. Kort og bokser er hvite med tynn grå kant.
   Beige brukes bare i meldinger av typen `info-box`, oransje bare i advarsler. Sjøgrønn er eneste aksentfarge, som profilen sier:
@@ -168,8 +169,17 @@ Miljødirektoratets profil og språkprofil.
   med samme rolle, brukes den: Oransje mørk for villrein, Sjøgrønn lys for grønt i bebygd område og Blå mørk for egne områder.
   Verneområder og verdsatt natur har egne farger, se `FARGER` i `src/motor/felles.js`.
 
-Det designsystemet ikke sier noe om, er laget etter de samme reglene: tabellene (`talltabell`), oppsettet med kart og tall i to
-kolonner, og alt i kartet.
+Det designsystemet ikke har, er laget etter de samme reglene, med noen få byggeklosser som brukes overalt:
+
+| Klasse | Hva det er | Brukes til |
+|---|---|---|
+| `talliste` | Liste med navn til venstre, tall til høyre, og forklaring og knapper under | Arealklassene, planlagt utbygging, tegnforklaringene og områdene i temaene |
+| `talltabell` | Tabell med 14 px skrift og tynne linjer | Egne områder, anslått utvikling, klassene og kall-loggen |
+| `kort` | Hvit boks med tynn grå kant | Hvert eget område, samlet for kommunen, og helhetsbildet for verdsatt natur |
+| `navn` | Navn med fargerute foran. Ruten følger skriftstørrelsen. | Første kolonne i lister og tabeller |
+| `tall` | Tall til høyre, som ikke deles over linjer | Tallene i lister og tabeller |
+
+I tillegg kommer oppsettet med kart og tall i to kolonner, stolpene (`stripe`), fargerutene (`rute`) og alt i kartet.
 
 Ting å vite:
 

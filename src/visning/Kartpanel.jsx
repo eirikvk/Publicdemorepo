@@ -71,7 +71,7 @@ function Kartlag() {
   const utenPlanNaa = utenPlan();
   return (
     <section className="kartlag" aria-labelledby="kartlag-tittel">
-      <h2 className="seksjonstittel" id="kartlag-tittel">
+      <h2 className="md-typography-heading-s" id="kartlag-tittel">
         Vis i kartet
       </h2>
       <div className="brikker" role="group" aria-label="Arealklasser og planlagt utbygging">

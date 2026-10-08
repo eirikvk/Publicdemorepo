@@ -12,17 +12,17 @@ export default function Notater({ teknisk, settTeknisk }) {
     <div className="notater">
       {teknisk && (
         <section className="prosa">
-          <h2 className="seksjonstittel">Kall mot åpne kilder</h2>
+          <h2 className="md-typography-heading-s">Kall mot åpne kilder</h2>
           <div className="tabellramme">
             <table className="talltabell logg">
               <thead>
                 <tr>
                   <th scope="col">Kilde</th>
                   <th scope="col">Hva</th>
-                  <th scope="col" className="r">
+                  <th scope="col" className="tall">
                     Tid
                   </th>
-                  <th scope="col" className="r">
+                  <th scope="col" className="tall">
                     Størrelse
                   </th>
                 </tr>
@@ -32,8 +32,8 @@ export default function Notater({ teknisk, settTeknisk }) {
                   <tr key={i}>
                     <td>{r[0]}</td>
                     <td>{r[1]}</td>
-                    <td className={'r' + (r[4] ? ' feil' : '')}>{r[2]}</td>
-                    <td className={'r' + (r[4] ? ' feil' : '')}>{r[3]}</td>
+                    <td className={'tall' + (r[4] ? ' feil' : '')}>{r[2]}</td>
+                    <td className={'tall' + (r[4] ? ' feil' : '')}>{r[3]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -47,7 +47,7 @@ export default function Notater({ teknisk, settTeknisk }) {
         </section>
       )}
       <section className="prosa">
-        <h2 className="seksjonstittel">Slik er klassene satt sammen</h2>
+        <h2 className="md-typography-heading-s">Slik er klassene satt sammen</h2>
         <div className="tabellramme">
           <table className="talltabell">
             <thead>
@@ -96,7 +96,7 @@ export default function Notater({ teknisk, settTeknisk }) {
         </p>
       </section>
       <section className="prosa">
-        <h2 className="seksjonstittel">Om siden</h2>
+        <h2 className="md-typography-heading-s">Om siden</h2>
         <p>
           Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra Statistisk
           sentralbyrå (SSB) og kartet fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.
@@ -121,7 +121,7 @@ export default function Notater({ teknisk, settTeknisk }) {
         </p>
       </section>
       <section>
-        <h2 className="seksjonstittel">Tekniske valg</h2>
+        <h2 className="md-typography-heading-s">Tekniske valg</h2>
         <MdToggle
           label="Vis teknisk informasjon"
           checked={teknisk}

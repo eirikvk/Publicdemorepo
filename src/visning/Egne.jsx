@@ -57,7 +57,7 @@ function EgenTabell({ rader, navnPlan, navnNy }) {
     kropp.push(
       <tr key={i}>
         <th scope="row">
-          <span className="radnavn">
+          <span className="navn">
             {farge && <Rute id={farge} />}
             {navn}
           </span>
@@ -70,12 +70,12 @@ function EgenTabell({ rader, navnPlan, navnNy }) {
   });
   return (
     <div className="tabellramme">
-      <table className="talltabell tallkolonner">
-        <caption className="etikett">Planlagt utbygging, daa</caption>
+      <table className="talltabell">
+        <caption className="md-typography-label-s">Planlagt utbygging, daa</caption>
         <thead>
           <tr>
-            {['På', navnPlan, navnNy, 'Endring'].map(t => (
-              <th key={t} scope="col">
+            {['På', navnPlan, navnNy, 'Endring'].map((t, i) => (
+              <th key={t} scope="col" className={i ? 'tall' : undefined}>
                 {t}
               </th>
             ))}
@@ -118,7 +118,7 @@ function EgetOmrade({ g, nr, R }) {
       : '';
   return (
     <li className="kort prosa">
-      <h3 className="korttittel">
+      <h3 className="md-typography-heading-xs">
         {g.navn}
         <span>{dekar(g.km2)}</span>
       </h3>
@@ -181,7 +181,7 @@ export default function Egne() {
     s = app.egneStatus;
   return (
     <section className="egne" aria-labelledby="egne-tittel">
-      <h2 className="seksjonstittel" id="egne-tittel">
+      <h2 className="md-typography-heading-s" id="egne-tittel">
         Egne områder
       </h2>
       <div className="knapper">
@@ -245,7 +245,7 @@ export default function Egne() {
       )}
       {E.length > 0 && R && (
         <div className="kort samlet">
-          <h3 className="korttittel">Samlet for kommunen</h3>
+          <h3 className="md-typography-heading-xs">Samlet for kommunen</h3>
           <EgenTabell
             rader={egneRader(null)}
             navnPlan="Planen"

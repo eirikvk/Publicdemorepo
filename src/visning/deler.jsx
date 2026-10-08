@@ -51,11 +51,11 @@ export const Forklaring = ({ deler }) => (
 /* En linje i en tegnforklaring: fargerute og navn, tall til høyre, og en forklaring under hvis det er oppgitt. */
 export const Fargelinje = ({ id, navn, tall, under, children }) => (
   <li>
-    <b>
+    <b className="navn">
       <Rute id={id} />
       {navn}
     </b>
-    <span>{tall}</span>
+    <span className="tall">{tall}</span>
     {(under || children) && (
       <small>
         {under}
@@ -74,7 +74,7 @@ export const stor = t => t.charAt(0).toUpperCase() + t.slice(1);
 
 /* En celle i en tabell, med et mindre tall under hvis det er oppgitt. */
 export const Celle = ({ tekst, under }) => (
-  <td>
+  <td className="tall">
     {tekst}
     {under ? <small>{under}</small> : null}
   </td>

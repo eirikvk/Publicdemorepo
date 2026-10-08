@@ -15,7 +15,7 @@ function Arealklasser() {
     sum = ok ? a[0] + a[1] + a[2] : 0;
   return (
     <section aria-labelledby="areal-tittel">
-      <h2 className="seksjonstittel" id="areal-tittel">
+      <h2 className="md-typography-heading-s" id="areal-tittel">
         Areal i kommunen, SSB{ok ? ' ' + T.aar : ''}
       </h2>
       <p className="total">
@@ -33,13 +33,16 @@ function Arealklasser() {
           ])}
         />
       )}
-      <ul className="klasser">
+      <ul className="talliste">
         {KL.map(([id, navn], i) => (
           <li key={id}>
-            <Rute id={id} />
-            <span className="navn">{navn}</span>
-            <span className="areal">{ok ? dekar(a[i]) : '–'}</span>
-            <span className="andel">{ok ? andelTekst((a[i] / sum) * 100) : '–'}</span>
+            <span className="navn">
+              <Rute id={id} />
+              {navn}
+            </span>
+            <span className="tall dempet">
+              {ok ? dekar(a[i]) : '–'} <b className="andel">{ok ? andelTekst((a[i] / sum) * 100) : '–'}</b>
+            </span>
           </li>
         ))}
       </ul>
@@ -99,7 +102,7 @@ function Planlagt() {
   }
   return (
     <section className="planlagt" aria-labelledby="plan-tittel">
-      <h2 className="seksjonstittel" id="plan-tittel">
+      <h2 className="md-typography-heading-s" id="plan-tittel">
         <Rute id="plan" />
         Planlagt utbygging
       </h2>
@@ -119,21 +122,21 @@ function Planlagt() {
         )
       )}
       {!utenPlan() && (
-        <ul className="tegnliste">
+        <ul className="talliste">
           <li>
-            <b>
+            <span className="navn">
               <Rute id="pnat" />
               Natur som kommuneplanen setter av til framtidig utbygging
-            </b>
+            </span>
             <small>
               <b>{natur}</b>
             </small>
           </li>
           <li>
-            <b>
+            <span className="navn">
               <Rute id="pjor" />
               Jordbruk som kommuneplanen setter av til framtidig utbygging
-            </b>
+            </span>
             <small>
               <b>{jordbruk}</b>
             </small>
@@ -162,7 +165,7 @@ function Utvikling() {
   if (H.endret)
     return (
       <section className="utvikling" aria-labelledby="utvikling-tittel">
-        <h2 className="seksjonstittel" id="utvikling-tittel">
+        <h2 className="md-typography-heading-s" id="utvikling-tittel">
           Anslått utvikling
         </h2>
         <p>
@@ -195,11 +198,11 @@ function Utvikling() {
           : ' Siste kolonne fylles ut når planlagt utbygging er regnet ut.');
   return (
     <section className="utvikling prosa" aria-labelledby="utvikling-tittel">
-      <h2 className="seksjonstittel" id="utvikling-tittel">
+      <h2 className="md-typography-heading-s" id="utvikling-tittel">
         Anslått utvikling
       </h2>
       <div className="tabellramme">
-        <table className="talltabell tallkolonner">
+        <table className="talltabell">
           <thead>
             <tr>
               {[
@@ -207,8 +210,8 @@ function Utvikling() {
                 H.fra,
                 H.til,
                 P && P.egne ? 'Med planlagt utbygging og egne områder' : 'Med planlagt utbygging'
-              ].map(t => (
-                <th key={t} scope="col">
+              ].map((t, i) => (
+                <th key={t} scope="col" className={i ? 'tall' : undefined}>
                   {t}
                 </th>
               ))}
@@ -218,7 +221,7 @@ function Utvikling() {
             {KL.map(([id, navn], i) => (
               <tr key={id}>
                 <th scope="row">
-                  <span className="radnavn">
+                  <span className="navn">
                     <Rute id={id} />
                     {navn}
                   </span>
@@ -247,7 +250,7 @@ function LandOgVann() {
   const V = tolkVann(app.flate, app.ssbSum, app.ferskvann);
   return (
     <section className="vann" aria-labelledby="vann-tittel">
-      <h2 className="seksjonstittel" id="vann-tittel">
+      <h2 className="md-typography-heading-s" id="vann-tittel">
         Land og vann
       </h2>
       {V && (

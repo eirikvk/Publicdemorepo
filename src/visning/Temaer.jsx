@@ -55,8 +55,8 @@ function Helhet({ t, H, E }) {
   const pst = (a, b) => (b > 0 ? nf((a / b) * 100) : '0'),
     verdier = a => t.klasser.map(([navn, id], v) => [navn, '--' + id, a[v]]);
   return (
-    <div className="helhet">
-      <h3 className="korttittel">Helhetsbildet: verdsatt natur og kartlegging</h3>
+    <div className="kort">
+      <h3 className="md-typography-heading-xs">Helhetsbildet: verdsatt natur og kartlegging</h3>
       <Stripe
         hva="Landarealet"
         deler={[
@@ -70,7 +70,7 @@ function Helhet({ t, H, E }) {
           ['Ikke kartlagt', 'tom', `${dekar(U)} (${pst(U, L)} %)`]
         ]}
       />
-      <h4 className="etikett">Der det er kartlagt</h4>
+      <h4 className="md-typography-label-s">Der det er kartlagt</h4>
       <Stripe
         hva="Det kartlagte"
         deler={[...verdier(inne), ['Ingen verdsatt natur registrert', 'kjent', Math.max(0, K - si)]]}
@@ -78,7 +78,7 @@ function Helhet({ t, H, E }) {
       <p>
         {pst(si, K)} % har verdsatt natur ({dekar(si)}).
       </p>
-      <h4 className="etikett">Der det ikke er kartlagt</h4>
+      <h4 className="md-typography-label-s">Der det ikke er kartlagt</h4>
       <Stripe hva="Det som ikke er kartlagt" deler={[...verdier(ute), ['Ukjent', 'tom', Math.max(0, U - su)]]} />
       <p>
         {su > 0
@@ -179,7 +179,7 @@ function Naturtema({ t }) {
     >
       <p>{sumTekst}</p>
       {N.klasser && (
-        <ul className="tegnliste">
+        <ul className="talliste">
           {t.klasser.map(([navn, id], v) => {
             const { antall, plan: pl } = N.klasser[v];
             return (
@@ -216,13 +216,13 @@ function Naturtema({ t }) {
         </p>
       )}
       {vises.length > 0 && (
-        <ul className="omrader">
+        <ul className="talliste">
           {vises.slice(0, maks).map(x => {
             const liId = `${t.id}-omr-${o.indexOf(x)}`;
             return (
               <li key={liId} id={liId}>
-                <b>{x.navn}</b>
-                <span>{dekar(x.km2)}</span>
+                <b className="navn">{x.navn}</b>
+                <span className="tall">{dekar(x.km2)}</span>
                 <small>
                   {x.under || ''}
                   {x.plan ? <b> · ca. {daa(x.plan)} planlagt utbygging</b> : null}
@@ -294,7 +294,7 @@ function Inon() {
                 ? 'I kartet vises naturen nå i fire grønntoner:'
                 : 'Når laget er på, vises naturen i kartet i fire grønntoner:'}
           </p>
-          <ul className="tegnliste">
+          <ul className="talliste">
             <Fargelinje id="nat" navn="Annen natur" tall="" under="Nærmere enn 1 km fra inngrep" />
             {[2, 1, 0].map(i => (
               <Fargelinje
@@ -370,7 +370,7 @@ function Graa() {
     >
       <p>{tekst}</p>
       {har && (
-        <ul className="tegnliste">
+        <ul className="talliste">
           {GRAATRINN.map(([id, navn], i) => (
             <Fargelinje key={id} id={id} navn={navn} tall={dekar(D.trinn[i + 1])} />
           ))}
@@ -405,7 +405,7 @@ function Graa() {
 export default function Temaer() {
   return (
     <section className="temaer" aria-labelledby="tema-tittel">
-      <h2 className="seksjonstittel" id="tema-tittel">
+      <h2 className="md-typography-heading-s" id="tema-tittel">
         Tema i kommunen
       </h2>
       <p className="hint">

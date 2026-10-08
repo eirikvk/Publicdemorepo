@@ -2,8 +2,9 @@
    (--md-*). Kartets farger er data og ligger som egne variabler (--beb, --pnat og så videre), satt fra FARGER i motor/felles.js.
 
    Fast mønster for hele siden, se også README:
-   - Skrift: overskrifter i designsystemets størrelser (h1 heading-xl, h2 heading-s, h3 heading-xs), brødtekst 16 px, hjelpetekst
-     og kilder 14 px, 12 px bare for små tall i tabeller og teknisk visning.
+   - Skrift: overskrifter med designsystemets klasser (md-typography-heading-s og så videre), brødtekst og lister 16 px,
+     hjelpetekst, kilder og tabeller 14 px, 12 px bare for små tall i tabeller og teknisk visning.
+   - Egne byggeklosser der designsystemet ikke har noe: talliste, talltabell, kort, navn og tall. Se README.
    - Flater: hvit side. Rader som kan åpnes, har designsystemets grønne flate. Kort og bokser er hvite med tynn grå kant.
      Beige brukes bare i meldinger av typen info-box. Én aksentfarge: sjøgrønn.
    - Avstander: 4, 8, 12, 16, 24 og 32 px fra designsystemet. Mellom avsnitt i løpende tekst minst to ganger skriftstørrelsen,
@@ -64,33 +65,13 @@ ul {
   outline-offset: var(--md-size-2);
 }
 
-/* Skrift */
-h1,
-.seksjonstittel,
-.korttittel {
-  font-family: var(--md-typography-family-heading);
-  font-weight: var(--md-typography-weight-regular);
-  line-height: var(--md-typography-line-height-small);
-  color: var(--md-color-text-primary);
-}
-h1 {
-  font-size: var(--md-typography-heading-l);
+/* Skrift. Overskriftene bruker designsystemets klasser (md-typography-heading-s og så videre) direkte i komponentene. Bare
+   sidetittelen har noe eget: den er større på bred skjerm. */
+.overskrift h1 {
   text-wrap: balance;
 }
-.seksjonstittel {
-  font-size: var(--md-typography-heading-s);
-}
-.korttittel {
-  font-size: var(--md-typography-heading-xs);
-}
-.etikett {
-  font-family: var(--md-typography-family-label);
-  font-weight: var(--md-typography-weight-medium);
-  font-size: var(--md-typography-label-s);
-  line-height: var(--md-typography-line-height-small);
-}
 @media (min-width: 861px) {
-  h1 {
+  .overskrift h1 {
     font-size: var(--md-typography-heading-xl);
   }
 }
@@ -512,79 +493,70 @@ strong {
   color: var(--dempet);
   margin-left: var(--md-spacing-8);
 }
-.klasser {
-  border-top: 1px solid var(--linje);
+/* Et tall: til høyre, og aldri delt over to linjer. Brukes i lister og tabeller. */
+.tall {
+  text-align: right;
+  white-space: nowrap;
 }
-.klasser li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto 4.6em;
-  gap: var(--md-spacing-12);
-  align-items: center;
-  padding: var(--md-spacing-12) 0;
-  border-bottom: 1px solid var(--linje);
-  font-variant-numeric: tabular-nums;
-}
-.klasser .rute {
-  width: 16px;
-  height: 16px;
-}
-.klasser .areal {
+.dempet {
   color: var(--dempet);
-  text-align: right;
-  white-space: nowrap;
 }
-.klasser .andel {
-  font-weight: var(--md-typography-weight-medium);
-  text-align: right;
-  white-space: nowrap;
-}
-.seksjonstittel:has(.rute) {
-  display: flex;
-  align-items: center;
-  gap: var(--md-spacing-12);
-}
-.seksjonstittel .rute {
-  width: 16px;
-  height: 16px;
-}
-/* Tegnforklaringer: fargerute og navn, tall til høyre, og en forklaring under */
-.tegnliste {
-  border-top: 1px solid var(--linje);
-  font-size: var(--md-typography-body-s);
-}
-.tegnliste li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--md-spacing-4) var(--md-spacing-12);
-  padding: var(--md-spacing-8) 0;
-  border-bottom: 1px solid var(--linje);
-  font-variant-numeric: tabular-nums;
-}
-.tegnliste li > b {
+/* Navn med fargerute foran, i lister og tabeller. Ruten følger skriftstørrelsen og står midt på første linje. */
+.navn {
   display: flex;
   align-items: flex-start;
   gap: var(--md-spacing-8);
 }
-.tegnliste li > b .rute {
-  margin-top: 3px;
+.navn .rute {
+  width: 1em;
+  height: 1em;
+  margin-top: 0.25em;
 }
-.tegnliste li > span {
-  text-align: right;
-  white-space: nowrap;
+/* Lister med tall: navnet til venstre, tallet til høyre, og en forklaring og knapper under når det er med. Brukes for
+   arealklassene, planlagt utbygging, tegnforklaringene i temaene og områdene i hvert tema. */
+.talliste {
+  border-top: 1px solid var(--linje);
+  font-variant-numeric: tabular-nums;
 }
-.tegnliste li small {
+.talliste li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--md-spacing-4) var(--md-spacing-12);
+  padding: var(--md-spacing-12) 0;
+  border-bottom: 1px solid var(--linje);
+}
+.talliste small,
+.talliste .knapper {
   grid-column: 1 / -1;
+}
+.talliste small {
   font-size: var(--md-typography-body-s);
   color: var(--dempet);
 }
-.tegnliste li small b {
+.talliste small b {
   color: var(--md-color-text-primary);
 }
-/* I planlagt utbygging er teksten forklaring og tallet det viktige */
-.planlagt .tegnliste li > b {
-  font-weight: var(--md-typography-weight-regular);
+/* Tertiærknapper har luft rundt teksten. Uten dette står de et stykke inn fra navnet over. */
+.talliste .knapper {
+  gap: var(--md-spacing-4) var(--md-spacing-8);
+  margin-left: calc(-1 * var(--md-spacing-12));
 }
-
+/* Arealklassene har både areal og andel. Andelen står i en egen kolonne, så prosentene står under hverandre. */
+.talliste .andel {
+  display: inline-block;
+  min-width: 4.6em;
+  margin-left: var(--md-spacing-8);
+  color: var(--md-color-text-primary);
+}
+h2:has(> .rute) {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-12);
+}
+h2 > .rute {
+  width: 16px;
+  height: 16px;
+}
 /* Temaene: designsystemets rader som kan åpnes, med tall i raden */
 .temaliste {
   display: flex;
@@ -659,38 +631,8 @@ strong {
   flex-direction: column;
   gap: var(--md-spacing-12);
 }
-.omrader {
-  border-top: 1px solid var(--linje);
-}
-.omrader li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--md-spacing-4) var(--md-spacing-12);
-  padding: var(--md-spacing-12) 0;
-  border-bottom: 1px solid var(--linje);
-  font-variant-numeric: tabular-nums;
-}
-.omrader li > span {
-  text-align: right;
-  white-space: nowrap;
-}
-.omrader li small {
-  grid-column: 1 / -1;
-  font-size: var(--md-typography-body-s);
-  color: var(--dempet);
-}
-.omrader li small b {
-  color: var(--md-color-text-primary);
-}
-.omrader .knapper {
-  grid-column: 1 / -1;
-  gap: var(--md-spacing-4) var(--md-spacing-8);
-  margin-left: calc(-1 * var(--md-spacing-12));
-}
-
-/* Kort og bokser: hvite, med tynn grå kant */
-.kort,
-.helhet {
+/* Kort: hvite, med tynn grå kant */
+.kort {
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-12);
@@ -699,30 +641,30 @@ strong {
   border-radius: var(--md-radius-md);
   background: var(--md-color-surface-white);
 }
-.kort .korttittel {
+.kort h3 {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--md-spacing-12);
   font-variant-numeric: tabular-nums;
 }
-.kort .korttittel span {
+.kort h3 span {
   font-family: var(--md-typography-family-body);
   font-size: var(--md-typography-body-m);
   color: var(--dempet);
   white-space: nowrap;
 }
-.helhet h4 {
+.kort h4 {
   margin-top: var(--md-spacing-8);
 }
 @media (max-width: 600px) {
-  .kort,
-  .helhet {
+  .kort {
     padding: var(--md-spacing-12);
   }
 }
 
-/* Tabeller med tall. Designsystemet har ingen tabell, så de er laget med designsystemets skrift, farger og linjer. */
+/* Tabeller. Designsystemet har ingen tabell, så de er laget med designsystemets skrift, farger og linjer. Celler med tall har
+   klassen tall. */
 .tabellramme {
   overflow-x: auto;
 }
@@ -738,10 +680,16 @@ strong {
 }
 .talltabell th,
 .talltabell td {
-  text-align: left;
   vertical-align: top;
-  padding: var(--md-spacing-8) var(--md-spacing-12) var(--md-spacing-8) 0;
+  padding: var(--md-spacing-8) 0;
   border-bottom: 1px solid var(--linje);
+}
+.talltabell :is(th, td) + :is(th, td) {
+  padding-left: var(--md-spacing-8);
+}
+/* Nettleseren midtstiller overskriftsceller */
+.talltabell th {
+  text-align: left;
 }
 .talltabell thead th {
   font-weight: var(--md-typography-weight-medium);
@@ -749,53 +697,26 @@ strong {
   color: var(--dempet);
   border-bottom-color: var(--md-color-border-primary);
 }
+.talltabell th.tall {
+  text-align: right;
+  white-space: normal;
+}
 .talltabell tbody th {
   font-weight: var(--md-typography-weight-medium);
+  min-width: 7em;
 }
 .talltabell td small {
   display: block;
   font-size: var(--md-typography-body-xs);
   color: var(--dempet);
 }
-/* Tabeller med tall i kolonnene: tallene til høyre, navnene til venstre */
-.tallkolonner th,
-.tallkolonner td {
-  text-align: right;
-  white-space: nowrap;
-  padding: var(--md-spacing-8) 0 var(--md-spacing-8) var(--md-spacing-8);
-}
-.tallkolonner thead th {
-  white-space: normal;
-}
-.tallkolonner th:first-child {
-  text-align: left;
-  padding-left: 0;
-}
-.tallkolonner tbody th {
-  white-space: normal;
-  min-width: 7em;
-}
-.tallkolonner tr.gruppe th {
+.talltabell tr.gruppe th {
   padding-top: var(--md-spacing-16);
   font-size: var(--md-typography-body-xs);
   color: var(--dempet);
 }
-.radnavn {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: var(--md-spacing-8);
-}
-.radnavn .rute {
-  margin-top: 3px;
-}
 .talltabell.logg {
   font-size: var(--md-typography-body-xs);
-}
-.talltabell .r {
-  text-align: right;
-  white-space: nowrap;
-  padding-right: 0;
-  padding-left: var(--md-spacing-12);
 }
 .talltabell td.feil {
   font-weight: var(--md-typography-weight-medium);
