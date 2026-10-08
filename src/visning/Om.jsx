@@ -1,16 +1,15 @@
-/* Nederst på siden: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
+/* Om og metode: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
 import { app, VERSJON } from '../motor/felles.js';
 import { finn, settSmale } from '../motor/handlinger.js';
 import { MdCheckbox, MdLink, MdToggle } from './md.js';
-import './Notater.css';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 
-export default function Notater({ teknisk, settTeknisk }) {
+export default function Om({ teknisk, settTeknisk }) {
   const medBilde = Object.keys(app.oversikter).filter(nr => finn(nr)),
     reg = app.oversiktInfo;
   return (
-    <div className="notater">
+    <>
       {teknisk && (
         <section className="prosa">
           <h2 className="md-typography-heading-s">Kall mot åpne kilder</h2>
@@ -92,8 +91,8 @@ export default function Notater({ teknisk, settTeknisk }) {
           Planlagt endring hentes fra kommuneplanens arealdel hos Direktoratet for byggkvalitet (DiBK): arealformål i
           1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig.
           Nettleseren legger dette oppå dagens klasser og viser bare det som i dag er natur eller jordbruk, med koksgrå
-          for natur og brun for jordbruk. Finnes det ingen kommuneplan for kommunen hos DiBK, står det under kartet og
-          ved planlagt utbygging. Laget kan vises alene, uavhengig av de tre klassene.
+          for natur og brun for jordbruk. Finnes det ingen kommuneplan for kommunen hos DiBK, står det på siden
+          Utvikling fremover.
         </p>
       </section>
       <section className="prosa">
@@ -145,6 +144,6 @@ export default function Notater({ teknisk, settTeknisk }) {
           eksisterende bebyggelse. Smale deler av et større felt vises alltid.
         </p>
       </section>
-    </div>
+    </>
   );
 }

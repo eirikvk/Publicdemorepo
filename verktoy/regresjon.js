@@ -53,7 +53,7 @@ export const SIDEN = {
   adresse: nr => `index.html?teknisk#${nr}`,
   kart: '.kartflate',
   laster: () => !!(window.motor && window.motor.app.laster),
-  lag: (p, id) => p.locator(`[data-lag-knapp="${id}"]`).click(),
+  side: (p, id) => p.locator(`[data-side="${id}"]`).click(),
   tegn: p => p.locator('#tegnknapp').click(),
   ferdig: p => p.getByRole('button', { name: 'Ferdig', exact: true }).click(),
   ikkeUtbygging: p => p.getByLabel('Ikke utbygging').check(),
@@ -64,7 +64,7 @@ export const SIDEN = {
       .click(),
   lastOpp: (p, fil) => p.setInputFiles('#planfil', fil),
   visForste: async (p, id) => {
-    await p.locator(`#tema-${id} > summary`).click();
+    await p.locator(`[data-side="${id}"]`).click();
     await p.locator(`#tema-${id} li button`).first().click();
   },
   byttKommune: async (p, fylke, nr, navn) => {
@@ -91,7 +91,7 @@ export const SIDEN = {
         vann: t('.vann'),
         probe: t('.probe') /* ikke linjen om siste kall, som har tider i seg */
       };
-      for (const d of document.querySelectorAll('.temarad')) ut[d.id] = d.textContent.replace(/\s+/g, ' ').trim();
+      for (const d of document.querySelectorAll('.temaside')) ut[d.id] = d.textContent.replace(/\s+/g, ' ').trim();
       return ut;
     }),
   egne: p =>
@@ -190,26 +190,23 @@ export const SCENARIER = {
     R.tekst.start = await S.tekster(p);
     await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('1-oversikt');
-    await trykk(p, S.lag(p, 'vern'));
-    await trykk(p, S.lag(p, 'verdi'));
-    await R.bilde('2-vern-verdi');
-    await trykk(p, S.lag(p, 'vern'));
-    await trykk(p, S.lag(p, 'verdi'));
-    await trykk(p, S.lag(p, 'inon'));
+    await trykk(p, S.side(p, 'vern'));
+    await R.bilde('2-vern');
+    await trykk(p, S.side(p, 'verdi'));
+    await R.bilde('2-verdi');
+    await trykk(p, S.side(p, 'inon'));
     await R.bilde('3-inon');
-    await trykk(p, S.lag(p, 'inon'));
-    await trykk(p, S.lag(p, 'graa'));
+    await trykk(p, S.side(p, 'graa'));
     await R.bilde('4-graa');
     await p.flytt(270500, 7031500, 10.58);
     await R.bilde('5-graa-inne');
-    await trykk(p, S.lag(p, 'graa'));
-    await trykk(p, S.lag(p, 'verdi'));
+    await trykk(p, S.side(p, 'verdi'));
     await R.bilde('6-plan-verdi-inne');
     await p.locator(S.kart).tap({ position: { x: 150, y: 300 } });
     await p.waitForTimeout(900);
     R.tekst.punkt = await S.probe(p);
-    await trykk(p, S.lag(p, 'verdi'));
-    /* eget område tegnet i kartet */
+    /* eget område tegnet i kartet, fra siden om utvikling fremover */
+    await trykk(p, S.side(p, 'framtid'));
     await p.flytt(270500, 7031500, 21.16);
     await S.tegn(p);
     await p.waitForTimeout(300);
@@ -277,7 +274,7 @@ export const SCENARIER = {
       return [...v.getCenter(), v.getResolution()];
     });
     await p.locator(S.kart).scrollIntoViewIfNeeded();
-    await trykk(p, S.lag(p, 'inon'));
+    await trykk(p, S.side(p, 'inon'));
     await p.flytt(x, y, 12);
     await R.bilde('1-inne');
     R.motor.inne = await p.motor();
@@ -287,8 +284,7 @@ export const SCENARIER = {
     await R.bilde('2-ute-60');
     await p.flytt(x, y, res);
     await R.bilde('3-ute-start');
-    await trykk(p, S.lag(p, 'inon'));
-    await trykk(p, S.lag(p, 'graa'));
+    await trykk(p, S.side(p, 'graa'));
     await R.bilde('4-graa-ute');
     R.motor.tilSlutt = await p.motor();
     R.tekst.tilSlutt = await S.tekster(p);

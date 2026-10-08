@@ -1,0 +1,13 @@
+/* Sidevelgeren i Sidevelger.jsx: designsystemets faner i form av knapper, over kart og innhold. Knappene brytes over flere
+   linjer når de ikke får plass. */
+.sidevelger .md-tabs-list {
+  flex-wrap: wrap;
+  gap: var(--md-spacing-8);
+  margin: 0;
+}
+.sidevelger .md-chip {
+  gap: var(--md-spacing-8);
+}
+.sidevelger .md-chip[aria-selected='true'] .rute {
+  box-shadow: 0 0 0 1.5px var(--md-color-surface-white);
+}

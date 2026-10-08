@@ -32,8 +32,8 @@ html {
 [hidden] {
   display: none !important;
 }
-/* Knapper og felt arver ikke skrift i nettleseren. Designsystemet setter skrift på de fleste av sine, men ikke på «Lukk» nederst
-   i rader som kan åpnes (6.32.0), som da får nettleserens standardskrift. :where gir ingen vekt, så designsystemets egne valg
+/* Knapper og felt arver ikke skrift i nettleseren. Designsystemet setter skrift på de fleste av sine, men ikke alle (6.32.0), og
+   da får de nettleserens standardskrift. :where gir ingen vekt, så designsystemets egne valg
    gjelder foran denne. */
 :where(button, input, select, textarea) {
   font-family: inherit;

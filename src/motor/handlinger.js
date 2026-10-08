@@ -1,49 +1,62 @@
-/* Det brukeren kan gjøre: velge kommune, slå kartlag av og på, og oppstarten. Sidens komponenter kaller funksjonene her. */
+/* Det brukeren kan gjøre: velge kommune, velge side, og oppstarten. Sidens komponenter kaller funksjonene her. */
 import { ol } from './ol.js';
 import { sluttTegning, visEgneLag } from './egne.js';
 import { KV, UTM, app, endret, hent, nyttValg, utm33, valgNr } from './felles.js';
-import { fargeleggFliser, tema } from './fliser.js';
+import { tema } from './fliser.js';
 import { graaLag, sjekkGraa, visGraa } from './graa.js';
 import { friskOpp } from './grunnlag.js';
 import { inonLag, sjekkInon, visInon } from './inon.js';
 import { grenseKilde, kartStatus, lukkBytt, view } from './kart.js';
 import { NATURLAG, dekLag, fjernMerket, hentNatur, visNatur } from './naturtema.js';
-import { hentOversikt, nySamling, stoppEtterarbeid, tegnOversikt } from './oversikt.js';
-import { nyttSlor, planLag, sjekkPlan, visPlan, visPlanLag } from './plan.js';
+import { hentOversikt, nySamling, stoppEtterarbeid } from './oversikt.js';
+import { planLag, sjekkPlan, visPlan } from './plan.js';
 import { hentHistorie, hentTall, nullstillTall } from './tall.js';
 let startet = false;
 
-/* Arealklassene i kartet. Natur styrer også inngrepsfri natur, som bare tegnes oppå natur. */
-export function byttKlasse(id) {
-  app.vis[id] = !app.vis[id];
-  tegnOversikt();
-  fargeleggFliser();
-  if (id === 'nat') visInon();
-  endret();
-}
-export function byttPlan() {
-  app.planPaa = !app.planPaa;
-  visPlanLag();
-  nyttSlor();
+/* Sidene i sidevelgeren, i rekkefølgen de vises. Hver side bestemmer innholdet og hva kartet viser: arealklassene og planlagt
+   utbygging vises på alle sider, og temaet bare på sin egen side. */
+export const SIDER = [
+  ['oversikt', 'Oversikt'],
+  ['graa', 'Grått areal'],
+  ['rein', 'Villrein'],
+  ['inon', 'Inngrepsfri natur'],
+  ['verdi', 'Verdsatt natur'],
+  ['vern', 'Verneområder'],
+  ['framtid', 'Utvikling fremover'],
+  ['om', 'Om og metode']
+];
+/* Kommunen og siden står i adressen, for eksempel #5001/verdi, så en lenke åpner samme kommune og side. Oversikten står ikke. */
+const skrivAdresse = () => {
+  try {
+    const side = app.side !== SIDER[0][0] ? '/' + app.side : '';
+    history.replaceState(null, '', location.pathname + location.search + '#' + (app.valgt ? app.valgt.nr : '') + side);
+  } catch (e) {}
+};
+export function velgSide(id) {
+  if (!SIDER.some(s => s[0] === id)) id = SIDER[0][0];
+  app.side = id;
+  NATURLAG.forEach(t => {
+    const paa = t.id === id;
+    if (t.paa === paa) return;
+    t.paa = paa;
+    if (!paa && app.vist && app.vist.id === t.id) fjernMerket();
+    visNatur(t);
+  });
+  if (app.inonPaa !== (id === 'inon')) {
+    app.inonPaa = id === 'inon';
+    visInon();
+  }
+  if (app.graaPaa !== (id === 'graa')) {
+    app.graaPaa = id === 'graa';
+    visGraa();
+  }
+  skrivAdresse();
   endret();
 }
 export function settSmale(paa) {
   app.visSmale = paa;
   friskOpp(planLag);
   endret();
-}
-export function byttTema(t) {
-  t.paa = !t.paa;
-  if (!t.paa && app.vist && app.vist.id === t.id) fjernMerket();
-  visNatur(t);
-}
-export function byttInon() {
-  app.inonPaa = !app.inonPaa;
-  visInon();
-}
-export function byttGraa() {
-  app.graaPaa = !app.graaPaa;
-  visGraa();
 }
 export function settSlor(paa) {
   app.slorPaa = paa;
@@ -94,9 +107,7 @@ export function velg(nr, behold) {
     mitt = nyttValg();
   app.valgt = k;
   lukkBytt();
-  try {
-    history.replaceState(null, '', location.pathname + location.search + '#' + nr);
-  } catch (e) {}
+  skrivAdresse();
   app.probe = null;
   nullstillTall('henter');
   grenseKilde.clear();
@@ -176,9 +187,10 @@ export function startOpp() {
       }
       app.fylker = liste.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
       app.fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
-      let forst = (location.hash || '').replace('#', '');
+      let [forst, side] = (location.hash || '').replace('#', '').split('/');
       if (!finn(forst)) forst = finn('5001') ? '5001' : app.fylker[0].kommuner[0].nr;
       velg(forst);
+      if (side) velgSide(side);
     })
     .catch(() => {
       app.listeFeil = true;

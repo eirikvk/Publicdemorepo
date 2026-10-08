@@ -1,5 +1,5 @@
-/* Kartpanelet i Kartpanel.jsx: rammen rundt kartet, merkelappene oppå det, kartets egne kontroller, linjen under kartet og
-   brikkene som slår kartlag av og på. Selve kartet tegnes av OpenLayers i motoren. */
+/* Kartpanelet i Kartpanel.jsx: rammen rundt kartet, merkelappene oppå det, kartets egne kontroller og linjen under kartet.
+   Selve kartet tegnes av OpenLayers i motoren. */
 .kartpanel {
   display: flex;
   flex-direction: column;
@@ -11,14 +11,6 @@
 }
 .sidezoom .kartpanel {
   touch-action: auto;
-}
-.kartpanel > section,
-.kartfot + section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-12);
-  padding-top: var(--md-spacing-16);
-  border-top: 1px solid var(--linje);
 }
 .kartscene {
   position: relative;
@@ -188,19 +180,4 @@
 }
 .probe b {
   color: var(--md-color-text-primary);
-}
-
-/* Kartlagene av og på: designsystemets filterbrikker, med kartets farge i en rute */
-.brikker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--md-spacing-8);
-}
-.brikke {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--md-spacing-8);
-}
-.md-chip--active .brikke .rute {
-  box-shadow: 0 0 0 1.5px var(--md-color-surface-white);
 }

@@ -98,7 +98,7 @@ export const ALLE = [...KL, ...VANN],
   JOR = 1,
   NAT = 2; /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
 /* Settes av verktoy/utgave.py ved hver endring, så man ser hvilken utgave en fane kjører */
-export const VERSJON = '8. oktober kl. 19.05';
+export const VERSJON = '8. oktober kl. 22.43';
 /* All delt tilstand for siden, samlet på ett sted. Sidens komponenter og kartet leser herfra, og samordningen skriver hit. Regnefunksjonene
    bruker den ikke: de får det de trenger som argumenter. Det som bare er hjelpemidler for én fil, som minner, tellere og tidtakere,
    ligger som vanlige variabler i filen de hører til. Temaene fra Miljødirektoratet har sine data i NATURLAG, ett objekt per tema. */
@@ -133,6 +133,7 @@ export const app = {
   graaKryss: null /* planlagt utbygging krysset med grått areal */,
   slorPaa: true /* om det som ikke er kartlagt, får et slør når verdsatt natur vises */,
   vist: null /* området som er valgt fra en liste og markert i kartet: { id, navn, nokkel } */,
+  side: 'oversikt' /* siden som er valgt i sidevelgeren. Den bestemmer innholdet og hvilket tema kartet viser. */,
   /* Det som vises over og under kartet */
   laster: false /* om det hentes kart nå */,
   ute: false /* kartet er zoomet ut forbi det NIBIO tegner, uten oversiktsbilde */,

@@ -6,9 +6,9 @@ import { kart } from '../motor/kart.js';
 import { NATURLAG } from '../motor/naturtema.js';
 import { useApp } from './lager.js';
 import Topp from './Topp.jsx';
+import Sidevelger from './Sidevelger.jsx';
 import Kartpanel from './Kartpanel.jsx';
-import Tallpanel from './Tallpanel.jsx';
-import Notater from './Notater.jsx';
+import Innhold from './Innhold.jsx';
 import './App.css';
 
 /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
@@ -43,11 +43,11 @@ export default function App() {
   return (
     <div className="side">
       <Topp />
+      <Sidevelger />
       <main className="hoved">
         <Kartpanel teknisk={teknisk} />
-        <Tallpanel />
+        <Innhold teknisk={teknisk} settTeknisk={settTeknisk} />
       </main>
-      <Notater teknisk={teknisk} settTeknisk={settTeknisk} />
     </div>
   );
 }

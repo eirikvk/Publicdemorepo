@@ -1,0 +1,28 @@
+/* Innholdet i Innhold.jsx: én side om gangen ved siden av kartet, med delene av siden skilt av en tynn linje */
+.innhold {
+  min-width: 0;
+}
+.sideinnhold {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-24);
+}
+.sideinnhold > * {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+}
+.sideinnhold > * + * {
+  padding-top: var(--md-spacing-24);
+  border-top: 1px solid var(--linje);
+}
+/* Overskrifter med fargerute foran, som «Planlagt utbygging» og hvert tema */
+h2:has(> .rute) {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-12);
+}
+h2 > .rute {
+  width: 16px;
+  height: 16px;
+}

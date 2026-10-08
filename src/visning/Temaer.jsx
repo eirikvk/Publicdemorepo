@@ -1,50 +1,39 @@
-/* Temaene: verneområder, villrein og verdsatt natur fra Miljødirektoratet, inngrepsfri natur og grått areal. Hvert tema er en
-   rad som kan åpnes. Raden svarer på det samme for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er,
+/* Temasidene: verneområder, villrein og verdsatt natur fra Miljødirektoratet, inngrepsfri natur og grått areal. Hvert tema er en
+   egen side. Toppen svarer på det samme for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er,
    og hvor mye planlagt utbygging som ligger innenfor. Under står detaljene. */
 import { app, gjeldende, RUTE } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
 import { GRAATRINN } from '../motor/graa.js';
 import { INONSONER } from '../motor/inon.js';
-import { byggNaturTall, NATURLAG, visIKartet } from '../motor/naturtema.js';
+import { byggNaturTall, visIKartet } from '../motor/naturtema.js';
 import { settSlor } from '../motor/handlinger.js';
 import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
-import { MdAccordionItem, MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
+import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
 import { andelTekst, antallOrd, dekar, dekarFraRuter, iTekst, nf, periode, prosent, stor } from './tekst.js';
 import './Temaer.css';
 
 const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
 
-/* Raden for et tema. Den viser det samme for alle temaene: arealet i kommunen og andelen av landarealet, eller hvorfor tallet
-   mangler, og en linje under navnet. status er henter, feil, ingen eller ok. Detaljene ligger inni, med kilden nederst. Mens
-   temaet hentes, står det bare det. */
-function Temarad({ id, navn, status, sum, under, kilde, children }) {
-  const areal = status === 'ok' ? dekar(sum) : { henter: '', feil: 'ikke hentet', ingen: 'ingen' }[status],
-    andel = status === 'ok' && app.ssbSum ? andelTekst((sum / app.ssbSum) * 100) : '';
+/* Toppen av en temaside: navnet, arealet i kommunen og andelen av landarealet, og en linje om planlagt utbygging. status er henter,
+   feil, ingen eller ok. Detaljene står under, med kilden nederst. Mens temaet hentes, står det bare det. */
+function Temaside({ id, navn, status, sum, under, kilde, children }) {
   return (
-    <MdAccordionItem
-      id={'tema-' + id}
-      className="temarad"
-      label={
-        <span className="temanavn">
-          <Rute id={id} />
-          <span>
-            <span className="tittel">{navn}</span>
-            {under && <small>{under}</small>}
-          </span>
-        </span>
-      }
-      headerContent={
-        <span className="tematall">
-          <span className="areal">{areal}</span>
-          <span className="andel">{andel}</span>
-        </span>
-      }
-    >
-      <div className="temablokk prosa" role="region" aria-label={navn}>
-        {status === 'henter' ? <p>{app.valgt ? 'Henter …' : ''}</p> : children}
-        {kilde}
-      </div>
-    </MdAccordionItem>
+    <div className="temaside prosa" id={'tema-' + id}>
+      <h2 className="md-typography-heading-s">
+        <Rute id={id} />
+        {navn}
+      </h2>
+      {status === 'ok' && (
+        <div>
+          <p>
+            <b>{dekar(sum)}</b> i kommunen{app.ssbSum ? `, ${andelTekst((sum / app.ssbSum) * 100)} av landarealet` : ''}
+          </p>
+          {under && <p className="hint temaunder">{under}</p>}
+        </div>
+      )}
+      {status === 'henter' ? <p>{app.valgt ? 'Henter …' : ''}</p> : children}
+      {kilde}
+    </div>
   );
 }
 
@@ -99,7 +88,7 @@ function Helhet({ t, H, E }) {
 }
 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
-function Naturtema({ t }) {
+export function Naturtema({ t }) {
   const D = t.data,
     ok = !!D && !!app.valgt && D.nr === app.valgt.nr,
     o = ok ? D.omrader : [],
@@ -111,7 +100,7 @@ function Naturtema({ t }) {
       {t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}
     </p>
   );
-  if (!ok) return <Temarad id={t.id} navn={t.navn} status="henter" kilde={kilde} />;
+  if (!ok) return <Temaside id={t.id} navn={t.navn} status="henter" kilde={kilde} />;
   const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum),
     E = D.ekstra,
     { plan, smal } = N,
@@ -167,7 +156,7 @@ function Naturtema({ t }) {
   const maks = t.samlet ? 15 : 40,
     vises = N.vises;
   return (
-    <Temarad
+    <Temaside
       id={t.id}
       navn={t.navn}
       status={D.feil ? 'feil' : o.length ? 'ok' : 'ingen'}
@@ -255,12 +244,12 @@ function Naturtema({ t }) {
           {vises.length > maks && <li>… og {vises.length - maks} til</li>}
         </ul>
       )}
-    </Temarad>
+    </Temaside>
   );
 }
 
 /* Inngrepsfri natur: sonene etter avstand til inngrep. Krysses ikke med planlagt utbygging. */
-function Inon() {
+export function Inon() {
   const D = gjeldende(app.inon),
     status = bildeStatus(D),
     har = status === 'ok';
@@ -279,7 +268,7 @@ function Inon() {
     </p>
   );
   return (
-    <Temarad
+    <Temaside
       id="inon"
       navn="Inngrepsfri natur"
       status={status}
@@ -290,13 +279,7 @@ function Inon() {
       <p>{tekst}</p>
       {har && (
         <>
-          <p>
-            {!app.vis.nat
-              ? 'Laget følger klassen natur, som er slått av i kartet nå.'
-              : app.inonPaa
-                ? 'I kartet vises naturen nå i fire grønntoner:'
-                : 'Når laget er på, vises naturen i kartet i fire grønntoner:'}
-          </p>
+          <p>I kartet vises naturen i fire grønntoner:</p>
           <ul className="talliste">
             <Fargelinje id="nat" navn="Annen natur" tall="" under="Nærmere enn 1 km fra inngrep" />
             {[2, 1, 0].map(i => (
@@ -316,13 +299,13 @@ function Inon() {
           </p>
         </>
       )}
-    </Temarad>
+    </Temaside>
   );
 }
 
 /* Grått areal: areal som alt er tatt i bruk eller sterkt påvirket, etter andel vegetasjon, og hvor mye av planlagt utbygging som
    ligger der. */
-function Graa() {
+export function Graa() {
   const D = gjeldende(app.graa),
     status = bildeStatus(D),
     har = status === 'ok',
@@ -362,7 +345,7 @@ function Graa() {
     </p>
   );
   return (
-    <Temarad
+    <Temaside
       id="graa"
       navn="Grått areal"
       status={status}
@@ -396,27 +379,6 @@ function Graa() {
           sier ikke noe om hva som kan bygges om. Det må leses sammen med lokal kunnskap.
         </p>
       )}
-    </Temarad>
-  );
-}
-
-export default function Temaer() {
-  return (
-    <section className="temaer" aria-labelledby="tema-tittel">
-      <h2 className="md-typography-heading-s" id="tema-tittel">
-        Tema i kommunen
-      </h2>
-      <p className="hint">
-        Areal i kommunen, andel av landarealet og planlagt utbygging innenfor. Åpne et tema for detaljer. Temaene vises
-        i kartet med knappene under kartet.
-      </p>
-      <div className="temaliste">
-        {NATURLAG.map(t => (
-          <Naturtema key={t.id} t={t} />
-        ))}
-        <Inon />
-        <Graa />
-      </div>
-    </section>
+    </Temaside>
   );
 }

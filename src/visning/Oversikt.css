@@ -1,0 +1,8 @@
+/* Oversikten i Oversikt.jsx */
+/* Arealklassene har både areal og andel. Andelen står i en egen kolonne, så prosentene står under hverandre. */
+.talliste .andel {
+  display: inline-block;
+  min-width: 4.6em;
+  margin-left: var(--md-spacing-8);
+  color: var(--md-color-text-primary);
+}

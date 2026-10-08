@@ -1,10 +1,8 @@
 /* Komponentene fra Miljødirektoratets designsystem som siden bruker. De hentes hver for seg fra pakken, så bare disse kommer med i
    bygget. Pakkens samlede inngang tar med alle komponentene. */
-export { MdAccordionItem } from '@miljodirektoratet/md-react/dist/accordion/MdAccordionItem';
 export { MdAlertMessage } from '@miljodirektoratet/md-react/dist/messages/MdAlertMessage';
 export { MdButton } from '@miljodirektoratet/md-react/dist/button/MdButton';
 export { MdCheckbox } from '@miljodirektoratet/md-react/dist/formElements/MdCheckbox';
-export { MdFilterChip } from '@miljodirektoratet/md-react/dist/chips/MdFilterChip';
 export { MdIconButton } from '@miljodirektoratet/md-react/dist/iconButton/MdIconButton';
 export { MdLink } from '@miljodirektoratet/md-react/dist/link/MdLink';
 export { MdLoadingSpinner } from '@miljodirektoratet/md-react/dist/loadingSpinner/MdLoadingSpinner';

@@ -4,7 +4,7 @@
 .rute {
   display: inline-block;
   flex: none;
-  /* Overskriften i rader som kan åpnes, regner bredde uten kant. Rutene med kant skal likevel være like store som de andre. */
+  /* Bredden regnes med kanten, så rutene med kant (verneområder, villrein) er like store som de andre */
   box-sizing: border-box;
   width: 14px;
   height: 14px;
