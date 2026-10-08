@@ -121,7 +121,7 @@ export const app = {
   visSmale: false /* om smale striper vises i kartet */,
   planInfo: null /* om DiBK har en kommuneplan for kommunen, og hvilken */,
   planRaster: null /* rutenettet for planlagt utbygging i hele kommunen, med tallene som er regnet ut fra det */,
-  planSum: null /* planlagt utbygging på natur og jordbruk i km², til tabellen over utvikling */,
+  planSum: null /* planlagt utbygging på natur og jordbruk i km², til oversikten og regnskapet */,
   planTall:
     null /* hva som skal stå om planlagt utbygging i tallpanelet: tilstand er tom, zoom, regner, feil eller ok */,
   egne: [] /* egne områder, tegnet i kartet eller lastet opp. De finnes så lenge siden er åpen. */,

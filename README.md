@@ -50,7 +50,8 @@ Slik går en runde, for eksempel når brukeren velger kommune:
 3. Hver gang noe er klart, kaller motoren `endret()`. React tegner da siden på nytt ut fra det som ligger i `app`.
 
 Velger brukeren en side, kaller `Sidevelger.jsx` funksjonen `velgSide` i motoren. Den husker siden i `app.side`, slår på
-temaet i kartet og skriver siden i adressen, for eksempel `#5001/verdi`.
+temaet i kartet og skriver siden i adressen, for eksempel `#5001/verdi`. Lenkene mellom sidene, som navnene på oversikten, gjør
+det samme (`Sidelenke` i `deler.jsx`).
 
 Komponentene endrer aldri tilstanden selv. De viser den, og kaller motoren når brukeren gjør noe.
 
@@ -59,10 +60,11 @@ Siden er bygd opp av disse delene. De fleste har en `.jsx`-fil og en `.css`-fil 
 ```
 App              sideoppsettet: toppen, sidevelgeren, og kartet og innholdet i to kolonner
 ├─ Topp          navnet, valg av fylke og kommune, og kommunenavnet
-├─ Sidevelger    én knapp per side. Siden bestemmer innholdet og hva kartet viser.
+├─ Sidevelger    én knapp per side, med temaene samlet under «Naturen i kommunen». Siden bestemmer innholdet og hva kartet viser.
 ├─ Kartpanel     kartet og linjen under det
 └─ Innhold       den valgte siden:
-   ├─ Oversikt   arealet fra SSB, utviklingen siden 2017, og land og vann
+   ├─ Oversikt   det viktigste fra hver side, med lenke til siden
+   ├─ Regnskap   utbredelsesregnskapet: forklart med stolper, satt opp som regnskap, og land og vann
    ├─ Temaer     én side per tema: grått areal, villrein, inngrepsfri natur, verdsatt natur og verneområder
    ├─ Framtid    utvikling fremover: planlagt utbygging, og
    │  └─ Egne    egne områder: tegning, opplasting og sammenligning
@@ -70,7 +72,7 @@ App              sideoppsettet: toppen, sidevelgeren, og kartet og innholdet i t
 ```
 
 Hver side bestemmer hva kartet viser: arealklassene og planlagt utbygging vises alltid, og temaet bare på sin egen side. Hvilke
-sider som finnes, og rekkefølgen, står i `SIDER` i `motor/handlinger.js`.
+sider som finnes, rekkefølgen og gruppene står i `SIDER` i `motor/handlinger.js`.
 
 Felles for alle delene:
 
@@ -113,7 +115,7 @@ Motoren:
 | `graa.js` | Grått areal |
 | `egne.js` | Egne områder: tegning i kartet, opplasting av plan og sammenligning med kommuneplanen |
 | `kart.js` | Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling og trykk i kartet |
-| `tall.js` | Tallene fra SSB: arealklasser, land og vann, og anslått utvikling |
+| `tall.js` | Tallene fra SSB: arealklasser, land og vann, og arealet i 2017 til utbredelsesregnskapet |
 | `handlinger.js` | Det brukeren kan gjøre: velge kommune, velge side (og dermed hva kartet viser), og oppstarten |
 
 Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av `Temaer.jsx`.
@@ -122,15 +124,16 @@ Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.cs
 |---|---|
 | `App.jsx` | Hele siden, og valget av teknisk visning |
 | `Topp.jsx` | Valg av fylke og kommune, og overskriften |
-| `Sidevelger.jsx` | Knappene for sidene, over kart og innhold |
+| `Sidevelger.jsx` | Knappene for sidene, over kart og innhold, i grupper |
 | `Kartpanel.jsx` | Kartet med merkelappene oppå, og linjen under kartet |
 | `Innhold.jsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
-| `Oversikt.jsx` | Arealet fra SSB, anslått utvikling og land og vann |
+| `Oversikt.jsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
+| `Regnskap.jsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
 | `Temaer.jsx` | Én side per tema, med detaljer og lister over områder |
 | `Framtid.jsx` | Utvikling fremover: planlagt utbygging og egne områder |
 | `Egne.jsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
 | `Om.jsx` | Om og metode: kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, og tabeller med tall |
+| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `tekst.js` | Hvordan tall og tekst skrives: prosent, dekar, endring med fortegn, tall med bokstaver og oppramsing |
 | `md.js` | Komponentene fra designsystemet som siden bruker |
 | `lager.js` | Kroken som kobler komponentene til tilstanden i motoren |
@@ -195,12 +198,12 @@ GitHub. Dette er brukt hvor:
 | `MdComboBox` | Valg av kommune. Søker i alle kommuner, og viser kommunene i valgt fylke når søkefeltet er tomt. |
 | `MdAlertMessage` | Ingen kommuneplan (`warning`), og feil ved tegning og opplasting |
 | `MdButton`, `MdIconButton` | Tegning og opplasting, vis i kartet, faktaark, slett, bytt kommune, til listen og fjern markering |
-| `MdLink` | Lenker i løpende tekst |
+| `MdLink` (og stilen `md-link`) | Lenker i løpende tekst, og lenkene mellom sidene |
 | `MdRadioGroup` | Om et tegnet område er utbygging eller ikke |
 | `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper og teknisk visning |
 | `MdLoadingSpinner` | Mens kartet hentes |
 | Ikoner | Tegn, last opp, sted, åpne i ny fane, slett og lukk |
-| Faner som knapper (stilen `md-tabs` og `md-chip`) | Sidevelgeren |
+| Chips (stilen `md-chip` og `md-chip--active`) | Sidevelgeren |
 
 Det designsystemet ikke har, er laget selv med designsystemets variabler for farger, skrift og avstander: tabeller, stolpene som
 viser fordeling, tegnforklaringer med fargeruter, og alt i kartet. Kartfargene for arealklasser og tema er data, ikke utforming,
@@ -236,7 +239,7 @@ Det designsystemet ikke har, er laget etter de samme reglene, med noen få bygge
 | Klasse | Hva det er | Brukes til |
 |---|---|---|
 | `talliste` | Liste med navn til venstre, tall til høyre, og forklaring og knapper under | Arealklassene, planlagt utbygging, tegnforklaringene og områdene i temaene |
-| `talltabell` | Tabell med 14 px skrift og tynne linjer | Egne områder, anslått utvikling, klassene og kall-loggen |
+| `talltabell` | Tabell med 14 px skrift og tynne linjer | Egne områder, regnskapsoppstillingen, klassene og kall-loggen |
 | `kort` | Hvit boks med tynn grå kant | Hvert eget område, og samlet for kommunen |
 | `navn` | Navn med fargerute foran. Ruten følger skriftstørrelsen. | Første kolonne i lister og tabeller |
 | `tall` | Tall til høyre, som ikke deles over linjer | Tallene i lister og tabeller |
@@ -249,8 +252,9 @@ Ting å vite:
 - To feil i designsystemet (md-css 6.32.0) rettes i `src/grunnlag.css`: variabelen `--md-typography-weight-semibold` brukes av
   etikettene, men er ikke definert, så den settes til 600. Noen knapper har ingen skrift og får nettleserens standardskrift, så
   knapper arver skriften.
-- Sidevelgeren bruker designsystemets stil for faner, men ikke komponenten `MdTabs`. Den kan bare velge fane selv, og legger
-  innholdet rett under knappene. Her skal kartet stå mellom knappene og innholdet, og «Til listen» i kartet må kunne bytte side.
+- Sidevelgeren er en navigasjon med knapper i chip-form, ikke faner. Faner kan ikke deles i grupper med overskrift, og
+  designsystemets `MdTabs` legger innholdet rett under knappene. Her skal kartet stå mellom knappene og innholdet, og «Til listen»
+  i kartet må kunne bytte side. Valgt side er merket med `aria-current="page"`.
 - Skriften i designsystemet er Open Sans og Sofia Pro. Open Sans følger med bygget (fra `@fontsource/open-sans`). Sofia Pro kan
   bare brukes i Miljødirektoratets egne løsninger og ligger ikke i dette repoet, så overskriftene bruker Open Sans. Har maskinen
   Sofia Pro installert, brukes den.

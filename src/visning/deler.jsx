@@ -1,5 +1,7 @@
 /* Små byggeklosser som designsystemet ikke har: fargeruter, stolper som viser en fordeling, tegnforklaringer, linjer i en liste
-   med tall, og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i motor/felles.js. */
+   med tall, lenker mellom sidene og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i
+   motor/felles.js. */
+import { adresse, velgSide } from '../motor/handlinger.js';
 import { dekar, prosent } from './tekst.js';
 import './deler.css';
 
@@ -66,8 +68,30 @@ export const Fargelinje = ({ id, navn, tall, under, children }) => (
   </li>
 );
 
-/* Tabell med navn i første kolonne og tall i resten. kolonner er overskriftene. Hver rad er { navn, farge, tall }, der tall er
-   cellene som [tekst, mindre tall under], eller { gruppe } for en mellomoverskrift. tittel står over tabellen. */
+/* Lenke til en annen side i sidevelgeren. Lenken har sidens adresse, så den kan også åpnes i ny fane. Et vanlig trykk bytter side
+   her, og flytter fokus og visningen til toppen av den nye siden. */
+export function Sidelenke({ id, children }) {
+  const gaa = e => {
+    e.preventDefault();
+    velgSide(id);
+    /* Siden som nettopp er valgt, kan ikke få fokus før nettleseren har tegnet den */
+    setTimeout(() => {
+      const s = document.getElementById('side-' + id);
+      if (!s) return;
+      s.focus({ preventScroll: true });
+      if (s.getBoundingClientRect().top < 0) s.scrollIntoView();
+    }, 50);
+  };
+  return (
+    <a className="md-link sidelenke" href={adresse(id)} onClick={gaa}>
+      {children}
+    </a>
+  );
+}
+
+/* Tabell med navn i første kolonne og tall i resten. kolonner er overskriftene. Hver rad er { navn, farge, tall, klasse }, der
+   tall er cellene som [tekst, mindre tall under] og klasse kan være sum, eller { gruppe } for en mellomoverskrift. tittel står over
+   tabellen. */
 export function Talltabell({ tittel, kolonner, rader }) {
   return (
     <div className="tabellramme">
@@ -91,7 +115,7 @@ export function Talltabell({ tittel, kolonner, rader }) {
                 </th>
               </tr>
             ) : (
-              <tr key={i}>
+              <tr key={i} className={r.klasse}>
                 <th scope="row">
                   <span className="navn">
                     {r.farge && <Rute id={r.farge} />}

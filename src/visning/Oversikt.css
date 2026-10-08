@@ -1,8 +1,8 @@
-/* Oversikten i Oversikt.jsx */
-/* Arealklassene har både areal og andel. Andelen står i en egen kolonne, så prosentene står under hverandre. */
-.talliste .andel {
-  display: inline-block;
-  min-width: 4.6em;
-  margin-left: var(--md-spacing-8);
-  color: var(--md-color-text-primary);
+/* Oversikten i Oversikt.jsx: en liste med tall, der forklaringen under hvert tall er vanlig tekst og ikke liten grå tekst */
+.sammendrag .talliste p {
+  grid-column: 1 / -1;
+}
+/* Listene står etter hverandre, så bare den første har strek over. Ellers blir det to streker der de møtes. */
+.sammendrag .talliste ~ .talliste {
+  border-top: none;
 }

@@ -1,13 +1,18 @@
-/* Sidevelgeren i Sidevelger.jsx: designsystemets faner i form av knapper, over kart og innhold. Knappene brytes over flere
-   linjer når de ikke får plass. */
-.sidevelger .md-tabs-list {
+/* Sidevelgeren i Sidevelger.jsx: designsystemets chips over kart og innhold. Knappene i en blokk står tett, og det er litt mer luft
+   mellom blokkene. En blokk med gruppenavn har navnet over knappene. Knappene brytes over flere linjer når de ikke får plass. */
+.sidevelger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--md-spacing-12) var(--md-spacing-24);
+}
+.sideblokk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-8);
+}
+.sideblokk ul {
+  display: flex;
   flex-wrap: wrap;
   gap: var(--md-spacing-8);
-  margin: 0;
-}
-.sidevelger .md-chip {
-  gap: var(--md-spacing-8);
-}
-.sidevelger .md-chip[aria-selected='true'] .rute {
-  box-shadow: 0 0 0 1.5px var(--md-color-surface-white);
 }

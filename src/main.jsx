@@ -17,7 +17,6 @@ import '@miljodirektoratet/md-css/src/iconButton/iconButton.css';
 import '@miljodirektoratet/md-css/src/link/link.css';
 import '@miljodirektoratet/md-css/src/loadingSpinner/loadingSpinner.css';
 import '@miljodirektoratet/md-css/src/messages/alertMessage.css';
-import '@miljodirektoratet/md-css/src/tabs/tabs.css';
 import '@miljodirektoratet/md-css/src/toggle/toggle.css';
 import 'ol/ol.css';
 import './grunnlag.css';

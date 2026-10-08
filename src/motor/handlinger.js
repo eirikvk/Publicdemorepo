@@ -13,23 +13,34 @@ import { planLag, sjekkPlan, visPlan } from './plan.js';
 import { hentHistorie, hentTall, nullstillTall } from './tall.js';
 let startet = false;
 
-/* Sidene i sidevelgeren, i rekkefølgen de vises. Hver side bestemmer innholdet og hva kartet viser: arealklassene og planlagt
-   utbygging vises på alle sider, og temaet bare på sin egen side. */
+/* Sidene i sidevelgeren, i rekkefølgen de vises: [id, navn, gruppe]. Sider med samme gruppe står samlet under gruppens navn. Hver
+   side bestemmer innholdet og hva kartet viser: arealklassene og planlagt utbygging vises på alle sider, og temaet bare på sin egen
+   side. */
+const NATUR = 'Naturen i kommunen';
 export const SIDER = [
   ['oversikt', 'Oversikt'],
-  ['graa', 'Grått areal'],
-  ['rein', 'Villrein'],
-  ['inon', 'Inngrepsfri natur'],
-  ['verdi', 'Verdsatt natur'],
-  ['vern', 'Verneområder'],
+  ['regnskap', 'Utbredelsesregnskap'],
+  ['graa', 'Grått areal', NATUR],
+  ['rein', 'Villrein', NATUR],
+  ['inon', 'Inngrepsfri natur', NATUR],
+  ['verdi', 'Verdsatt natur', NATUR],
+  ['vern', 'Verneområder', NATUR],
   ['framtid', 'Utvikling fremover'],
   ['om', 'Om og metode']
 ];
+/* Sidene i blokker: sider som står etter hverandre med samme gruppe (eller uten gruppe) havner i samme blokk. Sidevelgeren og
+   oversikten bruker blokkene. */
+export const BLOKKER = SIDER.reduce((b, s) => {
+  const siste = b[b.length - 1];
+  if (siste && siste.gruppe === s[2]) siste.sider.push(s);
+  else b.push({ gruppe: s[2], sider: [s] });
+  return b;
+}, []);
 /* Kommunen og siden står i adressen, for eksempel #5001/verdi, så en lenke åpner samme kommune og side. Oversikten står ikke. */
+export const adresse = (id = app.side) => '#' + (app.valgt ? app.valgt.nr : '') + (id !== SIDER[0][0] ? '/' + id : '');
 const skrivAdresse = () => {
   try {
-    const side = app.side !== SIDER[0][0] ? '/' + app.side : '';
-    history.replaceState(null, '', location.pathname + location.search + '#' + (app.valgt ? app.valgt.nr : '') + side);
+    history.replaceState(null, '', location.pathname + location.search + adresse());
   } catch (e) {}
 };
 export function velgSide(id) {

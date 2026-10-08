@@ -134,10 +134,20 @@
   margin-left: calc(-1 * var(--md-spacing-12));
 }
 
+/* Lenker mellom sidene. Adressen endres når man bytter side, så nettleseren regner fort alle sidene som besøkt. De beholder derfor
+   vanlig lenkefarge. */
+.md-link.sidelenke:visited {
+  color: var(--md-color-cta-primary-default);
+}
+
 /* Tabeller. Designsystemet har ingen tabell, så de er laget med designsystemets skrift, farger og linjer. Celler med tall har
    klassen tall. */
+/* Rammen kan rulles sidelengs og klipper alt som stikker utenfor. Fargerutene har en kant som stikker én piksel ut, så rammen har
+   én piksel luft på hver side, trukket tilbake med negativ marg, så tabellen står likt med resten. */
 .tabellramme {
   overflow-x: auto;
+  padding: 0 1px;
+  margin: 0 -1px;
 }
 .talltabell {
   border-collapse: collapse;
@@ -180,6 +190,10 @@
 }
 .talltabell tr.gruppe th {
   padding-top: var(--md-spacing-16);
+}
+/* En sumlinje, som arealet ved slutten av et regnskap: halvfet */
+.talltabell tr.sum > * {
+  font-weight: var(--md-typography-weight-medium);
 }
 .talltabell td.feil {
   font-weight: var(--md-typography-weight-medium);

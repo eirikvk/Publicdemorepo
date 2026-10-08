@@ -1,0 +1,55 @@
+/* Utbredelsesregnskapet i Regnskap.jsx */
+/* Nøkkellinjen, stolpen og tegnforklaringen står tett sammen */
+.fordeling {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-8);
+}
+/* Forskjellen fra 2017 er en egen del under fordelingen, med litt mer luft over overskriften */
+.utvikling {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+  margin-top: var(--md-spacing-12);
+}
+/* Forskjellen fra 2017: navnet, en stolpe ut fra midtlinjen og tallet til høyre. Kolonnene er like brede i alle radene, så
+   midtlinjen står rett og går gjennom alle radene. */
+.endring {
+  font-variant-numeric: tabular-nums;
+}
+.endring li {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr) 6em;
+  align-items: center;
+  gap: var(--md-spacing-12);
+  padding: var(--md-spacing-8) 0;
+}
+.endring .akse {
+  position: relative;
+  align-self: stretch;
+}
+.endring .akse::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: calc(-1 * var(--md-spacing-8));
+  bottom: calc(-1 * var(--md-spacing-8));
+  border-left: 1px solid var(--dempet);
+}
+.endring .akse i {
+  position: absolute;
+  top: 50%;
+  width: var(--b);
+  min-width: 2px;
+  height: 16px;
+  transform: translateY(-50%);
+  background: var(--c);
+}
+.endring .akse i.ned {
+  right: 50%;
+  border-radius: var(--md-radius-sm) 0 0 var(--md-radius-sm);
+}
+.endring .akse i.opp {
+  left: 50%;
+  border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
+}

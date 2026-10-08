@@ -15,7 +15,6 @@ const MAPPE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '
 const REGNING = /^(tolk|kryss|bygg|tell|les)[A-ZÆØÅ]/;
 const OGSAA = [
   'ryddStriper',
-  'etterPlan',
   'klasseAreal',
   'naturMaske',
   'rutenett',

@@ -4,6 +4,7 @@ import { app } from '../motor/felles.js';
 import { SIDER } from '../motor/handlinger.js';
 import { NATURLAG } from '../motor/naturtema.js';
 import Oversikt from './Oversikt.jsx';
+import Regnskap from './Regnskap.jsx';
 import { Graa, Inon, Naturtema } from './Temaer.jsx';
 import Framtid from './Framtid.jsx';
 import Om from './Om.jsx';
@@ -11,6 +12,7 @@ import './Innhold.css';
 
 function Side({ id, teknisk, settTeknisk }) {
   if (id === 'oversikt') return <Oversikt />;
+  if (id === 'regnskap') return <Regnskap />;
   if (id === 'graa') return <Graa />;
   if (id === 'inon') return <Inon />;
   if (id === 'framtid') return <Framtid />;
@@ -18,16 +20,17 @@ function Side({ id, teknisk, settTeknisk }) {
   return <Naturtema t={NATURLAG.find(t => t.id === id)} />;
 }
 
+/* Hver side kan få fokus (tabIndex -1), så en lenke fra en annen side kan flytte fokus hit. */
 export default function Innhold({ teknisk, settTeknisk }) {
   return (
     <div className="innhold">
-      {SIDER.map(([id]) => (
+      {SIDER.map(([id, navn]) => (
         <section
           key={id}
           id={'side-' + id}
           className="sideinnhold"
-          role="tabpanel"
-          aria-labelledby={'fane-' + id}
+          aria-label={navn}
+          tabIndex={-1}
           hidden={app.side !== id}
         >
           <Side id={id} teknisk={teknisk} settTeknisk={settTeknisk} />

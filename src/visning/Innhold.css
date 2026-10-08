@@ -7,6 +7,10 @@
   flex-direction: column;
   gap: var(--md-spacing-24);
 }
+/* Fokus flyttes hit når en lenke bytter side. Hele siden får ingen ramme, bare det som får fokus med tastaturet. */
+.sideinnhold:focus:not(:focus-visible) {
+  outline: none;
+}
 .sideinnhold > * {
   display: flex;
   flex-direction: column;

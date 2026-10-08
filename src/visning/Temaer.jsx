@@ -12,7 +12,7 @@ import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
 import { andelTekst, antallOrd, dekar, dekarFraRuter, iTekst, nf, periode, prosent, stor } from './tekst.js';
 import './Temaer.css';
 
-const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
+export const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
 
 /* Toppen av en temaside: navnet, arealet i kommunen og andelen av landarealet, og en linje om planlagt utbygging. status er henter,
    feil, ingen eller ok. Detaljene står under, med kilden nederst. Mens temaet hentes, står det bare det. */
@@ -38,7 +38,7 @@ function Temaside({ id, navn, status, sum, under, kilde, children }) {
 }
 
 /* Status for et tema som hentes som ett bilde av kommunen: inngrepsfri natur og grått areal */
-const bildeStatus = D =>
+export const bildeStatus = D =>
   !D || D.tilstand === 'henter' ? 'henter' : D.tilstand !== 'ok' ? 'feil' : D.sum > 0 ? 'ok' : 'ingen';
 
 /* Helhetsbildet for verdsatt natur: landarealet delt i kartlagt og ikke kartlagt, og så hver del for seg med verdsatt natur etter

@@ -1,11 +1,11 @@
-/* Tallene fra SSB: arealklasser, land og vann, og anslått utvikling. */
+/* Tallene fra SSB: arealklasser, land og vann, og arealet i 2017 til utbredelsesregnskapet. */
 import { KL, SSB, VANN, app, endret, hent, valgNr } from './felles.js';
 /* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
    kommunens flate (grensen fra Kartverket) minus land og ferskvann. Tilstanden ligger i app: arealtall, ssbSum, ferskvann,
    flate, historie og planSum. */
 
 /* Regning: funksjonene under tolker svar og regner ut tall. De leser ikke fra siden og skriver ikke til den. Tabellene og stripene
-   tegnes av siden, se visning/Arealtall.jsx. */
+   tegnes av siden, se visning/Regnskap.jsx. */
 function tolkAreal(j) {
   const ix = j.dimension.ArealKlasse.category.index,
     tid = j.dimension.Tid.category.index;
@@ -51,9 +51,6 @@ export function tolkVann(flate, land, ferskvann) {
     ].filter(d => d[2] > 0)
   };
 }
-/* Arealet per klasse hvis alt planen setter av, bygges: natur og jordbruk går over til bebygd. */
-export const etterPlan = (a, P) => [a[0] + P.nat + P.jor, a[1] - P.jor, a[2] - P.nat];
-
 export function nullstillTall(tilstand) {
   /* ingen tall å vise: de hentes, eller hentingen feilet */
   app.ssbSum = 0;
@@ -110,8 +107,8 @@ export async function hentTall(k, mitt) {
     if (mitt === valgNr) nullstillTall('feil');
   }
 }
-/* Anslått utvikling på tre tidspunkt: SSBs tall for 2017, SSBs nyeste tall, og nyeste tall med planlagt utbygging trukket fra natur
-   og jordbruk og lagt til bebygd. SSB advarer mot å lese forskjeller mellom årganger som endring, så dette er et anslag og merkes slik.
+/* Arealet i 2017 og i SSBs nyeste tall, til utbredelsesregnskapet. SSB advarer mot å lese forskjeller mellom årganger som
+   endring, så siden sier at det er en forskjell og ikke målt endring.
    Tallene for 2017 hentes med SSBs sammenslåtte tidsserier, så de gjelder dagens kommune også der kommuner er slått sammen.
    Er kommunens samlede flate likevel en annen i 2017, er grensen flyttet, og da vises ingen sammenligning. */
 

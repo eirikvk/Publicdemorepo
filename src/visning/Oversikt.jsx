@@ -1,163 +1,138 @@
-/* Oversikten: arealet i kommunen fra SSB, utviklingen siden 2017, og land og vann. Tallene hentes og regnes ut i motoren. Her
-   gjøres de om til tekst, tabeller og stolper. */
-import { app, gjeldende, KL } from '../motor/felles.js';
+/* Oversikten: det viktigste fra hver side, kort. Hver linje har sidens navn som lenke, ett tall og én eller to setninger. Tallene er
+   de samme som på sidene selv. Linjene står i de samme blokkene som i sidevelgeren, så temaene står under «Naturen i kommunen». */
+import { Fragment } from 'react';
+import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
-import { etterPlan, tolkVann } from '../motor/tall.js';
-import { Forklaring, Rute, Stripe, Talltabell } from './deler.jsx';
-import { andelTekst, dekar, iTekst, medFortegn, nf, prosent } from './tekst.js';
+import { BLOKKER } from '../motor/handlinger.js';
+import { NATURLAG, byggNaturTall } from '../motor/naturtema.js';
+import { ETT, bildeStatus } from './Temaer.jsx';
+import { Sidelenke } from './deler.jsx';
+import { andelTekst, antallOrd, dekar, dekarFraRuter, iTekst, stor } from './tekst.js';
 import './Oversikt.css';
 
-function Arealklasser() {
-  const T = app.arealtall,
-    ok = !!T && T.tilstand === 'ok',
-    a = ok ? T.a : null,
-    sum = ok ? a[0] + a[1] + a[2] : 0;
-  return (
-    <section aria-labelledby="areal-tittel">
-      <h2 className="md-typography-heading-s" id="areal-tittel">
-        Areal i kommunen, SSB{ok ? ' ' + T.aar : ''}
-      </h2>
-      <p className="total">
-        {ok ? (
-          <>
-            Landareal: <b>{dekar(sum)}</b>
-          </>
-        ) : T && T.tilstand === 'feil' ? (
-          'Tallene kunne ikke hentes'
-        ) : (
-          'Henter …'
-        )}
-      </p>
-      {ok && (
-        <Stripe
-          hva="Arealet i kommunen"
-          deler={KL.map(([id, navn], i) => [
-            navn,
-            '--' + id,
-            Math.max(a[i], 0.0001),
-            `${navn}: ${dekar(a[i])}, ${prosent(a[i], sum)} %`
-          ])}
-        />
-      )}
-      <ul className="talliste">
-        {KL.map(([id, navn], i) => (
-          <li key={id}>
-            <span className="navn">
-              <Rute id={id} />
-              {navn}
-            </span>
-            <span className="tall">
-              {ok ? dekar(a[i]) : '–'} <b className="andel">{ok ? andelTekst((a[i] / sum) * 100) : '–'}</b>
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="hint">Kilde: Statistisk sentralbyrå (SSB), tabell 09594. Vann er ikke med.</p>
-    </section>
-  );
+const HENTER = { tall: '', tekst: 'Henter …' },
+  ingenTall = tekst => ({ tall: '', tekst });
+const andel = km2 => (app.ssbSum ? `, ${andelTekst((km2 / app.ssbSum) * 100)} av landarealet` : '');
+
+/* Utbredelsesregnskapet: natur nå, og forskjellen fra 2017 */
+function regnskap() {
+  const T = app.arealtall;
+  if (!T || T.tilstand === 'henter') return HENTER;
+  if (T.tilstand !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
+  const nat = T.a[2],
+    H = gjeldende(app.historie),
+    d = H && !H.endret ? H.a1[2] - H.a0[2] : 0;
+  return {
+    tall: dekar(nat),
+    tekst:
+      `Natur i ${T.aar}${andel(nat)}.` +
+      (Math.round(d * 1000)
+        ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${H.fra}, men forskjellen mellom årgangene er ikke målt endring.`
+        : '')
+  };
 }
 
-/* Anslått utvikling på tre tidspunkt: SSBs tall for 2017, SSBs nyeste tall, og nyeste tall med planlagt utbygging trukket fra natur
-   og jordbruk og lagt til bebygd. */
-function Utvikling() {
-  const H = gjeldende(app.historie);
-  if (!H) return null;
-  if (H.endret)
-    return (
-      <section className="utvikling" aria-labelledby="utvikling-tittel">
-        <h2 className="md-typography-heading-s" id="utvikling-tittel">
-          Anslått utvikling
-        </h2>
-        <p>
-          Kommunens flate er ikke den samme i SSBs tall for {H.fra} og {H.til}, trolig fordi grensen er flyttet. Tallene
-          kan derfor ikke sammenlignes.
-        </p>
-      </section>
-    );
-  const P = app.planSum && app.planSum.nr === app.valgt.nr && !utenPlan() ? app.planSum : null,
-    etter = P ? etterPlan(H.a1, P) : null;
-  /* Hele dekar i tabellen, og endringen med fortegn */
-  const hele = km2 => nf(Math.round(km2 * 1000), 0),
-    endr = km2 => medFortegn(Math.round(km2 * 1000), v => nf(v, 0));
-  const siden = KL.map(([, navn], i) => {
-    const d = H.a1[i] - H.a0[i];
-    return `${navn.toLowerCase()} ${Math.round(d * 1000) ? `${d < 0 ? 'ned' : 'opp'} ${iTekst(Math.abs(d))} (${prosent(Math.abs(d), H.a0[i])} %)` : 'uendret'}`;
-  })
-    .reverse()
-    .join(', ');
-  const tekst =
-    `Fra ${H.fra} til ${H.til}: ${siden}.` +
-    (P
-      ? ` Bygges alt kommuneplanen setter av, går ca. ${iTekst(P.nat)} natur og ca. ${iTekst(P.jor)} jordbruk over til bebygd.${P.delvis ? ' Det gjelder bare den delen av kommunen nettleseren har hentet kart for.' : ''}`
-      : utenPlan()
-        ? ' DiBK har ingen kommuneplan for kommunen, så siste kolonne er tom.'
-        : !app.oversikter[app.valgt.nr]
-          ? ' Zoom inn i kartet for å få et anslag på planlagt utbygging i siste kolonne.'
-          : ' Siste kolonne fylles ut når planlagt utbygging er regnet ut.');
-  return (
-    <section className="utvikling prosa" aria-labelledby="utvikling-tittel">
-      <h2 className="md-typography-heading-s" id="utvikling-tittel">
-        Anslått utvikling
-      </h2>
-      <Talltabell
-        kolonner={[
-          'daa',
-          H.fra,
-          H.til,
-          P && P.egne ? 'Med planlagt utbygging og egne områder' : 'Med planlagt utbygging'
-        ]}
-        rader={KL.map(([id, navn], i) => ({
-          navn,
-          farge: id,
-          tall: [
-            [hele(H.a0[i])],
-            [hele(H.a1[i]), endr(H.a1[i] - H.a0[i])],
-            etter ? [hele(etter[i]), endr(etter[i] - H.a1[i])] : ['–']
-          ]
-        }))}
-      />
-      <p>{tekst}</p>
-      <p className="hint">
-        Anslag, ikke statistikk over endring. SSB skriver at tabellen ikke kan brukes til å beregne arealendringer
-        mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. Noe av forskjellen fra {H.fra} kan derfor
-        skyldes bedre kartlegging. SSB har varslet egne tabeller for arealendringer. Planlagt utbygging er regnet ut i
-        nettleseren uten smale striper.
-      </p>
-    </section>
-  );
+/* Verneområder, villrein og verdsatt natur: antall, areal og planlagt utbygging innenfor */
+function naturtema(id) {
+  const t = NATURLAG.find(x => x.id === id),
+    D = t.data;
+  if (!D || !app.valgt || D.nr !== app.valgt.nr) return HENTER;
+  if (D.feil) return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
+  const o = D.omrader;
+  if (!o.length) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
+  const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum),
+    verdi =
+      t.klasser && D.klasser ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : '',
+    plan =
+      utenPlan() || !D.regnet
+        ? ''
+        : N.plan
+          ? ` Ca. ${dekarFraRuter(N.plan)} planlagt utbygging innenfor.`
+          : ' Ingen planlagt utbygging innenfor.';
+  return {
+    tall: dekar(D.sum || 0),
+    tekst: `${stor(antallOrd(o.length, ETT[id]))} ${o.length === 1 ? t.en : t.fl}.${verdi}${plan}`
+  };
 }
 
-/* Land og vann: land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate minus land og ferskvann. */
-function LandOgVann() {
-  const V = tolkVann(app.flate, app.ssbSum, app.ferskvann);
-  return (
-    <section className="vann" aria-labelledby="vann-tittel">
-      <h2 className="md-typography-heading-s" id="vann-tittel">
-        Land og vann
-      </h2>
-      {V && (
-        <>
-          <Stripe hva="Kommunens flate" deler={V.deler.map(([id, navn, v]) => [navn, '--' + id, v])} />
-          <Forklaring
-            deler={V.deler.map(([id, navn, v]) => [navn, '--' + id, `${id === 'hav' ? 'ca. ' : ''}${dekar(v)}`])}
-          />
-          <p className="hint">
-            {V.hav
-              ? 'Land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate (grensen fra Kartverket) minus land og ferskvann.'
-              : 'Land, innsjø og elv er SSBs tall. Kommunen har ikke hav.'}
-          </p>
-        </>
-      )}
-    </section>
-  );
+/* Inngrepsfri natur og grått areal hentes som ett bilde av kommunen */
+function inon() {
+  const D = gjeldende(app.inon),
+    s = bildeStatus(D);
+  if (s === 'henter') return HENTER;
+  if (s === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
+  if (s === 'ingen') return ingenTall('Ingen. Alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep.');
+  return { tall: dekar(D.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${andel(D.sum)}.` };
 }
+function graa() {
+  const D = gjeldende(app.graa),
+    s = bildeStatus(D);
+  if (s === 'henter') return HENTER;
+  if (s === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
+  if (s === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
+  return {
+    tall: dekar(D.sum),
+    tekst: `Tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet${andel(D.sum)}.`
+  };
+}
+
+/* Utvikling fremover: natur og jordbruk som kommuneplanen setter av til utbygging */
+function framtid() {
+  if (utenPlan()) return ingenTall('Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for kommunen.');
+  const P = app.planSum && app.valgt && app.planSum.nr === app.valgt.nr ? app.planSum : null;
+  if (P)
+    return {
+      tall: dekar(P.nat),
+      tekst: `Natur som kommuneplanen setter av til framtidig utbygging. I tillegg ca. ${iTekst(P.jor)} jordbruk.${P.egne ? ' Egne områder er med.' : ''}${P.delvis ? ' Gjelder bare den delen av kommunen nettleseren har hentet kart for.' : ''}`
+    };
+  const tilstand = app.planTall ? app.planTall.tilstand : 'tom';
+  return tilstand === 'zoom'
+    ? ingenTall('Zoom inn i kartet for å få et anslag.')
+    : tilstand === 'feil'
+      ? ingenTall('Arealet kunne ikke regnes ut.')
+      : HENTER;
+}
+
+const LINJE = {
+  regnskap,
+  graa,
+  rein: () => naturtema('rein'),
+  inon,
+  verdi: () => naturtema('verdi'),
+  vern: () => naturtema('vern'),
+  framtid
+};
 
 export default function Oversikt() {
   return (
-    <>
-      <Arealklasser />
-      <Utvikling />
-      <LandOgVann />
-    </>
+    <section className="sammendrag" aria-labelledby="oversikt-tittel">
+      <h2 className="md-typography-heading-s" id="oversikt-tittel">
+        Oversikt
+      </h2>
+      <p>Det viktigste fra hver side. Velg navnet for å lese mer.</p>
+      {BLOKKER.map(({ gruppe, sider }, b) => {
+        const vis = sider.filter(([id]) => LINJE[id]);
+        if (!vis.length) return null;
+        return (
+          <Fragment key={b}>
+            {gruppe && <h3 className="md-typography-heading-xs">{gruppe}</h3>}
+            <ul className="talliste">
+              {vis.map(([id, navn]) => {
+                const { tall, tekst } = LINJE[id]();
+                return (
+                  <li key={id}>
+                    <span className="navn">
+                      <Sidelenke id={id}>{navn}</Sidelenke>
+                    </span>
+                    <b className="tall">{tall}</b>
+                    <p>{tekst}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          </Fragment>
+        );
+      })}
+    </section>
   );
 }

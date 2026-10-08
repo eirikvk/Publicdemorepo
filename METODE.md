@@ -14,7 +14,7 @@ Siden er en prototype. Tall fra SSB er offisiell statistikk. Alt som er regnet u
 | Bebygd, jordbruk, natur og landareal | Hentet, summert i tre klasser | SSB tabell 09594 |
 | Innsjø og elv | Hentet | SSB tabell 09594 |
 | Hav | Regnet: kommunens flate minus land og ferskvann | Kartverket og SSB |
-| Anslått utvikling fra 2017 | Hentet, satt sammen med plantallene | SSB og egen utregning |
+| Utbredelsesregnskap fra 2017 | Hentet, forskjellen mellom årgangene regnet | SSB tabell 09594 |
 | Planlagt utbygging på natur og jordbruk | Regnet i et rutenett på 21 meter | DiBK og NIBIO |
 | Verneområder og villreinområder | Flatene hentet, arealet regnet | Miljødirektoratet |
 | Verdsatt natur og kartleggingsgrad | Flatene hentet, arealet regnet | Miljødirektoratet |
@@ -64,19 +64,23 @@ seg fra dag til dag når kildene oppdateres.
 - **Forbehold:** Er resten mindre enn 0,5 km² eller 0,5 % av flaten, regnes det som avvik mellom grense og statistikk, og
   kommunen vises uten hav.
 
-## Anslått utvikling
+## Utbredelsesregnskap
 
 - **Kilde:** SSB tabell 09594 med SSBs sammenslåtte tidsserier (kodelisten `agg_KommSummer`), så tallene for 2017 gjelder
   dagens kommune også der kommuner er slått sammen.
-- **Regnes:** tre kolonner (`tolkHistorie`, `etterPlan`): 2017, nyeste år, og nyeste år der planlagt utbygging på natur og
-  jordbruk er trukket fra de to klassene og lagt til bebygd.
+- **Regnes:** arealet per klasse i 2017 og i nyeste år (`tolkHistorie`), og forskjellen mellom dem. Det settes opp som et
+  regnskap etter mønster fra FNs standard for naturregnskap (SEEA EA): inngående areal, netto endring og utgående areal, med en
+  sum for landarealet. Planlagt utbygging er ikke med i regnskapet, men omtales under det.
 - **Forbehold:**
   - SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer
     fullstendig over tid. Kolonnen for 2017 er derfor et anslag, og noe av forskjellen kan skyldes bedre kartlegging.
   - Avviker kommunens samlede flate med mer enn 0,5 % mellom 2017 og nyeste år, er grensen trolig flyttet, og siden viser ingen
     sammenligning.
   - Har SSB ikke tall for kommunen i 2017, vises ikke tabellen. Det gjelder blant annet kommuner som ble opprettet ved deling.
-  - Siste kolonne blander offisiell statistikk med et anslag fra nettleseren.
+  - Landarealet er ikke alltid det samme i de to årgangene, så netto endring går ikke alltid i null. Siden sier fra når det
+    skjer.
+  - Bare netto endring per klasse er kjent. Tilvekst og avgang hver for seg, og hva natur ble til, kommer først med SSBs egne
+    tabeller over arealendringer.
 
 ## Dagens arealklasser i kartet
 

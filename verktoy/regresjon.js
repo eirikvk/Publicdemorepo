@@ -75,7 +75,7 @@ export const SIDEN = {
   },
   probe: p => p.locator('.probe').innerText(),
   vist: p => p.locator('.vistmerke').innerText(),
-  /* Tekstene i tallpanelet. Temaene leses med textContent, så detaljene kommer med også når de er lukket. */
+  /* Tekstene på sidene. Temaene leses med textContent, så detaljene kommer med også når de er lukket. */
   tekster: p =>
     p.evaluate(() => {
       const t = sel =>
@@ -84,8 +84,9 @@ export const SIDEN = {
           .filter(Boolean)
           .join('\n');
       const ut = {
+        sammendrag: t('.sammendrag'),
         total: t('.total'),
-        klasser: t('[aria-labelledby="areal-tittel"] ul'),
+        regnskap: t('.regnskap'),
         planlagt: t('.planlagt'),
         utvikling: t('.utvikling'),
         vann: t('.vann'),
