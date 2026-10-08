@@ -70,7 +70,8 @@ Komponentene:
 | `Tallpanel.jsx` | Arealet fra SSB, planlagt utbygging, anslått utvikling og land og vann |
 | `Temaer.jsx` | Temaene som rader som kan åpnes, med detaljer og lister over områder |
 | `Notater.jsx` | Kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall og tabellceller |
+| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, og tabeller med tall |
+| `tekst.js` | Hvordan tall og tekst skrives: prosent, dekar, endring med fortegn, tall med bokstaver og oppramsing |
 | `md.js` | Komponentene fra designsystemet som siden bruker |
 | `lager.js` | Kroken som kobler komponentene til tilstanden i motoren |
 

@@ -1,7 +1,7 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene regnes ut i motor/plan.js og
    motor/egne.js, radene i tabellene i byggEgneRader. */
 import { useRef } from 'react';
-import { app, dekar, iTekst, nf, RUTE } from '../motor/felles.js';
+import { app, gjeldende, RUTE } from '../motor/felles.js';
 import {
   angrePunkt,
   egneRader,
@@ -16,7 +16,7 @@ import {
   visEgetIKartet
 } from '../motor/egne.js';
 import { ingenPlan } from '../motor/plan.js';
-import { antallOrd, Celle, Rute } from './deler.jsx';
+import { Talltabell } from './deler.jsx';
 import {
   MdAlertMessage,
   MdButton,
@@ -26,65 +26,31 @@ import {
   MdIconUpload,
   MdRadioGroup
 } from './md.js';
+import { antallOrd, dekar, dekarFraRuter, medFortegn, prosent, ramse } from './tekst.js';
 
 /* Antall flater i tekst, med tall til og med tolv i ord */
 const flater = n => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
 
-const dk = n => iTekst(n * RUTE);
-const ramse = deler => {
-  const d = deler.filter(Boolean);
-  return d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0] || '';
-};
-
-/* Tabellen som sammenligner planen alene med egne områder. Radene er [navn, farge, planen, med egne, hva andelen regnes av, gruppe]. */
+/* Tabellen som sammenligner planen alene med egne områder. Radene fra motoren er [navn, farge, planen, med egne, hva andelen
+   regnes av, gruppe]. Tallene er ruter på 21 meter. */
 function EgenTabell({ rader, navnPlan, navnNy }) {
-  const tall = n => (n ? dekar(n * RUTE).replace(' daa', '') : '0'),
-    endr = d => (!d ? '0' : (d < 0 ? '−' : '+') + tall(Math.abs(d)));
-  const kropp = [];
+  const tall = n => (n ? dekar(n * RUTE).replace(' daa', '') : '0');
+  const ut = [];
   let gruppe = '';
-  rader.forEach(([navn, farge, plan, ny, av, gr], i) => {
-    if (gr !== gruppe) {
-      gruppe = gr;
-      kropp.push(
-        <tr key={'g' + i} className="gruppe">
-          <th colSpan={4} scope="colgroup">
-            {gr}
-          </th>
-        </tr>
-      );
-    }
-    const andel = n => (av ? `${nf((n / av) * 100)} %` : '');
-    kropp.push(
-      <tr key={i}>
-        <th scope="row">
-          <span className="navn">
-            {farge && <Rute id={farge} />}
-            {navn}
-          </span>
-        </th>
-        <Celle tekst={plan === null ? '–' : tall(plan)} under={plan === null ? '' : andel(plan)} />
-        <Celle tekst={tall(ny)} under={andel(ny)} />
-        <Celle tekst={endr(ny - (plan || 0))} />
-      </tr>
-    );
-  });
-  return (
-    <div className="tabellramme">
-      <table className="talltabell">
-        <caption className="md-typography-label-s">Planlagt utbygging, daa</caption>
-        <thead>
-          <tr>
-            {['På', navnPlan, navnNy, 'Endring'].map((t, i) => (
-              <th key={t} scope="col" className={i ? 'tall' : undefined}>
-                {t}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{kropp}</tbody>
-      </table>
-    </div>
-  );
+  for (const [navn, farge, plan, ny, av, gr] of rader) {
+    if (gr !== gruppe) ut.push({ gruppe: (gruppe = gr) });
+    const andel = n => (av ? prosent(n, av) + ' %' : '');
+    ut.push({
+      navn,
+      farge,
+      tall: [
+        plan === null ? ['–'] : [tall(plan), andel(plan)],
+        [tall(ny), andel(ny)],
+        [medFortegn(ny - (plan || 0), tall)]
+      ]
+    });
+  }
+  return <Talltabell tittel="Planlagt utbygging, daa" kolonner={['På', navnPlan, navnNy, 'Endring']} rader={ut} />;
 }
 
 function EgetOmrade({ g, nr, R }) {
@@ -96,12 +62,19 @@ function EgetOmrade({ g, nr, R }) {
     const kjent = T.nat + T.jor + T.beb + T.vann;
     tekster.push(
       kjent
-        ? `I dag ligger det ${ramse([T.nat ? dk(T.nat) + ' natur' : '', T.jor ? dk(T.jor) + ' jordbruk' : '', T.beb ? dk(T.beb) + ' bebygd' : '', T.vann ? dk(T.vann) + ' vann' : ''])} her.`
+        ? `I dag ligger det ${ramse(
+            [
+              [T.nat, 'natur'],
+              [T.jor, 'jordbruk'],
+              [T.beb, 'bebygd'],
+              [T.vann, 'vann']
+            ].map(([v, hva]) => (v ? dekarFraRuter(v) + ' ' + hva : ''))
+          )} her.`
         : 'Kartet er ikke hentet for dette området ennå.'
     );
     if (T.ukjent && kjent)
       tekster.push(
-        `For ca. ${dk(T.ukjent)} er kartet ikke hentet, eller området ligger utenfor kommunen. Zoom inn over området for å få med mer.`
+        `For ca. ${dekarFraRuter(T.ukjent)} er kartet ikke hentet, eller området ligger utenfor kommunen. Zoom inn over området for å få med mer.`
       );
     if (kjent)
       tabell = (
@@ -169,14 +142,8 @@ function EgetOmrade({ g, nr, R }) {
 export default function Egne() {
   const fil = useRef(null),
     E = mine(),
-    R =
-      app.planRaster &&
-      app.valgt &&
-      app.planRaster.nr === app.valgt.nr &&
-      app.planRaster.eget &&
-      app.planRaster.antallEgne === E.length
-        ? app.planRaster
-        : null,
+    P = gjeldende(app.planRaster),
+    R = P && P.eget && P.antallEgne === E.length ? P : null,
     t = tegner(),
     s = app.egneStatus;
   return (

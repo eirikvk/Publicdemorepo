@@ -1,11 +1,12 @@
 /* Tallpanelet: arealet i kommunen fra SSB, planlagt utbygging, temaene, anslått utvikling og land og vann. Tallene hentes og regnes
    ut i motoren. Her gjøres de om til tekst, tabeller og stolper. */
-import { andelTekst, app, dekar, gjeldende, iTekst, KL, nf, OPPLOSNINGER } from '../motor/felles.js';
+import { app, gjeldende, KL, OPPLOSNINGER } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
 import { ingenPlan } from '../motor/plan.js';
 import { etterPlan, tolkVann } from '../motor/tall.js';
 import Temaer from './Temaer.jsx';
-import { antallOrd, Celle, Forklaring, Rute, Stripe } from './deler.jsx';
+import { Forklaring, Rute, Stripe, Talltabell } from './deler.jsx';
+import { andelTekst, antallOrd, dekar, iTekst, medFortegn, nf, prosent } from './tekst.js';
 import { MdAlertMessage } from './md.js';
 
 function Arealklasser() {
@@ -29,7 +30,7 @@ function Arealklasser() {
             navn,
             '--' + id,
             Math.max(a[i], 0.0001),
-            `${navn}: ${dekar(a[i])}, ${nf((a[i] / sum) * 100)} %`
+            `${navn}: ${dekar(a[i])}, ${prosent(a[i], sum)} %`
           ])}
         />
       )}
@@ -82,7 +83,6 @@ function Planlagt() {
   } else {
     const m = OPPLOSNINGER[R.z] / 2,
       km2 = v => (v * m * m) / 1e6,
-      pst = (a, b) => (b ? nf((a / b) * 100) : '0'),
       der = R.delvis ? ' i det hentede kartet' : '';
     const n = R.n,
       { rn, rj } = R.sum,
@@ -91,13 +91,13 @@ function Planlagt() {
     egnemerk = !antall
       ? ''
       : `Tallene under inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene setter av ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
-    natur = `ca. ${iTekst(km2(rn))}, ${pst(rn, n.nat)} % av naturen${der}${antall ? '' : ` (${iTekst(km2(n.pnat))} med smale striper)`}`;
-    jordbruk = `ca. ${iTekst(km2(rj))}, ${pst(rj, n.jor)} % av jordbruket${der}${antall ? '' : ` (${iTekst(km2(n.pjor))} med smale striper)`}`;
+    natur = `ca. ${iTekst(km2(rn))}, ${prosent(rn, n.nat)} % av naturen${der}${antall ? '' : ` (${iTekst(km2(n.pnat))} med smale striper)`}`;
+    jordbruk = `ca. ${iTekst(km2(rj))}, ${prosent(rj, n.jor)} % av jordbruket${der}${antall ? '' : ` (${iTekst(km2(n.pjor))} med smale striper)`}`;
     const felles =
       'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg. Anslag til illustrasjon, ikke offisiell statistikk.';
     if (R.delvis) {
       const a = km2(n.beb + n.jor + n.nat);
-      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${app.ssbSum ? ` av ${iTekst(app.ssbSum)} (${nf(Math.min(100, (a / app.ssbSum) * 100))} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${R.rute} meter. ${felles}`;
+      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${app.ssbSum ? ` av ${iTekst(app.ssbSum)} (${prosent(Math.min(a, app.ssbSum), app.ssbSum)} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${R.rute} meter. ${felles}`;
     } else note = `Regnet ut i nettleseren fra ${R.fliser} kartfliser med piksler på ${R.rute} meter. ${felles}`;
   }
   return (
@@ -176,14 +176,12 @@ function Utvikling() {
     );
   const P = app.planSum && app.planSum.nr === app.valgt.nr && !utenPlan() ? app.planSum : null,
     etter = P ? etterPlan(H.a1, P) : null;
+  /* Hele dekar i tabellen, og endringen med fortegn */
   const hele = km2 => nf(Math.round(km2 * 1000), 0),
-    endr = km2 => {
-      const d = Math.round(km2 * 1000);
-      return d ? (d < 0 ? '−' : '+') + nf(Math.abs(d), 0) : '0';
-    };
+    endr = km2 => medFortegn(Math.round(km2 * 1000), v => nf(v, 0));
   const siden = KL.map(([, navn], i) => {
     const d = H.a1[i] - H.a0[i];
-    return `${navn.toLowerCase()} ${Math.round(d * 1000) ? `${d < 0 ? 'ned' : 'opp'} ${iTekst(Math.abs(d))} (${H.a0[i] ? nf((Math.abs(d) / H.a0[i]) * 100) : '0'} %)` : 'uendret'}`;
+    return `${navn.toLowerCase()} ${Math.round(d * 1000) ? `${d < 0 ? 'ned' : 'opp'} ${iTekst(Math.abs(d))} (${prosent(Math.abs(d), H.a0[i])} %)` : 'uendret'}`;
   })
     .reverse()
     .join(', ');
@@ -201,39 +199,23 @@ function Utvikling() {
       <h2 className="md-typography-heading-s" id="utvikling-tittel">
         Anslått utvikling
       </h2>
-      <div className="tabellramme">
-        <table className="talltabell">
-          <thead>
-            <tr>
-              {[
-                'daa',
-                H.fra,
-                H.til,
-                P && P.egne ? 'Med planlagt utbygging og egne områder' : 'Med planlagt utbygging'
-              ].map((t, i) => (
-                <th key={t} scope="col" className={i ? 'tall' : undefined}>
-                  {t}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {KL.map(([id, navn], i) => (
-              <tr key={id}>
-                <th scope="row">
-                  <span className="navn">
-                    <Rute id={id} />
-                    {navn}
-                  </span>
-                </th>
-                <Celle tekst={hele(H.a0[i])} />
-                <Celle tekst={hele(H.a1[i])} under={endr(H.a1[i] - H.a0[i])} />
-                {etter ? <Celle tekst={hele(etter[i])} under={endr(etter[i] - H.a1[i])} /> : <Celle tekst="–" />}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Talltabell
+        kolonner={[
+          'daa',
+          H.fra,
+          H.til,
+          P && P.egne ? 'Med planlagt utbygging og egne områder' : 'Med planlagt utbygging'
+        ]}
+        rader={KL.map(([id, navn], i) => ({
+          navn,
+          farge: id,
+          tall: [
+            [hele(H.a0[i])],
+            [hele(H.a1[i]), endr(H.a1[i] - H.a0[i])],
+            etter ? [hele(etter[i]), endr(etter[i] - H.a1[i])] : ['–']
+          ]
+        }))}
+      />
       <p>{tekst}</p>
       <p className="hint">
         Anslag, ikke statistikk over endring. SSB skriver at tabellen ikke kan brukes til å beregne arealendringer
