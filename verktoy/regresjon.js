@@ -89,7 +89,7 @@ export const SIDEN = {
         planlagt: t('.planlagt'),
         utvikling: t('.utvikling'),
         vann: t('.vann'),
-        kartfot: t('.kartfot')
+        probe: t('.probe') /* ikke linjen om siste kall, som har tider i seg */
       };
       for (const d of document.querySelectorAll('.temarad')) ut[d.id] = d.textContent.replace(/\s+/g, ' ').trim();
       return ut;
