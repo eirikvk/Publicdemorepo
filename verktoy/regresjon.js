@@ -456,7 +456,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     const gammel = fs.mkdtempSync(path.join(os.tmpdir(), 'regresjon-')),
       utGammel = ut.replace(/\/+$/, '') + '-' + mot.replace(/[^\w.-]/g, '_');
     execSync(`git -C "${ROT}" archive ${mot} | tar -x -C "${gammel}"`);
-    fs.symlinkSync(path.join(ROT, 'node_modules'), path.join(gammel, 'node_modules'));
+    fs.symlinkSync(
+      path.join(ROT, 'node_modules'),
+      path.join(gammel, 'node_modules'),
+      'junction'
+    ); /* junction: virker også på Windows uten administrator */
     await kjor(bygg(gammel), utGammel, bare);
     process.exit((await sammenlign(utGammel, ut)) ? 1 : 0);
   }

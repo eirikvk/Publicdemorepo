@@ -12,13 +12,17 @@ NIBIO er lisensiert «Norge digitalt begrenset».
 
 ## Kjøre siden
 
-Krever Node 20 eller nyere.
+Krever Git og Node 22 (20.19 eller nyere går også).
 
 ```
-npm install        henter pakkene
-npm run dev        starter siden på http://localhost:5173, og laster den på nytt ved endringer
+git clone https://github.com/eirikvk/Publicdemorepo.git
+cd Publicdemorepo
+npm ci
+npm run dev        siden på http://localhost:5173, som lastes på nytt ved endringer
 npm run bygg       bygger siden til dist/
 ```
+
+[KOM-I-GANG.md](KOM-I-GANG.md) har hele veien: krav, prøving på mobil, bygg, tester, Python-verktøyene og feilsøking.
 
 Innholdet i `dist/` er hele siden: én HTML-fil, ett skript, ett stilark, skriftfilene og de lagrede dataene. Det kan legges på en
 hvilken som helst webserver, også i en undermappe, fordi alle adresser er relative.
@@ -33,6 +37,8 @@ hvilken som helst webserver, også i en undermappe, fordi alle adresser er relat
 | `src/motor/` | Motoren: henting, utregning og kartet. Vanlig JavaScript uten React. |
 | `src/visning/` | Sidens komponenter i React |
 | `public/` | Filer som legges ut som de er: listen over kommuner og de lagrede oversiktsbildene |
+| `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
+| `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
 Motoren:
 
@@ -70,6 +76,7 @@ Komponentene:
 
 ## Dokumentasjon
 
+- [KOM-I-GANG.md](KOM-I-GANG.md) viser hvordan man kjører, bygger og tester siden lokalt.
 - [METODE.md](METODE.md) beskriver hvert tall siden viser: hva som hentes, hva som regnes ut, og hvor sikkert det er.
 - [AVHENGIGHETER.md](AVHENGIGHETER.md) lister biblioteker, tjenester og verktøy, med lisenser og det som gjelder sikkerhet og
   personvern.
@@ -156,10 +163,17 @@ Ting å vite:
 1. Gjør endringen.
 2. `python3 verktoy/utgave.py` setter nytt utgavemerke, som vises under «Vis teknisk informasjon».
 3. `npm run sjekk` og `npm test` (se under).
-4. `npm run bygg`, og legg ut innholdet i `dist/`.
+4. Commit og push til `main`.
 
-Siden lå tidligere på GitHub Pages direkte fra `main`. Det går ikke lenger uten et byggesteg: GitHub Pages må enten få en
-arbeidsflyt (GitHub Actions) som bygger og legger ut `dist/`, eller få `dist/` lagt i en egen gren.
+Arbeidsflyten `.github/workflows/legg-ut.yml` («Bygg og legg ut») kjører ved hver push til `main`: den installerer pakkene fra
+`package-lock.json`, kjører `npm run sjekk`, bygger og legger ut `dist/` på GitHub Pages. Den kan også startes for hånd under
+Actions. Feiler sjekken eller bygget, blir ingenting lagt ut, og siden som ligger ute, står urørt.
+
+GitHub Pages må ha «GitHub Actions» som kilde (Settings → Pages → Build and deployment → Source). Står den på «Deploy from a
+branch», legger GitHub ut repoet slik det er, uten bygg, og siden blir blank.
+
+Hver action i arbeidsflyten er låst til en bestemt commit, med versjonen i en kommentar. Ved oppgradering byttes både
+commit og kommentar.
 
 ## Verktøy
 

@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "description": "Kommunalt naturregnskap, teknologidemo. React med Miljødirektoratets designsystem, bygget med Vite.",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "bygg": "vite build",

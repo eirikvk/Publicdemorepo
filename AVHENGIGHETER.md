@@ -60,8 +60,19 @@ Lagret sammen med siden ligger listen over fylker og kommuner (`public/kommuner.
 
 ## Drift
 
-Siden lå på GitHub Pages og ble lagt ut ved push til `main` i repoet `eirikvk/Publicdemorepo`. Den er tatt ned. Med byggesteget
-må det som legges ut, være innholdet i `dist/`, se README.
+Siden ligger på GitHub Pages fra repoet `eirikvk/Publicdemorepo`. Arbeidsflyten «Bygg og legg ut»
+(`.github/workflows/legg-ut.yml`) bygger og legger ut siden ved hver push til `main`, på GitHubs egne maskiner. Den bruker disse
+actions fra GitHub, alle med MIT-lisens og låst til en bestemt commit:
+
+| Action | Versjon | Brukes til |
+|---|---|---|
+| `actions/checkout` | 7.0.1 | Henter koden |
+| `actions/setup-node` | 7.0.0 | Node i versjonen fra `.nvmrc`, med minne for npm-pakkene |
+| `actions/configure-pages` | 6.0.0 | Leser oppsettet for GitHub Pages |
+| `actions/upload-pages-artifact` | 5.0.0 | Pakker `dist/` |
+| `actions/deploy-pages` | 5.0.1 | Legger ut pakken |
+
+GitHub Pages må ha «GitHub Actions» som kilde, se README.
 
 ## Vilkår for dataene
 
@@ -98,3 +109,5 @@ Ingen av disse følger med siden til brukeren.
 | acorn, acorn-walk, acorn-jsx | 8.19.0, 8.3.5, 5.3.2 | MIT | Sjekkene av navn og av skillet mellom regning og tegning |
 | eslint-scope | 9.1.2 | BSD 2-Clause | Sjekken av navn |
 | Python med NumPy, Pillow og Shapely | | BSD og lignende | Bygging av oversiktsbildene |
+
+Node-versjonen står i `.nvmrc` (22), og kravet i `package.json` (20.19 eller nyere), som Vite krever.
