@@ -1,6 +1,6 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og tabellene som sammenligner med kommuneplanen. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER, ORIGO, UTM, app, endret, nf, tilKartet, utm33 } from './felles.js';
+import { OPPLOSNINGER, ORIGO, UTM, app, endret, farge, nf, tilKartet, utm33 } from './felles.js';
 import { kommuneSti, lerret } from './grunnlag.js';
 import { finn, velg } from './handlinger.js';
 import { kart, lukkBytt, view } from './kart.js';
@@ -22,7 +22,7 @@ export const egneLag = new ol.layer.Vector({
     new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 7 }) }),
     new ol.style.Style({
       stroke: new ol.style.Stroke({
-        color: '#1D4ED8',
+        color: farge('egne'),
         width: 3,
         lineDash: f.get('type') === 'fri' ? [10, 7] : undefined
       }),
@@ -30,7 +30,7 @@ export const egneLag = new ol.layer.Vector({
         text: String(f.get('lopenr')),
         font: '600 14px sans-serif',
         fill: new ol.style.Fill({ color: '#fff' }),
-        backgroundFill: new ol.style.Fill({ color: '#1D4ED8' }),
+        backgroundFill: new ol.style.Fill({ color: farge('egne') }),
         padding: [3, 6, 2, 6],
         overflow: true
       })
@@ -42,11 +42,11 @@ export const tegner = () => !!tegn;
 const tegnStil = [
   new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 6 }) }),
   new ol.style.Style({
-    stroke: new ol.style.Stroke({ color: '#1D4ED8', width: 2.5 }),
-    fill: new ol.style.Fill({ color: 'rgba(29,78,216,.12)' }),
+    stroke: new ol.style.Stroke({ color: farge('egne'), width: 2.5 }),
+    fill: new ol.style.Fill({ color: 'rgba(0,114,206,.12)' }),
     image: new ol.style.Circle({
       radius: 7,
-      fill: new ol.style.Fill({ color: '#1D4ED8' }),
+      fill: new ol.style.Fill({ color: farge('egne') }),
       stroke: new ol.style.Stroke({ color: '#fff', width: 2.5 })
     })
   })

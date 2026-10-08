@@ -11,8 +11,8 @@ export default function Notater({ teknisk, settTeknisk }) {
   return (
     <div className="notater">
       {teknisk && (
-        <section>
-          <h2 className="md-typography-heading-s">Kall mot åpne kilder</h2>
+        <section className="prosa">
+          <h2 className="seksjonstittel">Kall mot åpne kilder</h2>
           <div className="tabellramme">
             <table className="talltabell logg">
               <thead>
@@ -46,8 +46,8 @@ export default function Notater({ teknisk, settTeknisk }) {
           </p>
         </section>
       )}
-      <section>
-        <h2 className="md-typography-heading-s">Slik er klassene satt sammen</h2>
+      <section className="prosa">
+        <h2 className="seksjonstittel">Slik er klassene satt sammen</h2>
         <div className="tabellramme">
           <table className="talltabell">
             <thead>
@@ -82,23 +82,24 @@ export default function Notater({ teknisk, settTeknisk }) {
           </table>
         </div>
         <p>
-          Inndelingen sendes som en stil i hvert kall, så NIBIO tegner seks klasser i stedet for elleve: de tre på land,
-          og hav, innsjø og elv. Fargene settes i nettleseren og er hentet fra grunnkartets egen tegnforklaring: bebygd
-          og opparbeidet areal, dyrket mark og skog, og grunnkartets tre farger for vann.
+          Inndelingen sendes som en stil i hvert kall, så Norsk institutt for bioøkonomi (NIBIO) tegner seks klasser i
+          stedet for elleve: de tre på land, og hav, innsjø og elv. Fargene settes i nettleseren og er hentet fra
+          grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog, og grunnkartets tre farger
+          for vann.
         </p>
         <p>
-          Planlagt endring hentes fra kommuneplanens arealdel hos DiBK: arealformål i 1000- og 2000-serien (bebyggelse
-          og anlegg, samferdsel og teknisk infrastruktur) med status framtidig. Nettleseren legger dette oppå dagens
-          klasser og viser bare det som i dag er natur eller jordbruk, med koksgrå for natur og brun for jordbruk.
-          Finnes det ingen kommuneplan for kommunen hos DiBK, står det under kartet og ved planlagt utbygging. Laget kan
-          vises alene, uavhengig av de tre klassene.
+          Planlagt endring hentes fra kommuneplanens arealdel hos Direktoratet for byggkvalitet (DiBK): arealformål i
+          1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig.
+          Nettleseren legger dette oppå dagens klasser og viser bare det som i dag er natur eller jordbruk, med koksgrå
+          for natur og brun for jordbruk. Finnes det ingen kommuneplan for kommunen hos DiBK, står det under kartet og
+          ved planlagt utbygging. Laget kan vises alene, uavhengig av de tre klassene.
         </p>
       </section>
-      <section>
-        <h2 className="md-typography-heading-s">Om siden</h2>
+      <section className="prosa">
+        <h2 className="seksjonstittel">Om siden</h2>
         <p>
-          Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra SSB og kartet
-          fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.
+          Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra Statistisk
+          sentralbyrå (SSB) og kartet fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.
         </p>
         {medBilde.length > 0 && reg && (
           <p>
@@ -120,7 +121,7 @@ export default function Notater({ teknisk, settTeknisk }) {
         </p>
       </section>
       <section>
-        <h2 className="md-typography-heading-s">Tekniske valg</h2>
+        <h2 className="seksjonstittel">Tekniske valg</h2>
         <MdToggle
           label="Vis teknisk informasjon"
           checked={teknisk}

@@ -5,7 +5,7 @@ import { utenPlan } from '../motor/egne.js';
 import { ingenPlan } from '../motor/plan.js';
 import { etterPlan, tolkVann } from '../motor/tall.js';
 import Temaer from './Temaer.jsx';
-import { Celle, Forklaring, Rute, Stripe } from './deler.jsx';
+import { antallOrd, Celle, Forklaring, Rute, Stripe } from './deler.jsx';
 import { MdAlertMessage } from './md.js';
 
 function Arealklasser() {
@@ -14,8 +14,10 @@ function Arealklasser() {
     a = ok ? T.a : null,
     sum = ok ? a[0] + a[1] + a[2] : 0;
   return (
-    <>
-      <h2 className="seksjonstittel">Areal i kommunen, SSB{ok ? ' ' + T.aar : ''}</h2>
+    <section aria-labelledby="areal-tittel">
+      <h2 className="seksjonstittel" id="areal-tittel">
+        Areal i kommunen, SSB{ok ? ' ' + T.aar : ''}
+      </h2>
       <p className="total">
         <b>{ok ? dekar(sum) : T && T.tilstand === 'feil' ? 'Tallene kunne ikke hentes' : 'Henter …'}</b>
         {ok && <span>land</span>}
@@ -41,7 +43,8 @@ function Arealklasser() {
           </li>
         ))}
       </ul>
-    </>
+      <p className="hint">Kilde: Statistisk sentralbyrå (SSB), tabell 09594. Vann er ikke med.</p>
+    </section>
   );
 }
 
@@ -53,12 +56,12 @@ function Planlagt() {
   const status = !i
     ? ''
     : i.tilstand === 'sjekker'
-      ? 'Sjekker om DiBK har en kommuneplan for kommunen …'
+      ? 'Sjekker om Direktoratet for byggkvalitet (DiBK) har en kommuneplan for kommunen …'
       : i.tilstand === 'feil'
-        ? 'Fikk ikke sjekket om DiBK har en kommuneplan for kommunen.'
+        ? 'Fikk ikke sjekket om Direktoratet for byggkvalitet (DiBK) har en kommuneplan for kommunen.'
         : ingen
-          ? `DiBK har ingen kommuneplan for ${navn}. Planlagt utbygging kan derfor ikke vises eller regnes ut.`
-          : `Kommuneplan hentet fra DiBK${i.kilde ? ': ' + i.kilde : ''}.${i.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
+          ? `Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for ${navn}, så planlagt utbygging kan ikke vises eller regnes ut.`
+          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.kilde ? ': ' + i.kilde : ''}.${i.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
   const tilstand = app.planTall ? app.planTall.tilstand : 'tom',
     R = gjeldende(app.planRaster);
   let natur = '',
@@ -84,7 +87,7 @@ function Planlagt() {
       antall = R.antallEgne;
     egnemerk = !antall
       ? ''
-      : `Tallene for planlagt utbygging inkluderer ${antall === 1 ? 'ett eget område' : antall + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene: ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
+      : `Tallene under inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene setter av ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
     natur = `ca. ${iTekst(km2(rn))}, ${pst(rn, n.nat)} % av naturen${der}${antall ? '' : ` (${iTekst(km2(n.pnat))} med smale striper)`}`;
     jordbruk = `ca. ${iTekst(km2(rj))}, ${pst(rj, n.jor)} % av jordbruket${der}${antall ? '' : ` (${iTekst(km2(n.pjor))} med smale striper)`}`;
     const felles =
@@ -95,13 +98,19 @@ function Planlagt() {
     } else note = `Regnet ut i nettleseren fra ${R.fliser} kartfliser med piksler på ${R.rute} meter. ${felles}`;
   }
   return (
-    <div className="planlagt">
-      <h3 className="md-typography-heading-xs">
+    <section className="planlagt" aria-labelledby="plan-tittel">
+      <h2 className="seksjonstittel" id="plan-tittel">
         <Rute id="plan" />
         Planlagt utbygging
-      </h3>
+      </h2>
       {ingen ? (
-        <MdAlertMessage theme="warning" fullWidth role="status" label={status} />
+        <MdAlertMessage
+          theme="warning"
+          fullWidth
+          role="status"
+          label="Ingen kommuneplan hos DiBK"
+          description={status}
+        />
       ) : (
         status && (
           <p className="hint" role="status">
@@ -131,9 +140,17 @@ function Planlagt() {
           </li>
         </ul>
       )}
-      {egnemerk && <MdAlertMessage theme="info" fullWidth role="status" label={egnemerk} />}
+      {egnemerk && (
+        <MdAlertMessage
+          theme="info-box"
+          fullWidth
+          role="status"
+          label="Egne områder er med i tallene"
+          description={egnemerk}
+        />
+      )}
       {note && <p className="hint">{note}</p>}
-    </div>
+    </section>
   );
 }
 
@@ -144,13 +161,15 @@ function Utvikling() {
   if (!H) return null;
   if (H.endret)
     return (
-      <div className="utvikling">
-        <h2 className="seksjonstittel">Anslått utvikling</h2>
+      <section className="utvikling" aria-labelledby="utvikling-tittel">
+        <h2 className="seksjonstittel" id="utvikling-tittel">
+          Anslått utvikling
+        </h2>
         <p>
           Kommunens flate er ikke den samme i SSBs tall for {H.fra} og {H.til}, trolig fordi grensen er flyttet. Tallene
           kan derfor ikke sammenlignes.
         </p>
-      </div>
+      </section>
     );
   const P = app.planSum && app.planSum.nr === app.valgt.nr && !utenPlan() ? app.planSum : null,
     etter = P ? etterPlan(H.a1, P) : null;
@@ -175,10 +194,12 @@ function Utvikling() {
           ? ' Zoom inn i kartet for å få et anslag på planlagt utbygging i siste kolonne.'
           : ' Siste kolonne fylles ut når planlagt utbygging er regnet ut.');
   return (
-    <div className="utvikling">
-      <h2 className="seksjonstittel">Anslått utvikling</h2>
+    <section className="utvikling prosa" aria-labelledby="utvikling-tittel">
+      <h2 className="seksjonstittel" id="utvikling-tittel">
+        Anslått utvikling
+      </h2>
       <div className="tabellramme">
-        <table className="talltabell">
+        <table className="talltabell tallkolonner">
           <thead>
             <tr>
               {[
@@ -197,8 +218,10 @@ function Utvikling() {
             {KL.map(([id, navn], i) => (
               <tr key={id}>
                 <th scope="row">
-                  <Rute id={id} />
-                  {navn}
+                  <span className="radnavn">
+                    <Rute id={id} />
+                    {navn}
+                  </span>
                 </th>
                 <Celle tekst={hele(H.a0[i])} />
                 <Celle tekst={hele(H.a1[i])} under={endr(H.a1[i] - H.a0[i])} />
@@ -215,7 +238,7 @@ function Utvikling() {
         skyldes bedre kartlegging. SSB har varslet egne tabeller for arealendringer. Planlagt utbygging er regnet ut i
         nettleseren uten smale striper.
       </p>
-    </div>
+    </section>
   );
 }
 
@@ -223,8 +246,10 @@ function Utvikling() {
 function LandOgVann() {
   const V = tolkVann(app.flate, app.ssbSum, app.ferskvann);
   return (
-    <div className="vann">
-      <h2 className="seksjonstittel">Land og vann</h2>
+    <section className="vann" aria-labelledby="vann-tittel">
+      <h2 className="seksjonstittel" id="vann-tittel">
+        Land og vann
+      </h2>
       {V && (
         <>
           <Stripe hva="Kommunens flate" deler={V.deler.map(([id, navn, v]) => [navn, '--' + id, v])} />
@@ -238,23 +263,18 @@ function LandOgVann() {
           </p>
         </>
       )}
-    </div>
+    </section>
   );
 }
 
 export default function Tallpanel() {
   return (
-    <section className="tallpanel" aria-label="Arealtall">
+    <div className="tallpanel">
       <Arealklasser />
       <Planlagt />
       <Temaer />
       <Utvikling />
       <LandOgVann />
-      <p className="hint">
-        Kartlagene slås av og på under kartet. Lagene er uavhengige, så planlagt utbygging kan vises alene. Vann vises i
-        kartet med grunnkartets farger og er ikke med i tallene for bebygd, jordbruk og natur. Planlaget er omtrentlig
-        og bare til illustrasjon.
-      </p>
-    </section>
+    </div>
   );
 }

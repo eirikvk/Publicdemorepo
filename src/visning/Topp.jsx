@@ -46,14 +46,12 @@ export default function Topp() {
         </div>
       </header>
       <div className="overskrift">
-        <h1 className="md-typography-heading-xl">
-          {app.listeFeil ? 'Kommunelisten kunne ikke hentes' : valgt ? valgt[1].navn : 'Henter kommuner …'}
-        </h1>
+        <h1>{app.listeFeil ? 'Kommunelisten kunne ikke hentes' : valgt ? valgt[1].navn : 'Henter kommuner …'}</h1>
         <p>
           {app.listeFeil
             ? 'Sjekk nettforbindelsen og last siden på nytt.'
             : valgt
-              ? `${valgt[0].navn} fylke · kommunenummer ${valgt[1].nr}`
+              ? `${valgt[0].navn} fylke · kommunenummer ${valgt[1].nr}`
               : ''}
         </p>
       </div>

@@ -65,6 +65,13 @@ export const Fargelinje = ({ id, navn, tall, under, children }) => (
   </li>
 );
 
+/* Tall i løpende tekst: til og med tolv skrives med bokstaver, som Miljødirektoratets språkprofil sier. en er ordet for 1, som
+   avhenger av kjønnet på det som telles (ett område, én lokalitet). */
+const ORD = ['null', 'én', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni', 'ti', 'elleve', 'tolv'];
+export const antallOrd = (n, en = 'én') =>
+  n === 1 ? en : Number.isInteger(n) && n >= 0 && n <= 12 ? ORD[n] : nf(n, 0);
+export const stor = t => t.charAt(0).toUpperCase() + t.slice(1);
+
 /* En celle i en tabell, med et mindre tall under hvis det er oppgitt. */
 export const Celle = ({ tekst, under }) => (
   <td>

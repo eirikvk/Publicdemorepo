@@ -6,10 +6,9 @@ import { byttGraa, byttInon, byttKlasse, byttPlan, byttTema } from '../motor/han
 import { byttTilValgt, lagKart, plasserBytt, settByttKnapp } from '../motor/kart.js';
 import { lastOppPlan, utenPlan } from '../motor/egne.js';
 import { NATURLAG, fjernMerket } from '../motor/naturtema.js';
-import { ingenPlan } from '../motor/plan.js';
 import Egne from './Egne.jsx';
 import { Rute } from './deler.jsx';
-import { MdAlertMessage, MdButton, MdFilterChip, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.js';
+import { MdButton, MdFilterChip, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.js';
 
 function Kart() {
   const ref = useRef(null);
@@ -71,11 +70,11 @@ function Kartlag() {
   );
   const utenPlanNaa = utenPlan();
   return (
-    <div className="kartlag">
-      <h2 className="md-typography-label-m" id="kartlag-tittel">
+    <section className="kartlag" aria-labelledby="kartlag-tittel">
+      <h2 className="seksjonstittel" id="kartlag-tittel">
         Vis i kartet
       </h2>
-      <div className="brikker" role="group" aria-labelledby="kartlag-tittel">
+      <div className="brikker" role="group" aria-label="Arealklasser og planlagt utbygging">
         {KL.map(([id, navn]) => brikke(id, id, navn, app.vis[id], () => byttKlasse(id)))}
         {brikke(
           'plan',
@@ -91,7 +90,11 @@ function Kartlag() {
         {brikke('inon', 'inon', 'Inngrepsfri natur', app.inonPaa, byttInon)}
         {brikke('graa', 'graa', 'Grått areal', app.graaPaa, byttGraa)}
       </div>
-    </div>
+      <p className="hint">
+        Lagene er uavhengige, så planlagt utbygging kan vises alene. Vann vises med grunnkartets farger og er ikke med i
+        tallene for bebygd, jordbruk og natur. Planlaget er omtrentlig og bare til illustrasjon.
+      </p>
+    </section>
   );
 }
 
@@ -147,14 +150,6 @@ export default function Kartpanel({ teknisk }) {
         )}
       </div>
       <div className="kartfot">
-        {ingenPlan() && (
-          <MdAlertMessage
-            theme="warning"
-            fullWidth
-            role="status"
-            label={`DiBK har ingen kommuneplan for ${app.valgt.navn}. Planlagt utbygging vises derfor ikke.`}
-          />
-        )}
         <p className="probe">
           {!p ? (
             'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.'

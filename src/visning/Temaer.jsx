@@ -7,10 +7,11 @@ import { GRAATRINN } from '../motor/graa.js';
 import { INONSONER } from '../motor/inon.js';
 import { byggNaturTall, NATURLAG, visIKartet } from '../motor/naturtema.js';
 import { settSlor } from '../motor/handlinger.js';
-import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
-import { MdAccordionItem, MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew, MdLink } from './md.js';
+import { antallOrd, Fargelinje, Forklaring, Rute, Stripe, stor } from './deler.jsx';
+import { MdAccordionItem, MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
 
 const daa = n => iTekst(n * RUTE); /* fra antall ruter på 21 meter, brukes i setninger */
+const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
 
 /* Raden for et tema: navn, areal, andel og en linje under. Detaljene ligger inni. */
 function Temarad({ id, navn, areal, andel, under, children }) {
@@ -34,7 +35,7 @@ function Temarad({ id, navn, areal, andel, under, children }) {
         </span>
       }
     >
-      <div className="temablokk" role="region" aria-label={navn}>
+      <div className="temablokk prosa" role="region" aria-label={navn}>
         {children}
       </div>
     </MdAccordionItem>
@@ -55,7 +56,7 @@ function Helhet({ t, H, E }) {
     verdier = a => t.klasser.map(([navn, id], v) => [navn, '--' + id, a[v]]);
   return (
     <div className="helhet">
-      <h3>Helhetsbildet: verdsatt natur og kartlegging</h3>
+      <h3 className="korttittel">Helhetsbildet: verdsatt natur og kartlegging</h3>
       <Stripe
         hva="Landarealet"
         deler={[
@@ -69,7 +70,7 @@ function Helhet({ t, H, E }) {
           ['Ikke kartlagt', 'tom', `${dekar(U)} (${pst(U, L)} %)`]
         ]}
       />
-      <h4>Der det er kartlagt</h4>
+      <h4 className="etikett">Der det er kartlagt</h4>
       <Stripe
         hva="Det kartlagte"
         deler={[...verdier(inne), ['Ingen verdsatt natur registrert', 'kjent', Math.max(0, K - si)]]}
@@ -77,7 +78,7 @@ function Helhet({ t, H, E }) {
       <p>
         {pst(si, K)} % har verdsatt natur ({dekar(si)}).
       </p>
-      <h4>Der det ikke er kartlagt</h4>
+      <h4 className="etikett">Der det ikke er kartlagt</h4>
       <Stripe hva="Det som ikke er kartlagt" deler={[...verdier(ute), ['Ukjent', 'tom', Math.max(0, U - su)]]} />
       <p>
         {su > 0
@@ -85,8 +86,8 @@ function Helhet({ t, H, E }) {
           : 'Ingen verdsatt natur er registrert her, og det finnes ikke noe kart over hvor det er lett.'}
       </p>
       <p className="hint">
-        Fargene er de samme som i tabellen over. Lave tall der det ikke er kartlagt, kan bety at det ikke er lett, ikke
-        at naturen mangler verdi. Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen derfra kan ikke
+        Fargene er de samme som i listen over. Lave tall der det ikke er kartlagt, kan bety at det ikke er lett, ikke at
+        naturen mangler verdi. Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen derfra kan ikke
         overføres direkte til resten.
         {E.fra ? ` Kartlagt etter Miljødirektoratets instruks ${E.fra === E.til ? E.fra : E.fra + '–' + E.til}.` : ''}
       </p>
@@ -137,7 +138,7 @@ function Naturtema({ t }) {
     ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.`
     : !o.length
       ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-      : `${nf(o.length, 0)} ${o.length === 1 ? t.en + ' dekker' : t.fl + ' dekker'} ca. ${iTekst(sum)} av kommunen${app.ssbSum ? `, ${nf((sum / app.ssbSum) * 100)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
+      : `${stor(antallOrd(o.length, ETT[t.id]))} ${o.length === 1 ? t.en : t.fl} dekker ca. ${iTekst(sum)} av kommunen${app.ssbSum ? `, ${nf((sum / app.ssbSum) * 100)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${t.klasser && D.klasser && o.length ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : ''}`;
   const merk =
     !E || helhet
       ? ''
@@ -155,7 +156,7 @@ function Naturtema({ t }) {
         <>
           <b>
             {plan
-              ? `Ca. ${daa(plan)} planlagt utbygging ligger innenfor ${ant === 1 ? 'ett ' + t.en : ant + ' ' + t.fl}${der}.`
+              ? `Ca. ${daa(plan)} planlagt utbygging ligger innenfor ${antallOrd(ant, ETT[t.id])} ${ant === 1 ? t.en : t.fl}${der}.`
               : `Ingen planlagt utbygging innenfor ${t.best}${der}.`}
           </b>
           {smal
@@ -199,7 +200,7 @@ function Naturtema({ t }) {
       {merk && <p>{merk}</p>}
       {t.dekning && kartlagt && (
         <MdCheckbox
-          label="Legg et lyst slør over det som ikke er kartlagt, når laget er på."
+          label="Slør over det som ikke er kartlagt"
           checked={app.slorPaa}
           onChange={e => settSlor(e.target.checked)}
         />
@@ -228,7 +229,7 @@ function Naturtema({ t }) {
                 </small>
                 <div className="knapper">
                   <MdButton
-                    theme="secondary"
+                    theme="tertiary"
                     mode="small"
                     leftIcon={<MdIconLocation />}
                     aria-label={`Vis ${x.navn} i kartet`}
@@ -237,16 +238,17 @@ function Naturtema({ t }) {
                     Vis i kartet
                   </MdButton>
                   {x.url && (
-                    <MdLink
-                      href={x.url}
-                      target="_blank"
-                      rel="noopener"
-                      icon={<MdIconOpenInNew />}
+                    <MdButton
+                      asChild
+                      asChildContent={<a href={x.url} target="_blank" rel="noopener" />}
+                      theme="tertiary"
+                      mode="small"
+                      rightIcon={<MdIconOpenInNew />}
                       aria-label={`Åpne faktaark for ${x.navn} hos Miljødirektoratet, i ny fane`}
                       title="Åpnes i ny fane"
                     >
-                      Åpne faktaark
-                    </MdLink>
+                      Faktaark
+                    </MdButton>
                   )}
                 </div>
               </li>
@@ -335,7 +337,7 @@ function Graa() {
   else if (!ok) tekst = 'Grått areal kunne ikke hentes fra NIBIO.';
   else if (!har) tekst = 'Kartet over grå arealer har ingen flater i kommunen.';
   else
-    tekst = `Ca. ${iTekst(D.sum)} av kommunen${app.ssbSum ? `, ${nf((D.sum / app.ssbSum) * 100)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Tabellen viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
+    tekst = `Ca. ${iTekst(D.sum)} av kommunen${app.ssbSum ? `, ${nf((D.sum / app.ssbSum) * 100)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Listen under viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
   let plan = null;
   if (har) {
     if (K && K.S.tot) {
@@ -402,8 +404,10 @@ function Graa() {
 
 export default function Temaer() {
   return (
-    <div className="temaer">
-      <h3 className="md-typography-heading-xs">Tema</h3>
+    <section className="temaer" aria-labelledby="tema-tittel">
+      <h2 className="seksjonstittel" id="tema-tittel">
+        Tema i kommunen
+      </h2>
       <p className="hint">
         Areal i kommunen, andel av landarealet og planlagt utbygging innenfor. Åpne et tema for detaljer. Temaene vises
         i kartet med knappene under kartet.
@@ -415,6 +419,6 @@ export default function Temaer() {
         <Inon />
         <Graa />
       </div>
-    </div>
+    </section>
   );
 }

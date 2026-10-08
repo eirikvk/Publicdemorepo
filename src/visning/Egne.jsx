@@ -16,7 +16,7 @@ import {
   visEgetIKartet
 } from '../motor/egne.js';
 import { ingenPlan } from '../motor/plan.js';
-import { Celle, Rute } from './deler.jsx';
+import { antallOrd, Celle, Rute } from './deler.jsx';
 import {
   MdAlertMessage,
   MdButton,
@@ -26,6 +26,9 @@ import {
   MdIconUpload,
   MdRadioGroup
 } from './md.js';
+
+/* Antall flater i tekst, med tall til og med tolv i ord */
+const flater = n => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
 
 const dk = n => iTekst(n * RUTE);
 const ramse = deler => {
@@ -67,10 +70,11 @@ function EgenTabell({ rader, navnPlan, navnNy }) {
   });
   return (
     <div className="tabellramme">
-      <table className="talltabell sml">
+      <table className="talltabell tallkolonner">
+        <caption className="etikett">Planlagt utbygging, daa</caption>
         <thead>
           <tr>
-            {['Planlagt utbygging på, daa', navnPlan, navnNy, 'Endring'].map(t => (
+            {['På', navnPlan, navnNy, 'Endring'].map(t => (
               <th key={t} scope="col">
                 {t}
               </th>
@@ -113,8 +117,8 @@ function EgetOmrade({ g, nr, R }) {
       ? 'Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.'
       : '';
   return (
-    <li className="kort">
-      <h3>
+    <li className="kort prosa">
+      <h3 className="korttittel">
         {g.navn}
         <span>{dekar(g.km2)}</span>
       </h3>
@@ -132,8 +136,8 @@ function EgetOmrade({ g, nr, R }) {
       ) : (
         <p>
           {g.utenFormal
-            ? `Opplastet fil med ${nf(g.deler.length, 0)} flater. Filen har ingen arealformål, så alle flatene regnes som utbygging.`
-            : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${nf(g.deler.length, 0)} flater: ${nf(g.bygg, 0)} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${nf(g.annet, 0)} som ikke utbygging. Innenfor flatene erstatter filen kommuneplanen.`}
+            ? `Opplastet fil med ${flater(g.deler.length)}. Filen har ingen arealformål, så ${g.deler.length === 1 ? 'flaten' : 'alle flatene'} regnes som utbygging.`
+            : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${flater(g.deler.length)}: ${g.bygg ? antallOrd(g.bygg) : 'ingen'} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${g.annet ? antallOrd(g.annet) : 'ingen'} som ikke utbygging. Innenfor flatene erstatter filen kommuneplanen.`}
         </p>
       )}
       {tekster.map(t => (
@@ -176,8 +180,10 @@ export default function Egne() {
     t = tegner(),
     s = app.egneStatus;
   return (
-    <div className="egne">
-      <h2 className="md-typography-label-m">Egne områder</h2>
+    <section className="egne" aria-labelledby="egne-tittel">
+      <h2 className="seksjonstittel" id="egne-tittel">
+        Egne områder
+      </h2>
       <div className="knapper">
         {!t ? (
           <>
@@ -229,7 +235,7 @@ export default function Egne() {
           ? 'Trykk i kartet for hvert hjørne. Avslutt med å trykke på første punkt, eller på Ferdig når du har minst tre punkter.'
           : 'Tegn et område i kartet, eller last opp en plan som GeoJSON i samme format som DiBKs nedlasting av plandata. Du kan også slippe filen i kartet. Innenfor flatene erstatter tegningen eller filen kommuneplanen. Ingenting lagres eller sendes fra nettleseren.'}
       </p>
-      {s && <MdAlertMessage theme={s.type} fullWidth role="status" label={s.tekst} />}
+      {s && <MdAlertMessage theme={s.type === 'info' ? 'info-box' : s.type} fullWidth role="status" label={s.tekst} />}
       {E.length > 0 && (
         <ul className="egneliste">
           {E.map((g, nr) => (
@@ -239,7 +245,7 @@ export default function Egne() {
       )}
       {E.length > 0 && R && (
         <div className="kort samlet">
-          <h3>Samlet for kommunen</h3>
+          <h3 className="korttittel">Samlet for kommunen</h3>
           <EgenTabell
             rader={egneRader(null)}
             navnPlan="Planen"
@@ -253,6 +259,6 @@ export default function Egne() {
           </p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

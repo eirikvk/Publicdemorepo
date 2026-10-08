@@ -1,9 +1,21 @@
-/* Sidens egen stil. Farger, skrift og avstander kommer fra Miljødirektoratets designsystem (variablene --md-*). Kartets farger er
-   data og ligger som egne variabler (--beb, --pnat og så videre), satt fra FARGER i motor/felles.js.
-   Layout: velgere øverst, kartet til venstre, tallene til høyre, metode og kall-logg under. På smal skjerm kommer alt under hverandre. */
+/* Sidens egen stil, bygd på Miljødirektoratets designsystem. Farger, skrift, avstander og hjørner er designsystemets variabler
+   (--md-*). Kartets farger er data og ligger som egne variabler (--beb, --pnat og så videre), satt fra FARGER i motor/felles.js.
+
+   Fast mønster for hele siden, se også README:
+   - Skrift: overskrifter i designsystemets størrelser (h1 heading-xl, h2 heading-s, h3 heading-xs), brødtekst 16 px, hjelpetekst
+     og kilder 14 px, 12 px bare for små tall i tabeller og teknisk visning.
+   - Flater: hvit side. Rader som kan åpnes, har designsystemets grønne flate. Kort og bokser er hvite med tynn grå kant.
+     Beige brukes bare i meldinger av typen info-box. Én aksentfarge: sjøgrønn.
+   - Avstander: 4, 8, 12, 16, 24 og 32 px fra designsystemet. Mellom avsnitt i løpende tekst minst to ganger skriftstørrelsen,
+     som designsystemet krever.
+   - Layout: velgere øverst, kartet til venstre og tallene til høyre, metode og kall-logg under. På smal skjerm kommer alt under
+     hverandre, og kartpanelet mister rammen, så tabellene får plass. */
 :root {
   /* Sofia Pro følger ikke med designsystemet og ligger ikke i denne løsningen. Uten den brukes Open Sans også i overskrifter. */
   --md-typography-family-heading: 'SofiaPro-Regular', 'Open Sans', sans-serif;
+  /* Designsystemets stiler for etiketter bruker denne variabelen, men den er ikke definert i designsystemet (6.32.0). Uten den
+     blir etikettene tynne. */
+  --md-typography-weight-semibold: 600;
   --linje: var(--md-color-border-secondary);
   --dempet: var(--md-color-grey-6);
   color-scheme: light;
@@ -19,6 +31,12 @@ html {
 }
 [hidden] {
   display: none !important;
+}
+/* Knapper og felt arver ikke skrift i nettleseren. Designsystemet setter skrift på de fleste av sine, men ikke på «Lukk» nederst
+   i rader som kan åpnes (6.32.0), som da får nettleserens standardskrift. :where gir ingen vekt, så designsystemets egne valg
+   gjelder foran denne. */
+:where(button, input, select, textarea) {
+  font-family: inherit;
 }
 body {
   margin: 0;
@@ -45,40 +63,84 @@ ul {
   outline: var(--md-size-3) solid var(--md-color-focus-outer);
   outline-offset: var(--md-size-2);
 }
-.side {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding-inline: clamp(16px, 4vw, 40px);
-  padding-block: 28px 56px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+
+/* Skrift */
+h1,
+.seksjonstittel,
+.korttittel {
+  font-family: var(--md-typography-family-heading);
+  font-weight: var(--md-typography-weight-regular);
+  line-height: var(--md-typography-line-height-small);
+  color: var(--md-color-text-primary);
+}
+h1 {
+  font-size: var(--md-typography-heading-l);
+  text-wrap: balance;
+}
+.seksjonstittel {
+  font-size: var(--md-typography-heading-s);
+}
+.korttittel {
+  font-size: var(--md-typography-heading-xs);
+}
+.etikett {
+  font-family: var(--md-typography-family-label);
+  font-weight: var(--md-typography-weight-medium);
+  font-size: var(--md-typography-label-s);
+  line-height: var(--md-typography-line-height-small);
+}
+@media (min-width: 861px) {
+  h1 {
+    font-size: var(--md-typography-heading-xl);
+  }
 }
 .hint {
   font-size: var(--md-typography-body-s);
   color: var(--dempet);
 }
+b,
+strong {
+  font-weight: var(--md-typography-weight-medium);
+}
+/* Løpende tekst: minst to ganger skriftstørrelsen mellom avsnitt (designsystemet, etter WCAG 2.1) */
+.prosa > p + p {
+  margin-top: calc(2em - var(--md-spacing-12));
+}
 .knapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: var(--md-spacing-8);
 }
 
-/* Toppen */
+/* Siden */
+.side {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+  padding-block: var(--md-spacing-24) var(--md-spacing-56);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-24);
+}
 .topp {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px 32px;
+  gap: var(--md-spacing-16) var(--md-spacing-32);
   align-items: flex-end;
   justify-content: space-between;
 }
 .merke {
   font-family: var(--md-typography-family-heading);
-  font-size: var(--md-typography-label-l);
+  font-size: var(--md-typography-heading-xs);
+  line-height: var(--md-typography-line-height-small);
   color: var(--md-color-text-secondary);
+  padding-left: var(--md-spacing-12);
+  border-left: var(--md-spacing-3) solid var(--md-color-green-10);
 }
 .merke small {
   display: block;
+  margin-top: var(--md-spacing-4);
   font-family: var(--md-typography-family-body);
   font-size: var(--md-typography-body-s);
   color: var(--dempet);
@@ -86,26 +148,29 @@ ul {
 .velgere {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 16px;
+  gap: var(--md-spacing-12) var(--md-spacing-16);
 }
 .velgere > * {
   width: 240px;
   max-width: 100%;
 }
-.overskrift h1 {
-  font-size: clamp(32px, 6vw, 48px);
-  line-height: 1.1;
-  text-wrap: balance;
+/* På telefon står velgerne under hverandre i full bredde, som skjemafeltene i designsystemet */
+@media (max-width: 600px) {
+  .velgere {
+    flex: 1 1 100%;
+  }
+  .velgere > * {
+    flex: 1 1 100%;
+  }
 }
 .overskrift p {
   color: var(--dempet);
-  margin-top: 6px;
+  margin-top: var(--md-spacing-4);
 }
-
 .hoved {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: 32px 40px;
+  gap: var(--md-spacing-32) var(--md-spacing-40);
   align-items: start;
 }
 @media (max-width: 860px) {
@@ -114,14 +179,14 @@ ul {
   }
 }
 
-/* Kartet */
+/* Kartpanelet */
 .kartpanel {
-  border: 1px solid var(--md-color-border-primary);
+  border: 1px solid var(--linje);
   border-radius: var(--md-radius-md);
-  padding: 12px;
+  padding: var(--md-spacing-12);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--md-spacing-16);
   min-width: 0;
   /* Knip på kortet rundt kartet forstørrer ikke siden, så et bomtrykk like utenfor kartet ikke zoomer hele siden. Er siden
      forstørret, slipper kartet bevegelsene igjennom, så man alltid kan knipe seg ut igjen. */
@@ -129,6 +194,21 @@ ul {
 }
 .sidezoom .kartpanel {
   touch-action: auto;
+}
+/* På telefon tar rammen rundt kartpanelet plass fra kartet og tabellene, uten å skille noe. */
+@media (max-width: 600px) {
+  .kartpanel {
+    border: 0;
+    padding: 0;
+  }
+}
+.kartpanel > section,
+.kartfot + section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+  padding-top: var(--md-spacing-16);
+  border-top: 1px solid var(--linje);
 }
 .kartscene {
   position: relative;
@@ -139,8 +219,8 @@ ul {
   background: var(--md-color-grey-1);
 }
 .kartscene.slipp {
-  outline: 3px dashed var(--md-color-border-tertiary);
-  outline-offset: -3px;
+  outline: var(--md-spacing-3) dashed var(--md-color-border-tertiary);
+  outline-offset: calc(-1 * var(--md-spacing-3));
 }
 .kartflate {
   position: absolute;
@@ -152,20 +232,26 @@ ul {
 .kartflate .plan {
   opacity: 0.92;
 }
-.merkelapp {
+/* Merkelapper oppå kartet: hvite, med designsystemets kant og hjørner */
+.merkelapp,
+.vistmerke {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   z-index: 2;
-  max-width: calc(100% - 110px);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  border-radius: var(--md-radius-xl);
+  gap: var(--md-spacing-8);
+  border-radius: var(--md-radius-md);
   background: var(--md-color-surface-white);
   border: 1px solid var(--md-color-border-primary);
   font-size: var(--md-typography-body-s);
+  line-height: var(--md-typography-line-height-small);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.merkelapp {
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 110px);
+  padding: var(--md-spacing-8) var(--md-spacing-12);
   text-align: center;
   pointer-events: none;
 }
@@ -174,50 +260,19 @@ ul {
 }
 .merkelapp.midt {
   top: 64px;
-  border-radius: var(--md-radius-md);
-  font-weight: 600;
+  font-weight: var(--md-typography-weight-medium);
 }
 .merkelapp.nede {
-  bottom: 34px;
-  border-radius: var(--md-radius-md);
-}
-.bytt {
-  position: absolute;
-  top: 12px;
-  left: 8px;
-  z-index: 3;
-  max-width: calc(100% - 16px);
-}
-.bytt .md-button {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  white-space: nowrap;
-}
-.punkt {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 3px solid var(--md-color-text-primary);
-  background: var(--md-color-surface-white);
-  box-shadow: 0 0 0 2px var(--md-color-surface-white);
-  pointer-events: none;
+  bottom: 40px;
 }
 .vistmerke {
-  position: absolute;
-  z-index: 2;
   left: 10px;
   bottom: 44px;
   max-width: calc(100% - 20px);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 4px 4px 12px;
-  border-radius: var(--md-radius-md);
-  background: var(--md-color-surface-white);
-  border: 1px solid var(--md-color-border-primary);
-  font-size: var(--md-typography-body-s);
+  gap: var(--md-spacing-4);
+  padding: var(--md-spacing-4) var(--md-spacing-4) var(--md-spacing-4) var(--md-spacing-12);
 }
 .vistmerke b {
-  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -227,7 +282,27 @@ ul {
 .vistmerke .md-icon-button {
   flex: none;
 }
-/* Kontrollene i kartet får designsystemets farger */
+.bytt {
+  position: absolute;
+  top: 12px;
+  left: 8px;
+  z-index: 3;
+  max-width: calc(100% - 16px);
+}
+.bytt .md-button {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+.punkt {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: var(--md-spacing-3) solid var(--md-color-green-10);
+  background: var(--md-color-surface-white);
+  box-shadow: 0 0 0 2px var(--md-color-surface-white);
+  pointer-events: none;
+}
+/* Kontrollene i kartet ser ut som designsystemets sekundærknapper */
 .kartflate .ol-control {
   background: none;
   padding: 0;
@@ -235,34 +310,42 @@ ul {
 .kartflate .ol-control button {
   width: 44px;
   height: 44px;
-  margin: 0 0 6px;
-  font-size: 22px;
+  margin: 0 0 var(--md-spacing-8);
+  font: 400 24px/1 var(--md-typography-family-body);
   color: var(--md-color-text-secondary);
-  background: var(--md-color-surface-white);
-  border: 1px solid var(--md-color-border-tertiary);
-  border-radius: var(--md-radius-sm);
+  background: var(--md-color-cta-secondary-default);
+  border: 1px solid var(--md-color-cta-secondary-stroke);
+  border-radius: var(--md-radius-md);
 }
 .kartflate .ol-control button:hover,
 .kartflate .ol-control button:focus {
   color: var(--md-color-text-secondary);
-  background: var(--md-color-surface-primary);
+  background: var(--md-color-cta-secondary-hover);
   outline: none;
+}
+.kartflate .ol-control button:active {
+  background: var(--md-color-cta-secondary-active);
 }
 .kartflate .ol-control button:focus-visible {
   outline: var(--md-size-3) solid var(--md-color-focus-outer);
+  outline-offset: var(--md-size-2);
 }
 .kartflate .ol-zoom {
   top: 10px;
   left: auto;
   right: 10px;
 }
-.kartflate .ol-scale-line {
+.kartflate .ol-scale-line,
+.kartflate .ol-attribution,
+.kartflate .ol-attribution:not(.ol-collapsed) {
   background: var(--md-color-surface-white);
-  border: 1px solid var(--md-color-border-primary);
-  border-radius: var(--md-radius-xs);
+  border: 1px solid var(--md-color-border-secondary);
+  border-radius: var(--md-radius-sm);
+}
+.kartflate .ol-scale-line {
   left: 10px;
   bottom: 10px;
-  padding: 3px 6px;
+  padding: 2px 6px;
 }
 .kartflate .ol-scale-line-inner {
   color: var(--dempet);
@@ -273,9 +356,6 @@ ul {
 .kartflate .ol-attribution:not(.ol-collapsed) {
   right: 10px;
   bottom: 10px;
-  background: var(--md-color-surface-white);
-  border: 1px solid var(--md-color-border-primary);
-  border-radius: var(--md-radius-xs);
   font-size: 11px;
 }
 .kartflate .ol-attribution ul {
@@ -291,38 +371,25 @@ ul {
 .kartfot {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--md-spacing-8);
   font-size: var(--md-typography-body-s);
   color: var(--dempet);
   font-variant-numeric: tabular-nums;
 }
 .probe b {
-  font-weight: 600;
   color: var(--md-color-text-primary);
 }
 
-/* Kartlagene av og på */
-.kartlag {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--linje);
-}
+/* Kartlagene av og på: designsystemets filterbrikker, med kartets farge i en rute */
 .brikker {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-}
-.brikker .md-chip {
-  font-size: var(--md-typography-label-s);
-  padding: 6px 14px;
-  min-height: 40px;
+  gap: var(--md-spacing-8);
 }
 .brikke {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--md-spacing-8);
 }
 .md-chip--active .brikke .rute {
   box-shadow: 0 0 0 1.5px var(--md-color-surface-white);
@@ -332,9 +399,11 @@ ul {
 .rute {
   display: inline-block;
   flex: none;
+  /* Overskriften i rader som kan åpnes, regner bredde uten kant. Rutene med kant skal likevel være like store som de andre. */
+  box-sizing: border-box;
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: var(--md-radius-xs);
   background: var(--c);
   box-shadow: 0 0 0 1px var(--md-color-grey-5);
   vertical-align: -2px;
@@ -371,11 +440,11 @@ ul {
 }
 .rute.kjent,
 .stripe i.kjent {
-  background: color-mix(in srgb, var(--md-color-grey-5) 55%, white);
+  background: var(--md-color-grey-4);
 }
 .rute.tom,
 .stripe i.tom {
-  background: transparent;
+  background: var(--md-color-surface-white);
   box-shadow: inset 0 0 0 1px var(--md-color-grey-5);
 }
 
@@ -383,7 +452,7 @@ ul {
 .stripe {
   display: flex;
   gap: 2px;
-  height: 18px;
+  height: 16px;
 }
 .stripe i {
   display: block;
@@ -391,55 +460,57 @@ ul {
   height: 100%;
 }
 .stripe i:first-child {
-  border-radius: 4px 0 0 4px;
+  border-radius: var(--md-radius-sm) 0 0 var(--md-radius-sm);
 }
 .stripe i:last-child {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
 }
 .forklaring {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 18px;
+  gap: var(--md-spacing-8) var(--md-spacing-16);
   font-size: var(--md-typography-body-s);
   color: var(--dempet);
   font-variant-numeric: tabular-nums;
 }
 .forklaring span {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--md-spacing-8);
   align-items: center;
   white-space: nowrap;
 }
 .forklaring b {
-  font-weight: 600;
   color: var(--md-color-text-primary);
 }
 
-/* Tallpanelet */
+/* Tallpanelet: seksjoner skilt med en tynn linje */
 .tallpanel {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--md-spacing-24);
   min-width: 0;
 }
-.seksjonstittel {
-  font-family: var(--md-typography-family-heading);
-  font-weight: var(--md-typography-weight-regular);
-  font-size: var(--md-typography-heading-s);
-  line-height: var(--md-typography-line-height-small);
+.tallpanel > section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+}
+.tallpanel > section + section {
+  padding-top: var(--md-spacing-24);
+  border-top: 1px solid var(--linje);
 }
 .total {
-  font-size: 30px;
-  line-height: 1.1;
+  font-size: var(--md-typography-heading-l);
+  line-height: var(--md-typography-line-height-small);
   font-variant-numeric: tabular-nums;
 }
 .total b {
-  font-weight: 600;
+  font-weight: var(--md-typography-weight-medium);
 }
 .total span {
   font-size: var(--md-typography-body-m);
   color: var(--dempet);
-  margin-left: 6px;
+  margin-left: var(--md-spacing-8);
 }
 .klasser {
   border-top: 1px solid var(--linje);
@@ -447,15 +518,15 @@ ul {
 .klasser li {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto 4.6em;
-  gap: 12px;
+  gap: var(--md-spacing-12);
   align-items: center;
-  padding: 12px 0;
+  padding: var(--md-spacing-12) 0;
   border-bottom: 1px solid var(--linje);
   font-variant-numeric: tabular-nums;
 }
 .klasser .rute {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 .klasser .areal {
   color: var(--dempet);
@@ -463,24 +534,18 @@ ul {
   white-space: nowrap;
 }
 .klasser .andel {
-  font-weight: 600;
-  font-size: var(--md-typography-label-l);
+  font-weight: var(--md-typography-weight-medium);
   text-align: right;
   white-space: nowrap;
 }
-.planlagt,
-.temaer,
-.vann,
-.utvikling {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.planlagt h3,
-.temaer h3 {
+.seksjonstittel:has(.rute) {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--md-spacing-12);
+}
+.seksjonstittel .rute {
+  width: 16px;
+  height: 16px;
 }
 /* Tegnforklaringer: fargerute og navn, tall til høyre, og en forklaring under */
 .tegnliste {
@@ -490,16 +555,18 @@ ul {
 .tegnliste li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 12px;
-  padding: 9px 0;
+  gap: var(--md-spacing-4) var(--md-spacing-12);
+  padding: var(--md-spacing-8) 0;
   border-bottom: 1px solid var(--linje);
   font-variant-numeric: tabular-nums;
 }
 .tegnliste li > b {
-  font-weight: 600;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-spacing-8);
 }
 .tegnliste li > b .rute {
-  margin-right: 8px;
+  margin-top: 3px;
 }
 .tegnliste li > span {
   text-align: right;
@@ -512,38 +579,43 @@ ul {
 }
 .tegnliste li small b {
   color: var(--md-color-text-primary);
-  font-weight: 600;
+}
+/* I planlagt utbygging er teksten forklaring og tallet det viktige */
+.planlagt .tegnliste li > b {
+  font-weight: var(--md-typography-weight-regular);
 }
 
-/* Temaene som rader som kan åpnes */
+/* Temaene: designsystemets rader som kan åpnes, med tall i raden */
 .temaliste {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--md-spacing-8);
 }
 .temarad .md-accordion-item__header {
-  padding: 12px 14px;
-  gap: 12px;
-  font-family: var(--md-typography-family-body);
+  padding: var(--md-spacing-12) var(--md-spacing-16);
+  gap: var(--md-spacing-12);
 }
 .temarad .md-accordion-item__header-left {
   align-items: flex-start;
   min-width: 0;
 }
+.temarad .md-accordion-item__header-icon {
+  margin-top: 1px;
+}
 .temarad .md-accordion-item__header-label {
-  font-size: var(--md-typography-label-m);
-  margin-left: 10px;
+  font-size: var(--md-typography-heading-xs);
+  margin-left: var(--md-spacing-12);
   min-width: 0;
 }
 .temanavn {
   display: flex;
-  gap: 10px;
+  gap: var(--md-spacing-12);
   align-items: flex-start;
 }
 .temanavn .rute {
   width: 16px;
   height: 16px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 /* Bare navnet streker seg under når pekeren er over raden, ikke tallene under det */
 .temaliste .temarad.md-accordion-item .md-accordion-item__header:hover .md-accordion-item__header-label {
@@ -554,10 +626,12 @@ ul {
 }
 .temanavn small {
   display: block;
+  font-family: var(--md-typography-family-body);
   font-size: var(--md-typography-body-s);
+  line-height: var(--md-typography-line-height-small);
   color: var(--dempet);
   white-space: pre-line;
-  margin-top: 2px;
+  margin-top: var(--md-spacing-4);
 }
 .tematall {
   display: flex;
@@ -565,6 +639,7 @@ ul {
   align-items: flex-end;
   text-align: right;
   white-space: nowrap;
+  font-family: var(--md-typography-family-body);
   font-variant-numeric: tabular-nums;
 }
 .tematall .areal {
@@ -572,21 +647,17 @@ ul {
   font-size: var(--md-typography-body-s);
 }
 .tematall .andel {
-  font-weight: 600;
+  font-weight: var(--md-typography-weight-medium);
 }
 .temarad .md-accordion-item__content {
-  padding: 4px 16px 16px;
+  padding: var(--md-spacing-16);
   background: var(--md-color-surface-white);
   border-radius: 0 0 var(--md-radius-md) var(--md-radius-md);
 }
 .temablokk {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: var(--md-typography-body-s);
-}
-.temablokk b {
-  font-weight: 600;
+  gap: var(--md-spacing-12);
 }
 .omrader {
   border-top: 1px solid var(--linje);
@@ -594,8 +665,8 @@ ul {
 .omrader li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 12px;
-  padding: 10px 0;
+  gap: var(--md-spacing-4) var(--md-spacing-12);
+  padding: var(--md-spacing-12) 0;
   border-bottom: 1px solid var(--linje);
   font-variant-numeric: tabular-nums;
 }
@@ -605,6 +676,7 @@ ul {
 }
 .omrader li small {
   grid-column: 1 / -1;
+  font-size: var(--md-typography-body-s);
   color: var(--dempet);
 }
 .omrader li small b {
@@ -612,33 +684,45 @@ ul {
 }
 .omrader .knapper {
   grid-column: 1 / -1;
-  align-items: center;
-  gap: 8px 16px;
-  margin-top: 6px;
+  gap: var(--md-spacing-4) var(--md-spacing-8);
+  margin-left: calc(-1 * var(--md-spacing-12));
 }
+
+/* Kort og bokser: hvite, med tynn grå kant */
+.kort,
 .helhet {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border: 1px solid var(--md-color-border-primary);
+  gap: var(--md-spacing-12);
+  padding: var(--md-spacing-16);
+  border: 1px solid var(--linje);
   border-radius: var(--md-radius-md);
-  background: var(--md-color-surface-secondary-light);
+  background: var(--md-color-surface-white);
 }
-.helhet h3 {
-  font-size: var(--md-typography-label-m);
-  font-weight: 600;
+.kort .korttittel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--md-spacing-12);
+  font-variant-numeric: tabular-nums;
+}
+.kort .korttittel span {
+  font-family: var(--md-typography-family-body);
+  font-size: var(--md-typography-body-m);
+  color: var(--dempet);
+  white-space: nowrap;
 }
 .helhet h4 {
-  margin: 8px 0 0;
-  font-size: var(--md-typography-label-s);
-  font-weight: 600;
+  margin-top: var(--md-spacing-8);
 }
-.helhet .stripe {
-  height: 16px;
+@media (max-width: 600px) {
+  .kort,
+  .helhet {
+    padding: var(--md-spacing-12);
+  }
 }
 
-/* Tabeller med tall */
+/* Tabeller med tall. Designsystemet har ingen tabell, så de er laget med designsystemets skrift, farger og linjer. */
 .tabellramme {
   overflow-x: auto;
 }
@@ -648,69 +732,61 @@ ul {
   font-size: var(--md-typography-body-s);
   font-variant-numeric: tabular-nums;
 }
+.talltabell caption {
+  text-align: left;
+  padding-bottom: var(--md-spacing-8);
+}
 .talltabell th,
 .talltabell td {
   text-align: left;
   vertical-align: top;
-  padding: 8px 12px 8px 0;
+  padding: var(--md-spacing-8) var(--md-spacing-12) var(--md-spacing-8) 0;
   border-bottom: 1px solid var(--linje);
 }
 .talltabell thead th {
-  font-weight: 600;
+  font-weight: var(--md-typography-weight-medium);
   vertical-align: bottom;
   color: var(--dempet);
+  border-bottom-color: var(--md-color-border-primary);
 }
 .talltabell tbody th {
-  font-weight: 600;
-  white-space: nowrap;
-}
-.talltabell tbody th .rute {
-  margin-right: 8px;
+  font-weight: var(--md-typography-weight-medium);
 }
 .talltabell td small {
   display: block;
   font-size: var(--md-typography-body-xs);
   color: var(--dempet);
 }
-.utvikling .talltabell th,
-.utvikling .talltabell td,
-.sml th,
-.sml td {
+/* Tabeller med tall i kolonnene: tallene til høyre, navnene til venstre */
+.tallkolonner th,
+.tallkolonner td {
   text-align: right;
   white-space: nowrap;
-  padding: 8px 0 8px 10px;
+  padding: var(--md-spacing-8) 0 var(--md-spacing-8) var(--md-spacing-8);
 }
-.utvikling .talltabell thead th,
-.sml thead th {
+.tallkolonner thead th {
   white-space: normal;
 }
-.utvikling .talltabell th:first-child,
-.sml th:first-child {
+.tallkolonner th:first-child {
   text-align: left;
   padding-left: 0;
 }
-/* I sammenligningen for egne områder er det trangt på telefon: navnene i første kolonne brytes over flere linjer, ved siden av
-   fargeruten */
-.sml tbody th {
+.tallkolonner tbody th {
   white-space: normal;
-  min-width: 7.5em;
+  min-width: 7em;
+}
+.tallkolonner tr.gruppe th {
+  padding-top: var(--md-spacing-16);
+  font-size: var(--md-typography-body-xs);
+  color: var(--dempet);
 }
 .radnavn {
   display: inline-flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--md-spacing-8);
 }
 .radnavn .rute {
   margin-top: 3px;
-}
-.talltabell tbody th .radnavn .rute {
-  margin-right: 0;
-}
-.sml tr.gruppe th {
-  padding-top: 14px;
-  font-size: var(--md-typography-body-xs);
-  color: var(--dempet);
-  text-align: left;
 }
 .talltabell.logg {
   font-size: var(--md-typography-body-xs);
@@ -719,80 +795,49 @@ ul {
   text-align: right;
   white-space: nowrap;
   padding-right: 0;
-  padding-left: 12px;
+  padding-left: var(--md-spacing-12);
 }
 .talltabell td.feil {
-  font-weight: 600;
+  font-weight: var(--md-typography-weight-medium);
   color: var(--md-color-attention-error-primary);
 }
 
 /* Egne områder */
-.egne {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--linje);
-  font-size: var(--md-typography-body-s);
-}
 .egneliste {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.kort {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border: 1px solid var(--md-color-border-primary);
-  border-radius: var(--md-radius-md);
-  background: var(--md-color-surface-secondary-light);
-}
-.kort h3 {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--md-typography-label-m);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.kort h3 span {
-  font-weight: 400;
-  color: var(--dempet);
-  white-space: nowrap;
+  gap: var(--md-spacing-12);
 }
 
 /* Nederst */
 .notater {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  gap: 28px 40px;
+  gap: var(--md-spacing-32) var(--md-spacing-40);
   border-top: 1px solid var(--linje);
-  padding-top: 28px;
+  padding-top: var(--md-spacing-32);
 }
 .notater section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--md-spacing-12);
   min-width: 0;
 }
 .notater p {
-  color: var(--dempet);
-  font-size: var(--md-typography-body-s);
   max-width: 62ch;
 }
 .tek {
   font-size: var(--md-typography-body-xs);
   color: var(--dempet);
 }
-.planlagt .tegnliste li > b {
-  font-weight: 400;
-}
-/* Lenker og avkrysningsbokser fra designsystemet i løpende tekst */
+/* Lenker fra designsystemet i løpende tekst følger teksten rundt */
 p .md-link:not(.md-button) {
   display: inline;
   padding: 0;
   font-size: inherit;
   line-height: inherit;
+}
+/* Meldinger fra designsystemet: bare etiketten er halvfet, forklaringen står i vanlig skrift */
+.md-alert-message__description {
+  font-size: var(--md-typography-body-s);
 }

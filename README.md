@@ -134,9 +134,9 @@ GitHub. Dette er brukt hvor:
 | `MdComboBox` | Valg av kommune. Søker i alle kommuner, og viser kommunene i valgt fylke når søkefeltet er tomt. |
 | `MdFilterChip` | Kartlagene av og på |
 | `MdAccordionItem` | Temaene, med tallene i raden og detaljene inni |
-| `MdAlertMessage` | Ingen kommuneplan, egne områder i tallene, og meldinger om tegning og opplasting |
-| `MdButton`, `MdIconButton` | Tegning og opplasting, vis i kartet, slett, bytt kommune, til listen og fjern markering |
-| `MdLink` | Faktaark og dokumentasjon |
+| `MdAlertMessage` | Ingen kommuneplan (`warning`), egne områder i tallene (`info-box`), og meldinger om tegning og opplasting |
+| `MdButton`, `MdIconButton` | Tegning og opplasting, vis i kartet, faktaark, slett, bytt kommune, til listen og fjern markering |
+| `MdLink` | Lenker i løpende tekst |
 | `MdRadioGroup` | Om et tegnet område er utbygging eller ikke |
 | `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper og teknisk visning |
 | `MdLoadingSpinner` | Mens kartet hentes |
@@ -146,9 +146,38 @@ Det designsystemet ikke har, er laget selv med designsystemets variabler for far
 viser fordeling, tegnforklaringer med fargeruter, og alt i kartet. Kartfargene for arealklasser og tema er data, ikke utforming,
 og følger med som før.
 
+### Fast mønster for utformingen
+
+Reglene står også øverst i `src/stil.css`. De bygger på designsystemets sider om farger, typografi og komponenter, og på
+Miljødirektoratets profil og språkprofil.
+
+- **Skrift.** Sidetittelen (kommunenavnet) er `heading-l`, og `heading-xl` på bred skjerm. Seksjoner har `heading-s` (klassen
+  `seksjonstittel`), kort og bokser `heading-xs` (`korttittel`). Brødtekst er 16 px. Kilder, hjelpetekst og tabeller er 14 px,
+  og 12 px brukes bare for små tall under tallene i tabellene og i teknisk visning. Uthevinger har vekt 600.
+- **Flater.** Siden er hvit. Rader som kan åpnes, har designsystemets egen flate. Kort og bokser er hvite med tynn grå kant.
+  Beige brukes bare i meldinger av typen `info-box`, oransje bare i advarsler. Sjøgrønn er eneste aksentfarge, som profilen sier:
+  én hovedfarge, og høyst én av de andre om gangen.
+- **Handlinger.** Primærknapp bare for hovedvalget i et øyeblikk: «Ferdig» når man tegner, og «Bytt til …» etter trykk utenfor
+  kommunen. Sekundærknapper for verktøy, tertiærknapper for handlinger i
+  lister («Vis i kartet», «Faktaark»), og vanlige lenker bare i løpende tekst.
+- **Avstander.** Designsystemets trinn (4, 8, 12, 16, 24, 32 px). Mellom avsnitt i løpende tekst minst to ganger
+  skriftstørrelsen, som designsystemet krever etter WCAG 2.1.
+- **Tekst.** Språkprofilen: tall til og med tolv med bokstaver i løpende tekst, forkortelser skrevet ut første gang
+  (Statistisk sentralbyrå (SSB)), desimalkomma, og mellomrom foran prosent. «Dekar» i setninger og «daa» i tabeller og lister.
+- **Kartfarger.** Fargene i kartet er data og velges for å skille klassene, også ved fargeblindhet. Der profilen har en farge
+  med samme rolle, brukes den: Oransje mørk for villrein, Sjøgrønn lys for grønt i bebygd område og Blå mørk for egne områder.
+  Verneområder og verdsatt natur har egne farger, se `FARGER` i `src/motor/felles.js`.
+
+Det designsystemet ikke sier noe om, er laget etter de samme reglene: tabellene (`talltabell`), oppsettet med kart og tall i to
+kolonner, og alt i kartet.
+
 Ting å vite:
 
 - Designsystemet har ikke mørkt tema, så siden har det ikke lenger.
+- Tre feil i designsystemet (md-css 6.32.0) rettes i `src/stil.css`: variabelen `--md-typography-weight-semibold` brukes av
+  etikettene, men er ikke definert, så den settes til 600. «Lukk» nederst i rader som kan åpnes, har ingen skrift og får
+  nettleserens standardskrift, så knapper arver skriften. Overskriften i de samme radene regner bredde uten kant, så
+  fargerutene setter dette selv.
 - Skriften i designsystemet er Open Sans og Sofia Pro. Open Sans følger med bygget (fra `@fontsource/open-sans`). Sofia Pro kan
   bare brukes i Miljødirektoratets egne løsninger og ligger ikke i dette repoet, så overskriftene bruker Open Sans. Har maskinen
   Sofia Pro installert, brukes den.
