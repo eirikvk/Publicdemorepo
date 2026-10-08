@@ -9,6 +9,7 @@ import { NATURLAG, fjernMerket } from '../motor/naturtema.js';
 import Egne from './Egne.jsx';
 import { Rute } from './deler.jsx';
 import { MdButton, MdFilterChip, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.js';
+import './Kartpanel.css';
 
 function Kart() {
   const ref = useRef(null);

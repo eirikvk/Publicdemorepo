@@ -1,0 +1,48 @@
+/* Toppen i Topp.jsx: navnet på løsningen, valg av fylke og kommune, og overskriften med kommunen som er valgt */
+.topp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-16) var(--md-spacing-32);
+  align-items: flex-end;
+  justify-content: space-between;
+}
+/* Navnet på løsningen: halvfet, med en linje liten tekst under */
+.merke {
+  font-weight: var(--md-typography-weight-medium);
+}
+.merke small {
+  display: block;
+  font-weight: var(--md-typography-weight-regular);
+  font-size: var(--md-typography-body-s);
+  color: var(--dempet);
+}
+.velgere {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-12) var(--md-spacing-16);
+}
+.velgere > * {
+  width: 240px;
+  max-width: 100%;
+}
+/* På telefon står velgerne under hverandre i full bredde, som skjemafeltene i designsystemet */
+@media (max-width: 600px) {
+  .velgere {
+    flex: 1 1 100%;
+  }
+  .velgere > * {
+    flex: 1 1 100%;
+  }
+}
+.overskrift p {
+  margin-top: var(--md-spacing-4);
+}
+/* Sidetittelen bruker designsystemets klasse, men er større på bred skjerm */
+.overskrift h1 {
+  text-wrap: balance;
+}
+@media (min-width: 861px) {
+  .overskrift h1 {
+    font-size: var(--md-typography-heading-xl);
+  }
+}

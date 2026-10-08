@@ -9,6 +9,7 @@ import Topp from './Topp.jsx';
 import Kartpanel from './Kartpanel.jsx';
 import Tallpanel from './Tallpanel.jsx';
 import Notater from './Notater.jsx';
+import './App.css';
 
 /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
    Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på.

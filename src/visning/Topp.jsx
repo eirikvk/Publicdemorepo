@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { app } from '../motor/felles.js';
 import { finn, velg, velgFylke } from '../motor/handlinger.js';
 import { MdComboBox, MdSelect } from './md.js';
+import './Topp.css';
 
 export default function Topp() {
   const valgt = app.valgt ? finn(app.valgt.nr) : null,

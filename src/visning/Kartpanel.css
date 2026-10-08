@@ -1,0 +1,206 @@
+/* Kartpanelet i Kartpanel.jsx: rammen rundt kartet, merkelappene oppå det, kartets egne kontroller, linjen under kartet og
+   brikkene som slår kartlag av og på. Selve kartet tegnes av OpenLayers i motoren. */
+.kartpanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-16);
+  min-width: 0;
+  /* Knip på kortet rundt kartet forstørrer ikke siden, så et bomtrykk like utenfor kartet ikke zoomer hele siden. Er siden
+     forstørret, slipper kartet bevegelsene igjennom, så man alltid kan knipe seg ut igjen. */
+  touch-action: pan-x pan-y;
+}
+.sidezoom .kartpanel {
+  touch-action: auto;
+}
+.kartpanel > section,
+.kartfot + section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+  padding-top: var(--md-spacing-16);
+  border-top: 1px solid var(--linje);
+}
+.kartscene {
+  position: relative;
+  height: min(68vh, 620px);
+  min-height: 340px;
+  border-radius: var(--md-radius-sm);
+  overflow: hidden;
+  background: var(--md-color-grey-1);
+}
+.kartscene.slipp {
+  outline: var(--md-spacing-3) dashed var(--md-color-border-tertiary);
+  outline-offset: calc(-1 * var(--md-spacing-3));
+}
+.kartflate {
+  position: absolute;
+  inset: 0;
+}
+.kartflate .tema {
+  opacity: 0.86;
+}
+.kartflate .plan {
+  opacity: 0.92;
+}
+/* Merkelapper oppå kartet: hvite, med designsystemets kant og hjørner */
+.merkelapp,
+.vistmerke {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-8);
+  border-radius: var(--md-radius-md);
+  background: var(--md-color-surface-white);
+  border: 1px solid var(--md-color-border-primary);
+  font-size: var(--md-typography-body-s);
+  line-height: var(--md-typography-line-height-small);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.merkelapp {
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 110px);
+  padding: var(--md-spacing-8) var(--md-spacing-12);
+  text-align: center;
+  pointer-events: none;
+}
+.merkelapp.oppe {
+  top: 10px;
+}
+.merkelapp.midt {
+  top: 64px;
+  font-weight: var(--md-typography-weight-medium);
+}
+.merkelapp.nede {
+  bottom: 40px;
+}
+.vistmerke {
+  left: 10px;
+  bottom: 44px;
+  max-width: calc(100% - 20px);
+  gap: var(--md-spacing-4);
+  padding: var(--md-spacing-4) var(--md-spacing-4) var(--md-spacing-4) var(--md-spacing-12);
+}
+.vistmerke b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.vistmerke .md-button,
+.vistmerke .md-icon-button {
+  flex: none;
+}
+.bytt {
+  position: absolute;
+  top: 12px;
+  left: 8px;
+  z-index: 3;
+  max-width: calc(100% - 16px);
+}
+.bytt .md-button {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+.punkt {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: var(--md-spacing-3) solid var(--md-color-green-10);
+  background: var(--md-color-surface-white);
+  box-shadow: 0 0 0 2px var(--md-color-surface-white);
+  pointer-events: none;
+}
+/* Kontrollene i kartet ser ut som designsystemets sekundærknapper */
+.kartflate .ol-control {
+  background: none;
+  padding: 0;
+}
+.kartflate .ol-control button {
+  width: 44px;
+  height: 44px;
+  margin: 0 0 var(--md-spacing-8);
+  font: 400 24px/1 var(--md-typography-family-body);
+  color: var(--md-color-text-secondary);
+  background: var(--md-color-cta-secondary-default);
+  border: 1px solid var(--md-color-cta-secondary-stroke);
+  border-radius: var(--md-radius-md);
+}
+.kartflate .ol-control button:hover,
+.kartflate .ol-control button:focus {
+  color: var(--md-color-text-secondary);
+  background: var(--md-color-cta-secondary-hover);
+  outline: none;
+}
+.kartflate .ol-control button:active {
+  background: var(--md-color-cta-secondary-active);
+}
+.kartflate .ol-control button:focus-visible {
+  outline: var(--md-size-3) solid var(--md-color-focus-outer);
+  outline-offset: var(--md-size-2);
+}
+.kartflate .ol-zoom {
+  top: 10px;
+  left: auto;
+  right: 10px;
+}
+.kartflate .ol-scale-line,
+.kartflate .ol-attribution,
+.kartflate .ol-attribution:not(.ol-collapsed) {
+  background: var(--md-color-surface-white);
+  border: 1px solid var(--md-color-border-secondary);
+  border-radius: var(--md-radius-sm);
+}
+.kartflate .ol-scale-line {
+  left: 10px;
+  bottom: 10px;
+  padding: 2px 6px;
+}
+.kartflate .ol-scale-line-inner {
+  color: var(--dempet);
+  border-color: var(--dempet);
+  font: 400 12px/1.3 var(--md-typography-family-body);
+}
+.kartflate .ol-attribution,
+.kartflate .ol-attribution:not(.ol-collapsed) {
+  right: 10px;
+  bottom: 10px;
+  font-size: 11px;
+}
+.kartflate .ol-attribution ul {
+  color: var(--dempet);
+  text-shadow: none;
+}
+.kartflate .ol-attribution button {
+  display: none;
+}
+.kartflate .ol-attribution.ol-collapsed ul {
+  display: inline;
+}
+.kartfot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-8);
+  font-size: var(--md-typography-body-s);
+  color: var(--dempet);
+  font-variant-numeric: tabular-nums;
+}
+.probe b {
+  color: var(--md-color-text-primary);
+}
+
+/* Kartlagene av og på: designsystemets filterbrikker, med kartets farge i en rute */
+.brikker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-8);
+}
+.brikke {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-spacing-8);
+}
+.md-chip--active .brikke .rute {
+  box-shadow: 0 0 0 1.5px var(--md-color-surface-white);
+}

@@ -27,13 +27,61 @@ npm run bygg       bygger siden til dist/
 Innholdet i `dist/` er hele siden: én HTML-fil, ett skript, ett stilark, skriftfilene og de lagrede dataene. Det kan legges på en
 hvilken som helst webserver, også i en undermappe, fordi alle adresser er relative.
 
+## Slik henger koden sammen
+
+Koden har to lag, og stilen ligger ved siden av sidens deler:
+
+```
+Åpne tjenester: SSB, Kartverket, NIBIO, DiBK, Miljødirektoratet
+      │  hentes av
+      ▼
+src/motor/     Motoren henter data, regner ut tallene og tegner kartet.
+               Vanlig JavaScript. Vet ingenting om React eller hvordan siden ser ut.
+      │  legger alt i tilstanden (app) og sier fra (endret)
+      ▼
+src/visning/   Siden: React-komponenter som leser tilstanden og viser den som
+               tekst, lister, tabeller og knapper. Hver komponent har sin CSS-fil.
+```
+
+Slik går en runde, for eksempel når brukeren velger kommune:
+
+1. Brukeren velger Trondheim i `Topp.jsx`. Komponenten kaller `velg` i `motor/handlinger.js`.
+2. Motoren henter grensen, tallene fra SSB, kommuneplanen og temaene, regner, og legger svarene i `app`.
+3. Hver gang noe er klart, kaller motoren `endret()`. React tegner da siden på nytt ut fra det som ligger i `app`.
+
+Komponentene endrer aldri tilstanden selv. De viser den, og kaller motoren når brukeren gjør noe.
+
+Siden er bygd opp av disse delene. Hver har en `.jsx`-fil og en `.css`-fil med samme navn i `src/visning/`:
+
+```
+App            sideoppsettet: toppen, to kolonner og notatene nederst
+├─ Topp        navnet, valg av fylke og kommune, og kommunenavnet
+├─ Kartpanel   kartet, knappene for kartlag, og
+│  └─ Egne     egne områder: tegning, opplasting og sammenligning
+├─ Tallpanel   arealet fra SSB, planlagt utbygging, utvikling og land og vann, og
+│  └─ Temaer   temaene som rader som kan åpnes
+└─ Notater     metode, om siden og tekniske valg
+```
+
+Felles for alle delene:
+
+| Fil | Hva den er |
+|---|---|
+| `src/grunnlag.css` | Stilen som gjelder hele siden, og reglene for utformingen |
+| `deler.jsx` og `deler.css` | Byggeklossene designsystemet ikke har: fargeruter, stolper, lister og tabeller med tall |
+| `tekst.js` | Hvordan tall og tekst skrives |
+| `md.js` | Komponentene fra designsystemet som siden bruker |
+
+Stilen kommer i tre lag, der hvert lag kan bygge på det forrige: designsystemets egen CSS (hentet i `main.jsx`), så
+`grunnlag.css`, så filen til hver komponent.
+
 ## Filene
 
 | Fil | Innhold |
 |---|---|
 | `index.html` | Inngangen. Bare et tomt element som React fyller. |
-| `src/main.jsx` | Stilene fra designsystemet, skriften og kartets stil, og oppstarten av React |
-| `src/stil.css` | Sidens egen stil: oppsett, kart, tabeller, stolper og fargeruter. Bruker designsystemets variabler. |
+| `src/main.jsx` | Stilene fra designsystemet, skriften, kartets stil og den felles stilen, og oppstarten av React |
+| `src/grunnlag.css` | Stilen som gjelder hele siden. Bruker designsystemets variabler. |
 | `src/motor/` | Motoren: henting, utregning og kartet. Vanlig JavaScript uten React. |
 | `src/visning/` | Sidens komponenter i React |
 | `public/` | Filer som legges ut som de er: listen over kommuner og de lagrede oversiktsbildene |
@@ -59,7 +107,7 @@ Motoren:
 | `tall.js` | Tallene fra SSB: arealklasser, land og vann, og anslått utvikling |
 | `handlinger.js` | Det brukeren kan gjøre: velge kommune, slå kartlag av og på, og oppstarten |
 
-Komponentene:
+Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av `Temaer.jsx`.
 
 | Fil | Innhold |
 |---|---|
@@ -149,7 +197,7 @@ og følger med som før.
 
 ### Fast mønster for utformingen
 
-Reglene står også øverst i `src/stil.css`. De bygger på designsystemets sider om farger, typografi og komponenter, og på
+Reglene står også øverst i `src/grunnlag.css`. De bygger på designsystemets sider om farger, typografi og komponenter, og på
 Miljødirektoratets profil og språkprofil.
 
 - **Tekst, seks stiler.** Tre overskrifter med designsystemets klasser: sidetittelen (`md-typography-heading-l`, og `heading-xl`
@@ -188,7 +236,7 @@ I tillegg kommer oppsettet med kart og tall i to kolonner, stolpene (`stripe`), 
 Ting å vite:
 
 - Designsystemet har ikke mørkt tema, så siden har det ikke lenger.
-- Tre feil i designsystemet (md-css 6.32.0) rettes i `src/stil.css`: variabelen `--md-typography-weight-semibold` brukes av
+- Tre feil i designsystemet (md-css 6.32.0) rettes i `src/grunnlag.css` og `src/visning/deler.css`: variabelen `--md-typography-weight-semibold` brukes av
   etikettene, men er ikke definert, så den settes til 600. «Lukk» nederst i rader som kan åpnes, har ingen skrift og får
   nettleserens standardskrift, så knapper arver skriften. Overskriften i de samme radene regner bredde uten kant, så
   fargerutene setter dette selv.

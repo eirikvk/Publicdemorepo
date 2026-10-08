@@ -10,6 +10,7 @@ import { settSlor } from '../motor/handlinger.js';
 import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
 import { MdAccordionItem, MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
 import { andelTekst, antallOrd, dekar, dekarFraRuter, iTekst, nf, periode, prosent, stor } from './tekst.js';
+import './Temaer.css';
 
 const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
 

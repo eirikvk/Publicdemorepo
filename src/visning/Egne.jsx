@@ -27,6 +27,7 @@ import {
   MdRadioGroup
 } from './md.js';
 import { antallOrd, dekar, dekarFraRuter, medFortegn, prosent, ramse } from './tekst.js';
+import './Egne.css';
 
 /* Antall flater i tekst, med tall til og med tolv i ord */
 const flater = n => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);

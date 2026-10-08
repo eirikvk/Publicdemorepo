@@ -1,0 +1,32 @@
+/* Tallpanelet i Tallpanel.jsx: seksjonene i høyre kolonne, skilt med en tynn linje */
+.tallpanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-24);
+  min-width: 0;
+}
+.tallpanel > section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+}
+.tallpanel > section + section {
+  padding-top: var(--md-spacing-24);
+  border-top: 1px solid var(--linje);
+}
+/* Arealklassene har både areal og andel. Andelen står i en egen kolonne, så prosentene står under hverandre. */
+.talliste .andel {
+  display: inline-block;
+  min-width: 4.6em;
+  margin-left: var(--md-spacing-8);
+  color: var(--md-color-text-primary);
+}
+h2:has(> .rute) {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-12);
+}
+h2 > .rute {
+  width: 16px;
+  height: 16px;
+}

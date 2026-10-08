@@ -2,6 +2,7 @@
 import { app, VERSJON } from '../motor/felles.js';
 import { finn, settSmale } from '../motor/handlinger.js';
 import { MdCheckbox, MdLink, MdToggle } from './md.js';
+import './Notater.css';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 

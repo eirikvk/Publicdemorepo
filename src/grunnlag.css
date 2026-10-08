@@ -1,0 +1,96 @@
+/* Felles for hele siden, hentet i main.jsx før komponentene. Her ligger det som gjelder overalt: designsystemets variabler som
+   siden setter selv, grunnlaget for tekst, fokus og avstand mellom avsnitt, og små rettinger av designsystemet.
+   Hver komponent har sin egen stil ved siden av seg i src/visning, for eksempel Temaer.css for Temaer.jsx.
+
+   Fast mønster for hele siden, se også README:
+   - Tekst: tre overskrifter med designsystemets klasser, brødtekst 16 px og liten tekst 14 px. Ingen andre størrelser.
+   - Flater: hvit side. Kort (hvite, tynn grå kant) bare for egne områder. Meldingsbokser bare når noe mangler eller er galt.
+   - Linjer: én tynn grå linje overalt.
+   - Knapper: ramme for verktøyene, bare tekst for handlinger i lister og kort.
+   - Farger, skrift, avstander og hjørner er designsystemets variabler (--md-*). Kartets farger er data og ligger som egne
+     variabler (--beb, --pnat og så videre), satt fra FARGER i motor/felles.js.
+   - Avstander: designsystemets trinn. Mellom avsnitt i løpende tekst minst to ganger skriftstørrelsen, som designsystemet krever. */
+:root {
+  /* Sofia Pro følger ikke med designsystemet og ligger ikke i denne løsningen. Uten den brukes Open Sans også i overskrifter. */
+  --md-typography-family-heading: 'SofiaPro-Regular', 'Open Sans', sans-serif;
+  /* Designsystemets stiler for etiketter bruker denne variabelen, men den er ikke definert i designsystemet (6.32.0). Uten den
+     blir etikettene tynne. */
+  --md-typography-weight-semibold: 600;
+  --linje: var(--md-color-border-secondary);
+  --dempet: var(--md-color-grey-6);
+  color-scheme: light;
+}
+/* Som designsystemets samlede stilark: bredder regnes med kant og luft. Siden tar bare med delene av designsystemet den bruker. */
+html {
+  box-sizing: border-box;
+}
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+[hidden] {
+  display: none !important;
+}
+/* Knapper og felt arver ikke skrift i nettleseren. Designsystemet setter skrift på de fleste av sine, men ikke på «Lukk» nederst
+   i rader som kan åpnes (6.32.0), som da får nettleserens standardskrift. :where gir ingen vekt, så designsystemets egne valg
+   gjelder foran denne. */
+:where(button, input, select, textarea) {
+  font-family: inherit;
+}
+body {
+  margin: 0;
+  background: var(--md-color-background-primary);
+  color: var(--md-color-text-primary);
+  font-family: var(--md-typography-family-body);
+  font-size: var(--md-typography-body-m);
+  line-height: var(--md-typography-line-height-medium);
+}
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+table {
+  margin: 0;
+}
+ul {
+  padding: 0;
+  list-style: none;
+}
+:focus-visible {
+  outline: var(--md-size-3) solid var(--md-color-focus-outer);
+  outline-offset: var(--md-size-2);
+}
+
+.hint {
+  font-size: var(--md-typography-body-s);
+  color: var(--dempet);
+}
+b,
+strong {
+  font-weight: var(--md-typography-weight-medium);
+}
+/* Løpende tekst: minst to ganger skriftstørrelsen mellom avsnitt (designsystemet, etter WCAG 2.1) */
+.prosa > p + p {
+  margin-top: calc(2em - var(--md-spacing-12));
+}
+.knapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--md-spacing-8);
+}
+
+/* Lenker fra designsystemet i løpende tekst følger teksten rundt */
+p .md-link:not(.md-button) {
+  display: inline;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+/* Meldinger fra designsystemet: bare etiketten er halvfet, forklaringen står i vanlig skrift */
+.md-alert-message__description {
+  font-size: var(--md-typography-body-s);
+}

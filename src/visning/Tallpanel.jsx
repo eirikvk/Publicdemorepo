@@ -8,6 +8,7 @@ import Temaer from './Temaer.jsx';
 import { Forklaring, Rute, Stripe, Talltabell } from './deler.jsx';
 import { andelTekst, antallOrd, dekar, iTekst, medFortegn, nf, prosent } from './tekst.js';
 import { MdAlertMessage } from './md.js';
+import './Tallpanel.css';
 
 function Arealklasser() {
   const T = app.arealtall,

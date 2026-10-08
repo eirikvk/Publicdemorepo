@@ -1,0 +1,78 @@
+/* Temaene i Temaer.jsx: designsystemets rader som kan åpnes, med navn, areal og andel i raden og detaljene inni */
+.temaliste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-8);
+}
+.temarad .md-accordion-item__header {
+  padding: var(--md-spacing-12) var(--md-spacing-16);
+  gap: var(--md-spacing-12);
+}
+.temarad .md-accordion-item__header-left {
+  align-items: flex-start;
+  min-width: 0;
+}
+.temarad .md-accordion-item__header-icon {
+  margin-top: 1px;
+}
+.temarad .md-accordion-item__header-label {
+  font-size: var(--md-typography-heading-xs);
+  margin-left: var(--md-spacing-12);
+  min-width: 0;
+}
+.temanavn {
+  display: flex;
+  gap: var(--md-spacing-12);
+  align-items: flex-start;
+}
+.temanavn .rute {
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+}
+/* Bare navnet streker seg under når pekeren er over raden, ikke tallene under det */
+.temaliste .temarad.md-accordion-item .md-accordion-item__header:hover .md-accordion-item__header-label {
+  text-decoration: none;
+}
+.temarad .md-accordion-item__header:hover .tittel {
+  text-decoration: underline;
+}
+.temanavn small {
+  display: block;
+  font-family: var(--md-typography-family-body);
+  font-size: var(--md-typography-body-s);
+  line-height: var(--md-typography-line-height-small);
+  color: var(--dempet);
+  white-space: pre-line;
+  margin-top: var(--md-spacing-4);
+}
+.tematall {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--md-typography-family-body);
+  font-variant-numeric: tabular-nums;
+}
+.tematall .areal {
+  color: var(--dempet);
+  font-size: var(--md-typography-body-s);
+}
+.tematall .andel {
+  font-weight: var(--md-typography-weight-medium);
+}
+.temarad .md-accordion-item__content {
+  padding: var(--md-spacing-16);
+  background: var(--md-color-surface-white);
+  border-radius: 0 0 var(--md-radius-md) var(--md-radius-md);
+}
+.temablokk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-12);
+}
+/* Små overskrifter inne i et tema får litt ekstra luft over seg */
+.temablokk :is(h3, h4) {
+  margin-top: var(--md-spacing-8);
+}

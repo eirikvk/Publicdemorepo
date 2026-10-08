@@ -1,9 +1,10 @@
 /* Små byggeklosser som designsystemet ikke har: fargeruter, stolper som viser en fordeling, tegnforklaringer, linjer i en liste
    med tall, og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i motor/felles.js. */
 import { dekar, prosent } from './tekst.js';
+import './deler.css';
 
 /* Fargerute for et kartlag eller en klasse. id er navnet på fargen, for eksempel beb eller verdi2. Lag med flere farger (plan,
-   inon, graa, verdi) og lag som tegnes som omriss (vern, rein) får egen utforming i stil.css, ut fra data-lag. */
+   inon, graa, verdi) og lag som tegnes som omriss (vern, rein) får egen utforming i deler.css, ut fra data-lag. */
 export const Rute = ({ id, className = '' }) => (
   <i
     className={'rute ' + className}

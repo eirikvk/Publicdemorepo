@@ -1,0 +1,22 @@
+/* Sideoppsettet i App.jsx: siden i midten med luft rundt, og to kolonner, kartet til venstre og tallene til høyre. På smal
+   skjerm kommer alt under hverandre. */
+.side {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+  padding-block: var(--md-spacing-24) var(--md-spacing-56);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-24);
+}
+.hoved {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--md-spacing-32) var(--md-spacing-40);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .hoved {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
