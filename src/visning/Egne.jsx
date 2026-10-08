@@ -119,11 +119,11 @@ function EgetOmrade({ g, nr, R }) {
       {tabell}
       {smal && <p>{smal}</p>}
       <div className="knapper">
-        <MdButton theme="secondary" mode="small" leftIcon={<MdIconLocation />} onClick={() => visEgetIKartet(g)}>
+        <MdButton theme="tertiary" mode="small" leftIcon={<MdIconLocation />} onClick={() => visEgetIKartet(g)}>
           Vis i kartet
         </MdButton>
         <MdButton
-          theme="danger-secondary"
+          theme="danger-tertiary"
           mode="small"
           leftIcon={<MdIconDelete />}
           aria-label={`Slett ${g.navn}`}
@@ -202,7 +202,12 @@ export default function Egne() {
           ? 'Trykk i kartet for hvert hjørne. Avslutt med å trykke på første punkt, eller på Ferdig når du har minst tre punkter.'
           : 'Tegn et område i kartet, eller last opp en plan som GeoJSON i samme format som DiBKs nedlasting av plandata. Du kan også slippe filen i kartet. Innenfor flatene erstatter tegningen eller filen kommuneplanen. Ingenting lagres eller sendes fra nettleseren.'}
       </p>
-      {s && <MdAlertMessage theme={s.type === 'info' ? 'info-box' : s.type} fullWidth role="status" label={s.tekst} />}
+      {s &&
+        (s.type === 'warning' || s.type === 'error' ? (
+          <MdAlertMessage theme={s.type} fullWidth role="status" label={s.tekst} />
+        ) : (
+          <p role="status">{s.tekst}</p>
+        ))}
       {E.length > 0 && (
         <ul className="egneliste">
           {E.map((g, nr) => (

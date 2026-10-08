@@ -57,7 +57,7 @@ function Helhet({ t, H, E }) {
   const { L, K, U, inne, ute, si, su } = H;
   const verdier = a => t.klasser.map(([navn, id], v) => [navn, '--' + id, a[v]]);
   return (
-    <div className="kort">
+    <>
       <h3 className="md-typography-heading-xs">Helhetsbildet: verdsatt natur og kartlegging</h3>
       <Stripe
         hva="Landarealet"
@@ -93,7 +93,7 @@ function Helhet({ t, H, E }) {
         overføres direkte til resten.
         {E.fra ? ` Kartlagt etter Miljødirektoratets instruks ${periode(E.fra, E.til)}.` : ''}
       </p>
-    </div>
+    </>
   );
 }
 

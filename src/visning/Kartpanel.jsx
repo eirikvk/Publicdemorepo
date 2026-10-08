@@ -161,7 +161,7 @@ export default function Kartpanel({ teknisk }) {
             p.tekst
           )}
         </p>
-        {teknisk && <p className="tek">{app.siste}</p>}
+        {teknisk && <p className="hint">{app.siste}</p>}
       </div>
       <Kartlag />
       <Egne />

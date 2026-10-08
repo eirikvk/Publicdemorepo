@@ -2,15 +2,14 @@
    (--md-*). Kartets farger er data og ligger som egne variabler (--beb, --pnat og så videre), satt fra FARGER i motor/felles.js.
 
    Fast mønster for hele siden, se også README:
-   - Skrift: overskrifter med designsystemets klasser (md-typography-heading-s og så videre), brødtekst og lister 16 px,
-     hjelpetekst, kilder og tabeller 14 px, 12 px bare for små tall i tabeller og teknisk visning.
-   - Egne byggeklosser der designsystemet ikke har noe: talliste, talltabell, kort, navn og tall. Se README.
-   - Flater: hvit side. Rader som kan åpnes, har designsystemets grønne flate. Kort og bokser er hvite med tynn grå kant.
-     Beige brukes bare i meldinger av typen info-box. Én aksentfarge: sjøgrønn.
-   - Avstander: 4, 8, 12, 16, 24 og 32 px fra designsystemet. Mellom avsnitt i løpende tekst minst to ganger skriftstørrelsen,
-     som designsystemet krever.
-   - Layout: velgere øverst, kartet til venstre og tallene til høyre, metode og kall-logg under. På smal skjerm kommer alt under
-     hverandre, og kartpanelet mister rammen, så tabellene får plass. */
+   - Tekst: tre overskrifter med designsystemets klasser, brødtekst 16 px og liten tekst 14 px. Ingen andre størrelser.
+   - Flater: hvit side. Kort (hvite, tynn grå kant) bare for egne områder. Meldingsbokser bare når noe mangler eller er galt.
+   - Linjer: én tynn grå linje overalt.
+   - Knapper: ramme for verktøyene, bare tekst for handlinger i lister og kort.
+   - Egne byggeklosser der designsystemet ikke har noe: talliste, talltabell, kort, navn og tall.
+   - Avstander: designsystemets trinn. Mellom avsnitt i løpende tekst minst to ganger skriftstørrelsen, som designsystemet krever.
+   - Oppsett: velgere øverst, kartet til venstre og tallene til høyre, metode og kall-logg under. På smal skjerm kommer alt under
+     hverandre. */
 :root {
   /* Sofia Pro følger ikke med designsystemet og ligger ikke i denne løsningen. Uten den brukes Open Sans også i overskrifter. */
   --md-typography-family-heading: 'SofiaPro-Regular', 'Open Sans', sans-serif;
@@ -111,18 +110,13 @@ strong {
   align-items: flex-end;
   justify-content: space-between;
 }
+/* Navnet på løsningen: halvfet, med en linje liten tekst under */
 .merke {
-  font-family: var(--md-typography-family-heading);
-  font-size: var(--md-typography-heading-xs);
-  line-height: var(--md-typography-line-height-small);
-  color: var(--md-color-text-secondary);
-  padding-left: var(--md-spacing-12);
-  border-left: var(--md-spacing-3) solid var(--md-color-green-10);
+  font-weight: var(--md-typography-weight-medium);
 }
 .merke small {
   display: block;
-  margin-top: var(--md-spacing-4);
-  font-family: var(--md-typography-family-body);
+  font-weight: var(--md-typography-weight-regular);
   font-size: var(--md-typography-body-s);
   color: var(--dempet);
 }
@@ -145,7 +139,6 @@ strong {
   }
 }
 .overskrift p {
-  color: var(--dempet);
   margin-top: var(--md-spacing-4);
 }
 .hoved {
@@ -160,11 +153,8 @@ strong {
   }
 }
 
-/* Kartpanelet */
+/* Kartpanelet: kartet, og under det kartlagene og egne områder. Uten ramme, som kolonnen med tall. */
 .kartpanel {
-  border: 1px solid var(--linje);
-  border-radius: var(--md-radius-md);
-  padding: var(--md-spacing-12);
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-16);
@@ -175,13 +165,6 @@ strong {
 }
 .sidezoom .kartpanel {
   touch-action: auto;
-}
-/* På telefon tar rammen rundt kartpanelet plass fra kartet og tabellene, uten å skille noe. */
-@media (max-width: 600px) {
-  .kartpanel {
-    border: 0;
-    padding: 0;
-  }
 }
 .kartpanel > section,
 .kartfot + section {
@@ -480,26 +463,10 @@ strong {
   padding-top: var(--md-spacing-24);
   border-top: 1px solid var(--linje);
 }
-.total {
-  font-size: var(--md-typography-heading-l);
-  line-height: var(--md-typography-line-height-small);
-  font-variant-numeric: tabular-nums;
-}
-.total b {
-  font-weight: var(--md-typography-weight-medium);
-}
-.total span {
-  font-size: var(--md-typography-body-m);
-  color: var(--dempet);
-  margin-left: var(--md-spacing-8);
-}
 /* Et tall: til høyre, og aldri delt over to linjer. Brukes i lister og tabeller. */
 .tall {
   text-align: right;
   white-space: nowrap;
-}
-.dempet {
-  color: var(--dempet);
 }
 /* Navn med fargerute foran, i lister og tabeller. Ruten følger skriftstørrelsen og står midt på første linje. */
 .navn {
@@ -650,11 +617,16 @@ h2 > .rute {
 }
 .kort h3 span {
   font-family: var(--md-typography-family-body);
-  font-size: var(--md-typography-body-m);
+  font-size: var(--md-typography-body-s);
   color: var(--dempet);
   white-space: nowrap;
 }
-.kort h4 {
+/* Tertiærknapper har luft rundt teksten. Uten dette står de et stykke inn fra teksten over. */
+.kort > .knapper {
+  margin-left: calc(-1 * var(--md-spacing-12));
+}
+/* Små overskrifter inne i et tema får litt ekstra luft over seg */
+.temablokk :is(h3, h4) {
   margin-top: var(--md-spacing-8);
 }
 @media (max-width: 600px) {
@@ -687,36 +659,28 @@ h2 > .rute {
 .talltabell :is(th, td) + :is(th, td) {
   padding-left: var(--md-spacing-8);
 }
-/* Nettleseren midtstiller overskriftsceller */
+/* Overskriftsceller er halvfete. Nettleseren midtstiller dem, så de settes til venstre. */
 .talltabell th {
   text-align: left;
+  font-weight: var(--md-typography-weight-medium);
 }
 .talltabell thead th {
-  font-weight: var(--md-typography-weight-medium);
   vertical-align: bottom;
-  color: var(--dempet);
-  border-bottom-color: var(--md-color-border-primary);
 }
 .talltabell th.tall {
   text-align: right;
   white-space: normal;
 }
 .talltabell tbody th {
-  font-weight: var(--md-typography-weight-medium);
   min-width: 7em;
 }
 .talltabell td small {
   display: block;
-  font-size: var(--md-typography-body-xs);
+  font-size: inherit;
   color: var(--dempet);
 }
 .talltabell tr.gruppe th {
   padding-top: var(--md-spacing-16);
-  font-size: var(--md-typography-body-xs);
-  color: var(--dempet);
-}
-.talltabell.logg {
-  font-size: var(--md-typography-body-xs);
 }
 .talltabell td.feil {
   font-weight: var(--md-typography-weight-medium);
@@ -746,10 +710,6 @@ h2 > .rute {
 }
 .notater p {
   max-width: 62ch;
-}
-.tek {
-  font-size: var(--md-typography-body-xs);
-  color: var(--dempet);
 }
 /* Lenker fra designsystemet i løpende tekst følger teksten rundt */
 p .md-link:not(.md-button) {

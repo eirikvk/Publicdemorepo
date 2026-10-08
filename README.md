@@ -135,7 +135,7 @@ GitHub. Dette er brukt hvor:
 | `MdComboBox` | Valg av kommune. Søker i alle kommuner, og viser kommunene i valgt fylke når søkefeltet er tomt. |
 | `MdFilterChip` | Kartlagene av og på |
 | `MdAccordionItem` | Temaene, med tallene i raden og detaljene inni |
-| `MdAlertMessage` | Ingen kommuneplan (`warning`), egne områder i tallene (`info-box`), og meldinger om tegning og opplasting |
+| `MdAlertMessage` | Ingen kommuneplan (`warning`), og feil ved tegning og opplasting |
 | `MdButton`, `MdIconButton` | Tegning og opplasting, vis i kartet, faktaark, slett, bytt kommune, til listen og fjern markering |
 | `MdLink` | Lenker i løpende tekst |
 | `MdRadioGroup` | Om et tegnet område er utbygging eller ikke |
@@ -152,16 +152,19 @@ og følger med som før.
 Reglene står også øverst i `src/stil.css`. De bygger på designsystemets sider om farger, typografi og komponenter, og på
 Miljødirektoratets profil og språkprofil.
 
-- **Skrift.** Overskriftene bruker designsystemets klasser direkte: sidetittelen `md-typography-heading-l` (og `heading-xl` på
-  bred skjerm), seksjoner `md-typography-heading-s`, kort `md-typography-heading-xs` og små overskrifter
-  `md-typography-label-s`. Brødtekst og lister er 16 px. Kilder, hjelpetekst, forklaringer under en linje og tabeller er 14 px,
-  og 12 px brukes bare for små tall under tallene i tabellene og i teknisk visning. Uthevinger har vekt 600.
-- **Flater.** Siden er hvit. Rader som kan åpnes, har designsystemets egen flate. Kort og bokser er hvite med tynn grå kant.
-  Beige brukes bare i meldinger av typen `info-box`, oransje bare i advarsler. Sjøgrønn er eneste aksentfarge, som profilen sier:
-  én hovedfarge, og høyst én av de andre om gangen.
+- **Tekst, seks stiler.** Tre overskrifter med designsystemets klasser: sidetittelen (`md-typography-heading-l`, og `heading-xl`
+  på bred skjerm), seksjoner (`heading-s`) og undertitler (`heading-xs`). Brødtekst 16 px, vanlig eller halvfet. Liten tekst
+  14 px: grå for kilder, hjelpetekst og forklaringer, svart i tabeller, og halvfet for etiketter og kolonneoverskrifter
+  (`md-typography-label-s`). Ingen andre størrelser.
+- **Flater.** Siden er hvit, også rundt kartet. Hvite kort med tynn grå kant brukes bare for egne områder. Rader som kan åpnes,
+  har designsystemets egen flate. Sjøgrønn er eneste aksentfarge, som profilen sier: én hovedfarge, og høyst én av de andre om
+  gangen.
+- **Meldinger.** Designsystemets meldingsbokser bare når noe mangler eller er galt: ingen kommuneplan, en fil som ikke kan
+  leses. Annen informasjon står som vanlig tekst.
+- **Linjer.** Én tynn grå linje mellom seksjoner, linjer i lister og rader i tabeller.
 - **Handlinger.** Primærknapp bare for hovedvalget i et øyeblikk: «Ferdig» når man tegner, og «Bytt til …» etter trykk utenfor
-  kommunen. Sekundærknapper for verktøy, tertiærknapper for handlinger i
-  lister («Vis i kartet», «Faktaark»), og vanlige lenker bare i løpende tekst.
+  kommunen. Sekundærknapper (med ramme) for verktøyene: tegn, last opp og angre. Tertiærknapper (bare tekst) for alle
+  handlinger i lister og kort: «Vis i kartet», «Faktaark» og «Slett». Vanlige lenker bare i løpende tekst.
 - **Avstander.** Designsystemets trinn (4, 8, 12, 16, 24, 32 px). Mellom avsnitt i løpende tekst minst to ganger
   skriftstørrelsen, som designsystemet krever etter WCAG 2.1.
 - **Tekst.** Språkprofilen: tall til og med tolv med bokstaver i løpende tekst, forkortelser skrevet ut første gang
@@ -176,7 +179,7 @@ Det designsystemet ikke har, er laget etter de samme reglene, med noen få bygge
 |---|---|---|
 | `talliste` | Liste med navn til venstre, tall til høyre, og forklaring og knapper under | Arealklassene, planlagt utbygging, tegnforklaringene og områdene i temaene |
 | `talltabell` | Tabell med 14 px skrift og tynne linjer | Egne områder, anslått utvikling, klassene og kall-loggen |
-| `kort` | Hvit boks med tynn grå kant | Hvert eget område, samlet for kommunen, og helhetsbildet for verdsatt natur |
+| `kort` | Hvit boks med tynn grå kant | Hvert eget område, og samlet for kommunen |
 | `navn` | Navn med fargerute foran. Ruten følger skriftstørrelsen. | Første kolonne i lister og tabeller |
 | `tall` | Tall til høyre, som ikke deles over linjer | Tallene i lister og tabeller |
 

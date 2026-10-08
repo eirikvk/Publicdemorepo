@@ -96,7 +96,7 @@ export const SIDEN = {
     }),
   egne: p =>
     p.evaluate(() =>
-      [...document.querySelectorAll('.egne .kort, .egne .md-alert-message')]
+      [...document.querySelectorAll('.egne .kort, .egne [role="status"]')]
         .map(e => e.innerText.replace(/\s*\n\s*/g, ' | ').trim())
         .join('\n')
     )

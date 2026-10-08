@@ -20,8 +20,15 @@ function Arealklasser() {
         Areal i kommunen, SSB{ok ? ' ' + T.aar : ''}
       </h2>
       <p className="total">
-        <b>{ok ? dekar(sum) : T && T.tilstand === 'feil' ? 'Tallene kunne ikke hentes' : 'Henter …'}</b>
-        {ok && <span>land</span>}
+        {ok ? (
+          <>
+            Landareal: <b>{dekar(sum)}</b>
+          </>
+        ) : T && T.tilstand === 'feil' ? (
+          'Tallene kunne ikke hentes'
+        ) : (
+          'Henter …'
+        )}
       </p>
       {ok && (
         <Stripe
@@ -41,7 +48,7 @@ function Arealklasser() {
               <Rute id={id} />
               {navn}
             </span>
-            <span className="tall dempet">
+            <span className="tall">
               {ok ? dekar(a[i]) : '–'} <b className="andel">{ok ? andelTekst((a[i] / sum) * 100) : '–'}</b>
             </span>
           </li>
@@ -143,15 +150,7 @@ function Planlagt() {
           </li>
         </ul>
       )}
-      {egnemerk && (
-        <MdAlertMessage
-          theme="info-box"
-          fullWidth
-          role="status"
-          label="Egne områder er med i tallene"
-          description={egnemerk}
-        />
-      )}
+      {egnemerk && <p role="status">{egnemerk}</p>}
       {note && <p className="hint">{note}</p>}
     </section>
   );

@@ -14,7 +14,7 @@ export default function Notater({ teknisk, settTeknisk }) {
         <section className="prosa">
           <h2 className="md-typography-heading-s">Kall mot åpne kilder</h2>
           <div className="tabellramme">
-            <table className="talltabell logg">
+            <table className="talltabell">
               <thead>
                 <tr>
                   <th scope="col">Kilde</th>
@@ -128,9 +128,9 @@ export default function Notater({ teknisk, settTeknisk }) {
           textLeft={false}
           onChange={e => settTeknisk(e.target.checked)}
         />
-        {teknisk && <p className="tek">Utgave: {VERSJON}.</p>}
+        {teknisk && <p className="hint">Utgave: {VERSJON}.</p>}
         {teknisk && (
-          <p className="tek" role="status">
+          <p className="hint" role="status">
             {app.maaling || 'Flytt kartet for å måle hvor jevnt det går.'}
           </p>
         )}
