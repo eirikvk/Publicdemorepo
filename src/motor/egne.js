@@ -1,14 +1,21 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og tabellene som sammenligner med kommuneplanen. */
+import { ol } from './ol.js';
+import { OPPLOSNINGER, ORIGO, UTM, app, endret, nf, tilKartet, utm33 } from './felles.js';
+import { kommuneSti, lerret } from './grunnlag.js';
+import { finn, velg } from './handlinger.js';
+import { kart, lukkBytt, view } from './kart.js';
+import { NATURLAG } from './naturtema.js';
+import { ingenPlan, visPlan } from './plan.js';
 /* Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. */
 
 let egenTeller = 0;
-const mine = () => (app.valgt ? app.egne.filter(g => g.nr === app.valgt.nr) : []);
-const utenPlan = () =>
+export const mine = () => (app.valgt ? app.egne.filter(g => g.nr === app.valgt.nr) : []);
+export const utenPlan = () =>
   ingenPlan() &&
   !mine().length; /* uten kommuneplan og uten egne områder finnes det ingen planlagt utbygging å regne på */
 /* Egne områder i kartet: omriss med nummer. Fargen inni kommer fra planlaget, som viser hva som går med. */
 const egneKilde = new ol.source.Vector();
-const egneLag = new ol.layer.Vector({
+export const egneLag = new ol.layer.Vector({
   className: 'merket',
   source: egneKilde,
   style: f => [
@@ -31,7 +38,7 @@ const egneLag = new ol.layer.Vector({
   ]
 });
 let tegn = null;
-const tegner = () => !!tegn;
+export const tegner = () => !!tegn;
 const tegnStil = [
   new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 6 }) }),
   new ol.style.Style({
@@ -44,22 +51,19 @@ const tegnStil = [
     })
   })
 ];
-function visTegneknapper() {
-  const t = tegner();
-  $('tegnknapp').hidden = $('lastknapp').hidden = t;
-  ['tegnangre', 'tegnferdig', 'tegnavbryt'].forEach(i => {
-    $(i).hidden = !t;
-  });
-  $('tegnhjelp').textContent = t
-    ? 'Trykk i kartet for hvert hjørne. Avslutt med å trykke på første punkt, eller på Ferdig når du har minst tre punkter.'
-    : 'Tegn et område i kartet, eller last opp en plan som GeoJSON i samme format som DiBKs nedlasting av plandata. Innenfor flatene erstatter tegningen eller filen kommuneplanen. Ingenting lagres eller sendes fra nettleseren.';
-}
-function sluttTegning() {
+export function sluttTegning() {
   if (tegn) kart.removeInteraction(tegn);
   tegn = null;
-  visTegneknapper();
+  endret();
 }
-function startTegning() {
+/* Knappene under tegning */
+export const angrePunkt = () => {
+  if (tegn) tegn.removeLastPoint();
+};
+export const ferdigTegning = () => {
+  if (tegn) tegn.finishDrawing();
+};
+export function startTegning() {
   if (!app.valgt || !app.klipp || tegner()) return;
   lukkBytt();
   tegn = new ol.interaction.Draw({ type: 'Polygon', stopClick: true, minPoints: 3, style: tegnStil });
@@ -71,10 +75,10 @@ function startTegning() {
     }, 0);
   });
   kart.addInteraction(tegn);
-  visTegneknapper();
+  endret();
   tilKartet();
 }
-function visEgneLag() {
+export function visEgneLag() {
   egneKilde.clear();
   egneKilde.addFeatures(
     mine()
@@ -84,17 +88,17 @@ function visEgneLag() {
 }
 function egneEndret() {
   visEgneLag();
-  visPlanInfo();
-  visEgne();
+  endret();
   visPlan();
 }
 function nyttEget(geom) {
   if (!app.valgt) return;
   if (!(geom.getArea() > 400)) {
-    $('egnestatus').textContent = 'Området ble for lite til å regnes ut. Tegn et større område.';
+    app.egneStatus = { tekst: 'Området ble for lite til å regnes ut. Tegn et større område.', type: 'warning' };
+    endret();
     return;
   }
-  $('egnestatus').textContent = '';
+  app.egneStatus = null;
   const lopenr = mine().reduce((m, x) => Math.max(m, x.lopenr || 0), 0) + 1;
   const g = {
     id: ++egenTeller,
@@ -207,14 +211,16 @@ function lesPlanfil(j, valgtNr, erKommune, midtAv) {
   );
   return { nr, funnet, deler, ext, km2, planid, bygg, annet: deler.length - bygg, utenFormal: !medFormal.length, proj };
 }
-async function lastOppPlan(fil) {
-  const melding = t => {
-    $('egnestatus').textContent = t;
+export async function lastOppPlan(fil) {
+  /* type er typen melding i designsystemet: info, success, warning eller error */
+  const melding = (tekst, type = 'error') => {
+    app.egneStatus = { tekst, type };
+    endret();
   };
   try {
     if (!fil) return;
     if (fil.size > 120e6) return melding('Filen er for stor til å leses i nettleseren (over 120 MB).');
-    melding(`Leser ${fil.name} …`);
+    melding(`Leser ${fil.name} …`, 'info');
     await new Promise(ok => setTimeout(ok, 30));
     const midtAv = nr => {
       const k = finn(nr)[1];
@@ -237,7 +243,8 @@ async function lastOppPlan(fil) {
       ...plan
     });
     melding(
-      `${fil.name}: ${nf(plan.deler.length, 0)} flater lest${funnet && (!app.valgt || app.valgt.nr !== nr) ? `, og kommunen er byttet til ${k.navn}` : ''}.`
+      `${fil.name}: ${nf(plan.deler.length, 0)} flater lest${funnet && (!app.valgt || app.valgt.nr !== nr) ? `, og kommunen er byttet til ${k.navn}` : ''}.`,
+      'success'
     );
     if (!app.valgt || app.valgt.nr !== nr) velg(nr);
     else egneEndret();
@@ -297,7 +304,7 @@ function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
     ]);
   return ut.concat(verdi);
 }
-function egneRader(e) {
+export function egneRader(e) {
   /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */
   const R = app.planRaster,
     GK =
@@ -318,171 +325,26 @@ function egneRader(e) {
     DV = V ? data(V) : null;
   return byggEgneRader(e, e === null ? null : mine()[e].tall, R, !ingenPlan(), GK, tema, DV ? DV.gap : null);
 }
-function egenTabell(rader, navnPlan, navnNy) {
-  const ramme = document.createElement('div'),
-    tab = document.createElement('table');
-  ramme.className = 'utvikling sml';
-  ramme.appendChild(tab);
-  const tall = n => (n ? dekar(n * RUTE).replace(' daa', '') : '0'),
-    endr = d => (!d ? '0' : (d < 0 ? '−' : '+') + tall(Math.abs(d)));
-  const hode = tab.createTHead().insertRow();
-  ['Planlagt utbygging på, daa', navnPlan, navnNy, 'Endring'].forEach(t => {
-    celle(hode, t, '', 'th').scope = 'col';
-  });
-  const kropp = tab.createTBody();
-  let gruppe = '';
-  rader.forEach(([navn, farge, plan, ny, av, gr]) => {
-    if (gr !== gruppe) {
-      gruppe = gr;
-      const g = kropp.insertRow(),
-        c = celle(g, gr, '', 'th');
-      g.className = 'gruppe';
-      c.colSpan = 4;
-      c.scope = 'colgroup';
-    }
-    const r = kropp.insertRow(),
-      h = celle(r, '', '', 'th');
-    h.scope = 'row';
-    if (farge) {
-      const i = document.createElement('i');
-      i.style.setProperty('--c', `var(--${farge})`);
-      h.appendChild(i);
-    }
-    h.appendChild(document.createTextNode(navn));
-    const andel = n => (av ? `${nf((n / av) * 100)} %` : '');
-    celle(r, plan === null ? '–' : tall(plan), plan === null ? '' : andel(plan));
-    celle(r, tall(ny), andel(ny));
-    celle(r, endr(ny - (plan || 0)));
-  });
-  return ramme;
+/* Et tegnet område byttes mellom utbygging og ikke utbygging. */
+export function settType(g, type) {
+  if (g.deler[0].type === type) return;
+  g.deler[0].type = type;
+  g.f.set('type', type);
+  egneEndret();
 }
-function visEgne() {
-  const liste = $('egneliste'),
-    E = mine(),
-    R =
-      app.planRaster &&
-      app.valgt &&
-      app.planRaster.nr === app.valgt.nr &&
-      app.planRaster.eget &&
-      app.planRaster.antallEgne === E.length
-        ? app.planRaster
-        : null,
-    samlet = $('egnesamlet');
-  liste.textContent = samlet.textContent = '';
-  samlet.hidden = !E.length || !R;
-  const dk = n => iTekst(n * RUTE);
-  const ramse = deler => {
-    const d = deler.filter(Boolean);
-    return d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0] || '';
-  };
-  const knapp = (tekst, vedTrykk) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tekknapp';
-    b.textContent = tekst;
-    b.addEventListener('click', vedTrykk);
-    return b;
-  };
-  E.forEach((g, nr) => {
-    const li = document.createElement('li'),
-      h = document.createElement('h3'),
-      sp = document.createElement('span'),
-      T = R ? g.tall : null;
-    const p = tekst => {
-      const x = document.createElement('p');
-      x.textContent = tekst;
-      li.appendChild(x);
-      return x;
-    };
-    h.append(g.navn, sp);
-    sp.textContent = dekar(g.km2);
-    li.appendChild(h);
-    if (g.kilde === 'tegnet') {
-      const valg = document.createElement('div');
-      valg.className = 'knapper';
-      [
-        ['bygg', 'Utbygging'],
-        ['fri', 'Ikke utbygging']
-      ].forEach(([type, navn]) => {
-        const b = knapp(navn, () => {
-          if (g.deler[0].type === type) return;
-          g.deler[0].type = type;
-          g.f.set('type', type);
-          egneEndret();
-        });
-        b.setAttribute('aria-pressed', String(g.deler[0].type === type));
-        valg.appendChild(b);
-      });
-      li.appendChild(valg);
-    } else
-      p(
-        g.utenFormal
-          ? `Opplastet fil med ${nf(g.deler.length, 0)} flater. Filen har ingen arealformål, så alle flatene regnes som utbygging.`
-          : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${nf(g.deler.length, 0)} flater: ${nf(g.bygg, 0)} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${nf(g.annet, 0)} som ikke utbygging. Innenfor flatene erstatter filen kommuneplanen.`
-      );
-    if (!T) p(ingenPlan() || app.ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
-    else {
-      const kjent = T.nat + T.jor + T.beb + T.vann;
-      p(
-        kjent
-          ? `I dag ligger det ${ramse([T.nat ? dk(T.nat) + ' natur' : '', T.jor ? dk(T.jor) + ' jordbruk' : '', T.beb ? dk(T.beb) + ' bebygd' : '', T.vann ? dk(T.vann) + ' vann' : ''])} her.`
-          : 'Kartet er ikke hentet for dette området ennå.'
-      );
-      if (T.ukjent && kjent)
-        p(
-          `For ca. ${dk(T.ukjent)} er kartet ikke hentet, eller området ligger utenfor kommunen. Zoom inn over området for å få med mer.`
-        );
-      if (kjent)
-        li.appendChild(
-          egenTabell(
-            egneRader(nr).filter((r, i) => i < 2 || r[2] || r[3] || r[0] === 'Grått areal'),
-            'Planen her',
-            g.kilde === 'fil' ? 'Opplastet' : 'Tegningen'
-          )
-        );
-      if (g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && T.nat + T.jor && !(T.nnat + T.njor))
-        p('Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.');
-    }
-    const gjor = document.createElement('div');
-    gjor.className = 'knapper';
-    gjor.append(
-      knapp('Vis i kartet', () => {
-        view.fit(app.klipp ? ol.extent.getIntersection(g.ext, app.klipp.getExtent()) : g.ext, {
-          padding: [56, 56, 56, 56],
-          minResolution: OPPLOSNINGER[13],
-          duration: 300
-        });
-        tilKartet();
-      })
-    );
-    const slett = knapp('Slett', () => {
-      app.egne.splice(app.egne.indexOf(g), 1);
-      egneEndret();
-      $('tegnknapp').focus();
-    });
-    slett.setAttribute('aria-label', `Slett ${g.navn}`);
-    gjor.appendChild(slett);
-    li.appendChild(gjor);
-    liste.appendChild(li);
-  });
-  if (!E.length) {
-    $('egnemerk').textContent = '';
-    return;
-  }
-  if (R) {
-    const h = document.createElement('h3'),
-      n = document.createElement('p');
-    h.textContent = 'Samlet for kommunen';
-    n.className = 'hint';
-    n.textContent = `Planen er kommuneplanen fra DiBK alene. Prosenten under tallene er andelen av dagens natur eller jordbruk i kommunen${app.ov && app.ov.dynamisk ? ', i den delen nettleseren har hentet kart for' : ''}. Endring er forskjellen fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i bruk. Smale striper er ikke med for natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.`;
-    samlet.append(
-      h,
-      egenTabell(egneRader(null), 'Planen', E.length === 1 && E[0].kilde === 'fil' ? 'Med opplastet' : 'Med egne'),
-      n
-    );
-  }
+export function slettEget(g) {
+  app.egne.splice(app.egne.indexOf(g), 1);
+  egneEndret();
 }
-function egenMaske(u) {
+export function visEgetIKartet(g) {
+  view.fit(app.klipp ? ol.extent.getIntersection(g.ext, app.klipp.getExtent()) : g.ext, {
+    padding: [56, 56, 56, 56],
+    minResolution: OPPLOSNINGER[13],
+    duration: 300
+  });
+  tilKartet();
+}
+export function egenMaske(u) {
   const deler = [];
   for (const x of mine())
     if (ol.extent.intersects(x.ext, u))
@@ -504,7 +366,7 @@ function egenMaske(u) {
   for (let i = 0, q = 0; i < a.length; i += 4, q++) if (a[i + 3] >= 128) ut[q] = a[i] > a[i + 1] ? 1 : 2;
   return ut;
 }
-function leggInnEget(g, merke, d, kl, eget, G) {
+export function leggInnEget(g, merke, d, kl, eget, G) {
   /* et eget område eller en opplastet plan inn i rutenettet: rutene med midtpunkt i flatene */
   const u = g.ext,
     m = G.m,

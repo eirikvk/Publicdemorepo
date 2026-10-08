@@ -1,14 +1,17 @@
-/* Sjekker at regning og tegning holdes fra hverandre. Funksjoner som regner, skal kunne flyttes til en annen løsning uten å ta
-   med seg siden: de får alt de trenger som argumenter og gir svaret tilbake. De skal derfor ikke lese eller skrive sidens
-   innhold, ikke røre kartet, ikke hente fra nettet og ikke bruke delt tilstand (app, og variabler på toppnivå laget med let).
+/* Sjekker at regning og tegning holdes fra hverandre i motoren (src/motor). Funksjoner som regner, skal kunne flyttes til en annen
+   løsning uten å ta med seg siden: de får alt de trenger som argumenter og gir svaret tilbake. De skal derfor ikke lese eller skrive
+   sidens innhold, ikke røre kartet, ikke hente fra nettet, ikke melde fra om endringer og ikke bruke delt tilstand (app, og
+   variabler på toppnivå laget med let).
 
    En funksjon regnes som regning når navnet begynner med tolk, kryss, bygg, tell eller les, eller står i listen under.
    Kjør: node verktoy/sjekk-regning.js */
-const acorn = require('acorn'),
-  walk = require('acorn-walk'),
-  fs = require('fs'),
-  path = require('path');
-const MAPPE = path.resolve(__dirname, '..', 'js');
+import * as acorn from 'acorn';
+import * as walk from 'acorn-walk';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const MAPPE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'motor');
 const REGNING = /^(tolk|kryss|bygg|tell|les)[A-ZÆØÅ]/;
 const OGSAA = [
   'ryddStriper',
@@ -24,7 +27,7 @@ const OGSAA = [
   'tilFarge',
   'klasseAv'
 ];
-const FORBUDT = ['app', '$', 'document', 'window', 'kart', 'view', 'hent', 'fetch', 'logg', 'friskOpp'];
+const FORBUDT = ['app', 'document', 'window', 'kart', 'view', 'hent', 'fetch', 'logg', 'friskOpp', 'endret'];
 const TEGNING = /^vis[A-ZÆØÅ]/;
 
 const monster = (p, ut) => {
@@ -39,8 +42,13 @@ const filer = fs.readdirSync(MAPPE).filter(f => f.endsWith('.js')),
   tilstand = new Set(),
   funksjoner = [];
 for (const f of filer) {
-  const tre = acorn.parse(fs.readFileSync(path.join(MAPPE, f), 'utf8'), { ecmaVersion: 2022, locations: true });
-  for (const n of tre.body) {
+  const tre = acorn.parse(fs.readFileSync(path.join(MAPPE, f), 'utf8'), {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    locations: true
+  });
+  for (const m of tre.body) {
+    const n = m.type === 'ExportNamedDeclaration' && m.declaration ? m.declaration : m;
     if (n.type === 'VariableDeclaration') {
       for (const d of n.declarations) {
         if (n.kind === 'let') monster(d.id, tilstand);

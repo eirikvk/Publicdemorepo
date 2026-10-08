@@ -1,8 +1,9 @@
 # Metode: hvor tallene kommer fra og hvordan de regnes ut
 
 Dette dokumentet beskriver hvert tall siden viser: hva som hentes ferdig fra en kilde, hva som regnes ut i nettleseren, og
-hvor sikkert resultatet er. Det følger koden slik den var i utgaven fra 7. oktober 2026. Funksjonsnavnene i parentes viser hvor
-i koden metoden ligger.
+hvor sikkert resultatet er. Det følger koden slik den var 8. oktober 2026, da siden ble lagt over på React og Miljødirektoratets
+designsystem. Metodene er de samme som i utgaven fra 7. oktober, og overgangen er kontrollert mot den, se under. Funksjonsnavnene i
+parentes viser hvor i motoren (`src/motor`) metoden ligger.
 
 Siden er en prototype. Tall fra SSB er offisiell statistikk. Alt som er regnet ut i nettleseren, er anslag til illustrasjon.
 
@@ -252,8 +253,19 @@ siden bruker.
 
 ## Trykk i kartet
 
-Siden leser fargen i punktet og oppgir klassen fargen ligger nærmest (`kart.js`). Er et naturtema slått på, slås punktet også
+Siden leser fargen i punktet og oppgir klassen fargen ligger nærmest (`trykkIKartet` i `kart.js`). Er et naturtema slått på, slås punktet også
 opp i flatene. Utenfor valgt kommune slås kommunen opp hos Kartverket.
+
+## Kontroll av overgangen til React
+
+8. oktober 2026 ble den nye utgaven sammenlignet med utgaven fra 7. oktober, samme dag og i samme nettleser, med de tre
+scenariene i regresjonstesten: Trondheim med tegnet område og opplastet plan, Surnadal zoomet inn og ut, og Oslo og Malvik.
+Testen henter tallene direkte fra motoren, ikke fra teksten på siden.
+
+- Alle tall var like, med ett unntak: arealet av verdsatt natur per verdikategori skilte med under 1 dekar. Det arealet regnes ut
+  ved å tegne flatene i et lerret i nettleseren, og det varierer like mye mellom to kjøringer av samme utgave.
+- Kartbildene var like piksel for piksel når de ble forskjøvet ett skjermpunkt, fordi kartet ligger litt annerledes på siden. Bare
+  merkelappene oppå kartet og knappene for zoom var forskjellige.
 
 ## Kjente svakheter samlet
 

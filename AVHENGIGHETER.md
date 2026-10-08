@@ -1,27 +1,43 @@
 # Biblioteker, tjenester og verktøy
 
-Dette dokumentet lister alt siden er avhengig av utenfor sin egen kode: biblioteker som lastes i nettleseren, tjenester den
-henter data fra, og verktøy som brukes under utvikling. Det følger koden slik den var i utgaven fra 7. oktober 2026.
+Dette dokumentet lister alt siden er avhengig av utenfor sin egen kode: biblioteker som følger med i bygget, tjenester den henter
+data fra, og verktøy som brukes under utvikling. Det følger koden slik den var 8. oktober 2026, etter overgangen til React og
+Miljødirektoratets designsystem.
 
-## Rammeverk
+## Rammeverk og bygg
 
-Siden bruker ikke noe rammeverk og har ikke noe byggesteg. Den er skrevet i vanlig JavaScript, HTML og CSS, og filene i repoet
-er de samme som nettleseren laster. Det finnes ingen egen server og ingen database.
+Siden er laget i React og bygges med Vite. Byggesteget samler sidens egen kode og bibliotekene i ett skript og ett stilark, og
+legger dem sammen med skriftene og de lagrede dataene i `dist/`. Det finnes ingen egen server og ingen database: det som bygges,
+er statiske filer.
 
-## Biblioteker som lastes i nettleseren
+Versjonene er låst i `package.json`, og hele treet av pakker i `package-lock.json`.
 
-| Bibliotek | Versjon | Lisens | Lastes fra | Brukes til | Størrelse pakket |
-|---|---|---|---|---|---|
-| OpenLayers (`ol`) | 10.6.1 | BSD 2-Clause | cdn.jsdelivr.net | Kartet: lag, fliser, tegning av flater, zoom og måling av areal | 234 kB, pluss 1,5 kB stil |
-| proj4js | 2.11.0 | MIT | cdnjs.cloudflare.com | Koordinatsystemer: UTM sone 32, 33 og 35 og grader, blant annet for opplastede planer | 30 kB |
-| polygon-clipping | 0.15.7 | MIT | cdn.jsdelivr.net | Klipping av verneområder og villreinområder mot kommunegrensen, og sammenslåing av dekningsflater | 9 kB |
+## Biblioteker som følger med siden
 
-Versjonene er låst i adressene i `index.html`. Sidens egen kode er til sammenligning rundt 75 kB pakket.
+| Bibliotek | Versjon | Lisens | Brukes til |
+|---|---|---|---|
+| React og React DOM | 19.2.5 | MIT | Sidens komponenter. Versjonen er den designsystemet krever. |
+| `@miljodirektoratet/md-react` | 6.35.0 | MIT | Komponentene fra Miljødirektoratets designsystem |
+| `@miljodirektoratet/md-css` | 6.32.0 | MIT | Stilene og variablene (farger, skrift, avstander) i designsystemet |
+| Ariakit (`@ariakit/react`) | 0.4.41 | MIT | Grunnlaget for designsystemets velgere. Kommer med designsystemet. |
+| classnames | 2.5.1 | MIT | Kommer med designsystemet |
+| OpenLayers (`ol`) | 10.6.1 | BSD 2-Clause | Kartet: lag, fliser, tegning av flater, zoom og måling av areal |
+| proj4js | 2.11.0 | MIT | Koordinatsystemer: UTM sone 32, 33 og 35 og grader, blant annet for opplastede planer |
+| polygon-clipping | 0.15.7 | MIT | Klipping av verneområder og villreinområder mot kommunegrensen, og sammenslåing av dekningsflater |
+| `@fontsource/open-sans` | 5.2.7 | SIL Open Font License 1.1 | Skriften Open Sans, i to vekter |
+
+Designsystemet tar også med pakken `material-symbols` (Apache 2.0) ved installasjon, men den brukes ikke og kommer ikke med i
+bygget. Ikonene i designsystemet er egne komponenter.
+
+Størrelse i bygget, pakket slik nettleseren henter det: skriptet er rundt 330 kB og stilarket rundt 24 kB. Det meste av skriptet
+er OpenLayers, React og Ariakit. Skriften er rundt 37 kB for de to vektene med latinske tegn. Andre tegnsett hentes bare hvis
+siden viser slike tegn. Til sammenligning var bibliotekene og sidens egen kode rundt 350 kB før overgangen.
 
 ## Skrifter
 
-Familjen Grotesk og Instrument Sans lastes fra Google Fonts (fonts.googleapis.com og fonts.gstatic.com). Begge har SIL Open
-Font License 1.1. Mangler de, faller siden tilbake på skriftene som finnes på enheten.
+Designsystemet bruker Open Sans og Sofia Pro. Open Sans følger med bygget. Sofia Pro kan bare brukes i Miljødirektoratets egne
+løsninger, og ligger derfor ikke i dette repoet, som er åpent. Overskriftene bruker Open Sans i stedet, eller Sofia Pro hvis den
+er installert på maskinen. Skal siden brukes av Miljødirektoratet, kan Sofia Pro legges inn som en egen skriftfil.
 
 ## Tjenester siden henter data fra
 
@@ -39,12 +55,13 @@ Alle kall går direkte fra nettleseren til tjenesten. Ingen av dem krever innlog
 | Miljødirektoratet | Naturvernområder, villrein, naturtyper med KU-verdi, dekningskart | kart.miljodirektoratet.no/arcgis/rest/services | ArcGIS REST | Naturtema som flater |
 | Miljødirektoratet | Inngrepsfrie naturområder | kart.miljodirektoratet.no/geoserver/inngrepsfrinatur | WMS | Inngrepsfri natur |
 
-Lagret sammen med siden ligger listen over fylker og kommuner (`kommuner.json`, fra Kartverket) og oversiktsbildene for 39
-kommuner (`oversikt/`, laget fra NIBIOs grunnkart).
+Lagret sammen med siden ligger listen over fylker og kommuner (`public/kommuner.json`, fra Kartverket) og oversiktsbildene for
+39 kommuner (`public/oversikt/`, laget fra NIBIOs grunnkart).
 
 ## Drift
 
-Siden ligger på GitHub Pages og legges ut ved push til `main` i repoet `eirikvk/Publicdemorepo`.
+Siden lå på GitHub Pages og ble lagt ut ved push til `main` i repoet `eirikvk/Publicdemorepo`. Den er tatt ned. Med byggesteget
+må det som legges ut, være innholdet i `dist/`, se README.
 
 ## Vilkår for dataene
 
@@ -61,25 +78,23 @@ Siden ligger på GitHub Pages og legges ut ved push til `main` i repoet `eirikvk
 - Siden setter ingen informasjonskapsler og lagrer ingenting i nettleseren. Valg som teknisk visning og kommune står i adressen.
 - Det er ingen måling av bruk og ingen sporing i sidens kode.
 - Filer brukeren laster opp, og områder brukeren tegner, leses og regnes i nettleseren og sendes ingen steder.
-- Nettleseren kontakter ti verter utenfor siden: de to som leverer biblioteker, de to som leverer skrifter, og seks hos
-  dataeierne. Hver av dem ser brukerens IP-adresse og hvilken side kallet kommer fra, og kallene til dataeierne viser hvilken
-  kommune og hvilket kartutsnitt brukeren ser på.
-- Bibliotekene lastes uten integritetssjekk (`integrity`-attributt). Endres en fil hos leverandøren, kjører nettleseren den
-  likevel. Dette bør rettes, enten med integritetssjekk eller ved å legge bibliotekene sammen med siden.
+- Bibliotekene og skriften følger med siden og hentes fra samme sted som den. Nettleseren kontakter seks verter utenfor siden,
+  alle hos dataeierne. Hver av dem ser brukerens IP-adresse og hvilken side kallet kommer fra, og kallene viser hvilken kommune
+  og hvilket kartutsnitt brukeren ser på.
+- Før overgangen ble bibliotekene og skriftene hentet fra fire andre verter uten integritetssjekk. Det problemet er borte, fordi
+  alt nå bygges inn i siden fra pakker med låste versjoner.
+- Pakkene hentes fra npm når siden bygges. `npm audit` viste ingen kjente sårbarheter 8. oktober 2026.
 
 ## Verktøy under utvikling
 
 Ingen av disse følger med siden til brukeren.
 
-| Verktøy | Lisens | Brukes til |
-|---|---|---|
-| Playwright | Apache 2.0 | Regresjonstesten, som kjører siden i Chromium |
-| Prettier 3.9.9 | MIT | Formatering av koden |
-| acorn, acorn-walk | MIT | Sjekken av skillet mellom regning og tegning |
-| eslint-scope | BSD 2-Clause | Sjekken av navnene i skriptene |
-| Python med NumPy, Pillow og Shapely | BSD og lignende | Bygging av oversiktsbildene |
-
-## Planlagt
-
-Løsningen skal etter hvert over på React og Miljødirektoratets designsystem (`@miljodirektoratet/md-react` og
-`@miljodirektoratet/md-css`). Det er ikke tatt i bruk. Se README for hva som er kartlagt.
+| Verktøy | Versjon | Lisens | Brukes til |
+|---|---|---|---|
+| Vite | 8.3.0 | MIT | Utviklingsserver og bygg |
+| `@vitejs/plugin-react` | 6.1.1 | MIT | JSX og oppdatering av komponenter under utvikling |
+| Playwright | 1.56.0 | Apache 2.0 | Regresjonstesten, som kjører siden i Chromium |
+| Prettier | 3.9.9 | MIT | Formatering av koden |
+| acorn, acorn-walk, acorn-jsx | 8.19.0, 8.3.5, 5.3.2 | MIT | Sjekkene av navn og av skillet mellom regning og tegning |
+| eslint-scope | 9.1.2 | BSD 2-Clause | Sjekken av navn |
+| Python med NumPy, Pillow og Shapely | | BSD og lignende | Bygging av oversiktsbildene |

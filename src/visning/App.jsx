@@ -1,0 +1,52 @@
+/* Hele siden. Kroken useApp gjør at siden tegnes på nytt når motoren melder at tilstanden er endret. */
+import { useEffect, useState } from 'react';
+import { app } from '../motor/felles.js';
+import { startOpp } from '../motor/handlinger.js';
+import { kart } from '../motor/kart.js';
+import { NATURLAG } from '../motor/naturtema.js';
+import { useApp } from './lager.js';
+import Topp from './Topp.jsx';
+import Kartpanel from './Kartpanel.jsx';
+import Tallpanel from './Tallpanel.jsx';
+import Notater from './Notater.jsx';
+
+/* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
+   Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på.
+   Med teknisk visning er motoren også tilgjengelig som window.motor, til feilsøking og til regresjonstesten. */
+const tekniskIAdressen = () => new URLSearchParams(location.search).has('teknisk');
+
+export default function App() {
+  useApp();
+  const [teknisk, settTekniskTilstand] = useState(tekniskIAdressen);
+  const settTeknisk = paa => {
+    settTekniskTilstand(paa);
+    try {
+      const u = new URL(location.href);
+      if (paa) u.searchParams.set('teknisk', '');
+      else u.searchParams.delete('teknisk');
+      history.replaceState(null, '', u.pathname + u.search.replace(/=(&|$)/g, '$1') + u.hash);
+    } catch (e) {}
+  };
+  useEffect(() => {
+    if (teknisk)
+      window.motor = {
+        app,
+        NATURLAG,
+        get kart() {
+          return kart;
+        }
+      };
+  }, [teknisk]);
+  /* Kartet har fått plassen sin før dette kjører, så det kan zoome til kommunen med en gang. */
+  useEffect(() => startOpp(), []);
+  return (
+    <div className="side">
+      <Topp />
+      <main className="hoved">
+        <Kartpanel teknisk={teknisk} />
+        <Tallpanel />
+      </main>
+      <Notater teknisk={teknisk} settTeknisk={settTeknisk} />
+    </div>
+  );
+}

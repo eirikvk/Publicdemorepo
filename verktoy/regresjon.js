@@ -1,30 +1,44 @@
-/* Regresjonstest for siden. Kjører et fast sett handlinger i en mobilnettleser (Chromium via Playwright), og lagrer
-   tallene siden viser og skjermbilder av kartet. To kjøringer kan sammenlignes, så en endring i koden kan sjekkes
-   mot en tidligere utgave. Tallene kommer fra åpne tjenester og endrer seg over tid, så en referanse må tas samme dag.
+/* Regresjonstest for siden. Bygger siden, kjører et fast sett handlinger i en mobilnettleser (Chromium via Playwright), og lagrer
+   tallene motoren har regnet ut, teksten siden viser og skjermbilder av kartet. To kjøringer kan sammenlignes, så en endring i koden
+   kan sjekkes mot en tidligere utgave. Tallene kommer fra åpne tjenester og endrer seg over tid, så en referanse må tas samme dag.
 
    Kjør:        node verktoy/regresjon.js ut/ny
    Mot git:     node verktoy/regresjon.js ut/ny --mot HEAD~1
    Sammenlign:  node verktoy/regresjon.js --sammenlign ut/gammel ut/ny
    Bare noen:   node verktoy/regresjon.js ut/ny --bare trondheim,oslo
+   Ferdig bygg: node verktoy/regresjon.js ut/ny --kilde dist
 
    Trenger pakken playwright og en Chromium. Stien til Chromium kan settes med CHROMIUM, ellers brukes Playwrights egen.
    Går nettet gjennom en proxy, leses den fra HTTPS_PROXY. */
-const { chromium } = require('playwright');
-const fs = require('fs'),
-  path = require('path'),
-  os = require('os'),
-  { execSync } = require('child_process');
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { execSync } from 'node:child_process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { motortall } from './motortall.js';
 
-const ROT = path.resolve(__dirname, '..');
+const HER = path.dirname(fileURLToPath(import.meta.url)),
+  ROT = path.resolve(HER, '..');
 const TYPER = {
   '.html': 'text/html',
   '.js': 'text/javascript',
   '.css': 'text/css',
   '.json': 'application/json',
   '.png': 'image/png',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.map': 'application/json',
   '.geojson': 'application/geo+json'
 };
-const TESTPLAN = path.join(__dirname, 'testdata', 'testplan-bygg.geojson');
+const TESTPLAN = path.join(HER, 'testdata', 'testplan-bygg.geojson');
+
+/* Bygger siden fra mappen rot til en midlertidig mappe og gir stien tilbake. */
+export function bygg(rot) {
+  const ut = fs.mkdtempSync(path.join(os.tmpdir(), 'bygg-'));
+  execSync(`npx vite build --outDir "${ut}" --emptyOutDir --logLevel error`, { cwd: rot, stdio: 'inherit' });
+  return ut;
+}
 
 async function startNettleser() {
   const valg = {};
@@ -34,8 +48,62 @@ async function startNettleser() {
   return chromium.launch(valg);
 }
 
-/* En side som serverer filene i kilde på http://demo.test/. Kartet gjøres tilgjengelig som window.kart, så testen kan flytte det. */
-async function nySide(nettleser, kilde, feil) {
+/* Hvordan testen bruker siden: adresse, knapper og hvor tekstene står. Samlet her, så resten av testen ikke avhenger av utformingen. */
+export const SIDEN = {
+  adresse: nr => `index.html?teknisk#${nr}`,
+  kart: '.kartflate',
+  laster: () => !!(window.motor && window.motor.app.laster),
+  lag: (p, id) => p.locator(`[data-lag-knapp="${id}"]`).click(),
+  tegn: p => p.locator('#tegnknapp').click(),
+  ferdig: p => p.getByRole('button', { name: 'Ferdig', exact: true }).click(),
+  ikkeUtbygging: p => p.getByLabel('Ikke utbygging').check(),
+  slett: p =>
+    p
+      .getByRole('button', { name: /^Slett / })
+      .first()
+      .click(),
+  lastOpp: (p, fil) => p.setInputFiles('#planfil', fil),
+  visForste: async (p, id) => {
+    await p.locator(`#tema-${id} > summary`).click();
+    await p.locator(`#tema-${id} .omrader li button`).first().click();
+  },
+  byttKommune: async (p, fylke, nr, navn) => {
+    const k = p.getByRole('combobox', { name: 'Kommune' });
+    await k.click();
+    await k.fill(navn);
+    await p.getByRole('option', { name: navn, exact: true }).click();
+  },
+  probe: p => p.locator('.probe').innerText(),
+  vist: p => p.locator('.vistmerke').innerText(),
+  /* Tekstene i tallpanelet. Temaene leses med textContent, så detaljene kommer med også når de er lukket. */
+  tekster: p =>
+    p.evaluate(() => {
+      const t = sel =>
+        [...document.querySelectorAll(sel)]
+          .map(e => e.innerText.replace(/\s*\n\s*/g, ' | ').trim())
+          .filter(Boolean)
+          .join('\n');
+      const ut = {
+        total: t('.total'),
+        klasser: t('.klasser'),
+        planlagt: t('.planlagt'),
+        utvikling: t('.utvikling'),
+        vann: t('.vann'),
+        kartfot: t('.kartfot')
+      };
+      for (const d of document.querySelectorAll('.temarad')) ut[d.id] = d.textContent.replace(/\s+/g, ' ').trim();
+      return ut;
+    }),
+  egne: p =>
+    p.evaluate(() =>
+      [...document.querySelectorAll('.egne .kort, .egne .md-alert-message')]
+        .map(e => e.innerText.replace(/\s*\n\s*/g, ' | ').trim())
+        .join('\n')
+    )
+};
+
+/* En side som serverer filene i kilde på http://demo.test/. */
+async function nySide(nettleser, kilde, feil, omskriv) {
   const ctx = await nettleser.newContext({
     ignoreHTTPSErrors: true,
     viewport: { width: 390, height: 900 },
@@ -59,25 +127,20 @@ async function nySide(nettleser, kilde, feil) {
   p.on('pageerror', e => feil.push('sidefeil: ' + e.message));
   await p.route('http://demo.test/**', r => {
     const fil = path.join(
-        kilde,
-        decodeURIComponent(new URL(r.request().url()).pathname).replace(/^\/+/, '') || 'index.html'
-      ),
-      type = TYPER[path.extname(fil)];
+      kilde,
+      decodeURIComponent(new URL(r.request().url()).pathname).replace(/^\/+/, '') || 'index.html'
+    );
     if (!fil.startsWith(kilde) || !fs.existsSync(fil)) return r.fulfill({ status: 404, body: 'finnes ikke' });
-    if (type === 'text/html' || type === 'text/javascript')
-      return r.fulfill({
-        contentType: type,
-        body: fs.readFileSync(fil, 'utf8').replace('const kart = new ol.Map(', 'const kart = window.kart = new ol.Map(')
-      });
-    return r.fulfill({ path: fil, contentType: type });
+    const ny = omskriv && omskriv(fil, () => fs.readFileSync(fil, 'utf8'));
+    if (ny) return r.fulfill({ contentType: TYPER[path.extname(fil)], body: ny });
+    return r.fulfill({ path: fil, contentType: TYPER[path.extname(fil)] || 'application/octet-stream' });
   });
   /* Venter til det ikke har gått noen kall på en stund og siden selv ikke henter kart, og litt til for utregningene som følger. */
   p.rolig = async (stille = 1300, maks = 45000) => {
     const t0 = Date.now();
     await p.waitForTimeout(400); /* kartet rekker å be om det det trenger */
     while (Date.now() - t0 < maks) {
-      if (!iGang && Date.now() - sist >= stille && (await p.evaluate(() => document.getElementById('laster').hidden)))
-        break;
+      if (!iGang && Date.now() - sist >= stille && !(await p.evaluate(p.siden.laster))) break;
       await p.waitForTimeout(150);
     }
     await p.waitForTimeout(500);
@@ -85,7 +148,7 @@ async function nySide(nettleser, kilde, feil) {
   p.flytt = async (x, y, res) => {
     await p.evaluate(
       ([x, y, res]) => {
-        const v = kart.getView();
+        const v = window.motor.kart.getView();
         if (x !== null) v.setCenter([x, y]);
         v.setResolution(res);
       },
@@ -93,116 +156,62 @@ async function nySide(nettleser, kilde, feil) {
     );
     await p.rolig();
   };
-  p.tekst = sel =>
-    p.evaluate(
-      sel =>
-        [...document.querySelectorAll(sel)]
-          .map(e => e.innerText.replace(/\s*\n\s*/g, ' | ').trim())
-          .filter(Boolean)
-          .join('\n'),
-      sel
-    );
-  p.tabell = sel =>
-    p.evaluate(
-      sel =>
-        [...document.querySelectorAll(sel + ' tr')]
-          .map(r => [...r.cells].map(c => c.innerText.replace(/\n/g, ' / ')).join(' | '))
-          .join('\n'),
-      sel
-    );
+  p.motor = () => p.evaluate(motortall);
   return p;
 }
 
-const TEMA = ['vern', 'rein', 'verdi', 'inon', 'graa'];
-async function tallpanel(p) {
-  const ut = {};
-  ut.total = await p.tekst('.total');
-  ut.aar = await p.tekst('#aar');
-  ut.klasser = await p.tekst('#tallrader > button.row');
-  ut.planstatus = await p.tekst('#planstatus');
-  ut.planinfo = await p.tekst('#planinfo');
-  ut.natur = await p.tekst('#tall-pnat');
-  ut.jordbruk = await p.tekst('#tall-pjor');
-  ut.tallnote = await p.tekst('#tallnote');
-  ut.egnemerk = await p.tekst('#egnemerk');
-  ut.utvikling = await p.tabell('#utvtab');
-  ut.utvsum = await p.tekst('#utvsum');
-  ut.vann = await p.tekst('#tegn2');
-  for (const t of TEMA) {
-    ut['rad-' + t] = await p.tekst(`#${t}apne`);
-    ut['blokk-' + t] = await p.evaluate(id => {
-      const b = document.getElementById(id);
-      const skjult = b.hidden;
-      b.hidden = false;
-      const tekst = b.innerText.replace(/\s*\n\s*/g, ' | ').trim();
-      b.hidden = skjult;
-      return tekst;
-    }, t + 'blokk');
-  }
-  return ut;
-}
-const egne = async p => ({
-  kort: await p.evaluate(() =>
-    [...document.querySelectorAll('#egneliste li')]
-      .map(
-        l =>
-          [...l.querySelectorAll(':scope > h3, :scope > p')].map(x => x.innerText).join(' | ') +
-          '\n' +
-          [...l.querySelectorAll('tr')]
-            .map(r => '   ' + [...r.cells].map(c => c.innerText.replace(/\n/g, ' / ')).join(' | '))
-            .join('\n')
-      )
-      .join('\n')
-  ),
-  samlet: await p.tabell('#egnesamlet'),
-  status: await p.tekst('#egnestatus')
-});
-const trykk = async (p, sel, vent = 1200) => {
-  await p.locator(sel).click();
+const trykk = async (p, gjor, vent = 1200) => {
+  await gjor;
   await p.waitForTimeout(vent);
   await p.rolig(600);
 };
+const vent = (p, R, navn, sjekk, tid = 70000) =>
+  p.waitForFunction(sjekk, null, { timeout: tid }).catch(() => R.feil.push(navn + ': ble ikke ferdig utregnet'));
 
-const SCENARIER = {
+export const SCENARIER = {
   /* Kommune med lagret oversiktsbilde: alt regnes ut for hele kommunen når siden åpnes. */
-  async trondheim(p, R) {
-    await p.goto('http://demo.test/index.html#5001');
-    await p
-      .waitForFunction(
-        () =>
-          /^ca\./.test(document.getElementById('tall-pnat').textContent) &&
-          /kartlagt/.test(document.getElementById('verdigap').textContent) &&
-          /grått areal/.test(document.querySelector('#graaapne .un').textContent),
-        null,
-        { timeout: 70000 }
-      )
-      .catch(() => R.feil.push('trondheim: ble ikke ferdig utregnet'));
+  async trondheim(p, R, S) {
+    await p.goto('http://demo.test/' + S.adresse('5001'));
+    await vent(p, R, 'trondheim', () => {
+      const M = window.motor;
+      if (!M || !M.app.valgt) return false;
+      const v = M.NATURLAG.find(t => t.id === 'verdi');
+      return (
+        M.app.planTall &&
+        M.app.planTall.tilstand === 'ok' &&
+        v.data &&
+        v.data.gap &&
+        M.app.graaKryss &&
+        M.app.graaKryss.nr === M.app.valgt.nr
+      );
+    });
     await p.rolig();
-    R.tekst.start = await tallpanel(p);
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    R.motor.start = await p.motor();
+    R.tekst.start = await S.tekster(p);
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('1-oversikt');
-    await trykk(p, '#vernknapp');
-    await trykk(p, '#verdiknapp');
+    await trykk(p, S.lag(p, 'vern'));
+    await trykk(p, S.lag(p, 'verdi'));
     await R.bilde('2-vern-verdi');
-    await trykk(p, '#vernknapp');
-    await trykk(p, '#verdiknapp');
-    await trykk(p, '#inonknapp');
+    await trykk(p, S.lag(p, 'vern'));
+    await trykk(p, S.lag(p, 'verdi'));
+    await trykk(p, S.lag(p, 'inon'));
     await R.bilde('3-inon');
-    await trykk(p, '#inonknapp');
-    await trykk(p, '#graaknapp');
+    await trykk(p, S.lag(p, 'inon'));
+    await trykk(p, S.lag(p, 'graa'));
     await R.bilde('4-graa');
     await p.flytt(270500, 7031500, 10.58);
     await R.bilde('5-graa-inne');
-    await trykk(p, '#graaknapp');
-    await trykk(p, '#verdiknapp');
+    await trykk(p, S.lag(p, 'graa'));
+    await trykk(p, S.lag(p, 'verdi'));
     await R.bilde('6-plan-verdi-inne');
-    await p.locator('#kartflate').tap({ position: { x: 150, y: 300 } });
+    await p.locator(S.kart).tap({ position: { x: 150, y: 300 } });
     await p.waitForTimeout(900);
-    R.tekst.punkt = await p.tekst('#probe');
-    await trykk(p, '#verdiknapp');
+    R.tekst.punkt = await S.probe(p);
+    await trykk(p, S.lag(p, 'verdi'));
     /* eget område tegnet i kartet */
     await p.flytt(270500, 7031500, 21.16);
-    await p.locator('#tegnknapp').click();
+    await S.tegn(p);
     await p.waitForTimeout(300);
     for (const [x, y] of [
       [90, 150],
@@ -210,133 +219,133 @@ const SCENARIER = {
       [320, 380],
       [110, 420]
     ]) {
-      await p.locator('#kartflate').tap({ position: { x, y } });
+      await p.locator(S.kart).tap({ position: { x, y } });
       await p.waitForTimeout(350);
     }
-    await trykk(p, '#tegnferdig', 2500);
+    await trykk(p, S.ferdig(p), 2500);
     await p.rolig();
-    R.tekst.tegnet = {
-      ...(await egne(p)),
-      natur: await p.tekst('#tall-pnat'),
-      utvikling: await p.tabell('#utvtab'),
-      graa: await p.tekst('#graaapne')
-    };
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    R.motor.tegnet = await p.motor();
+    R.tekst.tegnet = { egne: await S.egne(p), ...(await S.tekster(p)) };
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('7-eget');
-    await p.locator('#egneliste li button', { hasText: 'Ikke utbygging' }).click();
-    await p.waitForTimeout(2500);
+    await trykk(p, S.ikkeUtbygging(p), 2500);
     await p.rolig();
-    R.tekst.tegnetFri = { ...(await egne(p)), natur: await p.tekst('#tall-pnat') };
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    R.motor.tegnetFri = await p.motor();
+    R.tekst.tegnetFri = await S.egne(p);
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('8-eget-fri');
-    await p.locator('#egneliste li button', { hasText: 'Slett' }).click();
-    await p.waitForTimeout(2000);
+    await trykk(p, S.slett(p), 2000);
     await p.rolig();
     /* opplastet plan */
-    await p.setInputFiles('#planfil', TESTPLAN);
-    await p.waitForTimeout(4000);
+    await trykk(p, S.lastOpp(p, TESTPLAN), 4000);
     await p.rolig();
-    R.tekst.opplastet = {
-      ...(await egne(p)),
-      natur: await p.tekst('#tall-pnat'),
-      jordbruk: await p.tekst('#tall-pjor'),
-      egnemerk: await p.tekst('#egnemerk'),
-      utvikling: await p.tabell('#utvtab'),
-      verdi: await p.tekst('#verdiapne'),
-      graa: await p.tekst('#graablokk')
-    };
+    R.motor.opplastet = await p.motor();
+    R.tekst.opplastet = { egne: await S.egne(p), ...(await S.tekster(p)) };
     await p.flytt(270500, 7031500, 84.6);
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('9-opplastet');
-    await p.locator('#egneliste li button', { hasText: 'Slett' }).click();
-    await p.waitForTimeout(2000);
+    await trykk(p, S.slett(p), 2000);
     await p.rolig();
-    R.tekst.etterSletting = { natur: await p.tekst('#tall-pnat'), egnemerk: await p.tekst('#egnemerk') };
+    R.motor.etterSletting = await p.motor();
     /* ett verneområde vist i kartet fra listen */
-    await p.locator('#vernapne').click();
-    await p.locator('#vernliste li button').first().click();
-    await p.waitForTimeout(1500);
+    await trykk(p, S.visForste(p, 'vern'), 1500);
     await p.rolig();
-    R.tekst.vist = await p.tekst('#vistmerke');
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    R.tekst.vist = await S.vist(p);
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('10-vist');
   },
   /* Kommune uten lagret oversiktsbilde: kartet og tallene bygges av det som hentes når man zoomer inn. */
-  async surnadal(p, R) {
-    await p.goto('http://demo.test/index.html#1566');
-    await p
-      .waitForFunction(
-        () =>
-          /daa/.test(document.querySelector('#inonapne').textContent) &&
-          /daa/.test(document.getElementById('tot').textContent),
-        null,
-        { timeout: 60000 }
-      )
-      .catch(() => R.feil.push('surnadal: ble ikke ferdig'));
+  async surnadal(p, R, S) {
+    await p.goto('http://demo.test/' + S.adresse('1566'));
+    await vent(p, R, 'surnadal', () => {
+      const M = window.motor;
+      return (
+        M &&
+        M.app.inon &&
+        M.app.inon.tilstand === 'ok' &&
+        M.app.arealtall &&
+        M.app.arealtall.tilstand === 'ok' &&
+        M.app.graa &&
+        M.app.graa.tilstand === 'ok'
+      );
+    });
     await p.rolig();
-    R.tekst.start = await tallpanel(p);
-    const [x, y, res] = await p.evaluate(() => [...kart.getView().getCenter(), kart.getView().getResolution()]);
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
-    await trykk(p, '#inonknapp');
+    R.motor.start = await p.motor();
+    R.tekst.start = await S.tekster(p);
+    const [x, y, res] = await p.evaluate(() => {
+      const v = window.motor.kart.getView();
+      return [...v.getCenter(), v.getResolution()];
+    });
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
+    await trykk(p, S.lag(p, 'inon'));
     await p.flytt(x, y, 12);
     await R.bilde('1-inne');
-    R.tekst.inne = await tallpanel(p);
+    R.motor.inne = await p.motor();
+    R.tekst.inne = await S.tekster(p);
     await p.flytt(x + 2500, y, 12);
     await p.flytt(x, y, 60);
     await R.bilde('2-ute-60');
     await p.flytt(x, y, res);
     await R.bilde('3-ute-start');
-    await trykk(p, '#inonknapp');
-    await trykk(p, '#graaknapp');
+    await trykk(p, S.lag(p, 'inon'));
+    await trykk(p, S.lag(p, 'graa'));
     await R.bilde('4-graa-ute');
-    R.tekst.tilSlutt = await tallpanel(p);
+    R.motor.tilSlutt = await p.motor();
+    R.tekst.tilSlutt = await S.tekster(p);
   },
-  /* Kommune uten kommuneplan hos DiBK. */
-  async oslo(p, R) {
-    await p.goto('http://demo.test/index.html#0301');
-    await p
-      .waitForFunction(
-        () =>
-          /ingen kommuneplan/.test(document.getElementById('planstatus').textContent) &&
-          /daa/.test(document.querySelector('#graaapne').textContent),
-        null,
-        { timeout: 60000 }
-      )
-      .catch(() => R.feil.push('oslo: ble ikke ferdig'));
+  /* Kommune uten kommuneplan hos DiBK, og bytte av kommune med velgeren. */
+  async oslo(p, R, S) {
+    await p.goto('http://demo.test/' + S.adresse('0301'));
+    await vent(p, R, 'oslo', () => {
+      const M = window.motor;
+      return (
+        M &&
+        M.app.planInfo &&
+        M.app.planInfo.tilstand === 'ingen' &&
+        M.app.graa &&
+        M.app.graa.tilstand === 'ok' &&
+        M.NATURLAG.every(t => t.data)
+      );
+    });
     await p.rolig();
-    R.tekst.start = await tallpanel(p);
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    R.motor.start = await p.motor();
+    R.tekst.start = await S.tekster(p);
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('1-oversikt');
-    /* bytt kommune med velgeren, og tilbake igjen */
-    await p.selectOption('#fylke', '50');
-    await p.waitForTimeout(500);
-    await p.selectOption('#kommune', '5031');
+    await S.byttKommune(p, '50', '5031', 'Malvik');
     await p.waitForTimeout(6000);
+    await vent(p, R, 'malvik', () => {
+      const M = window.motor;
+      return M && M.app.planTall && M.app.planTall.tilstand === 'ok' && M.app.graaKryss;
+    });
     await p.rolig();
-    R.tekst.malvik = await tallpanel(p);
-    await p.locator('#kartflate').scrollIntoViewIfNeeded();
+    R.motor.malvik = await p.motor();
+    R.tekst.malvik = await S.tekster(p);
+    await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('2-malvik');
   }
 };
 
-async function kjor(kilde, ut, bare) {
+/* S beskriver siden, se SIDEN. omskriv(fil, les) kan gi annet innhold for en fil enn det som ligger i kilde. */
+export async function kjor(kilde, ut, bare, S = SIDEN, omskriv = null) {
   fs.mkdirSync(ut, { recursive: true });
   const nettleser = await startNettleser(),
     resultat = {};
   for (const navn of Object.keys(SCENARIER)) {
     if (bare && !bare.includes(navn)) continue;
     const t0 = Date.now(),
-      R = { tekst: {}, feil: [] },
-      p = await nySide(nettleser, kilde, R.feil);
+      R = { tekst: {}, motor: {}, feil: [] },
+      p = await nySide(nettleser, kilde, R.feil, omskriv);
+    p.siden = S;
     R.bilde = async n => {
-      await p.locator('#kartflate').screenshot({ path: path.join(ut, `${navn}-${n}.png`) });
+      await p.locator(S.kart).screenshot({ path: path.join(ut, `${navn}-${n}.png`) });
     };
     try {
-      await SCENARIER[navn](p, R);
+      await SCENARIER[navn](p, R, S);
     } catch (e) {
       R.feil.push('avbrutt: ' + String(e.message).split('\n')[0]);
     }
-    resultat[navn] = { tekst: R.tekst, feil: R.feil };
+    resultat[navn] = { motor: R.motor, tekst: R.tekst, feil: R.feil };
     await p.context().close();
     console.log(
       `${navn}: ${((Date.now() - t0) / 1000).toFixed(0)} s${R.feil.length ? ', FEIL: ' + R.feil.join('; ') : ''}`
@@ -347,8 +356,9 @@ async function kjor(kilde, ut, bare) {
   return resultat;
 }
 
-/* Sammenligner to kjøringer: all tekst skal være lik, og skjermbildene sammenlignes piksel for piksel. */
-async function sammenlign(a, b, toleranse = 0.002) {
+/* Sammenligner to kjøringer: tallene fra motoren og teksten skal være like, og skjermbildene sammenlignes piksel for piksel.
+   bareMotor sammenligner bare tallene, til sammenligning med en utgave der siden ser annerledes ut. */
+export async function sammenlign(a, b, { toleranse = 0.002, bareMotor = false } = {}) {
   const A = JSON.parse(fs.readFileSync(path.join(a, 'resultat.json'), 'utf8')),
     B = JSON.parse(fs.readFileSync(path.join(b, 'resultat.json'), 'utf8'));
   let avvik = 0;
@@ -359,12 +369,13 @@ async function sammenlign(a, b, toleranse = 0.002) {
     }
     return ut;
   };
-  const fa = flat(A),
-    fb = flat(B);
+  const del = R => (bareMotor ? Object.fromEntries(Object.entries(R).map(([n, x]) => [n, { motor: x.motor }])) : R);
+  const fa = flat(del(A)),
+    fb = flat(del(B));
   for (const k of new Set([...Object.keys(fa), ...Object.keys(fb)])) {
     if (fa[k] === fb[k]) continue;
     avvik++;
-    console.log(`TEKST ${k}\n   a: ${String(fa[k]).slice(0, 700)}\n   b: ${String(fb[k]).slice(0, 700)}`);
+    console.log(`ULIK ${k}\n   a: ${String(fa[k]).slice(0, 700)}\n   b: ${String(fb[k]).slice(0, 700)}`);
   }
   const nettleser = await startNettleser(),
     p = await nettleser.newPage();
@@ -423,7 +434,7 @@ async function sammenlign(a, b, toleranse = 0.002) {
   return avvik;
 }
 
-(async () => {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = process.argv.slice(2),
     valg = n => {
       const i = arg.indexOf(n);
@@ -436,15 +447,17 @@ async function sammenlign(a, b, toleranse = 0.002) {
     kildeValg = valg('--kilde'),
     ut = arg[0];
   if (!ut) {
-    console.log('Bruk: node verktoy/regresjon.js <ut-mappe> [--mot <git-ref>] [--kilde <mappe>] [--bare a,b]');
+    console.log('Bruk: node verktoy/regresjon.js <ut-mappe> [--mot <git-ref>] [--kilde <bygget mappe>] [--bare a,b]');
     process.exit(2);
   }
-  await kjor(kildeValg ? path.resolve(kildeValg) : ROT, ut, bare);
+  await kjor(kildeValg ? path.resolve(kildeValg) : bygg(ROT), ut, bare);
   if (mot) {
+    /* Den andre utgaven hentes fra git og bygges med de samme pakkene som arbeidskopien har installert. */
     const gammel = fs.mkdtempSync(path.join(os.tmpdir(), 'regresjon-')),
       utGammel = ut.replace(/\/+$/, '') + '-' + mot.replace(/[^\w.-]/g, '_');
     execSync(`git -C "${ROT}" archive ${mot} | tar -x -C "${gammel}"`);
-    await kjor(gammel, utGammel, bare);
+    fs.symlinkSync(path.join(ROT, 'node_modules'), path.join(gammel, 'node_modules'));
+    await kjor(bygg(gammel), utGammel, bare);
     process.exit((await sammenlign(utGammel, ut)) ? 1 : 0);
   }
-})();
+}

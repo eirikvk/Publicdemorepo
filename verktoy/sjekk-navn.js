@@ -1,16 +1,19 @@
-/* Sjekker navnene i skriptene. De er vanlige skript som deler ett navnerom, så feil som moduler ville fanget, må sjekkes her:
-   - et navn på toppnivå som er definert i to filer
-   - et navn på toppnivå som er likt en id i index.html (eldre Safari nektet å laste slike skript)
-   - et navn som brukes, men ikke er definert noe sted, for eksempel en skrivefeil eller en variabel som er flyttet
+/* Sjekker navnene i kildekoden: at hvert navn en fil bruker, er definert i filen, importert, eller finnes i nettleseren. Byggeverktøyet
+   fanger import av navn som ikke finnes, men ikke et navn som verken er definert eller importert. Det oppdages ellers først når
+   koden kjører, for eksempel etter en skrivefeil eller når en funksjon er flyttet til en annen fil uten å bli importert.
    Kjør: node verktoy/sjekk-navn.js */
-const acorn = require('acorn'),
-  { analyze } = require('eslint-scope'),
-  fs = require('fs'),
-  path = require('path');
-const ROT = path.resolve(__dirname, '..'),
-  MAPPE = path.join(ROT, 'js');
-/* Det nettleseren og bibliotekene gir. Språkets egne navn (Math, Map, Promise og så videre) hentes fra Node. */
-const NETTLESER = [
+import * as acorn from 'acorn';
+import jsx from 'acorn-jsx';
+import { analyze } from 'eslint-scope';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  SRC = path.join(ROT, 'src');
+const leser = acorn.Parser.extend(jsx());
+/* Det nettleseren gir. Språkets egne navn (Math, Map, Promise og så videre) hentes fra Node. */
+const NETTLESER = new Set([
   'window',
   'document',
   'location',
@@ -21,51 +24,58 @@ const NETTLESER = [
   'URLSearchParams',
   'Blob',
   'Image',
-  'Option',
   'createImageBitmap',
   'requestAnimationFrame',
   'cancelAnimationFrame',
   'matchMedia',
-  'getComputedStyle',
-  'MutationObserver',
-  'ol',
-  'proj4',
-  'polygonClipping'
-];
-const definert = new Map(),
-  brukt = [];
-for (const f of fs.readdirSync(MAPPE).filter(x => x.endsWith('.js'))) {
-  const tre = acorn.parse(fs.readFileSync(path.join(MAPPE, f), 'utf8'), {
-    ecmaVersion: 2022,
-    ranges: true,
-    locations: true
-  });
-  const sm = analyze(tre, { ecmaVersion: 2022, sourceType: 'script' });
-  for (const v of sm.globalScope.variables) {
-    if (!definert.has(v.name)) definert.set(v.name, []);
-    definert.get(v.name).push(f);
+  'ResizeObserver'
+]);
+const filer = [];
+const finn = m => {
+  for (const f of fs.readdirSync(m, { withFileTypes: true })) {
+    const p = path.join(m, f.name);
+    if (f.isDirectory()) finn(p);
+    else if (/\.jsx?$/.test(f.name)) filer.push(p);
   }
-  for (const r of sm.globalScope.through) brukt.push([r.identifier.name, f, r.identifier.loc.start.line]);
-}
-let feil = 0;
-const meld = t => {
-  feil++;
-  console.log(t);
 };
-for (const [navn, filer] of definert)
-  if (filer.length > 1) meld(`${navn} er definert i flere filer: ${filer.join(', ')}`);
-const ider = [...fs.readFileSync(path.join(ROT, 'index.html'), 'utf8').matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
-for (const id of ider)
-  if (definert.has(id)) meld(`${id} er både en id i index.html og et navn i ${definert.get(id)[0]}`);
-const meldt = new Set();
-for (const [navn, fil, linje] of brukt) {
-  if (definert.has(navn) || NETTLESER.includes(navn) || navn in globalThis || meldt.has(navn + fil)) continue;
-  meldt.add(navn + fil);
-  meld(`${fil}:${linje} bruker ${navn}, som ikke er definert noe sted`);
+finn(SRC);
+let feil = 0;
+for (const fil of filer) {
+  const kode = fs.readFileSync(fil, 'utf8'),
+    tre = leser.parse(kode, { ecmaVersion: 'latest', sourceType: 'module', ranges: true, locations: true });
+  const sm = analyze(tre, { ecmaVersion: 2022, sourceType: 'module', fallback: 'iteration' });
+  const meldt = new Set();
+  for (const r of sm.globalScope.through) {
+    const n = r.identifier.name;
+    if (NETTLESER.has(n) || n in globalThis || meldt.has(n)) continue;
+    meldt.add(n);
+    feil++;
+    console.log(
+      `${path.relative(ROT, fil)}:${r.identifier.loc.start.line} bruker ${n}, som verken er definert eller importert`
+    );
+  }
+  /* Komponenter i JSX (<Navn />) er ikke vanlige referanser for analysen, så de sjekkes for seg. */
+  const kjente = new Set(sm.scopes.flatMap(s => s.variables.map(v => v.name))),
+    komponenter = [];
+  const gaa = n => {
+    if (!n || typeof n.type !== 'string') return;
+    if (n.type === 'JSXOpeningElement' && n.name.type === 'JSXIdentifier' && /^[A-Z]/.test(n.name.name))
+      komponenter.push(n.name);
+    for (const k in n) {
+      const v = n[k];
+      if (Array.isArray(v)) v.forEach(gaa);
+      else if (v && typeof v === 'object' && k !== 'loc') gaa(v);
+    }
+  };
+  gaa(tre);
+  for (const k of komponenter)
+    if (!kjente.has(k.name) && !meldt.has(k.name)) {
+      meldt.add(k.name);
+      feil++;
+      console.log(
+        `${path.relative(ROT, fil)}:${k.loc.start.line} bruker komponenten ${k.name}, som verken er definert eller importert`
+      );
+    }
 }
-console.log(
-  feil
-    ? `\n${feil} feil.`
-    : `${definert.size} navn på toppnivå i ${new Set([...definert.values()].flat()).size} filer, ingen feil.`
-);
+console.log(feil ? `\n${feil} feil.` : `${filer.length} filer sjekket, ingen feil.`);
 process.exit(feil ? 1 : 0);

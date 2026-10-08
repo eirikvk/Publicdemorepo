@@ -1,8 +1,30 @@
 /* Grått areal fra Miljødirektoratets kart over grå arealer (NIBIO, testversjon): areal som alt er tatt i bruk eller sterkt påvirket
    av bygge- og anleggsaktivitet. Flatene har andel vegetasjon i fem trinn. Hentes som to bilder av hele kommunen når den velges,
    med egen stil uten kantstrek. Tallene og kartlaget zoomet ut lages av det i nettleseren. Zoomet inn hentes laget som fliser. Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt fabrikktomt. */
+import { ol } from './ol.js';
+import { utenPlan } from './egne.js';
+import { klasseAv } from './farger.js';
+import {
+  FLISNIVA,
+  OPPLOSNINGER,
+  ORIGO,
+  UTM,
+  app,
+  endret,
+  gjeldende,
+  hent,
+  husk,
+  rgb,
+  rutenett,
+  tegneflate,
+  tidSlutt,
+  utm33,
+  valgNr
+} from './felles.js';
+import { dagensKlasser, friskOppGamle } from './fliser.js';
+import { TOM, friskOpp, jevn, kommuneSti, lagHenter, lerret, plannett, tegnUtsnitt, tegnetKilde } from './grunnlag.js';
 const GRAA = 'https://wms.nibio.no/cgi-bin/graastruktur';
-const GRAATRINN = [
+export const GRAATRINN = [
   ['graa1', 'Under 1 % vegetasjon', 0, 1],
   ['graa2', '1–25 % vegetasjon', 1, 25],
   ['graa3', '25–50 % vegetasjon', 25, 50],
@@ -44,7 +66,6 @@ const graaTrinn = (r, a) =>
           Math.max(1, Math.round(r / 51))
         ); /* 0 ikke grått, 1–5 andel vegetasjon, 6 grått uten oppgitt andel */
 const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
-let graaRad = null;
 const graaMinne = new Map();
 /* Trinn i et punkt: 0 ikke grått, 1–5 andel vegetasjon fra lavest til høyest, 6 grått uten oppgitt andel (veier og lignende). */
 const graaVed = (D, x, y) => {
@@ -164,7 +185,7 @@ async function lastGraaFlis(tile) {
     tile.setState(3);
   }
 }
-const graaLag = new ol.layer.Tile({ className: 'tema', visible: false, source: tegnetKilde(lastGraaFlis) });
+export const graaLag = new ol.layer.Tile({ className: 'tema', visible: false, source: tegnetKilde(lastGraaFlis) });
 /* Tolker de to bildene av kommunen. P er bildet av alt grått areal, V bildet av flatene med oppgitt andel vegetasjon og M kommunens
    flate, alle som piksler i samme rutenett. Gir trinnet per rute og arealet per trinn i km². P gjøres samtidig om til en utjevnet
    maske over det grå, som kartlaget tegnes fra. Ren regning. */
@@ -182,7 +203,7 @@ function tolkGraa(P, V, M, w, h, res, m2) {
   const trinn = Array.from(n, v => Math.round(((v * res * res) / m2) * 100) / 100);
   return { kl, trinn, sum: Math.round(trinn.reduce((x, y) => x + y, 0) * 100) / 100 };
 }
-async function sjekkGraa(k, geom, mitt) {
+export async function sjekkGraa(k, geom, mitt) {
   const har = graaMinne.get(k.nr);
   if (har) {
     husk(graaMinne, k.nr, har, 3);
@@ -265,7 +286,7 @@ function kryssGraa(R, D, delvis) {
   }
   return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis };
 }
-function regnGraa() {
+export function regnGraa() {
   const R =
       app.planRaster && app.valgt && app.planRaster.nr === app.valgt.nr && app.planRaster.pl && !utenPlan()
         ? app.planRaster
@@ -275,59 +296,11 @@ function regnGraa() {
   app.graaKryss = R && D ? kryssGraa(R, D, !!(app.ov && app.ov.dynamisk)) : null;
   if (app.graaKryss) tidSlutt('grått areal, kryssing', t0);
   visGraa();
-  visEgne();
 }
-function visGraa() {
-  const D = gjeldende(app.graa),
-    ok = !!D && D.tilstand === 'ok',
-    R = graaRad.rad,
-    liste = $('graaliste'),
-    tekst = $('graasum'),
-    plan = $('graaplan'),
-    har = ok && D.sum > 0,
-    K = gjeldende(app.graaKryss);
-  graaLag.setVisible(app.graaPaa && !!app.klipp && har);
+/* Kartlaget følger tilstanden. Tekst og tall tegnes av siden, se visning/Graa.jsx. */
+export function visGraa() {
+  const D = gjeldende(app.graa);
+  graaLag.setVisible(app.graaPaa && !!app.klipp && !!D && D.tilstand === 'ok' && D.sum > 0);
   friskOppGamle();
-  radTall(R, D, har);
-  R.querySelector('.un').textContent =
-    har && K && K.S.tot
-      ? `${nf((K.S.graa / K.S.tot) * 100, 0)} % av planlagt utbygging ligger på grått areal${K.delvis ? ', i hentet kart' : ''}`
-      : '';
-  liste.textContent = plan.textContent = '';
-  $('graamerk').hidden = !har;
-  if (!D || D.tilstand === 'henter') {
-    tekst.textContent = app.valgt ? 'Henter …' : '';
-    return;
-  }
-  if (!ok) {
-    tekst.textContent = 'Grått areal kunne ikke hentes fra NIBIO.';
-    return;
-  }
-  if (!har) {
-    tekst.textContent = 'Kartet over grå arealer har ingen flater i kommunen.';
-    return;
-  }
-  tekst.textContent = `Ca. ${iTekst(D.sum)} av kommunen${app.ssbSum ? `, ${nf((D.sum / app.ssbSum) * 100)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Tabellen viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
-  const rad = (id, navn, tall, under) => fargelinje(liste, id, navn, tall, under);
-  GRAATRINN.forEach(([id, navn], i) => rad(id, navn, dekar(D.trinn[i + 1])));
-  if (D.trinn[6] > 0) rad('graa0', 'Uten oppgitt andel, som veier', dekar(D.trinn[6]));
-  rad(
-    'gront',
-    'Grønt i bebygd område',
-    K ? (K.delvis ? 'minst ' : '') + dekar(K.gront * RUTE) : '',
-    'Ikke grått areal. Parker, idrettsanlegg, golfbaner og lignende, som grunnkartet regner som bebygd og opparbeidet. Det er grønt, men telles ikke som natur.'
-  );
-  if (K && K.S.tot) {
-    const S = K.S,
-      b = document.createElement('b'),
-      dk = n => iTekst(n * RUTE);
-    b.textContent = `Av ca. ${dk(S.tot)} planlagt utbygging på land${K.delvis ? ' i hentet kart' : ''} ligger ca. ${dk(S.graa)} (${nf((S.graa / S.tot) * 100, 0)} %) på grått areal.`;
-    plan.append(
-      b,
-      ` Det er gjenbruk av areal som alt er tatt i bruk. Ca. ${dk(S.gron)} av dette er flater med minst halvparten vegetasjon, så også gjenbruk kan ta grønt.${S.gront ? ` I tillegg ligger ca. ${dk(S.gront)} på grønt i bebygd område.` : ''}${K.antallEgne ? ' Tallene inkluderer egne områder.' : ''} Her er all planlagt utbygging med, også på bebygd areal og i smale striper.`
-    );
-  } else
-    plan.textContent = utenPlan()
-      ? 'Kommunen har ingen kommuneplan hos DiBK å krysse med.'
-      : 'Planlagt utbygging på grått areal regnes ut når kartet er hentet.';
+  endret();
 }

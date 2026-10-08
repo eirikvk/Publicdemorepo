@@ -10,7 +10,7 @@ Kjør fra roten av repoet:
     python3 verktoy/oversiktsbilde.py 5001 5021
     python3 verktoy/oversiktsbilde.py --fylke 50 --hentet "5. og 6. oktober 2026"
 
-Bildene legges i oversikt/, og oversikt.json oppdateres. Kommuner som alt har bilde, hoppes over uten --paa-nytt.
+Bildene legges i public/oversikt/, og public/oversikt.json oppdateres. Kommuner som alt har bilde, hoppes over uten --paa-nytt.
 Grunnkartet er lisensiert «Norge digitalt begrenset». Vær varsom med belastningen: en kommune koster 4 til 16 kall.
 
 Trenger numpy, Pillow og shapely. Går nettet gjennom en proxy med eget sertifikat, leses det fra SSL_CERT_FILE.
@@ -28,7 +28,7 @@ LENGSTE = 2048     # piksler på lengste side i det ferdige bildet
 FLIS = 2048        # piksler per kall mot NIBIO
 GRENSE = 17.0      # groveste oppløsning NIBIO tegner grunnkartet i (1:50 000), meter per piksel
 
-# Rene farger fra NIBIO, de samme som i js/felles.js. Blandingen av to klasser kan ikke forveksles med blandingen av to andre.
+# Rene farger fra NIBIO, de samme som DATAFARGE i src/motor/felles.js. Blandingen av to klasser kan ikke forveksles med blandingen av to andre.
 FARGER = np.array([[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 128, 255], [0, 128, 255], [255, 128, 128]], float)
 KLASSER = [['bebygdOpparbeidetAreal'], ['dyrketmark', 'grasmark'],
            ['skog', 'heiBuskmark', 'liteVegetertMark', 'vatmark', 'kyststrenderSvabergDyner'],
@@ -166,15 +166,15 @@ def bygg(nr, ut):
 def main():
     p = argparse.ArgumentParser(description='Lager lagrede oversiktsbilder for kommuner.')
     p.add_argument('kommuner', nargs='*', help='kommunenumre, for eksempel 5001')
-    p.add_argument('--fylke', help='alle kommunene i et fylke, etter fylkesnummer i kommuner.json')
+    p.add_argument('--fylke', help='alle kommunene i et fylke, etter fylkesnummer i public/kommuner.json')
     p.add_argument('--paa-nytt', action='store_true', help='lag bildet også når kommunen har et fra før')
     p.add_argument('--hentet', help='tekst for når bildene er hentet, vises på siden')
-    p.add_argument('--ut', default=os.path.join(ROT, 'oversikt'), help='mappe for bildene')
-    p.add_argument('--register', default=os.path.join(ROT, 'oversikt.json'), help='registeret som oppdateres. Tom tekst for å la være')
+    p.add_argument('--ut', default=os.path.join(ROT, 'public', 'oversikt'), help='mappe for bildene')
+    p.add_argument('--register', default=os.path.join(ROT, 'public', 'oversikt.json'), help='registeret som oppdateres. Tom tekst for å la være')
     a = p.parse_args()
     numre = list(a.kommuner)
     if a.fylke:
-        fylker = json.load(open(os.path.join(ROT, 'kommuner.json'), encoding='utf8'))
+        fylker = json.load(open(os.path.join(ROT, 'public', 'kommuner.json'), encoding='utf8'))
         numre += sorted(k[0] for f in fylker if f[0] == a.fylke for k in f[2])
     if not numre:
         p.error('oppgi kommunenumre eller --fylke')

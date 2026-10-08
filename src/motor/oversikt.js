@@ -1,13 +1,24 @@
 /* Oversiktsbildet som vises når kartet er zoomet ut: det lagrede, eller det nettleseren setter sammen selv. */
+import { ol } from './ol.js';
+import { fargeleggBlob, klassefarger, tilFarge } from './farger.js';
+import { FLISNIVA, MAKSRES, OPPLOSNINGER, ORIGO, UTM, app, hent, tidSlutt, valgNr } from './felles.js';
+import { friskOppGamle, hentRaa } from './fliser.js';
+import { graaLag } from './graa.js';
+import { flisnett, kartflagg, opptatt, utdaterte } from './grunnlag.js';
+import { inonLag } from './inon.js';
+import { kartStatus, maalTekst, view, visMaaling } from './kart.js';
+import { regnAlt, tegnPlan } from './plan.js';
 let ovBilde = null;
 /* Lagret oversiktsbilde: ett ferdig bilde per kommune, vist til kartet er zoomet inn nok til at NIBIO tegner selv.
    Registeret ligger i app.oversikter og bildet for valgt kommune i app.ov. */
-let ovUrl = null,
+export let ovUrl = null,
   ovRes = 0;
+/* Det lagrede oversiktsbildet som bilde i nettleseren, til planlaget og de andre lagene som tegnes oppå dagens klasser. */
+export const ovBildet = () => ovBilde || (ovBilde = createImageBitmap(new Blob([app.ov.buf])));
 /* Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når det
    forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
    zoombevegelse rekker ikke å laste bildet sitt, og da blinket bakgrunnskartet gjennom første gang man zoomet inn. */
-const oversiktLag = new ol.layer.Image({ className: 'tema' });
+export const oversiktLag = new ol.layer.Image({ className: 'tema' });
 /* Kilde for kartet nettleseren setter sammen selv. Bildet er et lerret som fylles på flis for flis, og kartlaget får en kopi
    av det som bilde. Det sparer å pakke hele lerretet som PNG og lese det inn igjen hver gang det kommer nye fliser. */
 class LerretKilde extends ol.source.Image {
@@ -49,8 +60,8 @@ oversiktLag.on('postrender', e => {
 });
 /* Uten bilde holdes laget skjult. Et synlig lag uten kilde får OpenLayers til å feile midt i en kartbevegelse,
    for eksempel når man bytter fra en kommune med oversiktsbilde til en uten. */
-const oversiktSynlig = v => oversiktLag.setVisible(v && !!oversiktLag.getSource());
-async function tegnOversikt() {
+export const oversiktSynlig = v => oversiktLag.setVisible(v && !!oversiktLag.getSource());
+export async function tegnOversikt() {
   const denne = app.ov;
   if (!denne) return;
   if (denne.lerret) {
@@ -85,9 +96,9 @@ async function tegnOversikt() {
 /* Kommuner uten lagret oversiktsbilde: nettleseren setter sammen sitt eget av flisene den har hentet. Zoomer man ut
    igjen, vises dermed det man alt har sett, i stedet for bare bakgrunnskartet. Det hentes ingenting nytt for dette.
    Lerretet c har de rå klassefargene og brukes til utregning. Lerretet vis har visningsfargene og er det som tegnes. */
-let samle = null;
+export let samle = null;
 const samlinger = new Map(); /* beholdes for de fire sist besøkte kommunene, så kartet er der når man bytter tilbake */
-function nySamling(nr, ext) {
+export function nySamling(nr, ext) {
   let s = samlinger.get(nr);
   if (!s) {
     const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(ext[2] - ext[0], ext[3] - ext[1]) / 2048),
@@ -186,7 +197,7 @@ function visSamling(s) {
   if (forste) oversiktSynlig(true);
   s.kilde.oppdater(s.vis);
 }
-function leggISamling(tc, buf) {
+export function leggISamling(tc, buf) {
   const s = samle,
     n = tc.join('/');
   if (!s || s.har.has(n)) return Promise.resolve();
@@ -227,29 +238,35 @@ function leggISamling(tc, buf) {
    regnes plantallene og planlaget ut på nytt. Starter man å flytte igjen, venter resten til neste stopp.
    Unntaket er når man zoomer ut til det sammensatte kartet er det eneste som vises. Da fargelegges alt som venter med en gang,
    ellers ville det man nettopp så på mangle. */
-function fargeleggVentende(s) {
+export function fargeleggVentende(s) {
   if (!s || !s.venter.length) return;
   while (s.venter.length) fargeleggSamling(s, ...s.venter.shift());
   if (s.kilde) s.kilde.oppdater(s.vis);
 }
-let etterTimer = null,
+export let etterTimer = null,
   etterVenter = false;
-function planleggEtterarbeid() {
+export const pauseEtterarbeid = () =>
+  clearTimeout(etterTimer); /* kartet flyttes: etterarbeidet venter til det står stille */
+export const stoppEtterarbeid = () => {
+  clearTimeout(etterTimer);
+  etterVenter = false;
+}; /* ny kommune: etterarbeidet for den forrige gjelder ikke lenger */
+export function planleggEtterarbeid() {
   etterVenter = true;
   clearTimeout(etterTimer);
   etterTimer = setTimeout(async () => {
-    if (iBevegelse) return; /* moveend tar opp tråden igjen */
+    if (kartflagg.iBevegelse) return; /* moveend tar opp tråden igjen */
     const s = samle,
       t0 = performance.now(),
       antall = s ? s.venter.length : 0;
     if (s && s.venter.length) {
-      while (s.venter.length && !iBevegelse && s === samle) {
+      while (s.venter.length && !kartflagg.iBevegelse && s === samle) {
         fargeleggSamling(s, ...s.venter.shift());
         await new Promise(ok => setTimeout(ok, 0));
       }
       if (s.kilde) s.kilde.oppdater(s.vis); /* også når det ble avbrutt, så det som er gjort vises */
     }
-    if (iBevegelse || s !== samle) return;
+    if (kartflagg.iBevegelse || s !== samle) return;
     friskOppGamle();
     if (opptatt()) return planleggEtterarbeid(); /* tallene venter til alt er hentet */
     etterVenter = false;
@@ -258,7 +275,7 @@ function planleggEtterarbeid() {
     visMaaling();
   }, 400);
 }
-async function hentOversikt(k, mitt) {
+export async function hentOversikt(k, mitt) {
   app.ov = null;
   ovBilde = null;
   samle = null;
