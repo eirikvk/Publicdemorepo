@@ -1,0 +1,50 @@
+/* Katalogen i teknisk visning: en kort tabell, med knappene Info og Data på hver rad og detaljene under raden */
+.katalog .talltabell tbody th {
+  min-width: 0;
+}
+/* Det som ikke er ferdig (henter, feilet, utdatert), kan deles over linjer, så kolonnen holder seg smal */
+.katalog td small.uferdig {
+  white-space: normal;
+}
+.katalog td.handling {
+  padding-top: var(--md-spacing-4);
+  padding-bottom: var(--md-spacing-4);
+}
+/* Knappene står ved siden av hverandre, helt til høyre */
+.katalog td.handling .knapper {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: var(--md-spacing-4);
+}
+.katalog tr.detalj td {
+  padding-left: var(--md-spacing-12);
+  border-left: 2px solid var(--linje);
+}
+/* Detaljene gjør ikke tabellen bredere: innholdet er null bredt for tabellen, men fyller cellen. Lange linjer rulles sidelengs. */
+.katalog tr.detalj td > div {
+  width: 0;
+  min-width: 100%;
+}
+.katalog tr.detalj p {
+  margin: 0 0 var(--md-spacing-8);
+}
+.katalog tr.detalj p:last-child {
+  margin-bottom: 0;
+}
+.katalog code,
+.katalog pre {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: inherit;
+}
+.katalog details + details {
+  margin-top: var(--md-spacing-8);
+}
+.katalog summary {
+  cursor: pointer;
+}
+.katalog pre {
+  margin: var(--md-spacing-8) 0 0;
+  max-height: 24em;
+  overflow: auto;
+  white-space: pre;
+}

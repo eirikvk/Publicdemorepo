@@ -1,14 +1,13 @@
 /* Om og metode: kall-loggen og katalogen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
-import { useState } from 'react';
-import { innhold } from '../../data/cache.ts';
 import { katalog } from '../../data/katalog.ts';
 import { finn } from '../../data/motor/kommune.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.ts';
-import { kb, nf, tid } from '../tekst.ts';
+import { kb, tid } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { VERSJON } from '../../utgave.ts';
-import { MdButton, MdCheckbox, MdLink, MdToggle } from './md.ts';
+import Katalog from './Katalog.tsx';
+import { MdCheckbox, MdLink, MdToggle } from './md.ts';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 
@@ -16,63 +15,6 @@ const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 export interface Tekniskvalg {
   teknisk: boolean;
   settTeknisk: (paa: boolean) => void;
-}
-
-/* Katalogen og cachen: tabellene i bronse, sølv og gull, og det som er lagret i hver akkurat nå. Innholdet leses når man ber om det,
-   så det ikke regnes ut på nytt hver gang siden tegnes. */
-const LAGNAVN: Record<string, string> = {
-  bronse: 'Bronse: svar fra kildene',
-  solv: 'Sølv: tolket til felles standard',
-  gull: 'Gull: det sidene viser'
-};
-function Katalog() {
-  const [K, settK] = useState<ReturnType<typeof innhold> | null>(null);
-  return (
-    <section className="prosa">
-      <h2 className="md-typography-heading-s">Katalogen</h2>
-      <p>
-        Tabellene i datapipelinen, i tre lag, og hva som er lagret i hver akkurat nå. Hver tabell er en funksjon i koden
-        med samme navn: katalog.gull.inon er inon() i src/data/gull/inon.ts. Nøkkelen er som regel kommunenummeret. Gull
-        regnes ut på nytt når planrutenettet eller det kartlagte for kommunen er nytt. Ingenting lagres i nettleseren
-        etter at siden er lukket.
-      </p>
-      <MdButton theme="secondary" mode="small" onClick={() => settK(innhold())}>
-        {K ? 'Oppdater' : 'Vis innholdet nå'}
-      </MdButton>
-      {K &&
-        (['bronse', 'solv', 'gull'] as const).map(lag => (
-          <div key={lag}>
-            <h3 className="md-typography-heading-xs">{LAGNAVN[lag]}</h3>
-            <ul className="talliste">
-              {K.filter(d => d.lag === lag).map(d => {
-                const r = d.rader,
-                  uferdige = r.filter(x => x.status !== 'ok' || x.utdatert),
-                  noekler =
-                    r.length && r.length <= 8 && r.every(x => x.nokkel.length <= 24)
-                      ? ': ' + r.map(x => (x.nokkel || 'tom nøkkel') + (x.delvis ? ' (delvis)' : '')).join(', ')
-                      : '';
-                return (
-                  <li key={d.navn}>
-                    <b className="navn">{d.navn}</b>
-                    <span className="tall">{r.length ? kb(r.reduce((sum, x) => sum + x.byte, 0)) : ''}</span>
-                    <small>
-                      <b>
-                        {nf(r.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
-                        {noekler}
-                      </b>
-                      {uferdige.length
-                        ? ` (${uferdige.map(x => `${x.nokkel || 'tom nøkkel'} ${x.utdatert ? 'utdatert' : x.status}`).join(', ')})`
-                        : ''}
-                      {'. ' + d.om[0].toUpperCase() + d.om.slice(1) + (d.om.endsWith('.') ? '' : '.')}
-                    </small>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-    </section>
-  );
 }
 
 export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
@@ -110,9 +52,9 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
             </table>
           </div>
           <p>
-            Viser de siste kallene nettleseren din har gjort. Det som er hentet, huskes i katalogen så lenge siden er
-            åpen, og hentes ikke på nytt, se under. Bakgrunnskartet er ferdige fliser fra Kartverket, som kartet henter
-            og husker selv, og er ikke med i listen.
+            Viser de siste kallene nettleseren din har gjort. Det som er hentet, huskes i cachen så lenge siden er åpen,
+            og hentes ikke på nytt, se under. Bakgrunnskartet er ferdige fliser fra Kartverket, som kartet henter og
+            husker selv, og er ikke med i listen.
           </p>
         </section>
       )}

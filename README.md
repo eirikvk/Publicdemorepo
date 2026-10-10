@@ -97,6 +97,7 @@ App              sideoppsettet: toppen, sidevelgeren, og kartet og innholdet i t
    ├─ Framtid    utvikling fremover: planlagt utbygging, og
    │  └─ Egne    egne områder: tegning, opplasting og sammenligning
    └─ Om         om og metode, og tekniske valg
+      └─ Katalog katalogen og cachen, i teknisk visning
 ```
 
 Hver side bestemmer hva kartet viser: arealklassene og planlagt utbygging vises alltid, og temaet bare på sin egen side. Hvilke
@@ -260,6 +261,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
 | `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
+| `Katalog.tsx` | Katalogen i teknisk visning: én kort tabell over tabellene, med «Info» (hva tabellen er og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |
 | `lager.ts` | Kroken som kobler komponentene til tilstanden |
@@ -311,7 +313,7 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 - **Grensene** står per tabell i katalogen (`husk`). Svar fra kildene er store og huskes for noen få kommuner. Gull er små tabeller
   og huskes for flere. Det som er brukt lengst siden, går ut først. Ingenting lagres i nettleseren etter at siden er lukket.
 - **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» hva som ligger i cachen akkurat nå, per lag, med
-  status og størrelse.
+  størrelse. «Info» på hver tabell sier hva den er og hvor ETL-funksjonen ligger, og «Data» viser radene, med status og verdien.
 
 Noen tabeller har ingen ETL-funksjon, fordi de bygges opp mens kartet flyttes: det sammensatte kartet, planrutenettets blokker og
 planrutenettet. Dem fyller datamotoren selv (`src/data/motor/grunnkart.ts` og `plan.ts`).

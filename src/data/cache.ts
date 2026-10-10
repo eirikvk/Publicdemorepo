@@ -323,7 +323,9 @@ export function innhold() {
     lag: t.lag,
     om: t.om,
     husk: t.husk,
+    etl: !!t.etl,
     voksende: !!t.voksende,
+    endrerGull: !!t.endrerGull,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,
       status: r.status,
@@ -334,4 +336,11 @@ export function innhold() {
       sekunder: Math.round((na - r.tid) / 1000)
     }))
   }));
+}
+/* Verdien i raden med nøkkelen k i tabellen med det fulle navnet (som solv.inon), til oversikten under Tekniske valg. undefined når
+   raden ikke finnes, eller ikke har noen verdi ennå. */
+export function verdiI(navn: string, k: string): unknown {
+  const t = ALLE.find(x => fulltNavn(x) === navn),
+    r = t ? rom(t).get(k) : undefined;
+  return r ? r.verdi : undefined;
 }
