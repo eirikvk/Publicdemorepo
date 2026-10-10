@@ -196,7 +196,7 @@ eller `kryss` noe, er rene utregninger som tabellene bruker.
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
-| `temaer.ts` | Arealet per verdikategori, kryssingen med planen, og tallene på temasidene |
+| `temaer.ts` | Naturtemaene i tre deler: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, og planlagt utbygging i temaet (kryssingen med planen) |
 | `inon.ts` | Tallene på siden |
 | `graa.ts` | Kryssingen med planen, og tallene på siden |
 
@@ -306,8 +306,8 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
   underveis, deles, så to som spør etter det samme, gir ett kall til kilden.
 - **Én rad per tabell og kommune**, med status (henter, feil eller ok), svaret, tiden det tok, og om svaret er delvis (regnet ut
   for den delen av kommunen nettleseren har hentet kart for).
-- **Gull regnes ut på nytt** når planrutenettet eller det kartlagte området er nytt for kommunen. Siden viser de gamle tallene til
-  de nye er klare.
+- **Gull regnes ut på nytt** når planrutenettet er nytt for kommunen. Siden viser de gamle tallene til de nye er klare. Kaller en
+  ETL-funksjon planrutenettet mens datamotoren regner det ut, venter den til det er ferdig.
 - **Ingen kopier.** Svarene lagres som de er, uten å gjøres om til tekst. Et nytt svar erstatter det gamle. Unntakene er merket
   voksende: det sammensatte kartet og planrutenettets blokker.
 - **Grensene** står per tabell i katalogen (`husk`). Svar fra kildene er store og huskes for noen få kommuner. Gull er små tabeller
@@ -317,6 +317,24 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 
 Noen tabeller har ingen ETL-funksjon, fordi de bygges opp mens kartet flyttes: det sammensatte kartet, planrutenettets blokker og
 planrutenettet. Dem fyller datamotoren selv (`src/data/motor/grunnkart.ts` og `plan.ts`).
+
+### Fire prinsipper for dataflyten
+
+1. **Gull deles der det kommer inn en ny eller tregere kilde.** Hver tabell i gull svarer på ett spørsmål. Trenger en del av svaret
+   noe som kommer senere, som planrutenettet, blir den delen en egen tabell som kaller den første. `gull.verneomrader` er
+   verneområdene i kommunen, og `gull.verneomraderIPlan` er planlagt utbygging innenfor dem. Gull kan kalle gull.
+2. **Gull venter på alt det bruker.** En ETL-funksjon henter det den bygger på med `await`, og titter ikke etter om noe finnes
+   (`.naa()`). Da står hele sporet fra side til kilde i koden. Kan noe mangle uten at svaret er feil, som det kartlagte, står det
+   uttrykkelig: `katalog.solv.kartlagt(nr).catch(() => null)`.
+3. **Komponentene velger selv hvor store de er, og gjør bare visningslogikk.** En komponent kan lese flere resultater fra gull, for
+   eksempel vise listen med en gang og planlagt utbygging når den er regnet ut. Men den lager ingen nye tall. Kommer det et tall ut
+   av komponenten som ikke står i gull, er det metode, og det hører hjemme i gull.
+4. **Det brukeren gjør, er kilder nederst.** Kartet som er hentet og egne områder kommer fra brukeren, ikke fra kommunenummeret. De
+   er tabeller datamotoren fyller, og alt over dem er vanlige ETL-funksjoner. Når en slik kilde endres, regnes det som bygger på
+   den, ut på nytt.
+
+Dette gjennomføres steg for steg. Naturtemaene (verneområder, villrein og verdsatt natur) følger de tre første. Planlagt
+utbygging, grått areal og egne områder titter fortsatt på planrutenettet, og planrutenettet regnes fortsatt ut av datamotoren.
 
 Det finnes tre slags tilstand: den som gjelder nå (`app` i datamotoren og `ui` i visningen), cachen, og kartets egen (OpenLayers og
 kartkoden, som bare husker det som er laget for å tegne, som ferdige fliser og masker).

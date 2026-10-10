@@ -36,7 +36,7 @@ const stille = () => {}; /* en feil står i cachen, og siden viser den */
 function regnGull(nr: string) {
   if (nr === valgtNr()) for (const t of Object.values(katalog.gull)) t(nr).catch(stille);
 }
-/* Når planrutenettet eller det kartlagte er nytt, regnes det sidene viser ut på nytt med en gang */
+/* Når planrutenettet er nytt, regnes det sidene viser ut på nytt med en gang */
 nårGullUtdatert(regnGull);
 
 /* Det sidene viser for kommunen nr, og planrutenettet. Planrutenettet regnes ut når grensen, opplysningen om kommuneplanen og dagens

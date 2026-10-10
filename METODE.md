@@ -440,8 +440,10 @@ utbygging per område, per verdikategori og innenfor og utenfor det kartlagte.
 
 **Kode.** Bronse: `hentTemaflater` og `hentKartlagt` i `src/data/bronse/mdir-naturtema.ts`. Sølv: `src/data/solv/temaer.ts`. Gull:
 `src/data/gull/temaer.ts`. Tabellene i katalogen, for verneområder: `bronse.verneomrader`,
-`solv.verneomrader` og `gull.verneomrader`, og tilsvarende for villrein og verdsatt natur. I tillegg `solv.verdsattNaturAreal`,
-`solv.kartlagt`, `solv.verdsattNaturIKartlagt` og maskene i `solv.naturmaske`. Kartlagene:
+`solv.verneomrader`, `gull.verneomrader` (områdene og arealet) og `gull.verneomraderIPlan` (planlagt utbygging innenfor), og
+tilsvarende for villrein og verdsatt natur. For verdsatt natur i tillegg `solv.verdsattNaturAreal`, `solv.kartlagt`,
+`solv.verdsattNaturIKartlagt` og `gull.verdsattNaturKartlagt` (kartleggingen og helhetsbildet). Maskene ligger i
+`solv.naturmaske`. Kartlagene:
 `src/ui/kart/naturtema.ts`.
 
 ## Inngrepsfri natur
@@ -579,6 +581,13 @@ med én rad per tabell og kommune. Tabellene i gull huskes også, og regnes ut p
 er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Naturtemaene i gull delt i tre, 11. oktober 2026.** Gull for verneområder, villrein og verdsatt natur var ett stort svar per tema,
+som også tok med kryssingen med planen og kartleggingen hvis de fantes da svaret ble regnet ut. Nå er hvert tema delt der det kommer
+inn en ny kilde: temaet (områdene og arealet), planlagt utbygging i temaet (venter på planrutenettet), og for verdsatt natur
+kartleggingen (venter på det kartlagte). Siden setter delene sammen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven
+før, hver kjørt med sitt eget testverktøy samme kveld: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så
+Malvik og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
 **Katalogen, 10. oktober 2026, første utgave.** Alt som hentes og regnes ut, huskes nå i én katalog i datamotoren
 (`src/data/motor/katalog.ts`), og hvert datasett står i `src/data/motor/datasett.ts` med navn, nøkkel, grense og oppskrift. Bronse,

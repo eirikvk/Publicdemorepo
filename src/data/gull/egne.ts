@@ -6,7 +6,7 @@ import type { EgetTall, Planrutenett } from '../solv/planrutenett.ts';
 import { NATURTEMA } from '../solv/temaer.ts';
 import { andel } from './felles.ts';
 import type { Graakryss, Graatall } from './graa.ts';
-import type { Gap, Kryss, Naturtemaet } from './temaer.ts';
+import type { Gap, Kryss, TemaIPlan } from './temaer.ts';
 
 /* Et tema krysset med planen, slik radene trenger det */
 export interface TemaKryss {
@@ -125,20 +125,21 @@ export async function egneRader(nr: string): Promise<EgneRader | null> {
   const ikke = () => null,
     [GK, ...temaene] = await Promise.all([
       katalog.gull.graakryss(nr).catch(ikke),
-      katalog.gull.verneomrader(nr).catch(ikke),
-      katalog.gull.villrein(nr).catch(ikke),
-      katalog.gull.verdsattNatur(nr).catch(ikke)
+      katalog.gull.verneomraderIPlan(nr).catch(ikke),
+      katalog.gull.villreinIPlan(nr).catch(ikke),
+      katalog.gull.verdsattNaturIPlan(nr).catch(ikke)
     ]),
     info = katalog.solv.planinfo.naa(nr),
     harPlan = !info || info.finnes;
   const tema = NATURTEMA.flatMap((t, i) => {
-      const D = (temaene[i] as Naturtemaet | null)?.D;
-      return D && D.kryss && D.kryss.P && D.omrader.length
-        ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: D.kryss }]
+      const C = temaene[i] as TemaIPlan | null;
+      return C && C.K.kryss.P && C.omrader.length
+        ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: C.K.kryss }]
         : [];
     }),
     V = NATURTEMA.findIndex(t => t.dekning),
-    gap = V < 0 ? null : (temaene[V] as Naturtemaet | null)?.D.gap;
+    C = V < 0 ? null : (temaene[V] as TemaIPlan | null),
+    gap = C ? C.K.gap : null;
   return {
     kommune: byggEgneRader(null, null, R, harPlan, GK as Graakryss | null, tema, gap),
     omrader: R.egneIder.map((id, i) => ({

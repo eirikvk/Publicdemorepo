@@ -57,26 +57,29 @@ export function motortall() {
     },
     planSum: rund(v(K.gull.plansum)),
     tema: M.NATURTEMA.map(t => {
-      const x = v(M.TEMATABELLER[t.id].tall);
+      const T = M.TEMATABELLER[t.id],
+        x = v(T.tall);
       if (!x) return { id: t.id, data: null };
-      const D = x.D,
+      const I = v(T.iPlan),
+        C = I && I.omrader === x.omrader ? I.K : null,
+        B = T.kartlagt ? v(T.kartlagt) : null,
         /* ruter med planlagt utbygging per område, og av dem i smale striper */
-        plan = Array.from(D.plan),
-        smal = Array.from(D.smal);
+        plan = C ? Array.from(C.plan) : x.omrader.map(() => 0),
+        smal = C ? Array.from(C.smal) : x.omrader.map(() => 0);
       return {
         id: t.id,
         feil: false,
-        sum: r(D.sum),
-        antall: D.omrader.length,
-        klasser: rund(D.klasser || null),
-        regnet: !!D.regnet,
+        sum: r(x.sum),
+        antall: x.omrader.length,
+        klasser: rund(x.klasser || null),
+        regnet: !!C,
         plan: plan.reduce((s, x) => s + x, 0),
         smal: smal.reduce((s, x) => s + x, 0),
         berort: plan.filter(x => x).length,
-        kryss: D.kryss ? { S: rund(D.kryss.S), P: D.kryss.P ? rund(D.kryss.P) : null } : null,
-        gap: D.gap ? { nat: D.gap.nat, ukjent: D.gap.ukjent, plan: D.gap.plan ? rund(D.gap.plan) : null } : null,
-        kartlagt: D.ekstra ? r(D.ekstra.km2) : null,
-        inne: D.inne ? rund(D.inne) : null
+        kryss: C ? { S: rund(C.kryss.S), P: C.kryss.P ? rund(C.kryss.P) : null } : null,
+        gap: C && C.gap ? { nat: C.gap.nat, ukjent: C.gap.ukjent, plan: C.gap.plan ? rund(C.gap.plan) : null } : null,
+        kartlagt: B && B.E ? r(B.E.km2) : null,
+        inne: B && B.inne ? rund(B.inne) : null
       };
     }),
     /* bildene av hele kommunen: tallene når de er hentet, ellers bare tilstanden */

@@ -294,7 +294,6 @@ export const katalog = {
       om: 'det som er kartlagt for naturtyper etter Miljødirektoratets instruks, klippet mot kommunen',
       husk: 30,
       etl: solvTemaer.kartlagt,
-      endrerGull: true,
       glemt: (_, nr) => glemMasker('kartlagt/' + nr)
     }),
     verdsattNaturIKartlagt: tabell({
@@ -302,8 +301,7 @@ export const katalog = {
       navn: 'verdsattNaturIKartlagt',
       om: 'verdsatt natur per verdikategori innenfor det kartlagte',
       husk: 30,
-      etl: solvTemaer.verdsattNaturIKartlagt,
-      endrerGull: true
+      etl: solvTemaer.verdsattNaturIKartlagt
     }),
     naturmaske: tabell<string, Maske | null>({
       lag: 'solv',
@@ -386,23 +384,51 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'gull',
       navn: 'verneomrader',
-      om: 'verneområdene: arealet, listen, og planlagt utbygging innenfor',
+      om: 'verneområdene i kommunen: listen, arealet og andelen av landarealet',
       husk: 6,
       etl: gullTemaer.verneomrader
+    }),
+    verneomraderIPlan: tabell({
+      lag: 'gull',
+      navn: 'verneomraderIPlan',
+      om: 'planlagt utbygging innenfor verneområdene, samlet og per område',
+      husk: 6,
+      etl: gullTemaer.verneomraderIPlan
     }),
     villrein: tabell({
       lag: 'gull',
       navn: 'villrein',
-      om: 'villreinområdene: arealet, listen, og planlagt utbygging innenfor',
+      om: 'villreinområdene i kommunen: listen, arealet og andelen av landarealet',
       husk: 6,
       etl: gullTemaer.villrein
+    }),
+    villreinIPlan: tabell({
+      lag: 'gull',
+      navn: 'villreinIPlan',
+      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område',
+      husk: 6,
+      etl: gullTemaer.villreinIPlan
     }),
     verdsattNatur: tabell({
       lag: 'gull',
       navn: 'verdsattNatur',
-      om: 'verdsatt natur: arealet per verdikategori, kartleggingen, de berørte lokalitetene og planlagt utbygging innenfor',
+      om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, og andelen av landarealet',
       husk: 6,
       etl: gullTemaer.verdsattNatur
+    }),
+    verdsattNaturKartlagt: tabell({
+      lag: 'gull',
+      navn: 'verdsattNaturKartlagt',
+      om: 'kartleggingen: hvor mye som er kartlagt, og helhetsbildet med verdsatt natur i det kartlagte og resten',
+      husk: 6,
+      etl: gullTemaer.verdsattNaturKartlagt
+    }),
+    verdsattNaturIPlan: tabell({
+      lag: 'gull',
+      navn: 'verdsattNaturIPlan',
+      om: 'planlagt utbygging i verdsatt natur: per verdikategori, de berørte lokalitetene, og på natur som ikke er kartlagt',
+      husk: 6,
+      etl: gullTemaer.verdsattNaturIPlan
     }),
     egneRader: tabell({
       lag: 'gull',
@@ -416,12 +442,31 @@ export const katalog = {
 /* Maskene til et tema i en kommune glemmes når områdene glemmes */
 const glemMasker = (start: string) => glem(katalog.solv.naturmaske, k => k.startsWith(start));
 
-/* Tabellene for hvert naturtema, etter id: områdene i sølv og det sidene viser i gull */
-export const TEMATABELLER: Record<
-  string,
-  { omrader: Tabell<string, solvTemaer.Temaomrader>; tall: Tabell<string, gullTemaer.Naturtemaet> }
-> = {
-  vern: { omrader: katalog.solv.verneomrader, tall: katalog.gull.verneomrader },
-  rein: { omrader: katalog.solv.villrein, tall: katalog.gull.villrein },
-  verdi: { omrader: katalog.solv.verdsattNatur, tall: katalog.gull.verdsattNatur }
+/* Tabellene for hvert naturtema, etter id, til siden og kartet som er felles for temaene: områdene i sølv, og i gull temaet,
+   planlagt utbygging i det, og kartleggingen for verdsatt natur */
+export interface Tematabeller {
+  omrader: Tabell<string, solvTemaer.Temaomrader>;
+  tall: Tabell<string, gullTemaer.Temaet>;
+  iPlan: Tabell<string, gullTemaer.TemaIPlan | null>;
+  kartlagt: Tabell<string, gullTemaer.Kartleggingen> | null;
+}
+export const TEMATABELLER: Record<string, Tematabeller> = {
+  vern: {
+    omrader: katalog.solv.verneomrader,
+    tall: katalog.gull.verneomrader,
+    iPlan: katalog.gull.verneomraderIPlan,
+    kartlagt: null
+  },
+  rein: {
+    omrader: katalog.solv.villrein,
+    tall: katalog.gull.villrein,
+    iPlan: katalog.gull.villreinIPlan,
+    kartlagt: null
+  },
+  verdi: {
+    omrader: katalog.solv.verdsattNatur,
+    tall: katalog.gull.verdsattNatur,
+    iPlan: katalog.gull.verdsattNaturIPlan,
+    kartlagt: katalog.gull.verdsattNaturKartlagt
+  }
 };

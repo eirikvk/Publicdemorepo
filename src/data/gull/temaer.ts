@@ -1,6 +1,11 @@
-/* Gull for naturtemaene: kryssingen med planrutenettet (hvor mye planlagt utbygging som ligger i hvert område), og tallene
-   temasidene viser. Bygger på områdene, arealet og maskene i sølv (solv/temaer.ts) og planrutenettet (solv/planrutenett.ts). Arealer
-   er i km², kryssinger i ruter. */
+/* Gull for naturtemaene, i tre deler som bygger på hverandre:
+   - områdene i kommunen med arealet (gull.verneomrader, gull.villrein og gull.verdsattNatur)
+   - kartleggingen av verdsatt natur (gull.verdsattNaturKartlagt)
+   - planlagt utbygging i områdene (gull.verneomraderIPlan, gull.villreinIPlan og gull.verdsattNaturIPlan): kryssingen med
+     planrutenettet, hvor mye planlagt utbygging som ligger i hvert område.
+   Delene er delt der det kommer inn en ny kilde: det kartlagte og planrutenettet kommer senere enn områdene, og siden viser
+   områdene med en gang. Bygger på områdene, arealet og maskene i sølv (solv/temaer.ts) og planrutenettet (solv/planrutenett.ts).
+   Arealer er i km², kryssinger i ruter. */
 import { omriss, type FlateMedUtsnitt } from '../generelt/geometri.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
@@ -41,22 +46,6 @@ export interface Kryssing {
   plan: Int32Array;
   smal: Int32Array;
 }
-/* Det som er hentet og regnet ut for et naturtema i en kommune: områdene, arealet samlet og per verdikategori, det kartlagte og
-   verdsatt natur innenfor det (inne), og kryssingen med planen når den er regnet ut (regnet) */
-export interface TemaData {
-  nr: string;
-  omrader: TemaOmrade[];
-  sum: number;
-  klasser?: number[] | null;
-  ufullstendig?: boolean;
-  ekstra?: Kartlagt | null;
-  inne?: number[];
-  regnet: boolean;
-  plan: Int32Array;
-  smal: Int32Array;
-  kryss: { S: Kryss; P: Kryss | null } | null;
-  gap: Gap | null;
-}
 /* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
 export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
 
@@ -69,7 +58,7 @@ export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | nul
    naturMaske i sølv. maske(nokkel, lag) gir masken: den som kaller, kan huske maskene per område (nokkel) og bare kalle lag() første
    gang. */
 export function kryssNatur(
-  D: Pick<TemaData, 'omrader' | 'ekstra'>,
+  D: { omrader: TemaOmrade[]; ekstra?: Kartlagt | null },
   R: Planrutenett,
   nK: number,
   medDekning: boolean,
@@ -175,44 +164,56 @@ export function kryssNatur(
    ganger. */
 export const samletAreal = (omrader: Omrade[]) => summen(omrader.map(o => o.km2));
 
-/* Tallene en temaside og oversikten viser for et naturtema. D er temaets data, klasser verdikategoriene hvis temaet har det,
-   medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Arealer er i
-   km², andeler i prosent, og ruter med planlagt utbygging står både som antall og som km².
-   Gir arealet i kommunen og andelen av landarealet, per verdikategori antall lokaliteter og planlagt utbygging, arealet med stor
-   eller svært stor verdi, kartleggingsgraden, helhetsbildet (landarealet delt i kartlagt og ikke kartlagt, og verdsatt natur i hver
-   del), planlagt utbygging innenfor og i smale striper, antall områder som berøres, planlagt utbygging på natur som ikke er kartlagt,
-   og områdene som skal listes (med plassen i listen over alle områder). */
-export function byggNaturTall(
-  D: TemaData,
-  klasser: [navn: string, farge: string][] | undefined,
-  medDekning: boolean,
-  samlet: boolean,
+/* Et naturtema i kommunen: områdene, arealet samlet og per verdikategori (verdsatt natur), andelen av landarealet, antall områder,
+   og per verdikategori antall lokaliteter og arealet. Arealer er i km², andeler i prosent. */
+export interface Temaet {
+  nr: string;
+  omrader: TemaOmrade[];
+  sum: number;
+  klasser: number[] | null;
+  ufullstendig: boolean;
+  andelLand: number | null;
+  antall: number;
+  hoyVerdi: number | null;
+  perKlasse: { antall: number; km2: number }[] | null;
+}
+/* Temaet bygd av områdene O fra sølv, arealet A (samlet og per verdikategori) og landarealet land */
+export function byggTemaet(
+  tema: Naturtema,
+  nr: string,
+  O: Temaomrader,
+  A: { sum: number; klasser?: number[] },
   land: number
-) {
-  const o = D.omrader,
-    E = D.ekstra,
-    sum = D.sum || 0,
-    harKlasser = !!(klasser && D.klasser && o.length),
-    P = D.plan; /* ruter med planlagt utbygging per område, fra kryssNatur */
-  const perKlasse = harKlasser
-    ? klasser.map((_, v) => {
-        let antall = 0,
-          plan = 0;
-        o.forEach((x, i) => {
-          if (x.v !== v) return;
-          antall++;
-          plan += P[i];
-        });
-        return { antall, km2: D.klasser![v], plan, planKm2: plan * RUTE };
-      })
-    : null;
+): Temaet {
+  const o = O.omrader,
+    sum = A.sum || 0,
+    klasser = tema.samlet && tema.klasser ? A.klasser || null : null,
+    harKlasser = !!(tema.klasser && klasser && o.length);
+  return {
+    nr,
+    omrader: o,
+    sum,
+    klasser,
+    ufullstendig: !!O.ufullstendig,
+    andelLand: andel(sum, land),
+    antall: o.length,
+    hoyVerdi: harKlasser ? klasser![0] + klasser![1] : null,
+    perKlasse: harKlasser
+      ? tema.klasser!.map((_, v) => ({ antall: o.filter(x => x.v === v).length, km2: klasser![v] }))
+      : null
+  };
+}
+
+/* Kartleggingen av verdsatt natur: det kartlagte (E), verdsatt natur innenfor det per verdikategori (inne), arealet og andelen av
+   landarealet som er kartlagt, og helhetsbildet: landarealet delt i kartlagt og ikke kartlagt, og verdsatt natur i hver del. T er
+   temaet, land landarealet i km². */
+export function byggKartleggingen(E: Kartlagt | null, inne: number[] | null, T: Temaet, land: number) {
   let helhet = null;
-  if (medDekning && E && E.km2 > 0 && D.inne && D.klasser && land > 0 && o.length > 0) {
+  if (E && E.km2 > 0 && inne && T.klasser && land > 0 && T.antall > 0) {
     const L = land,
       K = Math.min(E.km2, L),
       U = Math.max(0, L - K),
-      inne = D.inne,
-      ute = D.klasser.map((a, v) => Math.max(0, a - inne[v])),
+      ute = T.klasser.map((a, v) => Math.max(0, a - inne[v])),
       si = summen(inne),
       su = summen(ute);
     helhet = {
@@ -229,88 +230,118 @@ export function byggNaturTall(
       andelUte: andel(su, U)
     };
   }
-  const plan = summen(P),
-    smal = summen(D.smal),
-    G = D.gap;
   return {
-    sum,
-    andelLand: andel(sum, land),
-    antall: o.length,
-    klasser: perKlasse,
-    hoyVerdi: harKlasser ? D.klasser![0] + D.klasser![1] : null,
+    E,
+    inne,
     kartlagt: E ? { km2: E.km2, andelLand: andel(Math.min(E.km2, land), land), fra: E.fra, til: E.til } : null,
-    helhet,
+    helhet
+  };
+}
+export type Kartleggingen = ReturnType<typeof byggKartleggingen>;
+
+/* Tallene for planlagt utbygging i et tema, fra kryssingen K: per verdikategori (klasser, hvis temaet har det), samlet og i smale
+   striper, antall områder som berøres, planlagt utbygging på natur som ikke er kartlagt (gap), per område (perOmrade, på samme plass
+   som området i T.omrader), og de berørte områdene med mest først (berorte, plassene i T.omrader). Ruter står både som antall og km². */
+export function byggTemaIPlan(T: Temaet, K: Kryssing, klasser: [navn: string, farge: string][] | undefined) {
+  const o = T.omrader,
+    P = K.plan,
+    G = K.gap,
+    plan = summen(P),
+    smal = summen(K.smal);
+  return {
+    klasser:
+      klasser && T.klasser && o.length
+        ? klasser.map((_, v) => {
+            let pl = 0;
+            o.forEach((x, i) => {
+              if (x.v === v) pl += P[i];
+            });
+            return { plan: pl, planKm2: pl * RUTE };
+          })
+        : null,
     plan,
     planKm2: plan * RUTE,
     smal,
     smalKm2: smal * RUTE,
     berort: o.filter((_, i) => P[i]).length,
     gap: G ? { nat: G.nat, natKm2: G.nat * RUTE, ukjentKm2: G.ukjent * RUTE, andel: andel(G.ukjent, G.nat) } : null,
-    vises: (samlet
-      ? o
-          .map((_, i) => i)
-          .filter(i => P[i])
-          .sort((a, b) => P[b] - P[a])
-      : o.map((_, i) => i)
-    ).map(i => ({
-      omr: o[i],
-      nr: i,
-      planKm2: P[i] * RUTE
-    }))
+    perOmrade: Array.from(P, p => p * RUTE),
+    berorte: o
+      .map((_, i) => i)
+      .filter(i => P[i])
+      .sort((a, b) => P[b] - P[a])
   };
 }
-/* Det temasiden viser, fra byggNaturTall */
-export type NaturTall = ReturnType<typeof byggNaturTall>;
+/* Planlagt utbygging i et tema: områdene det gjelder (de samme som i tabellen for temaet), kryssingen (K) og tallene (N) */
+export interface TemaIPlan {
+  omrader: TemaOmrade[];
+  K: Kryssing;
+  N: ReturnType<typeof byggTemaIPlan>;
+}
 
-/* Kryssingen før den er regnet ut: ingen ruter med planlagt utbygging i n områder */
-const ikkeKrysset = (n: number) => ({
-  regnet: false,
-  plan: new Int32Array(n),
-  smal: new Int32Array(n),
-  kryss: null,
-  gap: null
-});
-/* Et naturtema i kommunen nr: dataene (D) og tallene temasiden og oversikten viser (N). O er områdene fra sølv. Arealet per
-   verdikategori kommer fra sølv for verdsatt natur, og er summen av områdene for de andre. Det kartlagte og planrutenettet tas med
-   når de finnes: kommer de senere, regnes gull ut på nytt. Maskene til områdene huskes i solv.naturmaske. */
-export type Naturtemaet = { D: TemaData; N: NaturTall };
-async function naturtemaet(tema: Naturtema, nr: string, O: Temaomrader): Promise<Naturtemaet> {
-  const [land, g, A] = await Promise.all([
-      landareal(nr),
-      katalog.solv.grense(nr),
-      tema.samlet ? katalog.solv.verdsattNaturAreal(nr) : { sum: samletAreal(O.omrader), klasser: undefined }
-    ]),
-    omrader = O.omrader,
-    ekstra = tema.dekning ? katalog.solv.kartlagt.naa(nr) : undefined,
-    inne = tema.dekning && tema.klasser ? katalog.solv.verdsattNaturIKartlagt.naa(nr) || undefined : undefined,
-    R = katalog.solv.planrutenett.naa(nr),
-    navn = new Map<object, string>(omrader.map((o, i) => [o, `${tema.id}/${nr}/${i}`]));
-  if (ekstra) navn.set(ekstra, 'kartlagt/' + nr);
-  const K = R
-    ? kryssNatur({ omrader, ekstra }, R, tema.klasser ? tema.klasser.length : 1, !!tema.dekning, g, (o, lag) =>
-        katalog.solv.naturmaske.straks(navn.get(o)!, lag)
-      )
-    : null;
-  const D: TemaData = {
-    nr,
-    omrader,
-    sum: A.sum,
-    klasser: tema.samlet ? (tema.klasser ? A.klasser : null) : undefined,
-    ufullstendig: O.ufullstendig,
-    ekstra,
-    inne,
-    ...(K ? { ...K, regnet: true } : ikkeKrysset(omrader.length))
-  };
-  return { D, N: byggNaturTall(D, tema.klasser, !!tema.dekning, !!tema.samlet, land) };
-}
 const [VERN, REIN, VERDI] = NATURTEMA;
-/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur */
-export async function verneomrader(nr: string): Promise<Naturtemaet> {
-  return naturtemaet(VERN, nr, await katalog.solv.verneomrader(nr));
+const ikke = () => null; /* det kartlagte kan mangle uten at svaret er feil: da er det ikke med */
+
+/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet. Arealet per
+   verdikategori kommer fra sølv for verdsatt natur, og er summen av områdene for de andre. */
+async function temaet(tema: Naturtema, nr: string, O: Temaomrader): Promise<Temaet> {
+  const [land, A] = await Promise.all([
+    landareal(nr),
+    tema.samlet ? katalog.solv.verdsattNaturAreal(nr) : { sum: samletAreal(O.omrader) }
+  ]);
+  return byggTemaet(tema, nr, O, A, land);
 }
-export async function villrein(nr: string): Promise<Naturtemaet> {
-  return naturtemaet(REIN, nr, await katalog.solv.villrein(nr));
+export async function verneomrader(nr: string): Promise<Temaet> {
+  return temaet(VERN, nr, await katalog.solv.verneomrader(nr));
 }
-export async function verdsattNatur(nr: string): Promise<Naturtemaet> {
-  return naturtemaet(VERDI, nr, await katalog.solv.verdsattNatur(nr));
+export async function villrein(nr: string): Promise<Temaet> {
+  return temaet(REIN, nr, await katalog.solv.villrein(nr));
+}
+export async function verdsattNatur(nr: string): Promise<Temaet> {
+  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr));
+}
+
+/* Tabellen gull.verdsattNaturKartlagt: kartleggingen av verdsatt natur i kommunen nr. Uten det kartlagte er det ingen kartlegging å
+   vise. */
+export async function verdsattNaturKartlagt(nr: string): Promise<Kartleggingen> {
+  const [T, E, inne, land] = await Promise.all([
+    katalog.gull.verdsattNatur(nr),
+    katalog.solv.kartlagt(nr).catch(ikke),
+    katalog.solv.verdsattNaturIKartlagt(nr).catch(ikke),
+    landareal(nr)
+  ]);
+  return byggKartleggingen(E, inne, T, land);
+}
+
+/* Tabellene gull.verneomraderIPlan, gull.villreinIPlan og gull.verdsattNaturIPlan: temaet T krysset med planrutenettet for kommunen
+   nr. null når det ikke finnes noe planrutenett (ingen plan og ingen egne områder, eller ikke noe kart ennå). Venter mens
+   datamotoren regner ut planrutenettet. For verdsatt natur deles utbygging på natur i kartlagt og ikke kartlagt, når det kartlagte
+   finnes. Maskene til områdene huskes i solv.naturmaske. */
+async function temaIPlan(tema: Naturtema, nr: string, T: Temaet): Promise<TemaIPlan | null> {
+  const [R, g, E] = await Promise.all([
+    katalog.solv.planrutenett(nr),
+    katalog.solv.grense(nr),
+    tema.dekning ? katalog.solv.kartlagt(nr).catch(ikke) : null
+  ]);
+  if (!R) return null;
+  const navn = new Map<object, string>(T.omrader.map((o, i) => [o, `${tema.id}/${nr}/${i}`]));
+  if (E) navn.set(E, 'kartlagt/' + nr);
+  const K = kryssNatur(
+    { omrader: T.omrader, ekstra: E },
+    R,
+    tema.klasser ? tema.klasser.length : 1,
+    !!tema.dekning,
+    g,
+    (o, lag) => katalog.solv.naturmaske.straks(navn.get(o)!, lag)
+  );
+  return { omrader: T.omrader, K, N: byggTemaIPlan(T, K, tema.klasser) };
+}
+export async function verneomraderIPlan(nr: string): Promise<TemaIPlan | null> {
+  return temaIPlan(VERN, nr, await katalog.gull.verneomrader(nr));
+}
+export async function villreinIPlan(nr: string): Promise<TemaIPlan | null> {
+  return temaIPlan(REIN, nr, await katalog.gull.villrein(nr));
+}
+export async function verdsattNaturIPlan(nr: string): Promise<TemaIPlan | null> {
+  return temaIPlan(VERDI, nr, await katalog.gull.verdsattNatur(nr));
 }

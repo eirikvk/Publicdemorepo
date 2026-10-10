@@ -1,7 +1,8 @@
-/* Tester for cachen: les-gjennom, grensen for hvor mye som huskes, feil, utgaver og utdatert gull. Kjør: npm test */
+/* Tester for cachen: les-gjennom, grensen for hvor mye som huskes, feil, utgaver, utdatert gull, og tabeller motoren fyller. Kjør:
+   npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { les, se, tabell, utdaterGull, utgave } from '../src/data/cache.ts';
+import { begynt, feilet, legg, les, se, tabell, utdaterGull, utgave } from '../src/data/cache.ts';
 
 test('les-gjennom: ETL-funksjonen kjøres én gang, også når to spør samtidig', async () => {
   let kjort = 0;
@@ -64,4 +65,17 @@ test('gull: utdatert gull gis til visningen mens det nye regnes ut, og regnes ut
   utdaterGull('5001');
   assert.equal(les(T, '5001')!.verdi, 1); /* det gamle, mens det nye regnes ut */
   assert.equal(await T('5001'), 2);
+});
+
+test('motoren fyller: den som kaller tabellen mens motoren holder på, venter, og får null hvis det feiler', async () => {
+  const T = tabell<string, string>({ lag: 'solv', navn: 'f', om: '', husk: 2 });
+  assert.equal(await T('a'), null); /* motoren har ikke begynt */
+  begynt(T, 'a');
+  const venter = T('a');
+  legg(T, 'a', 'ferdig');
+  assert.equal(await venter, 'ferdig');
+  begynt(T, 'b');
+  const feiler = T('b');
+  feilet(T, 'b');
+  assert.equal(await feiler, null);
 });

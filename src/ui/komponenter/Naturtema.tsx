@@ -1,9 +1,12 @@
 /* Temasidene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Toppen svarer på hvor mye som finnes i
    kommunen, hvor stor del av landarealet det er, og hvor mye planlagt utbygging som ligger innenfor. Under står områdene som liste,
-   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull (katalog.gull.verneomrader,
-   villrein og verdsattNatur). */
+   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull, i tre deler: temaet
+   (katalog.gull.verneomrader), planlagt utbygging i det (katalog.gull.verneomraderIPlan), og for verdsatt natur kartleggingen
+   (katalog.gull.verdsattNaturKartlagt). Temaet vises med en gang, og planen og kartleggingen legges til når de er klare. Siden
+   setter bare tallene sammen: planlagt utbygging per område står på samme plass som området i listen. */
 import { TEMATABELLER } from '../../data/katalog.ts';
-import type { NaturTall } from '../../data/gull/temaer.ts';
+import type { Kartleggingen, TemaIPlan, Temaet } from '../../data/gull/temaer.ts';
+import type { Rad } from '../../data/cache.ts';
 import type { Naturtema as Tema } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { bareHentetKart } from '../../data/motor/grunnkart.ts';
@@ -50,10 +53,23 @@ export const TEMAORD: Record<string, Temaord> = {
   }
 };
 
+/* Tallene for planlagt utbygging i temaet T, når de er regnet ut for de samme områdene som listen viser. Ellers null: da er planen
+   ikke regnet ut ennå. */
+export const planenFor = (T: Temaet, I: Rad<TemaIPlan | null> | null) =>
+  I && I.status === 'ok' && I.verdi && I.verdi.omrader === T.omrader ? I.verdi.N : null;
+
 /* Helhetsbildet for verdsatt natur: landarealet delt i kartlagt og ikke kartlagt, og så hver del for seg med verdsatt natur etter
    verdi. Det vi ikke vet noe om, tegnes som en tom ramme. Slik skilles «ingenting funnet» fra «ikke lett». H er helhetsbildet og E
-   kartleggingen, fra byggNaturTall. */
-function Helhet({ t, H, E }: { t: Tema; H: NonNullable<NaturTall['helhet']>; E: NonNullable<NaturTall['kartlagt']> }) {
+   kartleggingen, fra gull.verdsattNaturKartlagt. */
+function Helhet({
+  t,
+  H,
+  E
+}: {
+  t: Tema;
+  H: NonNullable<Kartleggingen['helhet']>;
+  E: NonNullable<Kartleggingen['kartlagt']>;
+}) {
   const { K, U, inne, ute, si, su } = H;
   const verdier = (a: number[]) => t.klasser!.map(([navn, id], v): Stripedel => [navn, '--' + id, a[v]]);
   return (
@@ -100,7 +116,10 @@ function Helhet({ t, H, E }: { t: Tema; H: NonNullable<NaturTall['helhet']>; E: 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
 export function Naturtema({ t: tema }: { t: Tema }) {
   const t = { ...tema, ...TEMAORD[tema.id] },
-    T = valgt(TEMATABELLER[tema.id].tall);
+    tab = TEMATABELLER[tema.id],
+    T = valgt(tab.tall),
+    I = valgt(tab.iPlan),
+    B = tab.kartlagt ? valgt(tab.kartlagt) : null;
   const kilde = (
     <p className="hint">
       Kilde: {t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i
@@ -116,11 +135,13 @@ export function Naturtema({ t: tema }: { t: Tema }) {
         <p>{t.navn} kunne ikke hentes fra Miljødirektoratet.</p>
       </Temaside>
     );
-  const { D, N } = T.verdi!,
-    E = N.kartlagt,
+  const N = T.verdi!,
+    C = planenFor(N, I),
+    K = B && B.status === 'ok' ? B.verdi! : null,
+    E = K ? K.kartlagt : null,
     hentet = bareHentetKart(),
     der = hentet ? ' i den delen av kommunen det er hentet kart for' : '',
-    helhet = !!t.dekning && !!N.helhet,
+    helhet = !!t.dekning && !!K && !!K.helhet,
     kartlagt = !!E && E.km2 > 0;
   const under = !N.antall
     ? ''
@@ -130,13 +151,13 @@ export function Naturtema({ t: tema }: { t: Tema }) {
         : '') +
       (utenPlan()
         ? 'ingen kommuneplan å krysse med'
-        : !D.regnet
+        : !C
           ? 'planlagt utbygging ikke regnet ut ennå'
-          : (N.plan ? `ca. ${dekar(N.planKm2)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') +
+          : (C.plan ? `ca. ${dekar(C.planKm2)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') +
             (hentet ? ', i hentet kart' : ''));
   const sumTekst = !N.antall
     ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-    : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
+    : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${N.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
   const merk =
     !E || helhet
       ? ''
@@ -147,26 +168,31 @@ export function Naturtema({ t: tema }: { t: Tema }) {
   if (N.antall) {
     if (utenPlan())
       paavirkning = 'Kommunen har ingen kommuneplan hos DiBK, så påvirkning fra planlagt utbygging kan ikke vurderes.';
-    else if (!D.regnet) paavirkning = 'Påvirkning fra planlagt utbygging regnes ut når kartet er hentet.';
+    else if (!C) paavirkning = 'Påvirkning fra planlagt utbygging regnes ut når kartet er hentet.';
     else {
-      const ant = N.berort;
+      const ant = C.berort;
       paavirkning = (
         <>
           <b>
-            {N.plan
-              ? `Ca. ${iTekst(N.planKm2)} planlagt utbygging ligger innenfor ${antallOrd(ant, ETT[t.id])} ${ant === 1 ? t.en : t.fl}${der}.`
+            {C.plan
+              ? `Ca. ${iTekst(C.planKm2)} planlagt utbygging ligger innenfor ${antallOrd(ant, ETT[t.id])} ${ant === 1 ? t.en : t.fl}${der}.`
               : `Ingen planlagt utbygging innenfor ${t.best}${der}.`}
           </b>
-          {N.smal
-            ? ` I tillegg kommer ca. ${iTekst(N.smalKm2)} i smale striper, som oftest der grensene ikke er tegnet helt likt.`
+          {C.smal
+            ? ` I tillegg kommer ca. ${iTekst(C.smalKm2)} i smale striper, som oftest der grensene ikke er tegnet helt likt.`
             : ''}
         </>
       );
     }
   }
-  const G = t.dekning && N.gap && N.gap.nat && D.regnet && !utenPlan() ? N.gap : null;
+  const G = t.dekning && C && C.gap && C.gap.nat && !utenPlan() ? C.gap : null;
+  /* Områdene i listen: for verdsatt natur bare de som berøres av planlagt utbygging, med mest først, ellers alle */
   const maks = t.samlet ? 15 : 40,
-    vises = N.vises;
+    vises = (t.samlet ? (C ? C.berorte : []) : N.omrader.map((_, i) => i)).map(i => ({
+      omr: N.omrader[i],
+      nr: i,
+      planKm2: C ? C.perOmrade[i] : 0
+    }));
   return (
     <Temaside
       id={t.id}
@@ -176,10 +202,11 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       kilde={kilde}
     >
       <p>{sumTekst}</p>
-      {N.klasser && (
+      {N.perKlasse && (
         <ul className="talliste">
           {t.klasser!.map(([navn, id], v) => {
-            const { antall, km2, plan: pl, planKm2 } = N.klasser![v];
+            const { antall, km2 } = N.perKlasse![v],
+              { plan: pl, planKm2 } = (C && C.klasser && C.klasser[v]) || { plan: 0, planKm2: 0 };
             return (
               <Fargelinje
                 key={id}
@@ -188,13 +215,13 @@ export function Naturtema({ t: tema }: { t: Tema }) {
                 tall={dekar(km2)}
                 under={`${nf(antall, 0)} ${antall === 1 ? 'lokalitet' : 'lokaliteter'}`}
               >
-                {pl && D.regnet && !utenPlan() ? <b> · ca. {iTekst(planKm2)} planlagt utbygging</b> : null}
+                {pl && !utenPlan() ? <b> · ca. {iTekst(planKm2)} planlagt utbygging</b> : null}
               </Fargelinje>
             );
           })}
         </ul>
       )}
-      {helhet && <Helhet t={t} H={N.helhet!} E={E!} />}
+      {helhet && <Helhet t={t} H={K!.helhet!} E={E!} />}
       {merk && <p>{merk}</p>}
       {t.dekning && kartlagt && (
         <MdCheckbox

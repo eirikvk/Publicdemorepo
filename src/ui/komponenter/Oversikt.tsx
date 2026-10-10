@@ -8,7 +8,7 @@ import { utenPlan } from '../../data/motor/egne.ts';
 import { planTall } from '../../data/motor/plan.ts';
 import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
 import { BLOKKER } from '../sider.ts';
-import { ETT, TEMAORD } from './Naturtema.tsx';
+import { ETT, TEMAORD, planenFor } from './Naturtema.tsx';
 import { Sidelenke } from './deler.tsx';
 import { andelTekst, antallOrd, dekar, iTekst, stor } from '../tekst.ts';
 import './Oversikt.css';
@@ -45,17 +45,19 @@ function regnskap() {
 /* Verneområder, villrein og verdsatt natur: antall, areal og planlagt utbygging innenfor */
 function naturtema(id: string) {
   const t = { ...NATURTEMA.find(x => x.id === id)!, ...TEMAORD[id] },
-    T = valgt(TEMATABELLER[id].tall);
+    T = valgt(TEMATABELLER[id].tall),
+    I = valgt(TEMATABELLER[id].iPlan);
   if (!T || T.status === 'henter') return HENTER;
   if (T.status === 'feil') return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
-  const { D, N } = T.verdi!;
+  const N = T.verdi!,
+    C = planenFor(N, I);
   if (!N.antall) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
   const verdi = N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : '',
     plan =
-      utenPlan() || !D.regnet
+      utenPlan() || !C
         ? ''
-        : N.plan
-          ? ` Ca. ${iTekst(N.planKm2)} planlagt utbygging innenfor.`
+        : C.plan
+          ? ` Ca. ${iTekst(C.planKm2)} planlagt utbygging innenfor.`
           : ' Ingen planlagt utbygging innenfor.';
   return {
     tall: dekar(N.sum),
