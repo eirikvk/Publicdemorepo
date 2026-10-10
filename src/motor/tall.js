@@ -1,7 +1,7 @@
 /* Henting av tallene fra SSB, tabell 09594: arealklasser, land og vann, og arealet fra 2017 til utbredelsesregnskapet. Svarene
-   tolkes i analyse/ssb.js. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
-import { KL, VANN } from '../analyse/klasser.js';
-import { tolkAreal, tolkHistorie } from '../analyse/ssb.js';
+   tolkes i solv/ssb.js. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
+import { KL, VANN } from '../solv/klasser.js';
+import { tolkAreal, tolkHistorie } from '../solv/ssb.js';
 import { SSB, app, endret, hent, valgNr } from './felles.js';
 
 export function nullstillTall(tilstand) {

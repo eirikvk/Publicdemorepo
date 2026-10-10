@@ -4,7 +4,7 @@
 
    Formateringen av tall og areal (nf, dekar, iTekst, andelTekst) ligger i motoren, fordi motoren også skriver noen tekster. Den
    hentes videre herfra, så komponentene finner alt om tekst på ett sted. */
-import { RUTE } from '../analyse/felles.js';
+import { RUTE } from '../solv/felles.js';
 import { iTekst, nf } from '../motor/felles.js';
 export { andelTekst, dekar, iTekst, nf } from '../motor/felles.js';
 

@@ -1,8 +1,9 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og radene som sammenligner med kommuneplanen. Hvilke flater som er
-   utbygging, hvordan de legges inn i planrutenettet og hvordan radene bygges, ligger i analyse/egne.js. */
+   utbygging, hvordan de legges inn i planrutenettet og hvordan radene bygges, ligger i solv/egne.js (sølv) og gull/egne.js (gull). */
 import { ol } from './ol.js';
-import { EGET_MIN_M2, OPPLOSNINGER, areal, m2PerKm2 } from '../analyse/felles.js';
-import { byggEgneRader, planType } from '../analyse/egne.js';
+import { EGET_MIN_M2, OPPLOSNINGER, areal, m2PerKm2 } from '../solv/felles.js';
+import { byggEgneRader } from '../gull/egne.js';
+import { planType } from '../solv/egne.js';
 import { UTM, app, endret, farge, flater, nf, tilKartet } from './felles.js';
 import { kommuneSti, lerret } from './grunnlag.js';
 import { finn, velg } from './handlinger.js';
@@ -119,7 +120,7 @@ function nyttEget(geom) {
   egneEndret();
 }
 /* Opplastet plan i samme GeoJSON-format som DiBKs nedlasting av plandata: flater med arealformål og arealbruksstatus. Hvilke
-   flater som regnes som utbygging, står i planType i analyse/egne.js. Innenfor flatene erstatter filen kommuneplanen. Filen leses i
+   flater som regnes som utbygging, står i planType i solv/egne.js. Innenfor flatene erstatter filen kommuneplanen. Filen leses i
    nettleseren og sendes ingen steder. */
 const siffer = v => {
   const m = /\d+/.exec(v === undefined || v === null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -256,7 +257,7 @@ export async function lastOppPlan(fil) {
   }
 }
 /* Radene i sammenligningen mellom kommuneplanen og egne områder, for hele kommunen eller ett område. Radene bygges av byggEgneRader i
-   analyse/egne.js: natur og jordbruk som går med, og hvor mye av det som ligger i grått areal, verneområder, villreinområder,
+   gull/egne.js: natur og jordbruk som går med, og hvor mye av det som ligger i grått areal, verneområder, villreinområder,
    verdsatt natur per verdi og natur som ikke er kartlagt. Hver rad viser kommuneplanen alene, tallet med egne områder og endringen. */
 export function egneRader(e) {
   /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */

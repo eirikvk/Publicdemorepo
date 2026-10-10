@@ -1,5 +1,5 @@
-/* Arealklassene: inndelingen i bebygd, jordbruk og natur, med koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og
-   tolkingen av fargene i kartbildene fra NIBIO. */
+/* Sølv, felles standard: arealklassene. Inndelingen i bebygd, jordbruk og natur, med koblingen til SSBs arealklasser og
+   grunnkartets økosystemtyper, og tolkingen av fargene i kartbildene fra NIBIO. */
 
 /* De tre klassene på land: [id, navn, økosystemtyper i grunnkartet (okosystemtypeniva1), arealklasser i SSB tabell 09594] */
 export const KL = [

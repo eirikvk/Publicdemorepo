@@ -1,6 +1,6 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
    planen. */
-import { OPPLOSNINGER } from '../analyse/felles.js';
+import { OPPLOSNINGER } from '../solv/felles.js';
 import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
 import { ingenPlan } from '../motor/plan.js';

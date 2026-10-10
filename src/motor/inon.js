@@ -3,12 +3,13 @@
    lages av det bildet i nettleseren, så laget gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå
    dagens klasser og fargelegger bare det som er natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen.
    Laget deler lerret med klassene, så det får samme gjennomsiktighet og ser ut som en del av naturfargen. Arealet per sone regnes ut
-   i analyse/inon.js. */
+   i solv/inon.js (sølv) og gull/inon.js (gull). */
 import { ol } from './ol.js';
-import { BILDE_TEMA, m2PerKm2, rutenett } from '../analyse/felles.js';
-import { UTENFOR, tolkInon } from '../analyse/inon.js';
-import { NAT, klasseAv } from '../analyse/klasser.js';
-import { tegneflate } from '../analyse/raster.js';
+import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.js';
+import { inonAreal } from '../gull/inon.js';
+import { UTENFOR, tolkInon } from '../solv/inon.js';
+import { NAT, klasseAv } from '../solv/klasser.js';
+import { tegneflate } from '../solv/raster.js';
 import { UTM, app, endret, gjeldende, hent, husk, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, friskOppGamle } from './fliser.js';
 import { TOM, friskOpp, jevn, kommuneSti, lerret, plannett, tegnUtsnitt, tegnetKilde } from './grunnlag.js';
@@ -130,16 +131,12 @@ export async function sjekkInon(k, geom, mitt) {
     a.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h);
     kommuneSti(b, geom, u, 1 / res);
     b.fill('evenodd');
-    const T = tolkInon(
-        a.getImageData(0, 0, w, h).data,
-        b.getImageData(0, 0, w, h).data,
-        res,
-        m2PerKm2(geom.getExtent())
-      ),
+    const S = tolkInon(a.getImageData(0, 0, w, h).data, b.getImageData(0, 0, w, h).data),
+      A = inonAreal(S.n, res, m2PerKm2(geom.getExtent())),
       bilde = a.createImageData(w, h);
-    soneMaske(T.sone, bilde.data, w, h);
+    soneMaske(S.sone, bilde.data, w, h);
     a.putImageData(bilde, 0, 0);
-    app.inon = { nr: k.nr, tilstand: 'ok', soner: T.soner, sum: T.sum, c: a.canvas, u, res };
+    app.inon = { nr: k.nr, tilstand: 'ok', soner: A.soner, sum: A.sum, c: a.canvas, u, res };
     husk(inonMinne, k.nr, app.inon, 3);
     tidSlutt('inngrepsfri natur, kommunebilde', t0);
   } catch (e) {

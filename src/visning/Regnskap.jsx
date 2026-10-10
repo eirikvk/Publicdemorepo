@@ -2,10 +2,10 @@
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
    Til slutt land og vann. Tallene hentes i motoren, her blir de tekst, stolper og tabell. */
-import { KL } from '../analyse/klasser.js';
+import { KL } from '../solv/klasser.js';
 import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
-import { tolkVann } from '../analyse/ssb.js';
+import { landOgVann } from '../gull/regnskap.js';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.jsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from './tekst.js';
 import './Regnskap.css';
@@ -151,7 +151,7 @@ function Oppstilling() {
 
 /* Land og vann: land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate minus land og ferskvann. */
 function LandOgVann() {
-  const V = tolkVann(app.flate, app.ssbSum, app.ferskvann);
+  const V = landOgVann(app.flate, app.ssbSum, app.ferskvann);
   return (
     <section className="vann" aria-labelledby="vann-tittel">
       <h2 className="md-typography-heading-s" id="vann-tittel">

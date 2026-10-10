@@ -1,6 +1,6 @@
 /* Felles for hele motoren: adresser, projeksjoner, farger, formatering av tall, tilstanden og lageret, kall-logg og henting med
    minne. Filen importerer ingenting fra de andre filene i motoren, så den er alltid ferdig lastet før dem. Rutenettet, klassene og
-   tersklene ligger i analyse/. */
+   tersklene ligger i solv/. */
 import proj4 from 'proj4';
 import { ol } from './ol.js';
 

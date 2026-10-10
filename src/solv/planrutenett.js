@@ -1,6 +1,7 @@
-/* Planlagt utbygging: kommuneplanen lagt oppå dagens klasser i planrutenettet (21 meter), og hvor mye natur og jordbruk som er satt
-   av til utbygging. Planen og dagens klasser kommer som kartbilder på nivå 9, én flis (512 x 512 ruter) om gangen. Tallene er antall
-   ruter. Én rute er RUTE km². */
+/* Sølv for kommuneplanen og grunnkartet: planrutenettet. Kommuneplanen og egne områder lagt oppå dagens klasser i et rutenett med
+   ruter på 21 meter, med smale striper tatt bort. Planen og dagens klasser kommer som kartbilder på nivå 9, én flis (512 x 512
+   ruter) om gangen. Gir klasse og plan per rute, og antall ruter av hvert slag. Én rute er RUTE km². Alle kryssinger i gull går
+   gjennom dette rutenettet. */
 import { HALV, PLANNIVA, RUTE_M, SYNLIG } from './felles.js';
 import { leggInnEget } from './egne.js';
 import { JOR, NAT, klasseAv } from './klasser.js';

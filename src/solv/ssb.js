@@ -1,6 +1,6 @@
-/* Tallene fra SSB, tabell 09594: arealet per klasse, arealet i 2017 og nyeste år til utbredelsesregnskapet, og land og vann. Svarene
-   kommer som JSON-stat 2.0, og alle arealer er i km². */
-import { GRENSE_FLYTTET, HAV_MIN_ANDEL, HAV_MIN_KM2 } from './felles.js';
+/* Sølv for SSB, tabell 09594: svarene (JSON-stat 2.0) gjort om til arealet i km² per klasse (bebygd, jordbruk, natur), med innsjø og
+   elv for seg, for nyeste år og for 2017. */
+import { GRENSE_FLYTTET } from './felles.js';
 import { KL } from './klasser.js';
 
 /* Rekkefølgen på kategoriene i en dimensjon. SSB gir indeksen enten som liste eller som objekt med plass. */
@@ -37,22 +37,5 @@ export function tolkHistorie(j, nr) {
     a0: sum(f),
     a1: sum(nT - 1),
     endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > GRENSE_FLYTTET
-  };
-}
-
-/* Delene av kommunens flate: land og ferskvann fra SSB, og hav som det som blir igjen av flaten (fra kommunegrensen). En liten rest
-   er avvik mellom grense og statistikk, ikke hav. */
-export function tolkVann(flate, land, ferskvann) {
-  if (!land || !ferskvann || !flate) return null;
-  let hav = flate - land - ferskvann.inn - ferskvann.elv;
-  if (hav < Math.max(HAV_MIN_KM2, flate * HAV_MIN_ANDEL)) hav = 0;
-  return {
-    hav,
-    deler: [
-      ['land', 'Land', land],
-      ['inn', 'Innsjø', ferskvann.inn],
-      ['elv', 'Elv', ferskvann.elv],
-      ['hav', 'Hav', hav]
-    ].filter(d => d[2] > 0)
   };
 }

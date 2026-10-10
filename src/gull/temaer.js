@@ -1,84 +1,9 @@
-/* Naturtemaene fra Miljødirektoratet: verneområder, villreinområder og verdsatt natur. Arealet av hvert tema i kommunen,
-   kartleggingsgraden for verdsatt natur, og kryssingen med planrutenettet: hvor mye planlagt utbygging som ligger i hvert område.
-   Flatene kommer som GeoJSON. En kommune er { koord, ext }: flerflaten og utsnittet. Arealer er i km² i terrenget. */
-import polygonClipping from 'polygon-clipping';
-import {
-  HALV,
-  RUTENETT_MASKE,
-  RUTENETT_VERDI,
-  areal,
-  flerflate,
-  m2PerKm2,
-  omriss,
-  ruteX,
-  ruteY,
-  rutenett,
-  snitt,
-  tomt
-} from './felles.js';
-import { sti, tegneflate } from './raster.js';
-
-/* Et område som et lite rutenett med dekningen per rute (a, 0–255), til oppslag fra planrutenettet. flate er { koord, ext }.
-   kommune oppgis bare når flaten ikke alt er klippet mot kommunen. m2 er arealet i kartets kvadratmeter. */
-export function naturMaske(flate, kommune) {
-  const e = kommune ? snitt(flate.ext, kommune.ext) : flate.ext;
-  if (tomt(e)) return null;
-  const [maks, minst] = RUTENETT_MASKE,
-    res = Math.max(minst, Math.max(e[2] - e[0], e[3] - e[1]) / maks),
-    w = Math.ceil((e[2] - e[0]) / res) + 1,
-    h = Math.ceil((e[3] - e[1]) / res) + 1,
-    u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
-  const k = tegneflate(w, h);
-  sti(k, flate.koord, u, 1 / res);
-  k.fill('evenodd');
-  if (kommune) {
-    k.globalCompositeOperation = 'destination-in';
-    sti(k, kommune.koord, u, 1 / res);
-    k.fill('evenodd');
-  }
-  const d = k.getImageData(0, 0, w, h).data,
-    a = new Uint8Array(w * h);
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) {
-    a[i] = d[4 * i + 3];
-    sum += a[i];
-  }
-  return { u, res, w, h, a, m2: (sum / 255) * res * res };
-}
-
-/* Verneområder og villreinområder: hver flate klippes mot kommunen, og arealet av det som ligger i kommunen regnes ut. Feiler
-   klippingen, regnes arealet i stedet av flaten tegnet i et rutenett og klippet mot kommunen der (uklippet). les gir navn og
-   opplysninger fra egenskapene. Gir områdene sortert etter areal, størst først. Overlapper to flater, telles overlappet to ganger. */
-export function klippNatur(features, kommune, les) {
-  const skala = m2PerKm2(kommune.ext);
-  return features
-    .map(f => {
-      const g = f.geometry;
-      if (!g || !g.coordinates) return null;
-      const hele = flerflate(g);
-      let koord = null,
-        uklippet = false,
-        km2;
-      try {
-        koord = polygonClipping.intersection(hele, kommune.koord);
-      } catch (e) {
-        koord = null;
-      }
-      if (koord) {
-        if (!koord.length) return null;
-        km2 = areal(koord) / skala;
-      } else {
-        koord = hele;
-        uklippet = true;
-        const m = naturMaske({ koord: hele, ext: omriss(hele) }, kommune);
-        if (!m || !(m.m2 > 0)) return null;
-        km2 = m.m2 / skala;
-      }
-      return km2 > 0 ? { koord, uklippet, km2, ...les(f.properties || {}) } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.km2 - a.km2);
-}
+/* Gull for naturtemaene: arealet av verdsatt natur per verdikategori, kryssingen med planrutenettet (hvor mye planlagt utbygging
+   som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.js) og
+   planrutenettet (solv/planrutenett.js). Arealer er i km², kryssinger i ruter. */
+import { HALV, RUTENETT_VERDI, m2PerKm2, omriss, ruteX, ruteY, rutenett } from '../solv/felles.js';
+import { sti, tegneflate } from '../solv/raster.js';
+import { naturMaske } from '../solv/temaer.js';
 
 /* Omløpsretningen til en ring: true når den går mot klokka */
 const motKlokka = ring => {
@@ -133,38 +58,6 @@ export function klasseAreal(omrader, antall, kommune, innenfor) {
   return {
     klasser: Array.from({ length: antall }, (_, v) => Math.max(0, (kum[v] || 0) - (v ? kum[v - 1] || 0 : 0))),
     sum: kum.length ? kum[kum.length - 1] : 0
-  };
-}
-
-/* Verdsatt natur: områdene med areal hver for seg (uklippet, til listen) og arealet per verdikategori i kommunen. antall er antall
-   verdikategorier, eller null for et tema uten. Områdene sorteres med høyest verdi først, så en planrute der lokaliteter overlapper,
-   regnes til den høyeste. */
-export function samleNatur(features, kommune, les, antall) {
-  const skala = m2PerKm2(kommune.ext);
-  const omrader = features
-    .filter(f => f.geometry && f.geometry.coordinates)
-    .map(f => {
-      const koord = flerflate(f.geometry);
-      return { koord, uklippet: false, km2: koord.length ? areal(koord) / skala : 0, ...les(f.properties || {}) };
-    })
-    .sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2);
-  const r = klasseAreal(omrader, antall || 1, kommune);
-  return { omrader, klasser: antall ? r.klasser : null, sum: r.sum };
-}
-
-/* Kartleggingsgrad: dekningsflatene for naturtypekartlegging slått sammen og klippet mot kommunen. Gir det kartlagte arealet, flaten
-   og årene kartleggingen er gjort. */
-export function byggDekning(features, kommune) {
-  const fl = features.filter(f => f.geometry && f.geometry.coordinates);
-  if (!fl.length) return { km2: 0 };
-  const u = polygonClipping.intersection(polygonClipping.union(...fl.map(f => flerflate(f.geometry))), kommune.koord);
-  const aar = fl.map(f => parseInt((f.properties || {})['Årstall'], 10)).filter(v => v > 1900);
-  return {
-    km2: u.length ? areal(u) / m2PerKm2(kommune.ext) : 0,
-    fra: aar.length ? Math.min(...aar) : null,
-    til: aar.length ? Math.max(...aar) : null,
-    flate: u,
-    maske: null
   };
 }
 

@@ -1,8 +1,9 @@
 /* Naturtema fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Her ligger kartlagene, hentingen og samordningen.
-   Arealet, kartleggingsgraden og kryssingen med planen regnes ut i analyse/temaer.js. */
+   Arealet, kartleggingsgraden og kryssingen med planen regnes ut i solv/temaer.js (sølv) og gull/temaer.js (gull). */
 import { ol } from './ol.js';
-import { OPPLOSNINGER } from '../analyse/felles.js';
-import { byggDekning, klasseAreal, klippNatur, kryssNatur, samleNatur } from '../analyse/temaer.js';
+import { OPPLOSNINGER } from '../solv/felles.js';
+import { klasseAreal, kryssNatur } from '../gull/temaer.js';
+import { byggDekning, klippNatur, lokaliteter } from '../solv/temaer.js';
 import { utenPlan } from './egne.js';
 import { app, endret, farge, flater, hent, husk, rgb, rolig, tidSlutt, tilKartet, valgNr } from './felles.js';
 import { TOM, friskOpp, kommuneSti, lerret, plannett, tegnetKilde } from './grunnlag.js';
@@ -280,12 +281,14 @@ export async function hentNatur(t, k, geom, mitt) {
         };
       };
       if (t.samlet) {
-        const r = samleNatur(j.features, kommunen(geom), t.les, t.klasser ? t.klasser.length : null),
-          omrader = r.omrader.map(med);
+        const kom = kommunen(geom),
+          alle = lokaliteter(j.features, kom, t.les),
+          r = klasseAreal(alle, t.klasser ? t.klasser.length : 1, kom),
+          omrader = alle.map(med);
         pakke = {
           omrader,
           sum: r.sum,
-          klasser: r.klasser,
+          klasser: t.klasser ? r.klasser : null,
           vis: omrader.map(o => o.f),
           ufullstendig: !!j.exceededTransferLimit
         };

@@ -1,8 +1,11 @@
-/* Felles for alle analysene: rutenettet, tersklene, målestokken i UTM og arealet av en flate. Filen bruker verken nettleseren,
-   kartet eller sidens tilstand, så den kan kjøres i Node. METODE.md forklarer tersklene.
+/* Sølv, felles standard: det alle kildene gjøres om til, så de kan brukes sammen. Koordinatsystemet er UTM sone 33 (EPSG:25833),
+   arealer er i km² i terrenget, og rutenett følger Kartverkets flisnett eller legges over kommunen. Her ligger rutenettene,
+   tersklene, målestokken i UTM og arealet av en flate. Filen bruker verken nettleseren, kartet eller sidens tilstand, så den kan
+   kjøres i Node. METODE.md forklarer tersklene.
 
    Flater er vanlige lister med koordinater, som i GeoJSON: en flerflate er [flate][ring][punkt], der første ring i hver flate er
-   ytterkanten og resten er hull. Et utsnitt er [xmin, ymin, xmaks, ymaks] i meter i UTM sone 33 (EPSG:25833). */
+   ytterkanten og resten er hull. Et utsnitt er [xmin, ymin, xmaks, ymaks] i meter. En kommune er { koord, ext }: flerflaten og
+   utsnittet. */
 
 /* Kartverkets flisnett for UTM33: origo og meter per piksel på hvert nivå. Kartet og analysene bruker det samme nettet. */
 export const ORIGO = [-2500000, 9045984],

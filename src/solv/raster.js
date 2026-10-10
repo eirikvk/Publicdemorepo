@@ -1,6 +1,6 @@
-/* Fra flater til ruter. Flatene tegnes i et lerret (canvas) i nettleseren, og dekningen leses per rute som alfa fra 0 til 255.
-   Lerretet glatter kantene, så en rute i kanten av en flate får delvis dekning. Dette er den eneste filen i analysene som bruker
-   nettleseren. Skal analysene kjøres et annet sted, er det denne som må byttes ut. */
+/* Sølv, felles standard: fra flater til ruter. Flatene tegnes i et lerret (canvas) i nettleseren, og dekningen leses per rute som
+   alfa fra 0 til 255. Lerretet glatter kantene, så en rute i kanten av en flate får delvis dekning. Dette er den eneste filen i
+   sølv og gull som bruker nettleseren. Skal beregningene kjøres et annet sted, er det denne som må byttes ut. */
 
 /* Et lerret på w x h ruter, klart til å tegne i og lese fra */
 export function tegneflate(w, h) {

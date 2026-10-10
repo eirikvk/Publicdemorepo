@@ -1,13 +1,14 @@
 /* Grått areal fra Miljødirektoratets kart over grå arealer (NIBIO, testversjon): areal som alt er tatt i bruk eller sterkt påvirket
    av bygge- og anleggsaktivitet. Flatene har andel vegetasjon i fem trinn. Hentes som to bilder av hele kommunen når den velges,
    med egen stil uten kantstrek. Kartlaget zoomet ut lages av det i nettleseren. Zoomet inn hentes laget som fliser. Tallene og
-   kryssingen med planen regnes ut i analyse/graa.js. Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
+   kryssingen med planen regnes ut i solv/graa.js (sølv) og gull/graa.js (gull). Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
    fabrikktomt. */
 import { ol } from './ol.js';
-import { BILDE_TEMA, m2PerKm2, rutenett } from '../analyse/felles.js';
-import { GRAATRINN, graaTrinn, kryssGraa, tolkGraa } from '../analyse/graa.js';
-import { klasseAv } from '../analyse/klasser.js';
-import { tegneflate } from '../analyse/raster.js';
+import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.js';
+import { graaAreal, kryssGraa } from '../gull/graa.js';
+import { GRAATRINN, graaTrinn, tolkGraa } from '../solv/graa.js';
+import { klasseAv } from '../solv/klasser.js';
+import { tegneflate } from '../solv/raster.js';
 import { utenPlan } from './egne.js';
 import { FLISNIVA, UTM, app, endret, gjeldende, hent, husk, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, friskOppGamle } from './fliser.js';
@@ -190,7 +191,8 @@ export async function sjekkGraa(k, geom, mitt) {
     b.clearRect(0, 0, w, h);
     kommuneSti(b, geom, u, 1 / res);
     b.fill('evenodd');
-    const tall = tolkGraa(A.data, V, b.getImageData(0, 0, w, h).data, res, m2PerKm2(geom.getExtent()));
+    const S = tolkGraa(A.data, V, b.getImageData(0, 0, w, h).data),
+      tall = { kl: S.kl, ...graaAreal(S.n, res, m2PerKm2(geom.getExtent())) };
     graaMaske(tall.kl, A.data, w, h);
     a.putImageData(A, 0, 0);
     app.graa = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res, w, h };

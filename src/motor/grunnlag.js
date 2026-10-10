@@ -1,9 +1,9 @@
 /* Det de andre filene i motoren trenger allerede når de lastes: rutenettene for flisene, køen for kall mot kartkildene og hjelpere
-   for lag som tegnes i nettleseren. Filen importerer bare fra felles.js og analyse/, så den er alltid ferdig lastet før filene som bruker den.
+   for lag som tegnes i nettleseren. Filen importerer bare fra felles.js og solv/, så den er alltid ferdig lastet før filene som bruker den.
    Resten av motoren kaller hverandre fram og tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER, ORIGO } from '../analyse/felles.js';
-import { sti } from '../analyse/raster.js';
+import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
+import { sti } from '../solv/raster.js';
 import { FLISNIVA, SAMTIDIG, UTM, app, endret, flater, husk, kb, logg, nf } from './felles.js';
 /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
    så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */

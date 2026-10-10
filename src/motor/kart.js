@@ -1,8 +1,8 @@
 /* Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling og trykk i kartet. Kartet lages av lagKart når alle filene
    i motoren er lastet, og settes inn på siden av visning/Kart.jsx. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER, ORIGO } from '../analyse/felles.js';
-import { ALLE } from '../analyse/klasser.js';
+import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
+import { ALLE } from '../solv/klasser.js';
 import { egneLag, sluttTegning, tegner } from './egne.js';
 import {
   FLISNIVA,

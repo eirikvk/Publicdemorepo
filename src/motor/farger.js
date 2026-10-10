@@ -1,6 +1,6 @@
 /* Farger: stilen som sendes til NIBIO, og fargelegging av kartbildene i nettleseren. Tolkingen av fargene til klasser ligger i
-   analyse/klasser.js. */
-import { ALLE, BLANDING, DATAFARGE, fargeNr } from '../analyse/klasser.js';
+   solv/klasser.js. */
+import { ALLE, BLANDING, DATAFARGE, fargeNr } from '../solv/klasser.js';
 import { app, rgb, tidSlutt } from './felles.js';
 import { ingenPlan } from './plan.js';
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
@@ -21,7 +21,7 @@ export const SLD = (() => {
 
 /* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve
    bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se
-   BLANDING i analyse/klasser.js, og får en tilsvarende blanding av visningsfargene. */
+   BLANDING i solv/klasser.js, og får en tilsvarende blanding av visningsfargene. */
 /* Fargene som brukes nå. En skjult klasse er gjennomsiktig. Unntaket er når planlagt utbygging vises: da får skjulte klasser et lyst slør,
    så bakgrunnskartet dempes der og de mørke planfeltene synes tydelig også når de står alene. Fjerde tall er hvor tett fargen er. */
 const SLOR = 0.82;

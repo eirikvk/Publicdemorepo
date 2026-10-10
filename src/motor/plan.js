@@ -1,10 +1,10 @@
 /* Planlagt utbygging: kommuneplanen fra DiBK som kartlag, hentingen til planrutenettet og samordningen av utregningen. Selve
-   utregningen ligger i analyse/plan.js. */
+   utregningen ligger i solv/planrutenett.js. */
 import { ol } from './ol.js';
-import { BILDE_PLANDEKNING, PLANNIVA, PLAN_FINNES, RUTE, RUTE_M, rutenett } from '../analyse/felles.js';
-import { JOR, KL, NAT, klasseAv } from '../analyse/klasser.js';
-import { byggPlanRaster, planDekning, tellBlokk } from '../analyse/plan.js';
-import { tegneflate } from '../analyse/raster.js';
+import { BILDE_PLANDEKNING, PLANNIVA, PLAN_FINNES, RUTE, RUTE_M, rutenett } from '../solv/felles.js';
+import { JOR, KL, NAT, klasseAv } from '../solv/klasser.js';
+import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.js';
+import { tegneflate } from '../solv/raster.js';
 import { egenMaske, mine, utenPlan } from './egne.js';
 import { SVAKEST, UTM, app, endret, gjeldende, hent, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, fargeleggFliser, hentPlan } from './fliser.js';
@@ -265,7 +265,7 @@ async function regnPlan() {
   sett('ok');
 }
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker, se
-   planDekning i analyse/plan.js. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
+   planDekning i solv/planrutenett.js. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
 
 export const ingenPlan = () =>
   !!app.planInfo && !!app.valgt && app.planInfo.nr === app.valgt.nr && app.planInfo.tilstand === 'ingen';

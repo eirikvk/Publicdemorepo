@@ -4,7 +4,7 @@ import { Fragment } from 'react';
 import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
 import { BLOKKER } from '../motor/handlinger.js';
-import { byggNaturTall } from '../analyse/temaer.js';
+import { byggNaturTall } from '../gull/temaer.js';
 import { NATURLAG } from '../motor/naturtema.js';
 import { ETT, bildeStatus } from './Temaer.jsx';
 import { Sidelenke } from './deler.jsx';

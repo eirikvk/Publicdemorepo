@@ -1,5 +1,5 @@
-/* Inngrepsfri natur: arealet i hver sone etter avstand til tyngre tekniske inngrep, regnet fra ett bilde av hele kommunen fra
-   Miljødirektoratets kartlag (status). */
+/* Sølv for inngrepsfri natur: bildet av hele kommunen fra Miljødirektoratets kartlag (status) gjort om til sone per rute, etter
+   avstand til tyngre tekniske inngrep. */
 import { HALV } from './felles.js';
 
 /* Sonene: [kode i tjenesten, farge i kartet her, farge i tjenestens bilder, avstand, navn] */
@@ -25,11 +25,9 @@ export const inonSone = (r, g, b) => {
   return best;
 };
 
-/* Tolker bildet av sonene. P er bildet fra tjenesten og M kommunens flate, som piksler (RGBA) i samme rutenett med ruter på res
-   meter, og skala er m2PerKm2 for kommunen. En rute hører til en sone når den er minst halvt dekket, og telles når den ligger
-   i kommunen. Gir sonen per rute (UTENFOR uten sone), og arealet per sone og samlet i km², avrundet til nærmeste 10 dekar som
-   SSBs tall. */
-export function tolkInon(P, M, res, skala) {
+/* Tolker bildet av sonene. P er bildet fra tjenesten og M kommunens flate, som piksler (RGBA) i samme rutenett. En rute hører til en
+   sone når den er minst halvt dekket. Gir sonen per rute (UTENFOR uten sone), og antall ruter per sone innenfor kommunen. */
+export function tolkInon(P, M) {
   const n = [0, 0, 0],
     sone = new Uint8Array(P.length / 4).fill(UTENFOR);
   let forrige = -1,
@@ -44,6 +42,5 @@ export function tolkInon(P, M, res, skala) {
     sone[q] = s;
     if (M[i + 3] >= HALV) n[s]++;
   }
-  const soner = n.map(v => Math.round(((v * res * res) / skala) * 100) / 100);
-  return { sone, soner, sum: Math.round((soner[0] + soner[1] + soner[2]) * 100) / 100 };
+  return { sone, n };
 }

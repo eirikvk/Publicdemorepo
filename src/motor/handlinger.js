@@ -1,7 +1,7 @@
 /* Det brukeren kan gjøre: velge kommune, velge side, og oppstarten. Sidens komponenter kaller funksjonene her. */
 import { ol } from './ol.js';
 import { sluttTegning, visEgneLag } from './egne.js';
-import { areal, m2PerKm2 } from '../analyse/felles.js';
+import { areal, m2PerKm2 } from '../solv/felles.js';
 import { KV, UTM, app, endret, flater, hent, nyttValg, valgNr } from './felles.js';
 import { tema } from './fliser.js';
 import { graaLag, sjekkGraa, visGraa } from './graa.js';

@@ -1,7 +1,7 @@
 /* Oversiktsbildet som vises når kartet er zoomet ut: det lagrede, eller det nettleseren setter sammen selv. */
 import { ol } from './ol.js';
 import { fargeleggBlob, klassefarger, tilFarge } from './farger.js';
-import { OPPLOSNINGER, ORIGO } from '../analyse/felles.js';
+import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
 import { FLISNIVA, MAKSRES, UTM, app, hent, tidSlutt, valgNr } from './felles.js';
 import { friskOppGamle, hentRaa } from './fliser.js';
 import { graaLag } from './graa.js';
