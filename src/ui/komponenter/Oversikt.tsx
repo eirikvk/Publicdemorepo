@@ -10,7 +10,7 @@ import { utenPlan } from '../../data/motor/egne.ts';
 import { NATURTEMA } from '../../data/motor/naturtema.ts';
 import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
 import { BLOKKER } from '../sider.ts';
-import { ETT, TEMAORD } from './Temaer.tsx';
+import { ETT, TEMAORD } from './Naturtema.tsx';
 import { Sidelenke } from './deler.tsx';
 import { andelTekst, antallOrd, dekar, iTekst, stor } from '../tekst.ts';
 import './Oversikt.css';

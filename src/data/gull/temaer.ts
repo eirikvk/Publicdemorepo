@@ -287,14 +287,14 @@ export function byggNaturTall(
     planKm2: plan * RUTE,
     smal,
     smalKm2: smal * RUTE,
-    berort: o.filter((x, i) => P[i]).length,
+    berort: o.filter((_, i) => P[i]).length,
     gap: G ? { nat: G.nat, natKm2: G.nat * RUTE, ukjentKm2: G.ukjent * RUTE, andel: andel(G.ukjent, G.nat) } : null,
     vises: (samlet
       ? o
-          .map((x, i) => i)
+          .map((_, i) => i)
           .filter(i => P[i])
           .sort((a, b) => P[b] - P[a])
-      : o.map((x, i) => i)
+      : o.map((_, i) => i)
     ).map(i => ({
       omr: o[i],
       nr: i,

@@ -109,3 +109,10 @@ export const nyttSiden = () => {
     return true;
   };
 };
+/* Setter fargen f i pikselen som begynner på plass i i o, helt dekket */
+export const fargPiksel = (o: Uint8ClampedArray, i: number, f: ArrayLike<number>) => {
+  o[i] = f[0];
+  o[i + 1] = f[1];
+  o[i + 2] = f[2];
+  o[i + 3] = 255;
+};

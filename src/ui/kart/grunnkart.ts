@@ -14,7 +14,7 @@ import { leggISamling } from '../../data/motor/grunnkart.ts';
 import { abonner, app, lytt, tidSlutt, type Oversikt, type Sted } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
 import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte, type Flislag } from './felles.ts';
-import { kartStatus, view } from './kart.ts';
+import { kartStatus, opplosning } from './kart.ts';
 import { tegnPlan } from './plan.ts';
 
 /* Flisene fra NIBIO. Den rå flisen legges også inn i det sammensatte kartet i datamotoren. */
@@ -58,7 +58,7 @@ export const tema = new ol.layer.Tile({
    kartet fikk mer innhold, er derfor utdaterte. Lagene merkes når en ny flis legges inn, og tegnes på nytt neste gang kartet står
    stille zoomet ut med laget på. Uten dette ble de stående tomme når man zoomet inn, så seg rundt og zoomet ut igjen. */
 export function friskOppGamle() {
-  if (kartflagg.iBevegelse || view.getResolution()! < MAKSRES) return;
+  if (kartflagg.iBevegelse || opplosning() < MAKSRES) return;
   for (const lag of [...utdaterte]) if (lag.getVisible()) friskOpp(lag);
 }
 /* Lagene som tegnes oppå dagens klasser zoomet ut, og som må tegnes på nytt når det sammensatte kartet får nye fliser.
@@ -244,7 +244,7 @@ lytt('nyFlis', (c, r) => {
   const k = kopi(c);
   oppaa.forEach(lag => utdaterte.add(lag));
   k.venter.push(r); /* fargelegges når kartet står stille */
-  if (view.getResolution()! >= MAKSRES)
+  if (opplosning() >= MAKSRES)
     fargeleggVentende(k); /* zoomet ut vises det sammensatte kartet, så flisen må inn med en gang */
   planleggEtterarbeid();
 });

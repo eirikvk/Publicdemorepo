@@ -1,23 +1,16 @@
-/* Temasidene: verneområder, villrein og verdsatt natur fra Miljødirektoratet, inngrepsfri natur og grått areal. Hvert tema er en
-   egen side. Toppen svarer på det samme for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er,
-   og hvor mye planlagt utbygging som ligger innenfor. Under står detaljene. Tallene kommer ferdig regnet ut fra gull (byggNaturTall,
-   byggInon og byggGraa). Her blir de tekst og lister. */
-import { byggGraa } from '../../data/gull/graa.ts';
-import { byggInon } from '../../data/gull/inon.ts';
-import type { ReactNode } from 'react';
-import type { Bildetall } from '../../data/gull/felles.ts';
+/* Temasidene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Toppen svarer på hvor mye som finnes i
+   kommunen, hvor stor del av landarealet det er, og hvor mye planlagt utbygging som ligger innenfor. Under står områdene som liste,
+   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull (byggNaturTall). */
 import { byggNaturTall, type NaturTall } from '../../data/gull/temaer.ts';
-import { GRAATRINN } from '../../data/solv/graa.ts';
-import { INONSONER } from '../../data/solv/inon.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import type { Naturtema as Tema } from '../../data/motor/naturtema.ts';
-import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
+import { app, gjelder } from '../../data/motor/tilstand.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
-import { Fargelinje, Forklaring, Rute, Stripe, type Stripedel } from './deler.tsx';
+import { Fargelinje, Forklaring, Stripe, type Stripedel } from './deler.tsx';
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.ts';
-import { andelTekst, antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.ts';
-import './Temaer.css';
+import { antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.ts';
+import { Temaside } from './Temaside.tsx';
 
 export const ETT: Record<string, string> = {
   vern: 'ett',
@@ -53,45 +46,6 @@ export const TEMAORD: Record<string, Temaord> = {
     kildetekst: 'Miljødirektoratet, naturtyper med KU-verdi og dekningskart for naturtypekartlegging'
   }
 };
-
-/* Toppen av en temaside: navnet, arealet i kommunen og andelen av landarealet (null når landarealet mangler), og en linje om
-   planlagt utbygging. status er henter, feil, ingen eller ok. Detaljene står under, med kilden nederst. Mens temaet hentes, står det
-   bare det. */
-function Temaside({
-  id,
-  navn,
-  tall,
-  under,
-  kilde,
-  children
-}: {
-  id: string;
-  navn: string;
-  tall: Bildetall<{ sum: number; andelLand: number | null }>;
-  under?: ReactNode;
-  kilde: ReactNode;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="temaside prosa" id={'tema-' + id}>
-      <h2 className="md-typography-heading-s">
-        <Rute id={id} />
-        {navn}
-      </h2>
-      {tall.tilstand === 'ok' && (
-        <div>
-          <p>
-            <b>{dekar(tall.sum)}</b> i kommunen
-            {tall.andelLand !== null ? `, ${andelTekst(tall.andelLand)} av landarealet` : ''}
-          </p>
-          {under && <p className="hint temaunder">{under}</p>}
-        </div>
-      )}
-      {tall.tilstand === 'henter' ? <p>{app.valgt ? 'Henter …' : ''}</p> : children}
-      {kilde}
-    </div>
-  );
-}
 
 /* Helhetsbildet for verdsatt natur: landarealet delt i kartlagt og ikke kartlagt, og så hver del for seg med verdsatt natur etter
    verdi. Det vi ikke vet noe om, tegnes som en tom ramme. Slik skilles «ingenting funnet» fra «ikke lett». H er helhetsbildet og E
@@ -298,136 +252,6 @@ export function Naturtema({ t: tema }: { t: Tema }) {
           })}
           {vises.length > maks && <li>… og {vises.length - maks} til</li>}
         </ul>
-      )}
-    </Temaside>
-  );
-}
-
-/* Inngrepsfri natur: sonene etter avstand til inngrep. Krysses ikke med planlagt utbygging. */
-export function Inon() {
-  const I = byggInon(gjeldende(app.inon), app.ssbSum),
-    har = I.tilstand === 'ok';
-  const tekst =
-    I.tilstand === 'feil'
-      ? 'Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.'
-      : I.tilstand !== 'ok'
-        ? 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'
-        : `Ca. ${iTekst(I.sum)} av kommunen${I.andelLand !== null ? `, ${pst(I.andelLand)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
-  const kilde = (
-    <p className="hint">
-      Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele
-      kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt
-      innenfor sonene, også innsjøer, så andelen av landarealet er et omtrentlig mål. I kartet er det bare klassen natur
-      som får sonefarge.
-    </p>
-  );
-  return (
-    <Temaside
-      id="inon"
-      navn="Inngrepsfri natur"
-      tall={I}
-      under={har ? 'krysses ikke med planlagt utbygging' : ''}
-      kilde={kilde}
-    >
-      <p>{tekst}</p>
-      {har && (
-        <>
-          <p>I kartet vises naturen i fire grønntoner:</p>
-          <ul className="talliste">
-            <Fargelinje id="nat" navn="Annen natur" tall="" under="Nærmere enn 1 km fra inngrep" />
-            {[2, 1, 0].map(i => (
-              <Fargelinje
-                key={i}
-                id={INONSONER[i][1]}
-                navn={INONSONER[i][4]}
-                tall={dekar(I.soner[i])}
-                under={INONSONER[i][3]}
-              />
-            ))}
-          </ul>
-          <p>
-            <b>Inngrepsfri natur kan ikke krysses med planlagt utbygging slik de andre temaene kan.</b> Sonene følger
-            avstanden til nærmeste tyngre tekniske inngrep. Et nytt inngrep kan derfor flytte sonegrensene flere
-            kilometer unna, også når det ikke ligger i en sone selv.
-          </p>
-        </>
-      )}
-    </Temaside>
-  );
-}
-
-/* Grått areal: areal som alt er tatt i bruk eller sterkt påvirket, etter andel vegetasjon, og hvor mye av planlagt utbygging som
-   ligger der. */
-export function Graa() {
-  const G = byggGraa(gjeldende(app.graa), gjeldende(app.graaKryss), app.ssbSum),
-    har = G.tilstand === 'ok',
-    P = G.tilstand === 'ok' ? G.plan : null;
-  const tekst =
-    G.tilstand === 'feil'
-      ? 'Grått areal kunne ikke hentes fra NIBIO.'
-      : G.tilstand !== 'ok'
-        ? 'Kartet over grå arealer har ingen flater i kommunen.'
-        : `Ca. ${iTekst(G.sum)} av kommunen${G.andelLand !== null ? `, ${pst(G.andelLand)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Listen under viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
-  let plan = null;
-  if (har) {
-    if (P) {
-      plan = (
-        <>
-          <b>
-            Av ca. {iTekst(P.km2)} planlagt utbygging på land{P.delvis ? ' i hentet kart' : ''} ligger ca.{' '}
-            {iTekst(P.graa)} ({pst(P.andelGraa, 0)} %) på grått areal.
-          </b>
-          {` Det er gjenbruk av areal som alt er tatt i bruk. Ca. ${iTekst(P.gron)} av dette er flater med minst halvparten vegetasjon, så også gjenbruk kan ta grønt.${P.gront ? ` I tillegg ligger ca. ${iTekst(P.gront)} på grønt i bebygd område.` : ''}${P.antallEgne ? ' Tallene inkluderer egne områder.' : ''} Her er all planlagt utbygging med, også på bebygd areal og i smale striper.`}
-        </>
-      );
-    } else
-      plan = utenPlan()
-        ? 'Kommunen har ingen kommuneplan hos DiBK å krysse med.'
-        : 'Planlagt utbygging på grått areal regnes ut når kartet er hentet.';
-  }
-  const kilde = (
-    <p className="hint">
-      Kilde: Kart over grå arealer, Miljødirektoratet, Kartverket, NIBIO og SSB (testversjon 1, 2025), hentet fra NIBIO
-      som to bilder av hele kommunen, og som fliser når kartet er zoomet inn. Arealene er regnet ut i nettleseren. Andel
-      bygninger er ikke med, fordi tjenesten foreløpig oppgir 0 for alle flater vi har slått opp. I kartet er lysere
-      grått mer vegetasjon, og blågrønt er grønt i bebygd område. Det blågrønne er regnet ut som bebygd areal i
-      grunnkartet som ikke er grått. I en stikkprøve på 140 punkter i Trondheim var 133 det grunnkartet kaller grønne
-      arealer.
-    </p>
-  );
-  return (
-    <Temaside
-      id="graa"
-      navn="Grått areal"
-      tall={G}
-      kilde={kilde}
-      under={
-        har && P
-          ? `${pst(P.andelGraa, 0)} % av planlagt utbygging ligger på grått areal${P.delvis ? ', i hentet kart' : ''}`
-          : ''
-      }
-    >
-      <p>{tekst}</p>
-      {har && (
-        <ul className="talliste">
-          {GRAATRINN.map(([id, navn], i) => (
-            <Fargelinje key={id} id={id} navn={navn} tall={dekar(G.trinn[i + 1])} />
-          ))}
-          {G.trinn[6] > 0 && <Fargelinje id="graa0" navn="Uten oppgitt andel, som veier" tall={dekar(G.trinn[6])} />}
-          <Fargelinje
-            id="gront"
-            navn="Grønt i bebygd område"
-            tall={G.gront ? (G.gront.delvis ? 'minst ' : '') + dekar(G.gront.km2) : ''}
-            under="Ikke grått areal. Parker, idrettsanlegg, golfbaner og lignende, som grunnkartet regner som bebygd og opparbeidet. Det er grønt, men telles ikke som natur."
-          />
-        </ul>
-      )}
-      {plan && <p role="status">{plan}</p>}
-      {har && (
-        <p>
-          <b>Grått betyr ikke ledig.</b> Kartet skiller ikke mellom et boligområde i bruk og en nedlagt industritomt, og
-          sier ikke noe om hva som kan bygges om. Det må leses sammen med lokal kunnskap.
-        </p>
       )}
     </Temaside>
   );

@@ -87,7 +87,9 @@ App              sideoppsettet: toppen, sidevelgeren, og kartet og innholdet i t
 └─ Innhold       den valgte siden:
    ├─ Oversikt   det viktigste fra hver side, med lenke til siden
    ├─ Regnskap   utbredelsesregnskapet: forklart med stolper, satt opp som regnskap, og land og vann
-   ├─ Temaer     én side per tema: grått areal, villrein, inngrepsfri natur, verdsatt natur og verneområder
+   ├─ Naturtema  én side per naturtema: villrein, verdsatt natur og verneområder
+   ├─ Inon       inngrepsfri natur
+   ├─ Graa       grått areal
    ├─ Framtid    utvikling fremover: planlagt utbygging, og
    │  └─ Egne    egne områder: tegning, opplasting og sammenligning
    └─ Om         om og metode, og tekniske valg
@@ -216,7 +218,10 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 |---|---|
 | `ol.ts` | Delene av OpenLayers som brukes, samlet som `ol` |
 | `felles.ts` | Flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren |
-| `kart.ts` | Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling, bytte av kommune og trykk i kartet |
+| `kart.ts` | Selve kartet: bakgrunn, grense og status, og hvordan lagene settes sammen |
+| `klipping.ts` | Klipping mot kommunen: utenfor valgt kommune vises bare bakgrunnskartet |
+| `trykk.ts` | Trykk i kartet: hva som er i punktet, og bytte til kommunen man trykket i |
+| `maaling.ts` | Måling av hvor jevnt kartet går, til teknisk visning |
 | `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
 | `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og oversiktsbildet zoomet ut |
 | `plan.ts` | Planlagt utbygging |
@@ -226,8 +231,8 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `graa.ts` | Grått areal: fargene for trinnene, og fliser fra NIBIO når kartet er zoomet inn |
 | `egne.ts` | Egne områder: tegning i kartet og omrissene |
 
-React-komponentene, i `src/ui/komponenter/`. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av
-`Temaer.tsx`.
+React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme navn, for eksempel `Oversikt.css` ved siden av
+`Oversikt.tsx`. Temasidene deler `Temaside.css`.
 
 | Fil | Innhold |
 |---|---|
@@ -238,7 +243,10 @@ React-komponentene, i `src/ui/komponenter/`. Hver av dem har en CSS-fil med samm
 | `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
 | `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
-| `Temaer.tsx` | Én side per tema, med detaljer og lister over områder, og ordene sidene bruker om hvert tema |
+| `Temaside.tsx` | Toppen og rammen som alle temasidene har: navnet, arealet i kommunen, andelen av landarealet og kilden |
+| `Naturtema.tsx` | Sidene for verneområder, villrein og verdsatt natur, med lister over områdene, og ordene sidene bruker om hvert tema |
+| `Inon.tsx` | Siden for inngrepsfri natur |
+| `Graa.tsx` | Siden for grått areal |
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
 | `Om.tsx` | Om og metode: kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |

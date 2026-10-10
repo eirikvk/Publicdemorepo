@@ -17,7 +17,7 @@ import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { abonner, app, endret, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
-import { SVAKEST, TOM, friskOpp, nyttSiden, plannett, type Flistegner } from './felles.ts';
+import { SVAKEST, TOM, fargPiksel, friskOpp, nyttSiden, plannett, type Flistegner } from './felles.ts';
 
 const planUrl = (tc: TileCoord) => kommuneplanUrl(plannett.getTileCoordExtent(tc));
 
@@ -157,10 +157,7 @@ async function lastPlanFlis(tile: ImageTile, src: string) {
           if (e !== 1 && R && !iEllerInntil(R, ((tx * 512 + px) >> sh) - R.cx0, ((ty * 512 + py) >> sh) - R.cy0))
             continue;
           const f = k === JOR ? pjor : pnat;
-          o[i] = f[0];
-          o[i + 1] = f[1];
-          o[i + 2] = f[2];
-          o[i + 3] = 255;
+          fargPiksel(o, i, f);
           tegnet = true;
         }
     if (!tegnet) {

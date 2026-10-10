@@ -11,6 +11,7 @@ import type Polygon from 'ol/geom/Polygon.js';
 import type VectorLayer from 'ol/layer/Vector.js';
 import type VectorSource from 'ol/source/Vector.js';
 import { ol } from './ol.ts';
+import { flislerret } from '../../data/solv/raster.ts';
 import { OPPLOSNINGER } from '../../data/solv/felles.ts';
 import type { Kartlagt } from '../../data/solv/temaer.ts';
 import { NATURTEMA, type Naturtema } from '../../data/motor/naturtema.ts';
@@ -98,8 +99,7 @@ function tegnSlorflis(tile: ImageTile) {
     fl = dekKilde.getFeaturesInExtent(u);
   if (!fl.length) {
     if (!heltSlor) {
-      heltSlor = document.createElement('canvas');
-      heltSlor.width = heltSlor.height = 512;
+      heltSlor = flislerret();
       const g = heltSlor.getContext('2d')!;
       g.fillStyle = slorFarge();
       g.fillRect(0, 0, 512, 512);
@@ -108,9 +108,8 @@ function tegnSlorflis(tile: ImageTile) {
     return;
   }
   const t0 = performance.now(),
-    c = document.createElement('canvas'),
+    c = flislerret(),
     s = 512 / (u[2] - u[0]);
-  c.width = c.height = 512;
   const g = c.getContext('2d')!;
   g.fillStyle = slorFarge();
   g.fillRect(0, 0, 512, 512);
@@ -153,9 +152,8 @@ function tegnFlateflis(t: Naturtema, tile: ImageTile) {
     tile.setState(TOM);
     return;
   }
-  const c = document.createElement('canvas'),
+  const c = flislerret(),
     s = 512 / (u[2] - u[0]);
-  c.width = c.height = 512;
   const g = c.getContext('2d')!;
   g.fillStyle = g.strokeStyle = farge(t.id);
   g.lineWidth = 1;

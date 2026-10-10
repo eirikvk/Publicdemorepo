@@ -1,4 +1,4 @@
-/* Temasidene i Temaer.tsx: overskrift med fargerute, arealet i kommunen, detaljene og kilden nederst */
+/* Temasidene (Temaside.tsx): overskrift med fargerute, arealet i kommunen, detaljene og kilden nederst */
 .temaside {
   display: flex;
   flex-direction: column;

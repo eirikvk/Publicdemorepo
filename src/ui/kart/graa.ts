@@ -10,7 +10,8 @@ import { bildePiksler } from '../../data/solv/raster.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { app, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
-import { bildelag, fargPiksel } from './kommunebilde.ts';
+import { fargPiksel } from './felles.ts';
+import { bildelag } from './kommunebilde.ts';
 
 /* Kartets egne terskler for grått areal. Arealet regnes med halvregelen (HALV). I flisene fra NIBIO er en piksel grå fra en
    fjerdedel dekning, så kantene på små flater ikke forsvinner når kartet er zoomet langt inn. Langs kanten av den utjevnede masken

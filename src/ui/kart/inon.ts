@@ -8,7 +8,8 @@ import { NAT, klasseAv } from '../../data/solv/klasser.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { app, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
-import { bildelag, fargPiksel } from './kommunebilde.ts';
+import { fargPiksel } from './felles.ts';
+import { bildelag } from './kommunebilde.ts';
 
 /* Sonene som tre masker i hver sin fargekanal: rød er minst 1 km, grønn minst 3 km og blå minst 5 km fra inngrep. Når en flis
    forstørres fra masken, jevner nettleseren ut hver maske for seg, og grensen settes der masken er halvveis. Maskene jevnes også ut
@@ -27,7 +28,7 @@ export const inonLag = bildelag({
       P[i + 3] = 255;
     }
   },
-  tegn: async (g, D, tegnMaske, tc) => {
+  tegn: async (g, _, tegnMaske, tc) => {
     const t0 = performance.now();
     g.imageSmoothingQuality = 'high';
     tegnMaske();

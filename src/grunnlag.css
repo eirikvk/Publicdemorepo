@@ -1,6 +1,6 @@
 /* Felles for hele siden, hentet i main.tsx før komponentene. Her ligger det som gjelder overalt: designsystemets variabler som
    siden setter selv, grunnlaget for tekst, fokus og avstand mellom avsnitt, og små rettinger av designsystemet.
-   Hver komponent har sin egen stil ved siden av seg i src/ui/komponenter, for eksempel Temaer.css for Temaer.tsx.
+   Hver komponent har sin egen stil ved siden av seg i src/ui/komponenter, for eksempel Oversikt.css for Oversikt.tsx.
 
    Fast mønster for hele siden, se også README:
    - Tekst: tre overskrifter med designsystemets klasser, brødtekst 16 px og liten tekst 14 px. Ingen andre størrelser.

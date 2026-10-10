@@ -8,7 +8,8 @@ import { OPPLOSNINGER, type Kommune } from '../../data/solv/felles.ts';
 import { leggTilEget, mine } from '../../data/motor/egne.ts';
 import { abonner, app, endret, type EgetOmrade } from '../../data/motor/tilstand.ts';
 import { farge } from '../farger.ts';
-import { kart, lukkBytt, tilKartet, view } from './kart.ts';
+import { kart, tilKartet, view } from './kart.ts';
+import { lukkBytt } from './trykk.ts';
 
 const egneKilde = new ol.source.Vector();
 export const egneLag = new ol.layer.Vector({

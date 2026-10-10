@@ -3,7 +3,8 @@
 import { useEffect, useLayoutEffect, useRef, type DragEvent } from 'react';
 import { lastOppPlan } from '../../data/motor/egne.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { byttTilValgt, lagKart, plasserBytt, rolig, settByttKnapp } from '../kart/kart.ts';
+import { lagKart, rolig } from '../kart/kart.ts';
+import { byttTilValgt, plasserBytt, settByttKnapp } from '../kart/trykk.ts';
 import { fjernMerket } from '../kart/naturtema.ts';
 import { velgSide } from '../sider.ts';
 import { ui } from '../tilstand.ts';
