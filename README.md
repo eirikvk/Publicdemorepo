@@ -29,37 +29,48 @@ hvilken som helst webserver, også i en undermappe, fordi alle adresser er relat
 
 ## Slik henger koden sammen
 
-Koden har tre lag, og stilen ligger ved siden av sidens deler:
+Dataene går gjennom tre lag, etter mønsteret bronse, sølv og gull fra moderne dataplattformer. Motoren samordner lagene, og
+visningen viser resultatet:
 
 ```
 Åpne tjenester: SSB, Kartverket, NIBIO, DiBK, Miljødirektoratet
-      │  hentes av
+      │
       ▼
-src/motor/     Motoren henter data, tegner kartet og bestemmer hva som regnes når.
-               Vanlig JavaScript. Vet ingenting om React eller hvordan siden ser ut.
-      │  gir dataene til              ▲ får tallene tilbake
-      ▼                               │
-src/analyse/   Beregningene: hvordan tallene regnes ut. Får alt som argumenter og
-               gir svaret tilbake. Bruker verken kartet, siden eller nettet.
-      
-      motoren legger alt i tilstanden (app) og sier fra (endret)
+src/bronse/   Bronse: hvordan hver tjeneste brukes. Adresser, parametre og stiler.
+              Svarene kommer urørt tilbake. Alt nettverk går gjennom dette laget.
+      │
       ▼
-src/visning/   Siden: React-komponenter som leser tilstanden og viser den som
-               tekst, lister, tabeller og knapper. Hver komponent har sin CSS-fil.
+src/solv/     Sølv: felles standard, så dataene fra flere kilder kan brukes sammen.
+              UTM33, km², de tre klassene, kommunen og rutenettene.
+      │
+      ▼
+src/gull/     Gull: svarene. Arealer, andeler, kryssinger og regnskap, i den formen
+              hver side trenger.
+      │
+      ▼
+src/visning/  Visning: React. Gjør gull om til tekst, lister, stolper og tabeller.
+
+
+src/motor/    Samordner: bestemmer hva som hentes og regnes når, holder tilstanden
+              (app), tegner kartet og sier fra til siden når noe er klart (endret).
 ```
+
+Sølv og gull får alt som argumenter og gir svaret tilbake. De bruker verken kartet, siden eller nettet, og kan kjøres i Node.
 
 Slik går en runde, for eksempel når brukeren velger kommune:
 
 1. Brukeren velger Trondheim i `Topp.jsx`. Komponenten kaller `velg` i `motor/handlinger.js`.
-2. Motoren henter grensen, tallene fra SSB, kommuneplanen og temaene, får dem regnet ut i `src/analyse/`, og legger svarene i
-   `app`.
-3. Hver gang noe er klart, kaller motoren `endret()`. React tegner da siden på nytt ut fra det som ligger i `app`.
+2. Motoren ber bronse hente grensen, tallene fra SSB, kommuneplanen og temaene. Sølv gjør dem om til felles standard, og motoren
+   legger dem i `app`. Kryssingene med planlagt utbygging tar tid, så motoren kjører dem i gull én gang og legger svaret i `app`.
+3. Hver gang noe er klart, kaller motoren `endret()`. React tegner da siden på nytt. Hver komponent gir det som ligger i `app` til
+   en `bygg`-funksjon i gull, og viser svaret.
 
 Velger brukeren en side, kaller `Sidevelger.jsx` funksjonen `velgSide` i motoren. Den husker siden i `app.side`, slår på
 temaet i kartet og skriver siden i adressen, for eksempel `#5001/verdi`. Lenkene mellom sidene, som navnene på oversikten, gjør
 det samme (`Sidelenke` i `deler.jsx`).
 
-Komponentene endrer aldri tilstanden selv. De viser den, og kaller motoren når brukeren gjør noe.
+Komponentene endrer aldri tilstanden selv, og regner ikke selv. De viser det gull gir dem, og kaller motoren når brukeren gjør
+noe.
 
 Siden er bygd opp av disse delene. De fleste har en `.jsx`-fil og en `.css`-fil med samme navn i `src/visning/`:
 
@@ -99,47 +110,76 @@ Stilen kommer i tre lag, der hvert lag kan bygge på det forrige: designsystemet
 | `index.html` | Inngangen. Bare et tomt element som React fyller. |
 | `src/main.jsx` | Stilene fra designsystemet, skriften, kartets stil og den felles stilen, og oppstarten av React |
 | `src/grunnlag.css` | Stilen som gjelder hele siden. Bruker designsystemets variabler. |
-| `src/analyse/` | Beregningene, én fil per analyse. Kan kjøres i Node. |
-| `src/motor/` | Motoren: henting, kartet og samordningen av utregningen. Vanlig JavaScript uten React. |
+| `src/bronse/` | Hentingen, én fil per tjeneste |
+| `src/solv/` | Felles standard for dataene. Kan kjøres i Node. |
+| `src/gull/` | Svarene sidene viser, én fil per tema. Kan kjøres i Node. |
+| `src/motor/` | Motoren: samordningen, tilstanden og kartet. Vanlig JavaScript uten React. |
 | `src/visning/` | Sidens komponenter i React |
 | `public/` | Filer som legges ut som de er: listen over kommuner og de lagrede oversiktsbildene |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
-Analysene, i `src/analyse/`. METODE.md forklarer metoden bak hver av dem.
+Bronse, i `src/bronse/`. Én fil per tjeneste, og en felles fil for hvordan det hentes.
 
 | Fil | Innhold |
 |---|---|
-| `felles.js` | Rutenettet, alle terskler, målestokken i UTM og arealet av en flate |
-| `raster.js` | Fra flater til ruter: flatene tegnes i et lerret. Den eneste filen som bruker nettleseren. |
-| `klasser.js` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og tolking av fargene i kartbildene |
-| `ssb.js` | Arealet per klasse, arealet i 2017 og nyeste år til utbredelsesregnskapet, og land og vann |
-| `plan.js` | Planlagt utbygging: planrutenettet på 21 meter, regelen om smale striper, og om kommunen har plan |
-| `egne.js` | Egne områder: hvilke flater som er utbygging, hvordan de legges inn i planrutenettet, og sammenligningen med planen |
-| `temaer.js` | Verneområder, villrein og verdsatt natur: arealet, kartleggingsgraden og kryssingen med planen |
-| `inon.js` | Inngrepsfri natur: arealet per sone |
-| `graa.js` | Grått areal: arealet per trinn og kryssingen med planen |
+| `henting.js` | Henting med minne, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde) |
+| `ssb.js` | SSB, tabell 09594, med det eldre API-et som reserve |
+| `kartverket.js` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
+| `nibio-grunnkart.js` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, og de lagrede oversiktsbildene |
+| `dibk-kommuneplan.js` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, hvor mye av kommunen planen dekker, og navnet på planen |
+| `mdir-naturtema.js` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området |
+| `mdir-inon.js` | Inngrepsfrie naturområder, som ett bilde av kommunen |
+| `nibio-graa.js` | Kart over grå arealer, som bilder av kommunen og som fliser |
+| `planfil.js` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
-Reglene for analysene sjekkes av `verktoy/sjekk-regning.js`: de importerer bare fra hverandre, bruker ikke nettleseren eller
-tilstanden (bortsett fra lerretet i `raster.js`), og har ingen variabler på toppnivå som kan endres.
+Sølv, i `src/solv/`. METODE.md forklarer metoden bak hver fil.
+
+| Fil | Innhold |
+|---|---|
+| `felles.js` | Rutenettene, alle terskler, målestokken i UTM og arealet av en flate |
+| `raster.js` | Fra flater til ruter: flatene tegnes i et lerret. Den eneste filen i sølv og gull som bruker nettleseren. |
+| `klasser.js` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og tolking av fargene i kartbildene |
+| `ssb.js` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017 |
+| `planrutenett.js` | Kommuneplanen lagt oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort, og om kommunen har plan |
+| `egne.js` | Egne områder: hvilke flater som er utbygging, og hvordan de legges inn i planrutenettet |
+| `temaer.js` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
+| `inon.js` | Inngrepsfri natur: sone per rute |
+| `graa.js` | Grått areal: trinn per rute etter andel vegetasjon |
+
+Gull, i `src/gull/`. Funksjonene som heter `bygg` noe, gir det en side viser.
+
+| Fil | Innhold |
+|---|---|
+| `felles.js` | Andel i prosent, og tilstanden for temaene som hentes som ett bilde |
+| `regnskap.js` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
+| `planlagt.js` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
+| `egne.js` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
+| `temaer.js` | Arealet per verdikategori, kryssingen med planen, og tallene på temasidene |
+| `inon.js` | Arealet per sone og tallene på siden |
+| `graa.js` | Arealet per trinn, kryssingen med planen, og tallene på siden |
+
+Reglene for lagene sjekkes av `verktoy/sjekk-regning.js`: sølv importerer bare fra sølv, og gull fra gull og sølv. De bruker
+ikke nettleseren eller tilstanden (bortsett fra lerretet i `raster.js`), og har ingen variabler på toppnivå som kan endres.
+Bronse bruker ikke gull. Visningen henter ikke fra bronse, og tar bare navn og faste verdier fra sølv.
 
 Motoren:
 
 | Fil | Innhold |
 |---|---|
 | `ol.js` | Delene av OpenLayers som brukes, samlet som `ol` |
-| `felles.js` | Adresser, projeksjoner, kartfargene, tilstanden (`app`) og lageret, formatering av tall, kall-logg og henting med minne |
-| `grunnlag.js` | Det de andre filene trenger når de lastes: rutenettene for flisene, køen for kall og hjelpere for lag som tegnes i nettleseren |
-| `farger.js` | Stilen som sendes til NIBIO, og fargelegging av kartbildene i nettleseren |
+| `felles.js` | Projeksjoner, kartfargene, tilstanden (`app`) og lageret, og formatering av tall |
+| `grunnlag.js` | Det de andre filene trenger når de lastes: rutenettene for flisene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren |
+| `farger.js` | Fargelegging av kartbildene i nettleseren |
 | `fliser.js` | Grunnkartet som kartfliser, og dagens klasser i en flis |
 | `oversikt.js` | Oversiktsbildet zoomet ut: det lagrede, eller det nettleseren setter sammen selv |
-| `plan.js` | Kommuneplanen fra DiBK som kartlag, hentingen til planrutenettet og samordningen av utregningen |
-| `naturtema.js` | Verneområder, villrein og verdsatt natur: kartlagene, hentingen, og markering av ett område i kartet |
-| `inon.js` | Inngrepsfri natur: kartlaget og hentingen |
-| `graa.js` | Grått areal: kartlaget og hentingen |
-| `egne.js` | Egne områder: tegning i kartet, lesing av planfil, og radene i sammenligningen med kommuneplanen |
+| `plan.js` | Kommuneplanen fra DiBK som kartlag, og samordningen av planrutenettet |
+| `naturtema.js` | Verneområder, villrein og verdsatt natur: kartlagene, samordningen, og markering av ett område i kartet |
+| `inon.js` | Inngrepsfri natur: kartlaget og samordningen |
+| `graa.js` | Grått areal: kartlaget og samordningen |
+| `egne.js` | Egne områder: tegning i kartet, opplasting av planfil, og det radene i sammenligningen bygges av |
 | `kart.js` | Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling og trykk i kartet |
-| `tall.js` | Henting av tallene fra SSB |
+| `tall.js` | Tallene fra SSB: samordningen av henting og tolking, og hvor de legges i tilstanden |
 | `handlinger.js` | Det brukeren kan gjøre: velge kommune, velge side (og dermed hva kartet viser), og oppstarten |
 
 Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av `Temaer.jsx`.
@@ -166,7 +206,7 @@ Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.cs
 
 - [KOM-I-GANG.md](KOM-I-GANG.md) viser hvordan man kjører, bygger og tester siden lokalt.
 - [METODE.md](METODE.md) forklarer hver analyse med samme oppsett (spørsmål, data inn, steg, resultat, usikkerhet, kontroll og
-  kode), i samme inndeling som `src/analyse/`.
+  kode), i samme inndeling som `src/solv/` og `src/gull/`.
 - [AVHENGIGHETER.md](AVHENGIGHETER.md) lister biblioteker, tjenester og verktøy, med lisenser og det som gjelder sikkerhet og
   personvern.
 
@@ -174,16 +214,15 @@ Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
 
 ## Motoren og siden
 
-Motoren henter, får tallene regnet ut i analysene, og tegner kartet. Siden viser tallene og tar imot det brukeren gjør. De er skilt
-slik:
+Motoren samordner henting og utregning, og tegner kartet. Siden viser tallene og tar imot det brukeren gjør. De er skilt slik:
 
 - All delt tilstand ligger i ett objekt, `app`, i `src/motor/felles.js`: valgt kommune, grensen, tallene fra SSB, rutenettet for
   planlagt utbygging, egne områder, valgt side, hva som er slått på i kartet, og det som vises over og under kartet. Temaene fra
   Miljødirektoratet har dataene sine i `NATURLAG`, ett objekt per tema.
 - Den som endrer noe i `app` som vises på siden, kaller `endret()`. Varslene samles, så mange endringer etter hverandre gir én ny
   tegning av siden.
-- `App.jsx` abonnerer med kroken `useApp` og tegnes på nytt ved hvert varsel. Komponentene leser tilstanden direkte fra `app` og
-  temaene, og gjør tallene om til tekst, tabeller og stolper.
+- `App.jsx` abonnerer med kroken `useApp` og tegnes på nytt ved hvert varsel. Komponentene gir det som ligger i `app` og temaene
+  til gull, og gjør svaret om til tekst, tabeller og stolper.
 - Komponentene endrer ikke tilstanden selv. De kaller funksjoner i motoren, for eksempel `velg`, `velgSide` og `lastOppPlan`.
 - Kartet lages av motoren (`lagKart`) og settes inn på siden av `Kartpanel.jsx`. Knappen for å bytte kommune er en del av siden,
   men motoren plasserer den over punktet man trykket på.
@@ -198,21 +237,23 @@ mens filene lastes (rutenettene, køen for kall og kildene for lag som tegnes i 
 bare bruker `felles.js`. Selve kartet lages først når alt er lastet. Bryter man regelen, stopper siden med en `ReferenceError` når
 den åpnes.
 
-### Regning, tegning og samordning
+### Henting, regning, tegning og samordning
 
-Koden holder tre ting fra hverandre, og både mappen og navnet på en funksjon sier hvilken den er:
+Koden holder fire ting fra hverandre, og både mappen og navnet på en funksjon sier hvilken den er:
 
 | Hvor | Navn begynner med | Hva funksjonen gjør |
 |---|---|---|
-| `src/analyse/` | `tolk`, `kryss`, `bygg`, `tell` og andre | Regner. Får alt som argumenter og gir svaret tilbake. Leser ikke fra siden, skriver ikke til den, henter ikke fra nettet og bruker ikke delt tilstand. |
+| `src/bronse/` | `hent` | Henter fra én tjeneste og gir svaret urørt tilbake. Det eneste stedet det går kall ut på nettet. |
+| `src/solv/` og `src/gull/` | `tolk`, `kryss`, `bygg`, `tell` og andre | Regner. Får alt som argumenter og gir svaret tilbake. Leser ikke fra siden, skriver ikke til den, henter ikke fra nettet og bruker ikke delt tilstand. |
 | `src/motor/` | `vis` | Tegner kartet: slår lag av og på og ber om ny tegning av siden. Regner ikke ut nye tall. |
-| `src/motor/` | `hent`, `sjekk`, `regn`, `velg` | Samordner. Henter data, kaller analysene, legger svaret i tilstanden og ber om ny tegning. |
+| `src/motor/` | `hent`, `sjekk`, `regn`, `velg` | Samordner. Ber bronse hente, kaller sølv og gull, legger svaret i tilstanden og ber om ny tegning. |
 
-Analysene er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
+Sølv og gull er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
 tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.js`). `node verktoy/sjekk-regning.js`
-kontrollerer reglene, og at det ikke er havnet regnefunksjoner i motoren.
+kontrollerer reglene, retningen mellom lagene, og at det ikke er havnet regnefunksjoner i motoren.
 
-Teksten på siden lages i komponentene. Enkelte tall der regnes også ut der, som prosenter av tall som alt ligger i tilstanden.
+Komponentene regner ikke. Tallene og andelene kommer fra gull, og komponentene velger ord, avrunding og enhet. Unntaket er
+stripene i `deler.jsx`, som regner ut bredden på hver del av det de tegner.
 
 ## Designsystemet
 
@@ -316,12 +357,13 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `regresjon.js` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
   tallene motoren har regnet ut, teksten siden viser og skjermbilder av kartet. `node verktoy/regresjon.js ut/ny --mot HEAD`
   sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
-  tas samme dag. Ett kjent avvik som ikke skyldes koden: arealet av verdsatt natur per verdikategori kan skille med under én
-  dekar mellom kjøringer.
+  tas samme dag. Ett kjent avvik som ikke skyldes koden: Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, så arealet
+  av verdsatt natur per verdikategori kan skille med under én dekar mellom kjøringer, og når to lokaliteter har nøyaktig samme
+  flate, kan planlagt utbygging havne på den ene eller den andre.
 - `motortall.js` henter tallene fra motoren til regresjonstesten. Siden gjør motoren tilgjengelig som `window.motor` med
   `?teknisk`.
-- `sjekk-regning.js` kontrollerer at analysene i `src/analyse/` holder seg for seg selv, og `sjekk-navn.js` at alle navn som
-  brukes, er definert eller importert. `npm run sjekk` kjører begge.
+- `sjekk-regning.js` kontrollerer at sølv og gull holder seg for seg selv og at lagene bare bruker hverandre i riktig retning,
+  og `sjekk-navn.js` at alle navn som brukes, er definert eller importert. `npm run sjekk` kjører begge.
 - `oversiktsbilde.py` lager de lagrede oversiktsbildene, for eksempel `python3 verktoy/oversiktsbilde.py --fylke 50`.
   Én kommune koster 4 til 16 kall mot NIBIO.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.

@@ -1,11 +1,9 @@
-/* Felles for hele motoren: adresser, projeksjoner, farger, formatering av tall, tilstanden og lageret, kall-logg og henting med
-   minne. Filen importerer ingenting fra de andre filene i motoren, så den er alltid ferdig lastet før dem. Rutenettet, klassene og
-   tersklene ligger i solv/. */
+/* Felles for hele motoren: projeksjoner, farger, formatering av tall, og tilstanden og lageret. Filen importerer ingenting fra de
+   andre filene i motoren, så den er alltid ferdig lastet før dem. Adressene til tjenestene og hentingen ligger i bronse/, og
+   rutenettet, klassene og tersklene i solv/. */
 import proj4 from 'proj4';
 import { ol } from './ol.js';
 
-export const KV = 'https://api.kartverket.no/kommuneinfo/v1';
-export const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data';
 /* Kartet bruker UTM sone 33 (EPSG:25833), som dataene er laget i og som NIBIOs egen kartløsning Kilden bruker.
    Da regner NIBIO målestokken riktig, og flisene kan brukes fra reell 1:50 000. Rutenettet er Kartverkets for UTM33. */
 proj4.defs('EPSG:25833', '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');

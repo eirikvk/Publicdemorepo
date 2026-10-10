@@ -10,8 +10,14 @@
    I tillegg sjekkes det at motoren ikke har fått nye regnefunksjoner: funksjoner som heter tolk, kryss, bygg eller tell noe, hører
    hjemme i sølv eller gull.
 
+   Og retningen mellom lagene ellers:
+   - Bronse (src/bronse) henter, og bruker ikke gull eller visningen.
+   - Visningen (src/visning) henter ikke selv og regner ikke selv: den importerer ikke fra bronse, og fra sølv bare navn og faste
+     verdier (navn med store bokstaver, som GRAATRINN), ikke funksjoner. Tallene får den fra gull.
+
    Kjør: node verktoy/sjekk-regning.js */
 import * as acorn from 'acorn';
+import jsx from 'acorn-jsx';
 import * as walk from 'acorn-walk';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,9 +34,20 @@ const LAG = {
 const NETTLESER = ['document', 'window', 'fetch', 'navigator', 'location', 'history', 'createImageBitmap', 'app'];
 const UNNTAK = { 'solv/raster.js': ['document'] };
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
+/* Retningen mellom lagene: hva hvert lag ikke kan importere fra */
+const IKKE_FRA = {
+  bronse: ['../gull/', '../visning/'],
+  visning: ['../bronse/']
+};
+const KONSTANT = /^[A-ZÆØÅ][A-ZÆØÅ0-9_]*$/;
 
+const JSX = acorn.Parser.extend(jsx());
 const les = fil =>
-  acorn.parse(fs.readFileSync(fil, 'utf8'), { ecmaVersion: 2022, sourceType: 'module', locations: true });
+  (fil.endsWith('.jsx') ? JSX : acorn).parse(fs.readFileSync(fil, 'utf8'), {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    locations: true
+  });
 const feil = [];
 let antall = 0;
 
@@ -81,10 +98,29 @@ for (const f of fs.readdirSync(MOTOR).filter(f => f.endsWith('.js'))) {
   }
 }
 
+/* Retningen mellom lagene */
+let andre = 0;
+for (const [lag, forbudt] of Object.entries(IKKE_FRA)) {
+  for (const f of fs.readdirSync(path.join(SRC, lag)).filter(f => /\.jsx?$/.test(f))) {
+    const tre = les(path.join(SRC, lag, f));
+    andre++;
+    for (const n of tre.body) {
+      if (n.type !== 'ImportDeclaration') continue;
+      const fra = n.source.value,
+        sted = `${lag}/${f}:${n.loc.start.line}`;
+      if (forbudt.some(p => fra.startsWith(p))) feil.push(`${sted} importerer fra ${fra}`);
+      if (lag === 'visning' && fra.startsWith('../solv/'))
+        for (const x of n.specifiers)
+          if (x.type !== 'ImportSpecifier' || !KONSTANT.test(x.imported.name))
+            feil.push(`${sted} importerer ${x.local.name} fra sølv: visningen skal få tallene fra gull`);
+    }
+  }
+}
+
 feil.forEach(x => console.log(x));
 console.log(
   feil.length
     ? `\n${feil.length} brudd.`
-    : `${antall} filer i src/solv og src/gull sjekket, og ingen regnefunksjoner i motoren. Ingen brudd.`
+    : `${antall} filer i src/solv og src/gull og ${andre} i src/bronse og src/visning sjekket, og ingen regnefunksjoner i motoren. Ingen brudd.`
 );
 process.exit(feil.length ? 1 : 0);
