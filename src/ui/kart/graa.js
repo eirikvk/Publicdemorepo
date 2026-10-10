@@ -4,10 +4,10 @@
 import { ol } from './ol.js';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.js';
 import { graaFlisUrl, hentGraaFlis } from '../../data/bronse/nibio-graa.js';
-import { HALV, SYNLIG } from '../../data/solv/felles.js';
-import { GRAATRINN, graaTrinn } from '../../data/solv/graa.js';
-import { klasseAv } from '../../data/solv/klasser.js';
-import { flislerret, tegnUtsnitt } from '../../data/solv/raster.js';
+import { HALV, SYNLIG } from '../../data/solv/felles.ts';
+import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
+import { klasseAv } from '../../data/solv/klasser.ts';
+import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.js';
 import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.js';
 import { rgb } from '../farger.js';

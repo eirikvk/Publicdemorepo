@@ -8,8 +8,8 @@
    visningsfargene, se ui/kart/grunnkart.js. */
 import { FLISNIVA, grunnkartUrl, hentGrunnkartFlis, hentOversiktsbilde } from '../bronse/nibio-grunnkart.js';
 import { opptatt } from '../bronse/henting.js';
-import { OPPLOSNINGER, ORIGO, flisUtsnitt, overlapper } from '../solv/felles.js';
-import { flislerret, sti, tegnUtsnitt } from '../solv/raster.js';
+import { OPPLOSNINGER, ORIGO, flisUtsnitt, overlapper } from '../solv/felles.ts';
+import { flislerret, sti, tegnUtsnitt } from '../solv/raster.ts';
 import { regnAlt } from './plan.js';
 import { app, endret, tidSlutt, valgNr, varsle } from './tilstand.js';
 

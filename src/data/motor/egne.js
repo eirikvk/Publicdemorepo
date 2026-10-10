@@ -3,10 +3,10 @@
    Selve tegningen i kartet ligger i ui/kart/egne.js. Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og
    hører til kommunen de ble tegnet i. */
 import { lesPlanfil } from '../bronse/planfil.js';
-import { EGET_MIN_M2, areal, arealKm2, utsnitt } from '../solv/felles.js';
-import { planflater } from '../solv/egne.js';
-import { tilUTM } from '../solv/projeksjoner.js';
-import { byggEgneRader } from '../gull/egne.js';
+import { EGET_MIN_M2, areal, arealKm2, utsnitt } from '../solv/felles.ts';
+import { planflater } from '../solv/egne.ts';
+import { tilUTM } from '../solv/projeksjoner.ts';
+import { byggEgneRader } from '../gull/egne.ts';
 import { finn, velgKommune } from './kommune.js';
 import { NATURTEMA } from './naturtema.js';
 import { ingenPlan, regnAlt } from './plan.js';

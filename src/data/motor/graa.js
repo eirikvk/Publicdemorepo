@@ -4,10 +4,10 @@
    fabrikktomt. Kartlaget tegnes av trinnene per rute, se ui/kart/graa.js. */
 import { hentGraaBilde } from '../bronse/nibio-graa.js';
 import { husk } from '../bronse/henting.js';
-import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.js';
-import { sti, tegneflate } from '../solv/raster.js';
-import { tolkGraa } from '../solv/graa.js';
-import { graaAreal, kryssGraa } from '../gull/graa.js';
+import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.ts';
+import { sti, tegneflate } from '../solv/raster.ts';
+import { tolkGraa } from '../solv/graa.ts';
+import { graaAreal, kryssGraa } from '../gull/graa.ts';
 import { utenPlan } from './egne.js';
 import { app, endret, tidSlutt, valgNr } from './tilstand.js';
 

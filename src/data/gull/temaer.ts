@@ -1,13 +1,74 @@
 /* Gull for naturtemaene: arealet av verdsatt natur per verdikategori, kryssingen med planrutenettet (hvor mye planlagt utbygging
    som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.js) og
    planrutenettet (solv/planrutenett.js). Arealer er i km², kryssinger i ruter. */
-import { HALV, RUTE, RUTENETT_VERDI, m2PerKm2, omriss, ruteX, ruteY, rutenett } from '../solv/felles.js';
-import { sti, tegneflate } from '../solv/raster.js';
-import { naturMaske } from '../solv/temaer.js';
-import { andel } from './felles.js';
+import {
+  HALV,
+  RUTE,
+  RUTENETT_VERDI,
+  m2PerKm2,
+  omriss,
+  ruteX,
+  ruteY,
+  rutenett,
+  type Flerflate,
+  type FlateMedUtsnitt,
+  type Ring,
+  type Utsnitt
+} from '../solv/felles.ts';
+import type { Planrutenett } from '../solv/planrutenett.ts';
+import { sti, tegneflate } from '../solv/raster.ts';
+import { naturMaske, type Kartlagt, type Maske, type Omrade } from '../solv/temaer.ts';
+import { andel } from './felles.ts';
+
+/* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg) */
+export interface Kryss {
+  alt: Int32Array;
+  eg: Int32Array[];
+}
+/* Ruter med planlagt utbygging på natur (nat), og hvor mange av dem som ligger utenfor det kartlagte (ukjent) */
+export interface Ukjent {
+  nat: number;
+  ukjent: number;
+}
+/* Det samme for hele kommunen og per eget område, for planen med egne områder og for planen alene (plan) */
+export interface Gap extends Ukjent {
+  eg: Ukjent[];
+  plan: (Ukjent & { eg: Ukjent[] }) | null;
+}
+/* Kryssingen av et tema med planrutenettet: per verdikategori for planen med egne områder (S) og planen alene (P), gap, og ruter
+   per område med planlagt utbygging (plan) og i smale striper (smal) */
+export interface Kryssing {
+  kryss: { S: Kryss; P: Kryss | null };
+  gap: Gap | null;
+  plan: Int32Array;
+  smal: Int32Array;
+}
+/* Et område slik datamotoren har det, med utsnittet */
+export interface TemaOmrade extends Omrade {
+  ext: Utsnitt;
+}
+/* Det som er hentet og regnet ut for et naturtema i valgt kommune: områdene, arealet samlet og per verdikategori, det kartlagte og
+   verdsatt natur innenfor det (inne), og kryssingen med planen når den er regnet ut (regnet) */
+export interface TemaData {
+  nr: string;
+  feil?: boolean;
+  omrader: TemaOmrade[];
+  sum: number;
+  klasser?: number[] | null;
+  ufullstendig?: boolean;
+  ekstra?: Kartlagt | null;
+  inne?: number[];
+  regnet?: boolean;
+  plan?: Int32Array;
+  smal?: Int32Array;
+  kryss?: { S: Kryss; P: Kryss | null } | null;
+  gap?: Gap | null;
+}
+/* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
+export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
 
 /* Omløpsretningen til en ring: true når den går mot klokka */
-const motKlokka = ring => {
+const motKlokka = (ring: Ring) => {
   let a = 0;
   for (let i = 0; i < ring.length - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
   return a > 0;
@@ -17,11 +78,11 @@ const motKlokka = ring => {
    klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori uten dobbelttelling: der lokaliteter overlapper,
    teller den høyeste verdien, slik kartet også viser det. omrader har verdien v (0 er høyest). innenfor er en flerflate arealet
    også klippes mot, for eksempel det kartlagte. */
-export function klasseAreal(omrader, antall, kommune, innenfor) {
+export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMedUtsnitt, innenfor?: Flerflate) {
   const skala = m2PerKm2(kommune.ext),
     { res, w, h, u } = rutenett(kommune.ext, ...RUTENETT_VERDI);
   const g = tegneflate(w, h),
-    kum = [];
+    kum: number[] = [];
   for (let v = 0; v < antall && omrader.length; v++) {
     g.globalCompositeOperation = 'source-over';
     g.clearRect(0, 0, w, h);
@@ -70,18 +131,26 @@ export function klasseAreal(omrader, antall, kommune, innenfor) {
    (P), og gap: ruter med planlagt utbygging på natur, og hvor mange av dem som ligger utenfor det kartlagte. Maskene lages med
    naturMaske i sølv. maske(nokkel, lag) gir masken: den som kaller, kan huske maskene per område (nokkel) og bare kalle lag() første
    gang. */
-export function kryssNatur(D, R, nK, medDekning, kommune, maske) {
+export function kryssNatur(
+  D: TemaData,
+  R: Planrutenett,
+  nK: number,
+  medDekning: boolean,
+  kommune: FlateMedUtsnitt,
+  maske: HuskMaske
+): Kryssing {
   const B = R.basis || null,
     nE = R.eget ? R.antallEgne : 0,
     O = D.omrader;
-  const tom = () => ({ alt: new Int32Array(nK), eg: Array.from({ length: nE }, () => new Int32Array(nK)) }),
+  const tom = (): Kryss => ({ alt: new Int32Array(nK), eg: Array.from({ length: nE }, () => new Int32Array(nK)) }),
     S = tom(),
     P = tom();
   const plan = new Int32Array(O.length),
     smal = new Int32Array(O.length);
-  const fjernet = i => B.ryddet[i] && R.alle[i] !== 1 && R.alle[i] !== 2; /* i planen, tatt ut av et eget område */
+  const fjernet = (i: number) =>
+    B!.ryddet[i] && R.alle[i] !== 1 && R.alle[i] !== 2; /* i planen, tatt ut av et eget område */
   if (O.length) {
-    const treff = i => {
+    const treff = (i: number) => {
       /* nummeret til området ruta ligger i, eller -1 */
       const x = ruteX(R, i),
         y = ruteY(R, i);
@@ -101,7 +170,7 @@ export function kryssNatur(D, R, nK, medDekning, kommune, maske) {
       const a = treff(i);
       if (a < 0) continue;
       const v = O[a].v || 0,
-        e = nE ? R.eget[i] : 0;
+        e = nE ? R.eget![i] : 0;
       if (R.ryddet[i]) {
         plan[a]++;
         S.alt[v]++;
@@ -118,27 +187,32 @@ export function kryssNatur(D, R, nK, medDekning, kommune, maske) {
         const a = treff(i);
         if (a < 0) continue;
         const v = O[a].v || 0,
-          e = R.eget[i];
+          e = R.eget![i];
         P.alt[v]++;
         if (e) P.eg[e - 1][v]++;
       }
   }
-  let gap = null;
+  let gap: Gap | null = null;
   if (medDekning && D.ekstra) {
     /* ruter med planlagt utbygging på natur, uten smale striper, delt på kartlagt og ikke kartlagt */
     const E = D.ekstra,
-      M = E.flate && E.flate.length ? maske(E, () => naturMaske({ koord: E.flate, ext: omriss(E.flate) }, null)) : null;
-    const ukjentRute = i => {
+      M =
+        E.flate && E.flate.length ? maske(E, () => naturMaske({ koord: E.flate!, ext: omriss(E.flate!) }, null)) : null;
+    const ukjentRute = (i: number) => {
       if (!M) return true;
       const px = Math.floor((ruteX(R, i) - M.u[0]) / M.res),
         py = Math.floor((M.u[3] - ruteY(R, i)) / M.res);
       return px < 0 || py < 0 || px >= M.w || py >= M.h || M.a[py * M.w + px] < HALV;
     };
-    const ny = () => ({ nat: 0, ukjent: 0, eg: Array.from({ length: nE }, () => ({ nat: 0, ukjent: 0 })) }),
+    const ny = (): Ukjent & { eg: Ukjent[] } => ({
+        nat: 0,
+        ukjent: 0,
+        eg: Array.from({ length: nE }, () => ({ nat: 0, ukjent: 0 }))
+      }),
       G = ny(),
       GP = ny();
-    const tell = (T, i, uk) => {
-      const e = nE ? R.eget[i] : 0;
+    const tell = (T: Ukjent & { eg: Ukjent[] }, i: number, uk: boolean) => {
+      const e = nE ? R.eget![i] : 0;
       T.nat++;
       if (uk) T.ukjent++;
       if (e) {
@@ -162,7 +236,7 @@ export function kryssNatur(D, R, nK, medDekning, kommune, maske) {
 
 /* Arealet av et tema som er summen av områdene: verneområder og villreinområder. Overlapper to områder, telles overlappet to
    ganger. */
-export const samletAreal = omrader => omrader.reduce((s, o) => s + o.km2, 0);
+export const samletAreal = (omrader: Omrade[]) => omrader.reduce((s, o) => s + o.km2, 0);
 
 /* Tallene en temaside og oversikten viser for et naturtema. D er temaets data, klasser verdikategoriene hvis temaet har det,
    medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Arealer er i
@@ -171,7 +245,13 @@ export const samletAreal = omrader => omrader.reduce((s, o) => s + o.km2, 0);
    eller svært stor verdi, kartleggingsgraden, helhetsbildet (landarealet delt i kartlagt og ikke kartlagt, og verdsatt natur i hver
    del), planlagt utbygging innenfor og i smale striper, antall områder som berøres, planlagt utbygging på natur som ikke er kartlagt,
    og områdene som skal listes (med plassen i listen over alle områder). */
-export function byggNaturTall(D, klasser, medDekning, samlet, land) {
+export function byggNaturTall(
+  D: TemaData,
+  klasser: [navn: string, farge: string][] | undefined,
+  medDekning: boolean,
+  samlet: boolean,
+  land: number
+) {
   const o = D.omrader,
     E = D.ekstra,
     sum = D.sum || 0,
@@ -186,7 +266,7 @@ export function byggNaturTall(D, klasser, medDekning, samlet, land) {
           antall++;
           plan += P[i];
         });
-        return { antall, km2: D.klasser[v], plan, planKm2: plan * RUTE };
+        return { antall, km2: D.klasser![v], plan, planKm2: plan * RUTE };
       })
     : null;
   let helhet = null;
@@ -213,14 +293,14 @@ export function byggNaturTall(D, klasser, medDekning, samlet, land) {
     };
   }
   const plan = P.reduce((s, x) => s + x, 0),
-    smal = (D.smal || []).reduce((s, x) => s + x, 0),
+    smal = (D.smal || new Int32Array(0)).reduce((s, x) => s + x, 0),
     G = D.gap;
   return {
     sum,
     andelLand: andel(sum, land),
     antall: o.length,
     klasser: perKlasse,
-    hoyVerdi: harKlasser ? D.klasser[0] + D.klasser[1] : null,
+    hoyVerdi: harKlasser ? D.klasser![0] + D.klasser![1] : null,
     kartlagt: E ? { km2: E.km2, andelLand: andel(Math.min(E.km2, land), land), fra: E.fra, til: E.til } : null,
     helhet,
     plan,

@@ -3,9 +3,9 @@
    natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut tegnes laget fra planrutenettet i datamotoren. */
 import { ol } from './ol.js';
 import { hentKommuneplanFlis, kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.js';
-import { HALV, SYNLIG, UTM } from '../../data/solv/felles.js';
-import { JOR, NAT, klasseAv } from '../../data/solv/klasser.js';
-import { flislerret, sti } from '../../data/solv/raster.js';
+import { HALV, SYNLIG, UTM } from '../../data/solv/felles.ts';
+import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
+import { flislerret, sti } from '../../data/solv/raster.ts';
 import { mine, utenPlan } from '../../data/motor/egne.js';
 import { dagensKlasser } from '../../data/motor/grunnkart.js';
 import { abonner, app, endret, gjeldende, tidSlutt } from '../../data/motor/tilstand.js';

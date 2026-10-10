@@ -2,12 +2,62 @@
    klippet mot kommunen og med areal i km², og som masker i et rutenett når de skal krysses med planrutenettet. Også det kartlagte
    området for naturtyper. Flatene kommer som GeoJSON. */
 import polygonClipping from 'polygon-clipping';
-import { RUTENETT_MASKE, areal, flerflate, m2PerKm2, omriss, snitt, tomt } from './felles.js';
-import { sti, tegneflate } from './raster.js';
+import {
+  RUTENETT_MASKE,
+  areal,
+  flerflate,
+  m2PerKm2,
+  omriss,
+  snitt,
+  tomt,
+  type Flerflate,
+  type FlateMedUtsnitt,
+  type GeoJsonFlate,
+  type Rutebilde,
+  type Utsnitt
+} from './felles.ts';
+import { sti, tegneflate } from './raster.ts';
+
+/* Flatene slik polygon-clipping vil ha dem */
+type Mangekant = polygonClipping.MultiPolygon;
+
+/* En flate fra tjenesten, som i GeoJSON: geometrien og egenskapene */
+export interface Objekt {
+  geometry: GeoJsonFlate | null;
+  properties: Record<string, any> | null;
+}
+/* Opplysningene om et område, lest av egenskapene: navn, lenke til faktaark, en kort beskrivelse (under) og, for verdsatt natur,
+   verdikategorien v (0 svært stor, 1 stor, 2 middels, 3 noe verdi) */
+export interface Opplysninger {
+  navn: string;
+  url: string;
+  under: string;
+  v?: number;
+}
+/* Et område i et naturtema: flaten, om den er klippet mot kommunen (uklippet hvis klippingen feilet), arealet i kommunen i km², og
+   opplysningene */
+export interface Omrade extends Opplysninger {
+  koord: Flerflate;
+  uklippet: boolean;
+  km2: number;
+}
+/* Et område som et lite rutenett med dekningen per rute (a, 0–255), og arealet i kartets kvadratmeter (m2) */
+export interface Maske extends Rutebilde {
+  a: Uint8Array;
+  m2: number;
+}
+/* Det kartlagte området for naturtyper i kommunen: arealet i km², årene kartleggingen er gjort, og flaten */
+export interface Kartlagt {
+  km2: number;
+  fra?: number | null;
+  til?: number | null;
+  flate?: Flerflate;
+}
+export type Les = (p: Record<string, any>) => Opplysninger;
 
 /* Egenskapene til flatene i hvert tema gjort om til felles form: navn, lenke til faktaark, en kort beskrivelse (under) og, for
    verdsatt natur, verdikategorien v (0 svært stor, 1 stor, 2 middels, 3 noe verdi). */
-export const EGENSKAPER = {
+export const EGENSKAPER: Record<string, Les> = {
   vern: p => ({
     navn: p.offisieltNavn || 'Uten navn',
     url: p.faktaark || '',
@@ -16,7 +66,7 @@ export const EGENSKAPER = {
         .replace(/([a-zæøå])([A-ZÆØÅ])/g, '$1 $2')
         .toLowerCase()
         .replace(/omraade/g, 'område')
-        .replace(/^./, c => c.toUpperCase()),
+        .replace(/^./, (c: string) => c.toUpperCase()),
       p.vernedato ? 'vernet ' + new Date(p.vernedato).getUTCFullYear() : ''
     ]
       .filter(Boolean)
@@ -43,14 +93,14 @@ export const EGENSKAPER = {
 
 /* Et område som et lite rutenett med dekningen per rute (a, 0–255), til oppslag fra planrutenettet. flate er { koord, ext }.
    kommune oppgis bare når flaten ikke alt er klippet mot kommunen. m2 er arealet i kartets kvadratmeter. */
-export function naturMaske(flate, kommune) {
+export function naturMaske(flate: FlateMedUtsnitt, kommune: FlateMedUtsnitt | null): Maske | null {
   const e = kommune ? snitt(flate.ext, kommune.ext) : flate.ext;
   if (tomt(e)) return null;
   const [maks, minst] = RUTENETT_MASKE,
     res = Math.max(minst, Math.max(e[2] - e[0], e[3] - e[1]) / maks),
     w = Math.ceil((e[2] - e[0]) / res) + 1,
     h = Math.ceil((e[3] - e[1]) / res) + 1,
-    u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
+    u: Utsnitt = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
   const k = tegneflate(w, h);
   sti(k, flate.koord, u, 1 / res);
   k.fill('evenodd');
@@ -72,18 +122,18 @@ export function naturMaske(flate, kommune) {
 /* Verneområder og villreinområder: hver flate klippes mot kommunen, og arealet av det som ligger i kommunen regnes ut. Feiler
    klippingen, regnes arealet i stedet av flaten tegnet i et rutenett og klippet mot kommunen der (uklippet). les gir navn og
    opplysninger fra egenskapene. Gir områdene sortert etter areal, størst først. Overlapper to flater, telles overlappet to ganger. */
-export function klippNatur(features, kommune, les) {
+export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Les): Omrade[] {
   const skala = m2PerKm2(kommune.ext);
   return features
     .map(f => {
       const g = f.geometry;
       if (!g || !g.coordinates) return null;
       const hele = flerflate(g);
-      let koord = null,
+      let koord: Flerflate | null = null,
         uklippet = false,
-        km2;
+        km2: number;
       try {
-        koord = polygonClipping.intersection(hele, kommune.koord);
+        koord = polygonClipping.intersection(hele as Mangekant, kommune.koord as Mangekant);
       } catch (e) {
         koord = null;
       }
@@ -99,19 +149,19 @@ export function klippNatur(features, kommune, les) {
       }
       return km2 > 0 ? { koord, uklippet, km2, ...les(f.properties || {}) } : null;
     })
-    .filter(Boolean)
+    .filter((o): o is Omrade => !!o)
     .sort((a, b) => b.km2 - a.km2);
 }
 
 /* Verdsatt natur: lokalitetene med areal hver for seg, uten klipping mot kommunen (til listen). Arealet per verdikategori i kommunen
    regnes ut i gull (klasseAreal). Lokalitetene sorteres med høyest verdi først (v = 0 er høyest), så en planrute der lokaliteter
    overlapper, regnes til den høyeste. */
-export function lokaliteter(features, kommune, les) {
+export function lokaliteter(features: Objekt[], kommune: FlateMedUtsnitt, les: Les): Omrade[] {
   const skala = m2PerKm2(kommune.ext);
   const omrader = features
     .filter(f => f.geometry && f.geometry.coordinates)
     .map(f => {
-      const koord = flerflate(f.geometry);
+      const koord = flerflate(f.geometry as GeoJsonFlate);
       return { koord, uklippet: false, km2: koord.length ? areal(koord) / skala : 0, ...les(f.properties || {}) };
     })
     .sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2);
@@ -120,10 +170,11 @@ export function lokaliteter(features, kommune, les) {
 
 /* Kartleggingsgrad: dekningsflatene for naturtypekartlegging slått sammen og klippet mot kommunen. Gir det kartlagte arealet, flaten
    og årene kartleggingen er gjort. */
-export function byggDekning(features, kommune) {
+export function byggDekning(features: Objekt[], kommune: FlateMedUtsnitt): Kartlagt {
   const fl = features.filter(f => f.geometry && f.geometry.coordinates);
   if (!fl.length) return { km2: 0 };
-  const u = polygonClipping.intersection(polygonClipping.union(...fl.map(f => flerflate(f.geometry))), kommune.koord);
+  const [forste, ...resten] = fl.map(f => flerflate(f.geometry as GeoJsonFlate) as Mangekant);
+  const u = polygonClipping.intersection(polygonClipping.union(forste, ...resten), kommune.koord as Mangekant);
   const aar = fl.map(f => parseInt((f.properties || {})['Årstall'], 10)).filter(v => v > 1900);
   return {
     km2: u.length ? areal(u) / m2PerKm2(kommune.ext) : 0,

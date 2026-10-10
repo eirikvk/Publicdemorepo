@@ -6,9 +6,9 @@
    kartlag i ui/. */
 import { hentKartlagt, hentTemaflater } from '../bronse/mdir-naturtema.js';
 import { husk } from '../bronse/henting.js';
-import { utsnitt } from '../solv/felles.js';
-import { EGENSKAPER, byggDekning, klippNatur, lokaliteter } from '../solv/temaer.js';
-import { klasseAreal, kryssNatur, samletAreal } from '../gull/temaer.js';
+import { utsnitt } from '../solv/felles.ts';
+import { EGENSKAPER, byggDekning, klippNatur, lokaliteter } from '../solv/temaer.ts';
+import { klasseAreal, kryssNatur, samletAreal } from '../gull/temaer.ts';
 import { utenPlan } from './egne.js';
 import { app, endret, tidSlutt, valgNr } from './tilstand.js';
 

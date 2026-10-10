@@ -1,12 +1,36 @@
 /* Gull for egne områder: hva som ligger i hvert område, og radene som sammenligner kommuneplanen alene med kommuneplanen og egne
    områder. Arealer er i km², andeler i prosent. */
-import { RUTE } from '../solv/felles.js';
-import { andel } from './felles.js';
+import { RUTE } from '../solv/felles.ts';
+import type { EgetTall, Planrutenett } from '../solv/planrutenett.ts';
+import { andel } from './felles.ts';
+import type { Graakryss, Graatall } from './graa.ts';
+import type { Gap, Kryss } from './temaer.ts';
+
+/* Et tema krysset med planen, slik radene trenger det */
+export interface TemaKryss {
+  navn: string;
+  id: string;
+  klasser?: [navn: string, farge: string][];
+  kryss: { S: Kryss; P: Kryss | null };
+}
+/* En rad i sammenligningen, se byggEgneRader */
+export interface EgenRad {
+  navn: string;
+  farge: string;
+  gruppe: string;
+  plan: number | null;
+  ny: number;
+  endring: number;
+  andelPlan: number | null;
+  andelNy: number | null;
+}
+/* En rad før den regnes om: [navn, farge, planen i ruter, med egne i ruter, hva andelen regnes av, gruppe] */
+type Rad = [navn: string, farge: string, plan: number | null, ny: number, av: number, gruppe: string];
 
 /* Hva som ligger i et eget område i dag, i km², fra tellingen T i planrutenettet. ukjent er ruter der kartet ikke er hentet eller
    som ligger utenfor kommunen. smal sier at området tar natur eller jordbruk i planrutenettet, men at alt faller for regelen om
    smale striper. */
-export const byggEgetOmrade = T => ({
+export const byggEgetOmrade = (T: EgetTall) => ({
   kjent: !!(T.nat + T.jor + T.beb + T.vann),
   natur: T.nat * RUTE,
   jordbruk: T.jor * RUTE,
@@ -21,13 +45,21 @@ export const byggEgetOmrade = T => ({
    klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er { navn, farge, gruppe, plan, ny, endring, andelPlan,
    andelNy }: planen alene (null uten kommuneplan), med egne områder og forskjellen i km², og andelen av det som finnes i dag i
    prosent der det er regnet ut. */
-const RADNAVN = { rein: 'Villreinområder' }; /* i tabellen står områdene, ikke temaet */
-export function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
-  const ut = [];
+const RADNAVN: Record<string, string> = { rein: 'Villreinområder' }; /* i tabellen står områdene, ikke temaet */
+export function byggEgneRader(
+  e: number | null,
+  T: EgetTall | null,
+  R: Planrutenett,
+  harPlan: boolean,
+  GK: Graakryss | null,
+  tema: TemaKryss[],
+  gap: Gap | null
+): EgenRad[] {
+  const ut: Rad[] = [];
   ut.push([
     'Natur',
     'pnat',
-    harPlan ? (T ? T.fnat : R.basis.rn) : null,
+    harPlan ? (T ? T.fnat : R.basis!.rn) : null,
     T ? T.nnat : R.sum.rn,
     e === null ? R.iDag.nat : 0,
     ''
@@ -35,26 +67,27 @@ export function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
   ut.push([
     'Jordbruk',
     'pjor',
-    harPlan ? (T ? T.fjor : R.basis.rj) : null,
+    harPlan ? (T ? T.fjor : R.basis!.rj) : null,
     T ? T.njor : R.sum.rj,
     e === null ? R.iDag.jor : 0,
     ''
   ]);
   if (GK) {
-    const x = X => (e === null ? X : X.eg[e] || { graa: 0, gron: 0, gront: 0 });
+    const x = (X: Graatall & { eg: Graatall[] }): Omit<Graatall, 'tot'> =>
+      e === null ? X : X.eg[e] || { graa: 0, gron: 0, gront: 0 };
     ut.push(['Grått areal', 'graa2', harPlan ? x(GK.P).graa : null, x(GK.S).graa, 0, '']);
     ut.push(['– minst halvt grønt', '', harPlan ? x(GK.P).gron : null, x(GK.S).gron, 0, '']);
     ut.push(['Grønt i bebygd', 'gront', harPlan ? x(GK.P).gront : null, x(GK.S).gront, 0, '']);
   }
-  const verdi = [],
-    ruter = (X, v) => (e === null ? X.alt[v] : X.eg[e] ? X.eg[e][v] : 0);
+  const verdi: Rad[] = [],
+    ruter = (X: Kryss, v: number) => (e === null ? X.alt[v] : X.eg[e] ? X.eg[e][v] : 0);
   for (const t of tema) {
     const K = t.kryss;
     if (t.klasser)
       t.klasser.forEach(([navn, id], v) =>
-        verdi.push([navn, id, harPlan ? ruter(K.P, v) : null, ruter(K.S, v), 0, 'Av dette i verdsatt natur'])
+        verdi.push([navn, id, harPlan ? ruter(K.P!, v) : null, ruter(K.S, v), 0, 'Av dette i verdsatt natur'])
       );
-    else ut.push([RADNAVN[t.id] || t.navn, t.id, harPlan ? ruter(K.P, 0) : null, ruter(K.S, 0), 0, 'Av dette i']);
+    else ut.push([RADNAVN[t.id] || t.navn, t.id, harPlan ? ruter(K.P!, 0) : null, ruter(K.S, 0), 0, 'Av dette i']);
   }
   if (gap && gap.plan)
     ut.push([

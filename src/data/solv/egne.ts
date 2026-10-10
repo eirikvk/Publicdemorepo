@@ -1,20 +1,41 @@
 /* Sølv for egne områder og opplastet plan: hvilke flater som regnes som utbygging, og hvordan de legges inn i planrutenettet, så de
    kan brukes sammen med kommuneplanen. */
-import { HALV, ORIGO, arealKm2, overlapper } from './felles.js';
-import { sti, tegneflate } from './raster.js';
+import { HALV, ORIGO, arealKm2, overlapper, type Flerflate, type Utsnitt } from './felles.ts';
+import { sti, tegneflate } from './raster.ts';
+
+/* Utbygging ('bygg') eller ikke utbygging ('fri') */
+export type Type = 'bygg' | 'fri';
+/* Én flate i et eget område: flaten, utsnittet og typen */
+export interface Del {
+  koord: Flerflate;
+  ext: Utsnitt;
+  type: Type;
+}
+/* Et eget område slik planrutenettet trenger det: flatene og utsnittet rundt dem */
+export interface Flater {
+  deler: Del[];
+  ext: Utsnitt;
+}
+/* En flate i en opplastet plan, slik den leses i bronse/planfil.ts: arealformål og arealbruksstatus som sifre, eller tom tekst */
+export interface Planflate {
+  koord: Flerflate;
+  ext: Utsnitt;
+  formal: string;
+  status: string;
+}
 
 /* Om en flate i en opplastet plan er utbygging ('bygg') eller ikke ('fri'). Bebyggelse og anlegg og samferdsel (arealformål i
    1000- og 2000-serien) med status framtidig, eller uten status, er utbygging, slik som for kommuneplanen fra DiBK. Andre flater
    med arealformål er ikke utbygging. Har filen ingen arealformål i det hele tatt, er alle flatene utbygging. formal og status er
    sifrene i egenskapene, eller tom tekst. */
-export const planType = (formal, status, harFormal) =>
+export const planType = (formal: string, status: string, harFormal: boolean): Type =>
   !harFormal || (/^[12]/.test(formal) && (status === '' || status === '2')) ? 'bygg' : 'fri';
 
 /* Flatene i en opplastet plan, som de leses i bronse/planfil.js, gjort om til egne områder: hver flate får type etter planType.
    Gir flatene, det samlede arealet i km², og hvor mange som er utbygging og ikke. */
-export function planflater(deler, harFormal) {
+export function planflater(deler: Planflate[], harFormal: boolean) {
   let km2 = 0;
-  const ut = deler.map(({ koord, ext, formal, status }) => {
+  const ut = deler.map(({ koord, ext, formal, status }): Del => {
     km2 += arealKm2(koord, ext);
     return { koord, type: planType(formal, status, harFormal), ext };
   });
@@ -27,7 +48,14 @@ export function planflater(deler, harFormal) {
    { cx0, cy0, w, h, m } og typen per rute (G.type: 1 utbygging, 2 ikke utbygging).
    En rute hører til området når området dekker minst halve ruta. Som utbygging tar området all natur og alt jordbruk i ruta. Som
    ikke utbygging fjerner det planlagt utbygging der. Der flater overlapper, vinner utbygging. Endrer d, eget og G.type. */
-export function leggInnEget(g, merke, d, kl, eget, G) {
+export function leggInnEget(
+  g: Flater,
+  merke: number,
+  d: Uint8Array,
+  kl: Uint8Array,
+  eget: Uint8Array,
+  G: { cx0: number; cy0: number; w: number; h: number; m: number; type: Uint8Array }
+) {
   const u = g.ext,
     m = G.m,
     X0 = Math.max(0, Math.floor((u[0] - ORIGO[0]) / m) - G.cx0),
@@ -42,7 +70,7 @@ export function leggInnEget(g, merke, d, kl, eget, G) {
         ch = Math.min(B, Y1 - y0 + 1),
         vx = ORIGO[0] + (G.cx0 + x0) * m,
         oy = ORIGO[1] - (G.cy0 + y0) * m,
-        bit = [vx, oy - ch * m, vx + cw * m, oy];
+        bit: Utsnitt = [vx, oy - ch * m, vx + cw * m, oy];
       const deler = g.deler.filter(del => overlapper(del.ext, bit));
       if (!deler.length) continue;
       const k = tegneflate(cw, ch);

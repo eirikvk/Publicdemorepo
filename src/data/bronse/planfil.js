@@ -1,7 +1,7 @@
 /* Bronse for en opplastet planfil: GeoJSON i samme format som DiBKs nedlasting av plandata, med arealformål og arealbruksstatus.
    Filen leses i nettleseren og sendes ingen steder. Flatene gjøres om til UTM33. */
-import { UTM, flerflate, utsnitt } from '../solv/felles.js';
-import { kjent, tilUTM } from '../solv/projeksjoner.js';
+import { UTM, flerflate, utsnitt } from '../solv/felles.ts';
+import { kjent, tilUTM } from '../solv/projeksjoner.ts';
 
 /* Sifrene i en egenskap, som tekst. Tom tekst hvis det ikke er noen. */
 const siffer = v => {

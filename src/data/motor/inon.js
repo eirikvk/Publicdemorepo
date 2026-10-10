@@ -4,10 +4,10 @@
    så et nytt valg av samme kommune koster ingenting. Kartlaget tegnes av sonene per rute, se ui/kart/inon.js. */
 import { hentInonBilde } from '../bronse/mdir-inon.js';
 import { husk } from '../bronse/henting.js';
-import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.js';
-import { sti, tegneflate } from '../solv/raster.js';
-import { tolkInon } from '../solv/inon.js';
-import { inonAreal } from '../gull/inon.js';
+import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.ts';
+import { sti, tegneflate } from '../solv/raster.ts';
+import { tolkInon } from '../solv/inon.ts';
+import { inonAreal } from '../gull/inon.ts';
 import { app, endret, tidSlutt, valgNr } from './tilstand.js';
 
 const inonMinne = new Map();

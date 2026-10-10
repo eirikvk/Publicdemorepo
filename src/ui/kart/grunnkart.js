@@ -3,7 +3,7 @@
    datamotoren lager av flisene som er hentet (data/motor/grunnkart.js). Kartet har sin egen kopi av det i kartfargene. */
 import { ol } from './ol.js';
 import { grunnkartUrl, hentGrunnkartFlis } from '../../data/bronse/nibio-grunnkart.js';
-import { UTM } from '../../data/solv/felles.js';
+import { UTM } from '../../data/solv/felles.ts';
 import { leggISamling } from '../../data/motor/grunnkart.js';
 import { abonner, app, lytt, tidSlutt } from '../../data/motor/tilstand.js';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.js';

@@ -2,7 +2,7 @@
    og markeringen av ett område valgt fra en liste. Dataene hentes og regnes ut i data/motor/naturtema.js. Hvert tema vises på sin
    egen side. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER } from '../../data/solv/felles.js';
+import { OPPLOSNINGER } from '../../data/solv/felles.ts';
 import { NATURTEMA } from '../../data/motor/naturtema.js';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.js';
 import { farge, rgb } from '../farger.js';

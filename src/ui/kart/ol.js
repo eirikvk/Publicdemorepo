@@ -30,7 +30,7 @@ import * as extent from 'ol/extent.js';
 import * as proj from 'ol/proj.js';
 import { register } from 'ol/proj/proj4.js';
 import { getRenderPixel, getVectorContext } from 'ol/render.js';
-import { proj4 } from '../../data/solv/projeksjoner.js';
+import { proj4 } from '../../data/solv/projeksjoner.ts';
 
 export const ol = {
   Map,

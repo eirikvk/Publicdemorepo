@@ -1,6 +1,6 @@
 /* Fargelegging av kartbildene fra NIBIO i nettleseren: fra de rene fargene NIBIO tegner klassene i, til fargene i kartet. Stilen
    som sendes til NIBIO, ligger i data/bronse/nibio-grunnkart.js, og tolkingen av fargene til klasser i data/solv/klasser.js. */
-import { ALLE, BLANDING, fargeNr } from '../../data/solv/klasser.js';
+import { ALLE, BLANDING, fargeNr } from '../../data/solv/klasser.ts';
 import { tidSlutt } from '../../data/motor/tilstand.js';
 import { rgb } from '../farger.js';
 /* Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve bildet være, så fargebytte

@@ -2,10 +2,10 @@
    bronse/dibk-kommuneplan.js, planrutenettet bygges i solv/planrutenett.js, og tallene sidene viser, lages i gull/planlagt.js.
    Kartlaget for planen ligger i ui/kart/plan.js. */
 import { hentKommuneplanFlis, hentPlandekning, hentPlaninfo, kommuneplanUrl } from '../bronse/dibk-kommuneplan.js';
-import { BILDE_PLANDEKNING, PLANNIVA, RUTE_M, flisUtsnitt, fliserI, rutenett } from '../solv/felles.js';
-import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.js';
-import { flislerret, sti, tegneflate } from '../solv/raster.js';
-import { byggPlanSum } from '../gull/planlagt.js';
+import { BILDE_PLANDEKNING, PLANNIVA, RUTE_M, flisUtsnitt, fliserI, rutenett } from '../solv/felles.ts';
+import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.ts';
+import { flislerret, sti, tegneflate } from '../solv/raster.ts';
+import { byggPlanSum } from '../gull/planlagt.ts';
 import { mine, utenPlan } from './egne.js';
 import { regnGraa } from './graa.js';
 import { dagensKlasser, samle } from './grunnkart.js';

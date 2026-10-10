@@ -2,11 +2,11 @@
    egen side. Toppen svarer på det samme for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er,
    og hvor mye planlagt utbygging som ligger innenfor. Under står detaljene. Tallene kommer ferdig regnet ut fra gull (byggNaturTall,
    byggInon og byggGraa). Her blir de tekst og lister. */
-import { byggGraa } from '../../data/gull/graa.js';
-import { byggInon } from '../../data/gull/inon.js';
-import { byggNaturTall } from '../../data/gull/temaer.js';
-import { GRAATRINN } from '../../data/solv/graa.js';
-import { INONSONER } from '../../data/solv/inon.js';
+import { byggGraa } from '../../data/gull/graa.ts';
+import { byggInon } from '../../data/gull/inon.ts';
+import { byggNaturTall } from '../../data/gull/temaer.ts';
+import { GRAATRINN } from '../../data/solv/graa.ts';
+import { INONSONER } from '../../data/solv/inon.ts';
 import { utenPlan } from '../../data/motor/egne.js';
 import { app, gjeldende } from '../../data/motor/tilstand.js';
 import { settSlor, visIKartet } from '../kart/naturtema.js';

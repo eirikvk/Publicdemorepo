@@ -1,6 +1,6 @@
 /* Bronse for kart over grå arealer (NIBIO, WMS, testversjon): bilder av alt grått areal og av flatene med oppgitt andel vegetasjon.
    Stilen tegner trinnene i GRAATRINN (solv/graa.js) i rødt med styrken 51 · trinn, så trinnet kan leses av fargen. */
-import { GRAATRINN } from '../solv/graa.js';
+import { GRAATRINN } from '../solv/graa.ts';
 import { hent, lagHenter } from './henting.js';
 
 const GRAA = 'https://wms.nibio.no/cgi-bin/graastruktur';

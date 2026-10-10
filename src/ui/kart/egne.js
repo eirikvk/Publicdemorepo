@@ -1,7 +1,7 @@
 /* Egne områder i kartet: tegning av et område, og omrisset med nummer for hvert eget område. Fargen inni kommer fra planlaget, som
    viser hva som går med. Datamotoren tar imot det tegnede området og regner det ut, se data/motor/egne.js. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER } from '../../data/solv/felles.js';
+import { OPPLOSNINGER } from '../../data/solv/felles.ts';
 import { leggTilEget, mine } from '../../data/motor/egne.js';
 import { abonner, app, endret } from '../../data/motor/tilstand.js';
 import { farge } from '../farger.js';

@@ -2,10 +2,10 @@
    de samme som på sidene selv, fordi de kommer fra de samme funksjonene i gull. Linjene står i de samme blokkene som i sidevelgeren,
    så temaene står under «Naturen i kommunen». */
 import { Fragment } from 'react';
-import { byggGraa } from '../../data/gull/graa.js';
-import { byggInon } from '../../data/gull/inon.js';
-import { byggEndring, byggUtbredelse } from '../../data/gull/regnskap.js';
-import { byggNaturTall } from '../../data/gull/temaer.js';
+import { byggGraa } from '../../data/gull/graa.ts';
+import { byggInon } from '../../data/gull/inon.ts';
+import { byggEndring, byggUtbredelse } from '../../data/gull/regnskap.ts';
+import { byggNaturTall } from '../../data/gull/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.js';
 import { NATURTEMA } from '../../data/motor/naturtema.js';
 import { app, gjeldende } from '../../data/motor/tilstand.js';

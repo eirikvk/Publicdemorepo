@@ -1,14 +1,25 @@
 /* Gull for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av, regnet ut fra planrutenettet i
    sølv. Arealer er i km², andeler i prosent. */
-import { OPPLOSNINGER, RUTE } from '../solv/felles.js';
-import { andel } from './felles.js';
+import { OPPLOSNINGER, RUTE } from '../solv/felles.ts';
+import type { Planrutenett } from '../solv/planrutenett.ts';
+import { andel } from './felles.ts';
+
+/* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av i km², om bare en del av kommunen er hentet, og hvor mange
+   egne områder som er med */
+export interface PlanSum {
+  nr: string;
+  nat: number;
+  jor: number;
+  delvis: boolean;
+  egne: number;
+}
 
 /* Det siden viser om planlagt utbygging. R er planrutenettet, og land landarealet fra SSB. For natur og jordbruk: arealet uten smale
    striper, andelen av det som er natur eller jordbruk i dag i samme rutenett, og arealet med smale striper. Med egne områder også
    planen alene (basis). Er bare en del av kommunen hentet (delvis), også hvor mye land som er hentet. */
-export function byggPlanlagt(R, land) {
+export function byggPlanlagt(R: Planrutenett, land: number) {
   const m = OPPLOSNINGER[R.z] / 2,
-    km2 = v => (v * m * m) / 1e6,
+    km2 = (v: number) => (v * m * m) / 1e6,
     n = R.n,
     hentet = km2(n.beb + n.jor + n.nat);
   return {
@@ -24,7 +35,7 @@ export function byggPlanlagt(R, land) {
 }
 
 /* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av, i km² */
-export const byggPlanSum = R => ({
+export const byggPlanSum = (R: Planrutenett): PlanSum => ({
   nr: R.nr,
   nat: R.sum.rn * RUTE,
   jor: R.sum.rj * RUTE,

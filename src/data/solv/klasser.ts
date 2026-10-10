@@ -1,8 +1,15 @@
 /* Sølv, felles standard: arealklassene. Inndelingen i bebygd, jordbruk og natur, med koblingen til SSBs arealklasser og
    grunnkartets økosystemtyper, og tolkingen av fargene i kartbildene fra NIBIO. */
 
+/* Klassene, med id: bebygd, jordbruk og natur på land, og hav, innsjø og elv */
+export type KlasseId = 'beb' | 'jor' | 'nat' | 'hav' | 'inn' | 'elv';
+/* En klasse på land: [id, navn, økosystemtyper i grunnkartet, arealklasser i SSB] */
+export type Landklasse = [id: KlasseId, navn: string, okosystemtyper: string[], ssb: string[]];
+/* En klasse i vann: [id, navn, økosystemtyper i grunnkartet, arealklassen i SSB hvis den finnes] */
+export type Vannklasse = [id: KlasseId, navn: string, okosystemtyper: string[], ssb?: string];
+
 /* De tre klassene på land: [id, navn, økosystemtyper i grunnkartet (okosystemtypeniva1), arealklasser i SSB tabell 09594] */
-export const KL = [
+export const KL: Landklasse[] = [
   [
     'beb',
     'Bebygd',
@@ -18,19 +25,19 @@ export const KL = [
   ]
 ];
 /* Vann fargelegges i kartet slik grunnkartet gjør, men telles ikke som natur. Innsjø og elv har egne tall hos SSB. */
-export const VANN = [
+export const VANN: Vannklasse[] = [
   ['hav', 'Hav', ['hav']],
   ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'],
   ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']
 ];
-export const ALLE = [...KL, ...VANN],
+export const ALLE: (Landklasse | Vannklasse)[] = [...KL, ...VANN],
   BEB = 0,
   JOR = 1,
   NAT = 2; /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter hav, innsjø og elv */
 
 /* Fargene NIBIO bes tegne hver klasse i. De seks er valgt slik at en blanding av to klasser (pikslene i kanten mellom to flater) ikke
    kan forveksles med en blanding av to andre. */
-export const DATAFARGE = {
+export const DATAFARGE: Record<KlasseId, number[]> = {
   beb: [255, 0, 0],
   jor: [0, 255, 0],
   nat: [0, 0, 255],
@@ -76,9 +83,9 @@ export const BLANDING = (() => {
   return { A, B, T };
 })();
 /* Plassen til en farge i oppslaget */
-export const fargeNr = (r, g, b) => ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+export const fargeNr = (r: number, g: number, b: number) => ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
 /* Klassen det er mest av i en piksel: plass i ALLE */
-export const klasseAv = (r, g, b) => {
+export const klasseAv = (r: number, g: number, b: number) => {
   const q = fargeNr(r, g, b);
   return BLANDING.T[q] >= 128 ? BLANDING.A[q] : BLANDING.B[q];
 };

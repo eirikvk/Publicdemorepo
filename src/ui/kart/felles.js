@@ -3,8 +3,8 @@
    tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import { ol } from './ol.js';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.js';
-import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.js';
-import { sti } from '../../data/solv/raster.js';
+import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
+import { sti } from '../../data/solv/raster.ts';
 
 export const MAKSRES = 30; /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */
 export const SVAKEST = 0.35; /* svakeste farge for en piksel med bare litt planlagt utbygging i seg, så den ikke forsvinner helt */

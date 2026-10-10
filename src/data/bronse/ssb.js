@@ -1,6 +1,6 @@
 /* Bronse for SSB: tabell 09594, «Arealbruk og arealressurser», gjennom SSBs API. Svarene kommer urørt tilbake som JSON-stat 2.0 og
    gjøres om i solv/ssb.js. */
-import { KL, VANN } from '../solv/klasser.js';
+import { KL, VANN } from '../solv/klasser.ts';
 import { hent } from './henting.js';
 
 const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data';

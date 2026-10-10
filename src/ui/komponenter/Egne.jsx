@@ -1,7 +1,7 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene kommer ferdig regnet ut fra
    gull/egne.js: byggEgetOmrade for hvert område, og radene i tabellene fra byggEgneRader (som motor/egne.js henter fram). */
 import { useRef } from 'react';
-import { byggEgetOmrade } from '../../data/gull/egne.js';
+import { byggEgetOmrade } from '../../data/gull/egne.ts';
 import { egneRader, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.js';
 import { ingenPlan } from '../../data/motor/plan.js';
 import { app, gjeldende } from '../../data/motor/tilstand.js';

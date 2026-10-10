@@ -2,9 +2,69 @@
    ruter på 21 meter, med smale striper tatt bort. Planen og dagens klasser kommer som kartbilder på nivå 9, én flis (512 x 512
    ruter) om gangen. Gir klasse og plan per rute, og antall ruter av hvert slag. Én rute er RUTE km². Alle kryssinger i gull går
    gjennom dette rutenettet. */
-import { HALV, PLANNIVA, PLAN_FINNES, RUTE_M, SYNLIG } from './felles.js';
-import { leggInnEget } from './egne.js';
-import { JOR, NAT, klasseAv } from './klasser.js';
+import { HALV, PLANNIVA, PLAN_FINNES, RUTE_M, SYNLIG, type Flis, type Piksler, type Plassering } from './felles.ts';
+import { leggInnEget, type Flater } from './egne.ts';
+import { JOR, NAT, klasseAv } from './klasser.ts';
+
+/* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
+export interface Antall {
+  beb: number;
+  nat: number;
+  jor: number;
+  pnat: number;
+  pjor: number;
+}
+/* Én flis i planrutenettet, fra tellBlokk. sig sier hvor mange kartfliser den er regnet av (-1 for hele kommunen), og utenPlan at
+   den er regnet uten kommuneplan. */
+export interface Blokk {
+  sig: number;
+  d: Uint8Array;
+  kl: Uint8Array;
+  pl: Uint8Array;
+  n: Antall;
+  utenPlan?: boolean;
+}
+/* Planrutenettet med smale striper tatt bort: rutene med planlagt utbygging på natur eller jordbruk (celler), det som er beholdt
+   per rute (ryddet: 1 natur, 2 jordbruk), og antallet natur (rn) og jordbruk (rj) som er beholdt */
+export interface Rydding {
+  celler: number[];
+  ryddet: Uint8Array;
+  rn: number;
+  rj: number;
+}
+/* Hva som ligger i et eget område i dag, og hva planen alene (fnat, fjor) og planen med egne områder (nnat, njor) tar, i ruter */
+export interface EgetTall {
+  nat: number;
+  jor: number;
+  beb: number;
+  vann: number;
+  ukjent: number;
+  fnat: number;
+  fjor: number;
+  nnat: number;
+  njor: number;
+}
+/* Planrutenettet for kommunen, se byggPlanRaster */
+export interface Planrutenett extends Plassering {
+  nr: string;
+  h: number;
+  alle: Uint8Array /* med smale striper */;
+  ryddet: Uint8Array /* uten smale striper */;
+  celler: Int32Array;
+  eget: Uint8Array | null /* hvilket eget område ruta hører til, 1, 2 og så videre */;
+  egetType: Uint8Array | null /* 1 utbygging, 2 ikke utbygging */;
+  kl: Uint8Array;
+  pl: Uint8Array;
+  antallEgne: number;
+  basis: Rydding | null /* kommuneplanen alene, når det finnes egne områder */;
+  sum: { rn: number; rj: number };
+  iDag: { nat: number; jor: number };
+  n: Antall;
+  delvis: boolean;
+  fliser: number;
+  rute: number;
+  egneTall: EgetTall[];
+}
 
 /* Én flis: dagens klasser lagt oppå planen. K er dagens klasser og P planen, begge som piksler (RGBA). tc er flisen [z, x, y].
    fliser er kartflisene som er hentet innenfor, eller null når hele kommunen er kjent. Uten hentet kart er ruta ukjent (3).
@@ -13,11 +73,11 @@ import { JOR, NAT, klasseAv } from './klasser.js';
      kl: dagens klasse, 0 ukjent, 1 bebygd, 2 jordbruk, 3 natur, 4–6 vann
      pl: 1 der det er planlagt utbygging på land, også der det alt er bebygd
    og antall ruter n: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging. */
-export function tellBlokk(K, P, tc, fliser) {
+export function tellBlokk(K: Piksler, P: Piksler, tc: Flis, fliser: Flis[] | null): Blokk {
   const d = new Uint8Array(262144),
     kl = new Uint8Array(262144),
     pl = new Uint8Array(262144),
-    n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
+    n: Antall = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
   if (fliser) {
     d.fill(3);
     for (const [z, x, y] of fliser) {
@@ -58,14 +118,14 @@ export function tellBlokk(K, P, tc, fliser) {
    smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk, 3 ukjent) og w bredden. Ukjente ruter
    teller som naboer, så et felt ikke skrelles av langs kanten av det som er hentet. Gir de beholdte rutene (ryddet) og antallet
    natur (rn) og jordbruk (rj) i dem. */
-export function ryddStriper(d, w) {
-  const celler = [];
+export function ryddStriper(d: Uint8Array, w: number): Rydding {
+  const celler: number[] = [];
   for (let i = 0; i < d.length; i++) {
     const v = d[i];
     if (v === 1 || v === 2) celler.push(i);
   }
   const ryddet = new Uint8Array(d.length);
-  let front = [];
+  let front: number[] = [];
   for (const i of celler) {
     const x = i % w;
     if (x > 0 && x < w - 1 && i >= w && i < d.length - w && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) {
@@ -74,7 +134,7 @@ export function ryddStriper(d, w) {
     }
   }
   while (front.length) {
-    const ny = [];
+    const ny: number[] = [];
     for (const i of front)
       for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) {
         const v = d[j];
@@ -99,7 +159,14 @@ export function ryddStriper(d, w) {
    kommunen er hentet, E er de egne områdene, og rute er rutestørrelsen i meter slik den skal oppgis.
    Med egne områder regnes også kommuneplanen alene (basis), så forskjellen kan vises. For hvert eget område telles hva som ligger
    der i dag, hva planen alene tar (fnat, fjor) og hva som går med nå (nnat, njor). */
-export function byggPlanRaster(nr, nokler, blokker, delvis, E, rute) {
+export function byggPlanRaster(
+  nr: string,
+  nokler: number[][],
+  blokker: Map<string, Blokk>,
+  delvis: boolean,
+  E: Flater[],
+  rute: number
+): Planrutenett {
   const Z = PLANNIVA,
     kant = delvis ? 1 : 0,
     tx0 = Math.min(...nokler.map(t => t[0])),
@@ -111,32 +178,42 @@ export function byggPlanRaster(nr, nokler, blokker, delvis, E, rute) {
   let d = new Uint8Array(w * h);
   const kl = new Uint8Array(w * h),
     pl = new Uint8Array(w * h),
-    n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
+    n: Antall = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
   if (delvis) d.fill(3);
   for (const [x, y] of nokler) {
-    const b = blokker.get(`${x}/${y}`),
+    const b = blokker.get(`${x}/${y}`)!,
       start = ((y - ty0) * 512 + kant) * w + (x - tx0) * 512 + kant;
     for (let r = 0; r < 512; r++) {
       d.set(b.d.subarray(r * 512, r * 512 + 512), start + r * w);
       kl.set(b.kl.subarray(r * 512, r * 512 + 512), start + r * w);
       pl.set(b.pl.subarray(r * 512, r * 512 + 512), start + r * w);
     }
-    for (const k in n) n[k] += b.n[k];
+    for (const k in n) n[k as keyof Antall] += b.n[k as keyof Antall];
   }
   /* Egne områder: innenfor hvert område erstatter det kommuneplanen. */
-  let basis = null,
-    eget = null,
-    egetType = null;
+  let basis: Rydding | null = null,
+    eget: Uint8Array | null = null,
+    egetType: Uint8Array | null = null;
   if (E.length) {
     basis = ryddStriper(d, w);
     d = d.slice();
     eget = new Uint8Array(w * h);
     egetType = new Uint8Array(w * h);
-    E.forEach((g, i) => leggInnEget(g, i + 1, d, kl, eget, { cx0, cy0, w, h, m: RUTE_M, type: egetType }));
+    E.forEach((g, i) => leggInnEget(g, i + 1, d, kl, eget!, { cx0, cy0, w, h, m: RUTE_M, type: egetType! }));
   }
   const { celler, ryddet, rn, rj } = ryddStriper(d, w);
-  const egneTall = E.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0, fnat: 0, fjor: 0, nnat: 0, njor: 0 }));
-  if (E.length)
+  const egneTall: EgetTall[] = E.map(() => ({
+    nat: 0,
+    jor: 0,
+    beb: 0,
+    vann: 0,
+    ukjent: 0,
+    fnat: 0,
+    fjor: 0,
+    nnat: 0,
+    njor: 0
+  }));
+  if (eget && basis)
     for (let i = 0; i < eget.length; i++) {
       const e = eget[i];
       if (!e) continue;
@@ -184,8 +261,8 @@ export function byggPlanRaster(nr, nokler, blokker, delvis, E, rute) {
    samme rutenett. Gir hvor stor del av kommunen planlaget dekker, om det regnes som at kommunen har plan, og rutene med plan (til
    oppslag om hvilken plan det er). Langs grensen stikker naboenes planer litt inn, så en liten dekning betyr at kommunen ikke har
    plan der (se PLAN_FINNES). */
-export function planDekning(P, M) {
-  const treff = [];
+export function planDekning(P: Piksler, M: Piksler) {
+  const treff: number[] = [];
   let inne = 0;
   for (let q = 0; q < M.length / 4; q++)
     if (M[4 * q + 3] >= HALV) {

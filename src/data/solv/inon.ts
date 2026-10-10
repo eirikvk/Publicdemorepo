@@ -1,9 +1,9 @@
 /* Sølv for inngrepsfri natur: bildet av hele kommunen fra Miljødirektoratets kartlag (status) gjort om til sone per rute, etter
    avstand til tyngre tekniske inngrep. */
-import { HALV } from './felles.js';
+import { HALV, type Piksler } from './felles.ts';
 
 /* Sonene: [kode i tjenesten, farge i kartet her, farge i tjenestens bilder, avstand, navn] */
-export const INONSONER = [
+export const INONSONER: [kode: string, farge: string, rgb: number[], avstand: string, navn: string][] = [
   ['v', 'inonv', [76, 171, 38], '5 km eller mer fra inngrep', 'Villmarkspreget natur'],
   ['1', 'inon1', [153, 207, 22], '3–5 km fra inngrep', 'Sone 1'],
   ['2', 'inon2', [204, 234, 127], '1–3 km fra inngrep', 'Sone 2']
@@ -11,7 +11,7 @@ export const INONSONER = [
 export const UTENFOR = 255; /* rute uten sone */
 
 /* Sonen en farge ligger nærmest: 0 villmarkspreget, 1 sone 1, 2 sone 2 */
-export const inonSone = (r, g, b) => {
+export const inonSone = (r: number, g: number, b: number) => {
   let best = 0,
     min = 1e9;
   for (let i = 0; i < 3; i++) {
@@ -27,7 +27,7 @@ export const inonSone = (r, g, b) => {
 
 /* Tolker bildet av sonene. P er bildet fra tjenesten og M kommunens flate, som piksler (RGBA) i samme rutenett. En rute hører til en
    sone når den er minst halvt dekket. Gir sonen per rute (UTENFOR uten sone), og antall ruter per sone innenfor kommunen. */
-export function tolkInon(P, M) {
+export function tolkInon(P: Piksler, M: Piksler) {
   const n = [0, 0, 0],
     sone = new Uint8Array(P.length / 4).fill(UTENFOR);
   let forrige = -1,

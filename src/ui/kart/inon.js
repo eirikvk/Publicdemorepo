@@ -3,10 +3,10 @@
    natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen. Laget deler lerret med klassene, så det får
    samme gjennomsiktighet og ser ut som en del av naturfargen. */
 import { ol } from './ol.js';
-import { HALV, SYNLIG } from '../../data/solv/felles.js';
-import { UTENFOR } from '../../data/solv/inon.js';
-import { NAT, klasseAv } from '../../data/solv/klasser.js';
-import { flislerret, tegnUtsnitt } from '../../data/solv/raster.js';
+import { HALV, SYNLIG } from '../../data/solv/felles.ts';
+import { UTENFOR } from '../../data/solv/inon.ts';
+import { NAT, klasseAv } from '../../data/solv/klasser.ts';
+import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.js';
 import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.js';
 import { rgb } from '../farger.js';
