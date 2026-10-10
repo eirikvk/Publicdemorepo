@@ -91,7 +91,7 @@ export const tegnetKilde = (tegnFlis: Flistegner) =>
 /* Tegner flisene i et lag på nytt. De gamle står til de nye er klare. */
 let friskNr = 0;
 export const utdaterte =
-  new Set<Flislag>(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle i grunnkart.js */
+  new Set<Flislag>(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle i grunnkart.ts */
 /* OpenLayers merker setKey som intern, men det er den som gir nye fliser uten å kaste de gamle først */
 type MedNokkel = { setKey(nokkel: string): void };
 export const friskOpp = (lag: Flislag) => {

@@ -1,6 +1,6 @@
 /* Gull for naturtemaene: arealet av verdsatt natur per verdikategori, kryssingen med planrutenettet (hvor mye planlagt utbygging
-   som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.js) og
-   planrutenettet (solv/planrutenett.js). Arealer er i km², kryssinger i ruter. */
+   som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.ts) og
+   planrutenettet (solv/planrutenett.ts). Arealer er i km², kryssinger i ruter. */
 import {
   HALV,
   RUTE,

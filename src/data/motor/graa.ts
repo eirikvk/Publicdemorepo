@@ -1,7 +1,7 @@
 /* Datamotoren, grått areal: areal som alt er tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. To bilder av hele
-   kommunen hentes når kommunen velges (bronse/nibio-graa.js), gjøres om til trinn per rute (solv/graa.js), og arealet og
-   kryssingen med planen regnes ut i gull/graa.js. Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
-   fabrikktomt. Kartlaget tegnes av trinnene per rute, se ui/kart/graa.js. */
+   kommunen hentes når kommunen velges (bronse/nibio-graa.ts), gjøres om til trinn per rute (solv/graa.ts), og arealet og
+   kryssingen med planen regnes ut i gull/graa.ts. Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
+   fabrikktomt. Kartlaget tegnes av trinnene per rute, se ui/kart/graa.ts. */
 import { hentGraaBilde } from '../bronse/nibio-graa.ts';
 import { husk } from '../bronse/henting.ts';
 import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.ts';

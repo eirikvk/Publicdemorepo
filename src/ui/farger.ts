@@ -6,7 +6,7 @@
    en farge med samme rolle, brukes den: Oransje mørk for villrein, Sjøgrønn lys for grønt i bebygd område og Blå mørk for egne
    områder. Verneområder og verdsatt natur har egne farger, fordi profilens lilla er så mørk at den kan forveksles med planlagt
    utbygging, og profilens rosa ligger for nær bebygd. Siden legger fargene også ut som CSS-variabler (--beb og så videre), så
-   tegnforklaringene bruker de samme (main.jsx). */
+   tegnforklaringene bruker de samme (main.tsx). */
 export const FARGER: Record<string, string> = {
   ink: '#17201c',
   beb: '#e86474',

@@ -12,7 +12,7 @@ NIBIO er lisensiert «Norge digitalt begrenset».
 
 ## Kjøre siden
 
-Krever Git og Node 22 (20.19 eller nyere går også).
+Krever Git og Node 22.18 eller nyere.
 
 ```
 git clone https://github.com/eirikvk/Publicdemorepo.git
@@ -60,7 +60,7 @@ tegner seg på nytt når den endres, og kaller datamotoren når brukeren gjør n
 
 Slik går en runde, for eksempel når brukeren velger kommune:
 
-1. Brukeren velger Trondheim i `Topp.jsx`. Komponenten kaller `velgKommune` i `data/motor/kommune.js`.
+1. Brukeren velger Trondheim i `Topp.tsx`. Komponenten kaller `velgKommune` i `data/motor/kommune.ts`.
 2. Datamotoren ber bronse hente grensen, tallene fra SSB, kommuneplanen og temaene. Sølv gjør dem om til felles standard, og
    datamotoren legger dem i `app`. Kryssingene med planlagt utbygging tar tid, så datamotoren kjører dem i gull én gang og legger
    svaret i `app`.
@@ -68,14 +68,14 @@ Slik går en runde, for eksempel når brukeren velger kommune:
    til en `bygg`-funksjon i gull, og viser svaret. Samtidig ser hvert kartlag etter om det det tegnes av, er nytt, og tegner seg
    på nytt hvis det er det. Grensen kommer for eksempel som koordinater i `app.grense`, og kartet lager sin egen geometri av dem.
 
-Velger brukeren en side, kaller `Sidevelger.jsx` funksjonen `velgSide` i `ui/sider.js`. Den husker siden i `ui.side`, og kartet
+Velger brukeren en side, kaller `Sidevelger.tsx` funksjonen `velgSide` i `ui/sider.ts`. Den husker siden i `ui.side`, og kartet
 viser temaet til den siden. Adressen følger med, for eksempel `#5001/verdi`. Lenkene mellom sidene, som navnene på oversikten,
-gjør det samme (`Sidelenke` i `deler.jsx`).
+gjør det samme (`Sidelenke` i `deler.tsx`).
 
 Komponentene endrer aldri tilstanden i datamotoren selv, og regner ikke selv. De viser det gull gir dem, og kaller datamotoren
 når brukeren gjør noe.
 
-Siden er bygd opp av disse delene. De fleste har en `.jsx`-fil og en `.css`-fil med samme navn i `src/ui/komponenter/`:
+Siden er bygd opp av disse delene. De fleste har en `.tsx`-fil og en `.css`-fil med samme navn i `src/ui/komponenter/`:
 
 ```
 App              sideoppsettet: toppen, sidevelgeren, og kartet og innholdet i to kolonner
@@ -92,20 +92,34 @@ App              sideoppsettet: toppen, sidevelgeren, og kartet og innholdet i t
 ```
 
 Hver side bestemmer hva kartet viser: arealklassene og planlagt utbygging vises alltid, og temaet bare på sin egen side. Hvilke
-sider som finnes, rekkefølgen og gruppene står i `SIDER` i `ui/sider.js`.
+sider som finnes, rekkefølgen og gruppene står i `SIDER` i `ui/sider.ts`.
 
-Stilen kommer i tre lag, der hvert lag kan bygge på det forrige: designsystemets egen CSS (hentet i `main.jsx`), så
+Stilen kommer i tre lag, der hvert lag kan bygge på det forrige: designsystemets egen CSS (hentet i `main.tsx`), så
 `grunnlag.css`, så filen til hver komponent.
+
+## TypeScript
+
+All koden er TypeScript med streng typesjekk. Typene beskriver hva som går inn og ut av hver del: for eksempel `Tilstand` for
+datamotorens tilstand (`src/data/motor/tilstand.ts`), `Visning` for visningens (`src/ui/tilstand.ts`), og typene for flater,
+utsnitt og rutebilder i `src/data/solv/felles.ts`. Typene er bare beskrivelser: Vite fjerner dem når siden bygges, og Node fjerner
+dem selv når verktøyene kjøres. Koden bruker derfor bare TypeScript som kan fjernes uten å endre noe (`erasableSyntaxOnly`), og
+importer har filendelsen med (`./tilstand.ts`).
+
+Der en verdi kan mangle, sier typen det (`| null`). Der koden vet mer enn typene, står det et `!` (verdien finnes her) eller en
+`as` (verdien har denne formen). Kartet har flest av dem, fordi typene i OpenLayers er videre enn det kartet faktisk bruker. I
+bronse står `as` der et svar fra en tjeneste leses: typen sier hvilken form svaret skal ha. Testverktøyet leser også eldre utgaver
+av siden og beskriver derfor tilstanden der løst (`verktoy/motortall.ts`).
 
 ## Filene
 
 | Fil | Innhold |
 |---|---|
 | `index.html` | Inngangen. Bare et tomt element som React fyller. |
-| `src/main.jsx` | Stilene fra designsystemet, skriften, kartets stil og den felles stilen, og oppstarten av React |
+| `src/main.tsx` | Stilene fra designsystemet, skriften, kartets stil og den felles stilen, og oppstarten av React |
 | `src/grunnlag.css` | Stilen som gjelder hele siden, og reglene for utformingen. Bruker designsystemets variabler. |
-| `src/utgave.js` | Utgaven av siden, som vises under teknisk informasjon |
-| `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Vanlig JavaScript uten React og OpenLayers. |
+| `src/utgave.ts` | Utgaven av siden, som vises under teknisk informasjon |
+| `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
+| `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
 | `public/` | Filer som legges ut som de er: listen over kommuner og de lagrede oversiktsbildene |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
@@ -117,56 +131,56 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og en felles fil for hvordan
 
 | Fil | Innhold |
 |---|---|
-| `henting.js` | Henting med minne, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Sier fra om hva som skjer, uten å vite hvem som lytter. |
-| `ssb.js` | SSB, tabell 09594, med det eldre API-et som reserve |
-| `kartverket.js` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
-| `nibio-grunnkart.js` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, og de lagrede oversiktsbildene |
-| `dibk-kommuneplan.js` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, hvor mye av kommunen planen dekker, og hvilken plan det er |
-| `mdir-naturtema.js` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området |
-| `mdir-inon.js` | Inngrepsfrie naturområder, som ett bilde av kommunen |
-| `nibio-graa.js` | Kart over grå arealer, som bilder av kommunen og som fliser |
-| `planfil.js` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
+| `henting.ts` | Henting med minne, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve |
+| `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
+| `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, og de lagrede oversiktsbildene |
+| `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, hvor mye av kommunen planen dekker, og hvilken plan det er |
+| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området |
+| `mdir-inon.ts` | Inngrepsfrie naturområder, som ett bilde av kommunen |
+| `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
+| `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
 Sølv, i `src/data/solv/`. METODE.md forklarer metoden bak hver fil.
 
 | Fil | Innhold |
 |---|---|
-| `felles.js` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM og arealet av en flate |
-| `projeksjoner.js` | Projeksjonene siden kjenner, og omregning til UTM33 |
-| `raster.js` | Fra flater til ruter: flatene tegnes i et lerret. Den eneste filen i sølv og gull som bruker nettleseren. |
-| `klasser.js` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og tolking av fargene i kartbildene |
-| `ssb.js` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017 |
-| `planrutenett.js` | Kommuneplanen lagt oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort, og om kommunen har plan |
-| `egne.js` | Egne områder: hvilke flater som er utbygging, og hvordan de legges inn i planrutenettet |
-| `temaer.js` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
-| `inon.js` | Inngrepsfri natur: sone per rute |
-| `graa.js` | Grått areal: trinn per rute etter andel vegetasjon |
+| `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM og arealet av en flate |
+| `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
+| `raster.ts` | Fra flater til ruter: flatene tegnes i et lerret. Den eneste filen i sølv og gull som bruker nettleseren. |
+| `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og tolking av fargene i kartbildene |
+| `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017 |
+| `planrutenett.ts` | Kommuneplanen lagt oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort, og om kommunen har plan |
+| `egne.ts` | Egne områder: hvilke flater som er utbygging, og hvordan de legges inn i planrutenettet |
+| `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
+| `inon.ts` | Inngrepsfri natur: sone per rute |
+| `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon |
 
 Gull, i `src/data/gull/`. Funksjonene som heter `bygg` noe, gir det en side viser.
 
 | Fil | Innhold |
 |---|---|
-| `felles.js` | Andel i prosent, og tilstanden for temaene som hentes som ett bilde |
-| `regnskap.js` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
-| `planlagt.js` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
-| `egne.js` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
-| `temaer.js` | Arealet per verdikategori, kryssingen med planen, og tallene på temasidene |
-| `inon.js` | Arealet per sone og tallene på siden |
-| `graa.js` | Arealet per trinn, kryssingen med planen, og tallene på siden |
+| `felles.ts` | Andel i prosent, og tilstanden for temaene som hentes som ett bilde |
+| `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
+| `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
+| `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
+| `temaer.ts` | Arealet per verdikategori, kryssingen med planen, og tallene på temasidene |
+| `inon.ts` | Arealet per sone og tallene på siden |
+| `graa.ts` | Arealet per trinn, kryssingen med planen, og tallene på siden |
 
 Datamotoren, i `src/data/motor/`.
 
 | Fil | Innhold |
 |---|---|
-| `tilstand.js` | Tilstanden (`app`), lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen |
-| `kommune.js` | Listen over kommuner, og valg av kommune: alt som hentes og regnes ut når en kommune velges |
-| `tall.js` | Tallene fra SSB |
-| `grunnkart.js` | Dagens klasser: det lagrede oversiktsbildet, det sammensatte kartet av flisene som er hentet, og klassene i én flis |
-| `plan.js` | Om DiBK har kommuneplanen, og samordningen av planrutenettet |
-| `naturtema.js` | Verneområder, villrein og verdsatt natur: hvilke temaer som finnes, hentingen og kryssingen med planen |
-| `inon.js` | Inngrepsfri natur |
-| `graa.js` | Grått areal og kryssingen med planen |
-| `egne.js` | Egne områder: tegnede og opplastede, og det radene i sammenligningen bygges av |
+| `tilstand.ts` | Tilstanden (`app`), lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen |
+| `kommune.ts` | Listen over kommuner, og valg av kommune: alt som hentes og regnes ut når en kommune velges |
+| `tall.ts` | Tallene fra SSB |
+| `grunnkart.ts` | Dagens klasser: det lagrede oversiktsbildet, det sammensatte kartet av flisene som er hentet, og klassene i én flis |
+| `plan.ts` | Om DiBK har kommuneplanen, og samordningen av planrutenettet |
+| `naturtema.ts` | Verneområder, villrein og verdsatt natur: hvilke temaer som finnes, hentingen og kryssingen med planen |
+| `inon.ts` | Inngrepsfri natur |
+| `graa.ts` | Grått areal og kryssingen med planen |
+| `egne.ts` | Egne områder: tegnede og opplastede, og det radene i sammenligningen bygges av |
 
 ### Brukergrensesnittet
 
@@ -174,45 +188,45 @@ Felles, i `src/ui/`:
 
 | Fil | Innhold |
 |---|---|
-| `tilstand.js` | Det som bare gjelder visningen (`ui`): valgt side, hva som er slått på i kartet, og hva kartet sier om seg selv |
-| `sider.js` | Sidene, valg av side, adressen, og oppstarten |
-| `farger.js` | Fargene i kartet og i tegnforklaringene |
-| `tekst.js` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
+| `tilstand.ts` | Det som bare gjelder visningen (`ui`): valgt side, hva som er slått på i kartet, og hva kartet sier om seg selv |
+| `sider.ts` | Sidene, valg av side, adressen, og oppstarten |
+| `farger.ts` | Fargene i kartet og i tegnforklaringene |
+| `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
 
 Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 
 | Fil | Innhold |
 |---|---|
-| `ol.js` | Delene av OpenLayers som brukes, samlet som `ol` |
-| `felles.js` | Flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren |
-| `kart.js` | Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling, bytte av kommune og trykk i kartet |
-| `fargelegging.js` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
-| `grunnkart.js` | Dagens klasser i kartet: flisene fra NIBIO, og oversiktsbildet zoomet ut |
-| `plan.js` | Planlagt utbygging |
-| `naturtema.js` | Verneområder, villrein og verdsatt natur, sløret over det som ikke er kartlagt, og markering av ett område |
-| `inon.js` | Inngrepsfri natur |
-| `graa.js` | Grått areal |
-| `egne.js` | Egne områder: tegning i kartet og omrissene |
+| `ol.ts` | Delene av OpenLayers som brukes, samlet som `ol` |
+| `felles.ts` | Flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren |
+| `kart.ts` | Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling, bytte av kommune og trykk i kartet |
+| `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
+| `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og oversiktsbildet zoomet ut |
+| `plan.ts` | Planlagt utbygging |
+| `naturtema.ts` | Verneområder, villrein og verdsatt natur, sløret over det som ikke er kartlagt, og markering av ett område |
+| `inon.ts` | Inngrepsfri natur |
+| `graa.ts` | Grått areal |
+| `egne.ts` | Egne områder: tegning i kartet og omrissene |
 
 React-komponentene, i `src/ui/komponenter/`. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av
-`Temaer.jsx`.
+`Temaer.tsx`.
 
 | Fil | Innhold |
 |---|---|
-| `App.jsx` | Hele siden, og valget av teknisk visning |
-| `Topp.jsx` | Valg av fylke og kommune, og overskriften |
-| `Sidevelger.jsx` | Knappene for sidene, over kart og innhold, i grupper |
-| `Kartpanel.jsx` | Kartet med merkelappene oppå, og linjen under kartet |
-| `Innhold.jsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
-| `Oversikt.jsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
-| `Regnskap.jsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
-| `Temaer.jsx` | Én side per tema, med detaljer og lister over områder, og ordene sidene bruker om hvert tema |
-| `Framtid.jsx` | Utvikling fremover: planlagt utbygging og egne områder |
-| `Egne.jsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
-| `Om.jsx` | Om og metode: kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `deler.jsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
-| `md.js` | Komponentene fra designsystemet som siden bruker |
-| `lager.js` | Kroken som kobler komponentene til tilstanden |
+| `App.tsx` | Hele siden, og valget av teknisk visning |
+| `Topp.tsx` | Valg av fylke og kommune, og overskriften |
+| `Sidevelger.tsx` | Knappene for sidene, over kart og innhold, i grupper |
+| `Kartpanel.tsx` | Kartet med merkelappene oppå, og linjen under kartet |
+| `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
+| `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
+| `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
+| `Temaer.tsx` | Én side per tema, med detaljer og lister over områder, og ordene sidene bruker om hvert tema |
+| `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
+| `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
+| `Om.tsx` | Om og metode: kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |
+| `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
+| `md.ts` | Komponentene fra designsystemet som siden bruker |
+| `lager.ts` | Kroken som kobler komponentene til tilstanden |
 
 ## Dokumentasjon
 
@@ -228,15 +242,15 @@ Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
 
 Datamotoren henter og regner ut. Brukergrensesnittet viser og tar imot det brukeren gjør. De er skilt slik:
 
-- Tilstanden for dataene ligger i ett objekt, `app`, i `src/data/motor/tilstand.js`: valgt kommune, grensen, tallene fra SSB,
+- Tilstanden for dataene ligger i ett objekt, `app`, i `src/data/motor/tilstand.ts`: valgt kommune, grensen, tallene fra SSB,
   planrutenettet, egne områder og hentingen. Temaene fra Miljødirektoratet har dataene sine i `NATURTEMA`, ett objekt per tema.
-- Det som bare gjelder visningen, ligger i `ui` i `src/ui/tilstand.js`: valgt side, hva som er slått på i kartet, og det som vises
+- Det som bare gjelder visningen, ligger i `ui` i `src/ui/tilstand.ts`: valgt side, hva som er slått på i kartet, og det som vises
   over og under kartet. Datamotoren bruker det ikke.
 - Den som endrer noe som vises, kaller `endret()`. Varslene samles, så mange endringer etter hverandre gir én ny tegning.
-- `App.jsx` abonnerer med kroken `useApp` og tegnes på nytt ved hvert varsel. Hvert kartlag abonnerer også, og ser etter om det
+- `App.tsx` abonnerer med kroken `useApp` og tegnes på nytt ved hvert varsel. Hvert kartlag abonnerer også, og ser etter om det
   det tegnes av, er nytt.
 - Komponentene endrer ikke tilstanden i datamotoren selv. De kaller datamotoren, for eksempel `velgKommune` og `lastOppPlan`.
-- Kartet lages i `ui/kart/kart.js` (`lagKart`) og settes inn på siden av `Kartpanel.jsx`. Knappen for å bytte kommune er en del av
+- Kartet lages i `ui/kart/kart.ts` (`lagKart`) og settes inn på siden av `Kartpanel.tsx`. Knappen for å bytte kommune er en del av
   siden, men kartet plasserer den over punktet man trykket på.
 - Det som ikke er tilstand, men en hendelse, sies fra med `varsle` og `lytt`: datamotoren sier fra hver gang det er lagt en ny
   flis inn i det sammensatte kartet, og hvor, så kartet kan fargelegge sin kopi.
@@ -249,7 +263,7 @@ bare leser den.
 
 Filene i datamotoren, og filene i kartet, kaller hverandre fram og tilbake. Det går bra så lenge ingen fil bruker en annen mens den
 lastes. Det kartlagene trenger mens filene lastes (flisnettene og kildene for lag som tegnes i nettleseren), ligger derfor i
-`ui/kart/felles.js`, som bare bruker OpenLayers og datadelen. Selve kartet lages først når alt er lastet. Bryter man regelen,
+`ui/kart/felles.ts`, som bare bruker OpenLayers og datadelen. Selve kartet lages først når alt er lastet. Bryter man regelen,
 stopper siden med en `ReferenceError` når den åpnes.
 
 ### Hvem gjør hva
@@ -265,14 +279,14 @@ Både mappen og navnet på en funksjon sier hva den gjør:
 | `src/ui/komponenter/` | Store bokstaver | React-komponenter: gjør gull om til tekst, tabeller og stolper. |
 
 Sølv og gull er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
-tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.js`).
+tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.ts`).
 
-`node verktoy/sjekk-lag.js` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, sølv og
+`node verktoy/sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, sølv og
 gull holder seg for seg selv, bronse og datamotoren bruker ikke OpenLayers eller React, React-komponentene henter ikke fra bronse og
 tar bare navn og faste verdier fra sølv, og det har ikke havnet regnefunksjoner i datamotoren.
 
 Komponentene regner ikke. Tallene og andelene kommer fra gull, og komponentene velger ord, avrunding og enhet. Unntaket er
-stripene i `deler.jsx`, som regner ut bredden på hver del av det de tegner. Kartet tegner piksel for piksel og bruker derfor
+stripene i `deler.tsx`, som regner ut bredden på hver del av det de tegner. Kartet tegner piksel for piksel og bruker derfor
 tolkingen av fargene i sølv (`klasseAv`) og tersklene der. Der kartet har egne terskler, står det i METODE.md.
 
 ## Designsystemet
@@ -320,7 +334,7 @@ Miljødirektoratets profil og språkprofil.
   (Statistisk sentralbyrå (SSB)), desimalkomma, og mellomrom foran prosent. «Dekar» i setninger og «daa» i tabeller og lister.
 - **Kartfarger.** Fargene i kartet er data og velges for å skille klassene, også ved fargeblindhet. Der profilen har en farge
   med samme rolle, brukes den: Oransje mørk for villrein, Sjøgrønn lys for grønt i bebygd område og Blå mørk for egne områder.
-  Verneområder og verdsatt natur har egne farger, se `FARGER` i `src/ui/farger.js`.
+  Verneområder og verdsatt natur har egne farger, se `FARGER` i `src/ui/farger.ts`.
 
 Det designsystemet ikke har, er laget etter de samme reglene, med noen få byggeklosser som brukes overalt:
 
@@ -346,11 +360,11 @@ Ting å vite:
 - Skriften i designsystemet er Open Sans og Sofia Pro. Open Sans følger med bygget (fra `@fontsource/open-sans`). Sofia Pro kan
   bare brukes i Miljødirektoratets egne løsninger og ligger ikke i dette repoet, så overskriftene bruker Open Sans. Har maskinen
   Sofia Pro installert, brukes den.
-- Komponentene hentes hver for seg (`src/ui/komponenter/md.js`), og bare stilene for dem lastes (`src/main.jsx`). Pakkens samlede
+- Komponentene hentes hver for seg (`src/ui/komponenter/md.ts`), og bare stilene for dem lastes (`src/main.tsx`). Pakkens samlede
   inngang tar med alle komponentene.
 - Komponentene er CommonJS og henter Ariakit med `require`. Ariakits CommonJS-utgave har en hjelper som byggeverktøyet gjør om
-  til en uendelig løkke, så `vite.config.js` sender `@ariakit/react` til Ariakits ES-utgave.
-- `MdComboBox` finnes bare som standardeksport. `md.js` tar høyde for begge måtene byggeverktøyet kan levere den på.
+  til en uendelig løkke, så `vite.config.ts` sender `@ariakit/react` til Ariakits ES-utgave.
+- `MdComboBox` finnes bare som standardeksport. `md.ts` tar høyde for begge måtene byggeverktøyet kan levere den på.
 
 ## Legge ut en endring
 
@@ -374,17 +388,17 @@ commit og kommentar.
 Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 
 - `utgave.py` setter utgavemerke, se over.
-- `regresjon.js` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
-  tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `node verktoy/regresjon.js ut/ny --mot HEAD`
+- `regresjon.ts` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
+  tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `node verktoy/regresjon.ts ut/ny --mot HEAD`
   sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
   tas samme dag. Ett kjent avvik som ikke skyldes koden: Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, så arealet
   av verdsatt natur per verdikategori kan skille med under én dekar mellom kjøringer, og når to lokaliteter har nøyaktig samme
   flate, kan planlagt utbygging havne på den ene eller den andre.
-- `motortall.js` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene og kartet
+- `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene og kartet
   tilgjengelig som `window.motor`. Den leser både den nye og den gamle formen på tilstanden, så en utgave kan sammenlignes med
   utgaver fra før omleggingen.
-- `sjekk-lag.js` kontrollerer at lagene bare bruker hverandre i riktig retning, se over,
-  og `sjekk-navn.js` at alle navn som brukes, er definert eller importert. `npm run sjekk` kjører begge.
+- `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
+  (`tsc`) for `src` og `verktoy`, og så denne.
 - `oversiktsbilde.py` lager de lagrede oversiktsbildene, for eksempel `python3 verktoy/oversiktsbilde.py --fylke 50`.
   Én kommune koster 4 til 16 kall mot NIBIO.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.

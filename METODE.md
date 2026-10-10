@@ -36,20 +36,20 @@ flowchart LR
     INON["Inngrepsfri natur, Mdir"]
   end
   subgraph Solv["Sølv, src/data/solv"]
-    sssb["ssb.js"]
-    segne["egne.js"]
-    splan["planrutenett.js<br/>ruter på 21 m"]
-    stemaer["temaer.js"]
-    sgraa["graa.js"]
-    sinon["inon.js"]
+    sssb["ssb.ts"]
+    segne["egne.ts"]
+    splan["planrutenett.ts<br/>ruter på 21 m"]
+    stemaer["temaer.ts"]
+    sgraa["graa.ts"]
+    sinon["inon.ts"]
   end
   subgraph Gull["Gull, src/data/gull"]
-    gregnskap["regnskap.js"]
-    gplan["planlagt.js"]
-    gegne["egne.js"]
-    gtemaer["temaer.js"]
-    ggraa["graa.js"]
-    ginon["inon.js"]
+    gregnskap["regnskap.ts"]
+    gplan["planlagt.ts"]
+    gegne["egne.ts"]
+    gtemaer["temaer.ts"]
+    ggraa["graa.ts"]
+    ginon["inon.ts"]
   end
   subgraph Tall["Tall på siden"]
     T1["Arealklasser, land og vann,<br/>utbredelsesregnskap"]
@@ -80,20 +80,20 @@ navet i analysene, og det hører til sølv: det er den felles formen planen, dag
 
 | Tall på siden | Sølv | Gull | Kilde | Hentet eller regnet |
 |---|---|---|---|---|
-| Bebygd, jordbruk, natur og landareal | `ssb.js` | `regnskap.js` | SSB | Hentet, summert i tre klasser |
-| Innsjø, elv og hav | `ssb.js` | `regnskap.js` | SSB og Kartverket | Innsjø og elv hentet, hav regnet ut |
-| Utbredelsesregnskap fra 2017 | `ssb.js` | `regnskap.js` | SSB | Hentet, forskjellen mellom årgangene regnet ut |
-| Planlagt utbygging på natur og jordbruk | `planrutenett.js` | `planlagt.js` | DiBK og NIBIO | Regnet ut i nettleseren |
-| Verneområder og villreinområder | `temaer.js` | `temaer.js` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
-| Verdsatt natur og kartleggingsgrad | `temaer.js` | `temaer.js` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
-| Planlagt utbygging i hvert tema | `temaer.js` og `planrutenett.js` | `temaer.js` | Som over, og planrutenettet | Regnet ut i nettleseren |
-| Inngrepsfri natur | `inon.js` | `inon.js` | Miljødirektoratet | Regnet ut fra ett bilde av kommunen |
-| Grått areal og grønt i bebygd område | `graa.js` | `graa.js` | NIBIO | Regnet ut fra to bilder av kommunen |
-| Egne områder og opplastet plan | `egne.js` og `planrutenett.js` | `egne.js` | Brukeren | Regnet ut i planrutenettet |
+| Bebygd, jordbruk, natur og landareal | `ssb.ts` | `regnskap.ts` | SSB | Hentet, summert i tre klasser |
+| Innsjø, elv og hav | `ssb.ts` | `regnskap.ts` | SSB og Kartverket | Innsjø og elv hentet, hav regnet ut |
+| Utbredelsesregnskap fra 2017 | `ssb.ts` | `regnskap.ts` | SSB | Hentet, forskjellen mellom årgangene regnet ut |
+| Planlagt utbygging på natur og jordbruk | `planrutenett.ts` | `planlagt.ts` | DiBK og NIBIO | Regnet ut i nettleseren |
+| Verneområder og villreinområder | `temaer.ts` | `temaer.ts` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
+| Verdsatt natur og kartleggingsgrad | `temaer.ts` | `temaer.ts` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
+| Planlagt utbygging i hvert tema | `temaer.ts` og `planrutenett.ts` | `temaer.ts` | Som over, og planrutenettet | Regnet ut i nettleseren |
+| Inngrepsfri natur | `inon.ts` | `inon.ts` | Miljødirektoratet | Regnet ut fra ett bilde av kommunen |
+| Grått areal og grønt i bebygd område | `graa.ts` | `graa.ts` | NIBIO | Regnet ut fra to bilder av kommunen |
+| Egne områder og opplastet plan | `egne.ts` og `planrutenett.ts` | `egne.ts` | Brukeren | Regnet ut i planrutenettet |
 
 ## Felles grunnlag
 
-`src/data/solv/felles.js` og `src/data/solv/raster.js`
+`src/data/solv/felles.ts` og `src/data/solv/raster.ts`
 
 **Koordinatsystem.** Alt regnes i UTM sone 33 (EPSG:25833), som dataene er laget i. Flater er lister med koordinater, som i
 GeoJSON.
@@ -103,7 +103,7 @@ større i kartet enn i terrenget, og mer jo lenger øst eller vest for sonens mi
 k = 0,9996 · (1 + (x − 500 000)² / (2 · 6 380 000²)) og x er øst-koordinaten midt i kommunen (`m2PerKm2`). For Trondheim utgjør
 rettelsen under 0,1 %, og lengst øst eller vest i Norge knapt 1 %.
 
-**Fra flater til ruter.** Når en flate skal legges i et rutenett, tegnes den i et lerret i nettleseren (`raster.js`). Lerretet
+**Fra flater til ruter.** Når en flate skal legges i et rutenett, tegnes den i et lerret i nettleseren (`raster.ts`). Lerretet
 glatter kantene, så en rute i kanten får delvis dekning, fra 0 til 255. Det er det eneste sølv og gull trenger fra nettleseren.
 Resultatet avhenger litt av rekkefølgen flatene tegnes i, se Kontroller.
 
@@ -126,7 +126,7 @@ tilpasset størrelsen på den. Når to rutenett krysses, slås midtpunktet av ru
 | Områdemasker | Minst 10 meter, høyst 1500 ruter på lengste side | Oppslag fra planrutenettet i hvert verneområde, villreinområde og lokalitet, og i det kartlagte | `RUTENETT_MASKE` |
 | Plandekning | Høyst 256 ruter på lengste side | Om kommunen har kommuneplan hos DiBK | `BILDE_PLANDEKNING` |
 
-**Tersklene.** Alle står i `src/data/solv/felles.js`.
+**Tersklene.** Alle står i `src/data/solv/felles.ts`.
 
 | Terskel | Verdi | Hva den gjør |
 |---|---|---|
@@ -140,10 +140,10 @@ tilpasset størrelsen på den. Når to rutenett krysses, slås midtpunktet av ru
 **Kartets egne regler.** Kartet tegner de samme dataene piksel for piksel, og bruker de samme tersklene. På to steder har kartet
 egne regler, som bare gjelder det som vises, ikke tallene:
 
-- Grått areal zoomet inn (`ui/kart/graa.js`): i flisene fra NIBIO er en piksel grå fra en fjerdedel dekning (`KART_GRAA`, 64 av
+- Grått areal zoomet inn (`ui/kart/graa.ts`): i flisene fra NIBIO er en piksel grå fra en fjerdedel dekning (`KART_GRAA`, 64 av
   255), så kantene på små flater ikke forsvinner. Zoomet ut tegnes grønt i bebygd område langs kanten av det grå der den utjevnede
   masken er under en fjerdedel (`KART_KANT`). Arealet regnes med halvregelen.
-- Smale striper zoomet inn (`ui/kart/plan.js`): en piksel med planlagt utbygging vises når ruta den ligger i, eller en av de fire
+- Smale striper zoomet inn (`ui/kart/plan.ts`): en piksel med planlagt utbygging vises når ruta den ligger i, eller en av de fire
   naborutene, er et felt som ble beholdt i planrutenettet (`iEllerInntil`). Tallene bruker selve rutenettet.
 
 **Enhet og avrunding.** Arealer regnes i km², som SSB oppgir. Planlagt utbygging og kryssingene med den telles i ruter i
@@ -156,7 +156,7 @@ dag til dag når kildene oppdateres.
 
 ## Arealklassene
 
-`src/data/solv/klasser.js`
+`src/data/solv/klasser.ts`
 
 **Spørsmål.** Hva er bebygd, jordbruk og natur, i SSBs tall og i grunnkartet, og hvilken klasse har en piksel i kartbildet?
 
@@ -164,7 +164,7 @@ dag til dag når kildene oppdateres.
 
 - SSBs arealklasser i tabell 09594.
 - NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon 2025, som WMS. Siden ber NIBIO tegne seks klasser i rene farger ut fra
-  egenskapen `okosystemtypeniva1` (`DATAFARGE`, stilen lages i `src/data/bronse/nibio-grunnkart.js`).
+  egenskapen `okosystemtypeniva1` (`DATAFARGE`, stilen lages i `src/data/bronse/nibio-grunnkart.ts`).
 
 **Steg.**
 
@@ -196,12 +196,12 @@ dag til dag når kildene oppdateres.
   til rundt 45 meter per piksel, og opptil 65 meter i kystkommuner med mye sjø innenfor grensen. For andre kommuner setter
   nettleseren sammen et bilde av flisene den har hentet.
 
-**Kode.** Sølv: `src/data/solv/klasser.js`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.js`. Fargeleggingen i
-kartet: `src/ui/kart/fargelegging.js`. Dagens klasser i en flis: `dagensKlasser` i `src/data/motor/grunnkart.js`.
+**Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
+kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser i en flis: `dagensKlasser` i `src/data/motor/grunnkart.ts`.
 
 ## SSB-tallene og utbredelsesregnskapet
 
-`src/data/bronse/ssb.js`, `src/data/solv/ssb.js` og `src/data/gull/regnskap.js`
+`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts` og `src/data/gull/regnskap.ts`
 
 **Spørsmål.** Hvor mye natur, jordbruk og bebygd areal har kommunen, hvordan fordeler flaten seg på land og vann, og er det mer
 eller mindre natur enn i 2017?
@@ -240,12 +240,12 @@ eller mindre natur enn i 2017?
   over arealendringer.
 - Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.
 
-**Kode.** Bronse: `hentArealtall`, `hentTidsserie` og `hentSSB` i `src/data/bronse/ssb.js`. Sølv: `src/data/solv/ssb.js`. Gull:
-`src/data/gull/regnskap.js`. Samordningen: `hentTall` og `hentHistorie` i `src/data/motor/tall.js`.
+**Kode.** Bronse: `hentArealtall`, `hentTidsserie` og `hentSSB` i `src/data/bronse/ssb.ts`. Sølv: `src/data/solv/ssb.ts`. Gull:
+`src/data/gull/regnskap.ts`. Samordningen: `hentTall` og `hentHistorie` i `src/data/motor/tall.ts`.
 
 ## Planlagt utbygging
 
-`src/data/bronse/dibk-kommuneplan.js`, `src/data/solv/planrutenett.js` og `src/data/gull/planlagt.js`
+`src/data/bronse/dibk-kommuneplan.ts`, `src/data/solv/planrutenett.ts` og `src/data/gull/planlagt.ts`
 
 **Spørsmål.** Hvor mye natur og jordbruk setter kommuneplanen av til utbygging?
 
@@ -332,12 +332,12 @@ Forbehold ved kontrollen: vektoranalysen er et arbeidskart uten beskrivelse, og 
 bygger på. Planene i den er kopiert fra DiBK 11. januar 2026 for de fleste kommunene, mot 2. februar 2026 i tjenesten siden bruker.
 Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres på nytt herfra.
 
-**Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.js`. Sølv: `src/data/solv/planrutenett.js`. Gull: `src/data/gull/planlagt.js`. Samordningen:
-`hentBlokk`, `regnPlan` og `sjekkPlan` i `src/data/motor/plan.js`. Kartlaget: `src/ui/kart/plan.js`.
+**Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/planrutenett.ts`. Gull: `src/data/gull/planlagt.ts`. Samordningen:
+`hentBlokk`, `regnPlan` og `sjekkPlan` i `src/data/motor/plan.ts`. Kartlaget: `src/ui/kart/plan.ts`.
 
 ## Egne områder og opplastet plan
 
-`src/data/bronse/planfil.js`, `src/data/solv/egne.js` og `src/data/gull/egne.js`
+`src/data/bronse/planfil.ts`, `src/data/solv/egne.ts` og `src/data/gull/egne.ts`
 
 **Spørsmål.** Hva skjer med natur og jordbruk om et område bygges ut, eller tas ut av planen? Og hva tar en opplastet plan
 sammenlignet med kommuneplanen?
@@ -370,12 +370,12 @@ nettleseren og sendes ingen steder.
 - Lastes kommuneplanen selv opp, kan tabellen vise små forskjeller som bare kommer av at flatene legges i rutenettet på en annen
   måte enn bildene fra DiBK.
 
-**Kode.** Bronse: `src/data/bronse/planfil.js`. Sølv: `src/data/solv/egne.js`. Gull: `src/data/gull/egne.js`. Opplasting og det radene bygges av:
-`src/data/motor/egne.js`. Tegning i kartet: `src/ui/kart/egne.js`.
+**Kode.** Bronse: `src/data/bronse/planfil.ts`. Sølv: `src/data/solv/egne.ts`. Gull: `src/data/gull/egne.ts`. Opplasting og det radene bygges av:
+`src/data/motor/egne.ts`. Tegning i kartet: `src/ui/kart/egne.ts`.
 
 ## Naturtemaene
 
-`src/data/bronse/mdir-naturtema.js`, `src/data/solv/temaer.js` og `src/data/gull/temaer.js`
+`src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts` og `src/data/gull/temaer.ts`
 
 **Spørsmål.** Hvor mye av kommunen er verneområder, villreinområder og verdsatt natur, hvor mye av kommunen er kartlagt for
 naturtyper, og hvor mye planlagt utbygging ligger innenfor?
@@ -438,13 +438,13 @@ utbygging per område, per verdikategori og innenfor og utenfor det kartlagte.
 
 **Kontroll.** Rutenettmetoden for verdsatt natur ga under 0,2 % avvik fra geometrisk sammenslåing av flatene i Trondheim.
 
-**Kode.** Bronse: `hentTemaflater` og `hentKartlagt` i `src/data/bronse/mdir-naturtema.js`. Sølv: `src/data/solv/temaer.js`. Gull:
-`src/data/gull/temaer.js`. Samordningen: `hentNatur`, `hentDekning` og `regnNatur` i `src/data/motor/naturtema.js`. Kartlagene:
-`src/ui/kart/naturtema.js`.
+**Kode.** Bronse: `hentTemaflater` og `hentKartlagt` i `src/data/bronse/mdir-naturtema.ts`. Sølv: `src/data/solv/temaer.ts`. Gull:
+`src/data/gull/temaer.ts`. Samordningen: `hentNatur`, `hentDekning` og `regnNatur` i `src/data/motor/naturtema.ts`. Kartlagene:
+`src/ui/kart/naturtema.ts`.
 
 ## Inngrepsfri natur
 
-`src/data/bronse/mdir-inon.js`, `src/data/solv/inon.js` og `src/data/gull/inon.js`
+`src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts` og `src/data/gull/inon.ts`
 
 **Spørsmål.** Hvor mye av kommunen ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte
 vassdrag?
@@ -467,12 +467,12 @@ kommunen i kommunebildenes rutenett, uten glatting av kantene.
   sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.
 - I kartet får bare klassen natur sonefarge.
 
-**Kode.** Bronse: `hentInonBilde` i `src/data/bronse/mdir-inon.js`. Sølv: `src/data/solv/inon.js`. Gull: `src/data/gull/inon.js`. Samordningen:
-`sjekkInon` i `src/data/motor/inon.js`. Kartlaget: `src/ui/kart/inon.js`.
+**Kode.** Bronse: `hentInonBilde` i `src/data/bronse/mdir-inon.ts`. Sølv: `src/data/solv/inon.ts`. Gull: `src/data/gull/inon.ts`. Samordningen:
+`sjekkInon` i `src/data/motor/inon.ts`. Kartlaget: `src/ui/kart/inon.ts`.
 
 ## Grått areal
 
-`src/data/bronse/nibio-graa.js`, `src/data/solv/graa.js` og `src/data/gull/graa.js`
+`src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts` og `src/data/gull/graa.ts`
 
 **Spørsmål.** Hvor mye av kommunen er alt tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet, hvor mye vegetasjon er
 det der, og hvor mye av planlagt utbygging ligger på slikt areal?
@@ -506,18 +506,18 @@ grått areal, på grått areal med minst halvparten vegetasjon, og på grønt i 
 areal i Trondheim. I en gjennomgang av Trondheim på 10 meters ruter var 98,9 % av det som er bebygd, men ikke grått, det
 grunnkartet kaller grønne arealer.
 
-**Kode.** Bronse: `hentGraaBilde` i `src/data/bronse/nibio-graa.js`. Sølv: `src/data/solv/graa.js`. Gull: `src/data/gull/graa.js`. Samordningen:
-`sjekkGraa` og `regnGraa` i `src/data/motor/graa.js`. Kartlaget: `src/ui/kart/graa.js`.
+**Kode.** Bronse: `hentGraaBilde` i `src/data/bronse/nibio-graa.ts`. Sølv: `src/data/solv/graa.ts`. Gull: `src/data/gull/graa.ts`. Samordningen:
+`sjekkGraa` og `regnGraa` i `src/data/motor/graa.ts`. Kartlaget: `src/ui/kart/graa.ts`.
 
 ## Utenfor analysene: trykk i kartet
 
 Trykker man i kartet, leser siden fargen i punktet og oppgir den synlige klassen fargen ligger nærmest. Ligger det planlagt
 utbygging der, sier siden om det er natur eller jordbruk som er satt av. Er et naturtema slått på, slås punktet også opp i flatene.
-Utenfor valgt kommune slås kommunen opp hos Kartverket. Dette er ikke en analyse og ligger i `trykkIKartet` i `src/ui/kart/kart.js`.
+Utenfor valgt kommune slås kommunen opp hos Kartverket. Dette er ikke en analyse og ligger i `trykkIKartet` i `src/ui/kart/kart.ts`.
 
 ## Kontroller
 
-**Regresjonstesten.** `verktoy/regresjon.js` kjører siden i en nettleser med tre faste scenarier: Trondheim med tegnet område og
+**Regresjonstesten.** `verktoy/regresjon.ts` kjører siden i en nettleser med tre faste scenarier: Trondheim med tegnet område og
 opplastet plan, Surnadal zoomet inn og ut, og Oslo og Malvik. Den lagrer tallene direkte fra motoren, teksten på siden og
 skjermbilder av kartet, og kan sammenligne to utgaver av koden. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to
 kjøringene må tas samme dag.

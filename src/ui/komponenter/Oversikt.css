@@ -1,4 +1,4 @@
-/* Oversikten i Oversikt.jsx: en liste med tall, der forklaringen under hvert tall er vanlig tekst og ikke liten grå tekst */
+/* Oversikten i Oversikt.tsx: en liste med tall, der forklaringen under hvert tall er vanlig tekst og ikke liten grå tekst */
 .sammendrag .talliste p {
   grid-column: 1 / -1;
 }

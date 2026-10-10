@@ -5,7 +5,7 @@ Slik får du siden til å kjøre på din egen maskin etter å ha klonet repoet. 
 ## Det du trenger
 
 - **Git**, for å hente koden.
-- **Node.js 22** (20.19 eller nyere går også). Sjekk med `node --version`. Har du ikke Node, er den enkleste veien å laste ned
+- **Node.js 22.18 eller nyere**. Sjekk med `node --version`. Verktøyene er skrevet i TypeScript, og fra 22.18 kjører Node dem direkte. Har du ikke Node, er den enkleste veien å laste ned
   LTS-utgaven fra <https://nodejs.org>. Bruker du nvm, velger `nvm use` riktig versjon fra filen `.nvmrc`.
 - **Nettilgang** til SSB, Kartverket, NIBIO, DiBK og Miljødirektoratet. Siden henter alle data direkte fra dem mens den kjører. Er
   noen av dem stengt i nettet du sitter på, mangler de delene av siden.
@@ -51,7 +51,7 @@ GitHub Pages. `dist/` kan legges på en hvilken som helst webserver, også i en 
 
 | Kommando | Hva den gjør | Tid |
 |---|---|---|
-| `npm run sjekk` | Sjekker at alle navn er definert eller importert, at sølv og gull holder seg for seg selv, og at lagene bruker hverandre i riktig retning | Sekunder |
+| `npm run sjekk` | Typesjekken (`tsc`) av all koden, og sjekken av at sølv og gull holder seg for seg selv og at lagene bruker hverandre i riktig retning | Sekunder |
 | `npm run sjekk-format` | Sjekker formateringen. `npm run formater` retter den. | Sekunder |
 | `npm test` | Regresjonstesten: bygger siden og kjører Trondheim, Surnadal og Oslo i Chromium | Noen minutter |
 
@@ -59,7 +59,7 @@ Regresjonstesten trenger en Chromium til Playwright. Hent den én gang med `npx 
 endringene dine med siste commit:
 
 ```
-node verktoy/regresjon.js ut/ny --mot HEAD
+node verktoy/regresjon.ts ut/ny --mot HEAD
 ```
 
 Tallene kommer fra de åpne tjenestene og endrer seg over tid, så sammenligningen kjører begge utgavene samme dag. Arealet av
@@ -88,7 +88,7 @@ Push til `main` bygger siden og legger den ut på GitHub Pages med arbeidsflyten
 
 ## Når noe ikke virker
 
-- **Feil om Node-versjon** fra npm eller Vite: oppgrader Node til 22.
+- **Feil om Node-versjon** fra npm eller Vite, eller `SyntaxError` når et verktøy kjøres: oppgrader Node til 22.18 eller nyere.
 - **Porten er opptatt:** Vite velger neste ledige port og skriver den ut i terminalen.
 - **Blank side:** åpne utviklerverktøyene i nettleseren og se i konsollen. Et ferdig bygg må åpnes via en webserver, se over.
 - **Kartet eller tallene mangler:** en av tjenestene svarer ikke. Kall-loggen med `?teknisk` viser hvilken.

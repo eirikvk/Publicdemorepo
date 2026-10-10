@@ -1,5 +1,5 @@
 /* Bronse for SSB: tabell 09594, «Arealbruk og arealressurser», gjennom SSBs API. Svarene kommer urørt tilbake som JSON-stat 2.0 og
-   gjøres om i solv/ssb.js. */
+   gjøres om i solv/ssb.ts. */
 import type { Kommune } from '../solv/felles.ts';
 import { KL, VANN } from '../solv/klasser.ts';
 import type { JsonStat } from '../solv/ssb.ts';

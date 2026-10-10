@@ -1,6 +1,6 @@
 /* Bronse for NIBIO, Nasjonalt grunnkart for arealanalyse (WMS): kartbilder av dagens arealklasser, og de lagrede oversiktsbildene
    av hele kommuner som er laget av samme tjeneste (verktoy/oversiktsbilde.py). Siden ber NIBIO tegne seks klasser i rene farger
-   (DATAFARGE i solv/klasser.js), så klassen kan leses av fargen. */
+   (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Kommune, Utsnitt } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';

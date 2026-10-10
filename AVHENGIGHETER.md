@@ -22,7 +22,7 @@ Versjonene er låst i `package.json`, og hele treet av pakker i `package-lock.js
 | Ariakit (`@ariakit/react`) | 0.4.41 | MIT | Grunnlaget for designsystemets velgere. Kommer med designsystemet. |
 | classnames | 2.5.1 | MIT | Kommer med designsystemet |
 | OpenLayers (`ol`) | 10.6.1 | BSD 2-Clause | Kartet (`src/ui/kart/`): lag, fliser, tegning av flater og zoom. Datadelen bruker det ikke. |
-| proj4js | 2.11.0 | MIT | Koordinatsystemer: UTM sone 32, 33 og 35 og grader, blant annet for opplastede planer (`src/data/solv/projeksjoner.js`, og registrert i kartet) |
+| proj4js | 2.11.0 | MIT | Koordinatsystemer: UTM sone 32, 33 og 35 og grader, blant annet for opplastede planer (`src/data/solv/projeksjoner.ts`, og registrert i kartet). Pakken har ingen egne typer, så det siden bruker av den, er beskrevet i `src/data/solv/proj4.d.ts`. |
 | polygon-clipping | 0.15.7 | MIT | Klipping av verneområder og villreinområder mot kommunegrensen, og sammenslåing av dekningsflater |
 | `@fontsource/open-sans` | 5.2.7 | SIL Open Font License 1.1 | Skriften Open Sans, i to vekter |
 
@@ -104,10 +104,11 @@ Ingen av disse følger med siden til brukeren.
 |---|---|---|---|
 | Vite | 8.3.0 | MIT | Utviklingsserver og bygg |
 | `@vitejs/plugin-react` | 6.1.1 | MIT | JSX og oppdatering av komponenter under utvikling |
+| TypeScript | 7.0.2 | Apache 2.0 | Typesjekken (`tsc`) |
+| `@types/node`, `@types/react`, `@types/react-dom` | 22.20.4, 19.3.0, 19.3.0 | MIT | Typene for Node og React |
+| oxc-parser | 0.151.0 | MIT | Sjekken av lagene: leser koden og finner importene |
 | Playwright | 1.56.0 | Apache 2.0 | Regresjonstesten, som kjører siden i Chromium |
 | Prettier | 3.9.9 | MIT | Formatering av koden |
-| acorn, acorn-walk, acorn-jsx | 8.19.0, 8.3.5, 5.3.2 | MIT | Sjekkene av navn og av lagene i koden |
-| eslint-scope | 9.1.2 | BSD 2-Clause | Sjekken av navn |
 | Python med NumPy, Pillow og Shapely | | BSD og lignende | Bygging av oversiktsbildene |
 
-Node-versjonen står i `.nvmrc` (22), og kravet i `package.json` (20.19 eller nyere), som Vite krever.
+Node-versjonen står i `.nvmrc` (22), og kravet i `package.json` (22.18 eller nyere): fra den versjonen kjører Node verktøyene i TypeScript direkte.

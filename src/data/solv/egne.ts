@@ -31,7 +31,7 @@ export interface Planflate {
 export const planType = (formal: string, status: string, harFormal: boolean): Type =>
   !harFormal || (/^[12]/.test(formal) && (status === '' || status === '2')) ? 'bygg' : 'fri';
 
-/* Flatene i en opplastet plan, som de leses i bronse/planfil.js, gjort om til egne områder: hver flate får type etter planType.
+/* Flatene i en opplastet plan, som de leses i bronse/planfil.ts, gjort om til egne områder: hver flate får type etter planType.
    Gir flatene, det samlede arealet i km², og hvor mange som er utbygging og ikke. */
 export function planflater(deler: Planflate[], harFormal: boolean) {
   let km2 = 0;

@@ -1,10 +1,10 @@
 /* Fargelegging av kartbildene fra NIBIO i nettleseren: fra de rene fargene NIBIO tegner klassene i, til fargene i kartet. Stilen
-   som sendes til NIBIO, ligger i data/bronse/nibio-grunnkart.js, og tolkingen av fargene til klasser i data/solv/klasser.js. */
+   som sendes til NIBIO, ligger i data/bronse/nibio-grunnkart.ts, og tolkingen av fargene til klasser i data/solv/klasser.ts. */
 import { ALLE, BLANDING, fargeNr } from '../../data/solv/klasser.ts';
 import { tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 /* Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve bildet være, så fargebytte
-   trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se BLANDING i solv/klasser.js, og får en tilsvarende
+   trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se BLANDING i solv/klasser.ts, og får en tilsvarende
    blanding av kartfargene. */
 export const klassefarger = () => ALLE.map(([id]) => rgb(id));
 export function tilFarge(r: number, g: number, b: number, a: number, F: number[][]): number[] {

@@ -1,5 +1,5 @@
 /* Kartlagene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur, sløret over det som ikke er kartlagt,
-   og markeringen av ett område valgt fra en liste. Dataene hentes og regnes ut i data/motor/naturtema.js. Hvert tema vises på sin
+   og markeringen av ett område valgt fra en liste. Dataene hentes og regnes ut i data/motor/naturtema.ts. Hvert tema vises på sin
    egen side. */
 import type Feature from 'ol/Feature.js';
 import type { FeatureLike } from 'ol/Feature.js';

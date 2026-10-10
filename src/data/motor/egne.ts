@@ -1,6 +1,6 @@
 /* Datamotoren, egne områder: tegnede områder og opplastede planer, og det radene i sammenligningen med kommuneplanen bygges av.
-   Hvilke flater som er utbygging og hvordan de legges inn i planrutenettet, står i solv/egne.js, og radene bygges i gull/egne.js.
-   Selve tegningen i kartet ligger i ui/kart/egne.js. Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og
+   Hvilke flater som er utbygging og hvordan de legges inn i planrutenettet, står i solv/egne.ts, og radene bygges i gull/egne.ts.
+   Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og
    hører til kommunen de ble tegnet i. */
 import { lesPlanfil } from '../bronse/planfil.ts';
 import { EGET_MIN_M2, areal, arealKm2, utsnitt, type Flerflate } from '../solv/felles.ts';
@@ -47,7 +47,7 @@ export function leggTilEget(koord: Flerflate) {
   egneEndret();
 }
 
-/* Opplastet plan: filen leses i bronse/planfil.js, og hvilke flater som regnes som utbygging, står i planType i solv/egne.js.
+/* Opplastet plan: filen leses i bronse/planfil.ts, og hvilke flater som regnes som utbygging, står i planType i solv/egne.ts.
    Innenfor flatene erstatter filen kommuneplanen. Filen leses i nettleseren og sendes ingen steder. Hvordan det går, står i
    app.egneStatus: { hva, fil, ... }, der hva er forStor, leser, lest, eller hva som var galt. Siden skriver meldingen. */
 export async function lastOppPlan(fil: File | null | undefined) {
@@ -104,7 +104,7 @@ export function slettEget(g: EgetOmrade) {
 }
 
 /* Radene i sammenligningen mellom kommuneplanen og egne områder, for hele kommunen eller ett område. Radene bygges av byggEgneRader i
-   gull/egne.js: natur og jordbruk som går med, og hvor mye av det som ligger i grått areal, verneområder, villreinområder,
+   gull/egne.ts: natur og jordbruk som går med, og hvor mye av det som ligger i grått areal, verneområder, villreinområder,
    verdsatt natur per verdi og natur som ikke er kartlagt. Hver rad viser kommuneplanen alene, tallet med egne områder og endringen. */
 export function egneRader(e: number | null) {
   /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */

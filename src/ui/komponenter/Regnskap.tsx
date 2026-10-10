@@ -1,7 +1,7 @@
 /* Utbredelsesregnskapet: hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre. Først forklart med
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
-   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.js. Her blir de tekst, stolper og tabell. */
+   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.ts. Her blir de tekst, stolper og tabell. */
 import type { CSSProperties } from 'react';
 import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann, type Endring } from '../../data/gull/regnskap.ts';
 import { utenPlan } from '../../data/motor/egne.ts';

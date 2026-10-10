@@ -1,6 +1,6 @@
 /* Datamotoren, planlagt utbygging: om DiBK har kommuneplanen, og samordningen av planrutenettet. Kommuneplanen hentes i
-   bronse/dibk-kommuneplan.js, planrutenettet bygges i solv/planrutenett.js, og tallene sidene viser, lages i gull/planlagt.js.
-   Kartlaget for planen ligger i ui/kart/plan.js. */
+   bronse/dibk-kommuneplan.ts, planrutenettet bygges i solv/planrutenett.ts, og tallene sidene viser, lages i gull/planlagt.ts.
+   Kartlaget for planen ligger i ui/kart/plan.ts. */
 import { hentKommuneplanFlis, hentPlandekning, hentPlaninfo, kommuneplanUrl } from '../bronse/dibk-kommuneplan.ts';
 import {
   BILDE_PLANDEKNING,
@@ -27,7 +27,7 @@ export const ingenPlan = () =>
   !!app.planInfo && !!app.valgt && app.planInfo.nr === app.valgt.nr && app.planInfo.tilstand === 'ingen';
 
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker, se
-   planDekning i solv/planrutenett.js. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
+   planDekning i solv/planrutenett.ts. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
 export async function sjekkPlan(k: Kommune, grense: Grense, mitt: number) {
   app.planInfo = { nr: k.nr, tilstand: 'sjekker' };
   endret();

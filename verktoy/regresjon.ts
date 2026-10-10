@@ -2,25 +2,25 @@
    tallene motoren har regnet ut, teksten siden viser og skjermbilder av kartet. To kjøringer kan sammenlignes, så en endring i koden
    kan sjekkes mot en tidligere utgave. Tallene kommer fra åpne tjenester og endrer seg over tid, så en referanse må tas samme dag.
 
-   Kjør:        node verktoy/regresjon.js ut/ny
-   Mot git:     node verktoy/regresjon.js ut/ny --mot HEAD~1
-   Sammenlign:  node verktoy/regresjon.js --sammenlign ut/gammel ut/ny
-   Bare noen:   node verktoy/regresjon.js ut/ny --bare trondheim,oslo
-   Ferdig bygg: node verktoy/regresjon.js ut/ny --kilde dist
+   Kjør:        node verktoy/regresjon.ts ut/ny
+   Mot git:     node verktoy/regresjon.ts ut/ny --mot HEAD~1
+   Sammenlign:  node verktoy/regresjon.ts --sammenlign ut/gammel ut/ny
+   Bare noen:   node verktoy/regresjon.ts ut/ny --bare trondheim,oslo
+   Ferdig bygg: node verktoy/regresjon.ts ut/ny --kilde dist
 
    Trenger pakken playwright og en Chromium. Stien til Chromium kan settes med CHROMIUM, ellers brukes Playwrights egen.
    Går nettet gjennom en proxy, leses den fra HTTPS_PROXY. */
-import { chromium } from 'playwright';
+import { chromium, type Browser, type LaunchOptions, type Page } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { motortall } from './motortall.js';
+import { motortall } from './motortall.ts';
 
 const HER = path.dirname(fileURLToPath(import.meta.url)),
   ROT = path.resolve(HER, '..');
-const TYPER = {
+const TYPER: Record<string, string> = {
   '.html': 'text/html',
   '.js': 'text/javascript',
   '.css': 'text/css',
@@ -34,14 +34,14 @@ const TYPER = {
 const TESTPLAN = path.join(HER, 'testdata', 'testplan-bygg.geojson');
 
 /* Bygger siden fra mappen rot til en midlertidig mappe og gir stien tilbake. */
-export function bygg(rot) {
+export function bygg(rot: string) {
   const ut = fs.mkdtempSync(path.join(os.tmpdir(), 'bygg-'));
   execSync(`npx vite build --outDir "${ut}" --emptyOutDir --logLevel error`, { cwd: rot, stdio: 'inherit' });
   return ut;
 }
 
 async function startNettleser() {
-  const valg = {};
+  const valg: LaunchOptions = {};
   if (process.env.CHROMIUM) valg.executablePath = process.env.CHROMIUM;
   else if (fs.existsSync('/opt/pw-browsers/chromium')) valg.executablePath = '/opt/pw-browsers/chromium';
   if (process.env.HTTPS_PROXY) valg.proxy = { server: process.env.HTTPS_PROXY };
@@ -50,40 +50,40 @@ async function startNettleser() {
 
 /* Hvordan testen bruker siden: adresse, knapper og hvor tekstene står. Samlet her, så resten av testen ikke avhenger av utformingen. */
 export const SIDEN = {
-  adresse: nr => `index.html?teknisk#${nr}`,
+  adresse: (nr: string) => `index.html?teknisk#${nr}`,
   kart: '.kartflate',
   laster: () => !!(window.motor && window.motor.app.laster),
-  side: (p, id) => p.locator(`[data-side="${id}"]`).click(),
-  tegn: p => p.locator('#tegnknapp').click(),
-  ferdig: p => p.getByRole('button', { name: 'Ferdig', exact: true }).click(),
-  ikkeUtbygging: p => p.getByLabel('Ikke utbygging').check(),
-  slett: p =>
+  side: (p: Page, id: string) => p.locator(`[data-side="${id}"]`).click(),
+  tegn: (p: Page) => p.locator('#tegnknapp').click(),
+  ferdig: (p: Page) => p.getByRole('button', { name: 'Ferdig', exact: true }).click(),
+  ikkeUtbygging: (p: Page) => p.getByLabel('Ikke utbygging').check(),
+  slett: (p: Page) =>
     p
       .getByRole('button', { name: /^Slett / })
       .first()
       .click(),
-  lastOpp: (p, fil) => p.setInputFiles('#planfil', fil),
-  visForste: async (p, id) => {
+  lastOpp: (p: Page, fil: string) => p.setInputFiles('#planfil', fil),
+  visForste: async (p: Page, id: string) => {
     await p.locator(`[data-side="${id}"]`).click();
     await p.locator(`#tema-${id} li button`).first().click();
   },
-  byttKommune: async (p, fylke, nr, navn) => {
+  byttKommune: async (p: Page, fylke: string, nr: string, navn: string) => {
     const k = p.getByRole('combobox', { name: 'Kommune' });
     await k.click();
     await k.fill(navn);
     await p.getByRole('option', { name: navn, exact: true }).click();
   },
-  probe: p => p.locator('.probe').innerText(),
-  vist: p => p.locator('.vistmerke').innerText(),
+  probe: (p: Page) => p.locator('.probe').innerText(),
+  vist: (p: Page) => p.locator('.vistmerke').innerText(),
   /* Tekstene på sidene. Temaene leses med textContent, så detaljene kommer med også når de er lukket. */
-  tekster: p =>
+  tekster: (p: Page) =>
     p.evaluate(() => {
-      const t = sel =>
-        [...document.querySelectorAll(sel)]
+      const t = (sel: string) =>
+        [...document.querySelectorAll<HTMLElement>(sel)]
           .map(e => e.innerText.replace(/\s*\n\s*/g, ' | ').trim())
           .filter(Boolean)
           .join('\n');
-      const ut = {
+      const ut: Record<string, string> = {
         sammendrag: t('.sammendrag'),
         total: t('.total'),
         regnskap: t('.regnskap'),
@@ -92,19 +92,30 @@ export const SIDEN = {
         vann: t('.vann'),
         probe: t('.probe') /* ikke linjen om siste kall, som har tider i seg */
       };
-      for (const d of document.querySelectorAll('.temaside')) ut[d.id] = d.textContent.replace(/\s+/g, ' ').trim();
+      for (const d of document.querySelectorAll('.temaside')) ut[d.id] = d.textContent!.replace(/\s+/g, ' ').trim();
       return ut;
     }),
-  egne: p =>
+  egne: (p: Page) =>
     p.evaluate(() =>
-      [...document.querySelectorAll('.egne .kort, .egne [role="status"]')]
+      [...document.querySelectorAll<HTMLElement>('.egne .kort, .egne [role="status"]')]
         .map(e => e.innerText.replace(/\s*\n\s*/g, ' | ').trim())
         .join('\n')
     )
 };
+export type Siden = typeof SIDEN;
+
+/* En side i testen: Playwrights side med hjelperne rolig, flytt og motor, og beskrivelsen av siden (siden) */
+export type Testside = Page & {
+  rolig: (stille?: number, maks?: number) => Promise<void>;
+  flytt: (x: number | null, y: number | null, res: number) => Promise<void>;
+  motor: () => Promise<ReturnType<typeof motortall>>;
+  siden: Siden;
+};
+/* Gir annet innhold for en fil enn det som ligger i kilde, eller ingenting. les() gir det som ligger der. */
+type Omskriv = (fil: string, les: () => string) => string | null | undefined;
 
 /* En side som serverer filene i kilde på http://demo.test/. */
-async function nySide(nettleser, kilde, feil, omskriv) {
+async function nySide(nettleser: Browser, kilde: string, feil: string[], omskriv: Omskriv | null) {
   const ctx = await nettleser.newContext({
     ignoreHTTPSErrors: true,
     viewport: { width: 390, height: 900 },
@@ -112,7 +123,7 @@ async function nySide(nettleser, kilde, feil, omskriv) {
     hasTouch: true,
     isMobile: true
   });
-  const p = await ctx.newPage();
+  const p = (await ctx.newPage()) as Testside;
   let iGang = 0,
     sist = Date.now();
   const ferdig = () => {
@@ -149,7 +160,7 @@ async function nySide(nettleser, kilde, feil, omskriv) {
   p.flytt = async (x, y, res) => {
     await p.evaluate(
       ([x, y, res]) => {
-        const v = window.motor.kart.getView();
+        const v = window.motor!.kart.getView();
         if (x !== null) v.setCenter([x, y]);
         v.setResolution(res);
       },
@@ -161,22 +172,30 @@ async function nySide(nettleser, kilde, feil, omskriv) {
   return p;
 }
 
-const trykk = async (p, gjor, vent = 1200) => {
+const trykk = async (p: Testside, gjor: Promise<unknown>, vent = 1200) => {
   await gjor;
   await p.waitForTimeout(vent);
   await p.rolig(600);
 };
-const vent = (p, R, navn, sjekk, tid = 70000) =>
+const vent = (p: Testside, R: Kjoring, navn: string, sjekk: () => unknown, tid = 70000) =>
   p.waitForFunction(sjekk, null, { timeout: tid }).catch(() => R.feil.push(navn + ': ble ikke ferdig utregnet'));
 
-export const SCENARIER = {
+/* Det én kjøring av et scenario samler: tallene fra motoren og teksten per steg, feilene, og skjermbilder av kartet (bilde) */
+interface Kjoring {
+  tekst: Record<string, unknown>;
+  motor: Record<string, unknown>;
+  feil: string[];
+  bilde: (navn: string) => Promise<void>;
+}
+type Scenario = (p: Testside, R: Kjoring, S: Siden) => Promise<void>;
+export const SCENARIER: Record<string, Scenario> = {
   /* Kommune med lagret oversiktsbilde: alt regnes ut for hele kommunen når siden åpnes. */
   async trondheim(p, R, S) {
     await p.goto('http://demo.test/' + S.adresse('5001'));
     await vent(p, R, 'trondheim', () => {
       const M = window.motor;
       if (!M || !M.app.valgt) return false;
-      const v = (M.NATURTEMA || M.NATURLAG).find(t => t.id === 'verdi');
+      const v = (M.NATURTEMA || M.NATURLAG).find((t: { id: string }) => t.id === 'verdi');
       return (
         M.app.planTall &&
         M.app.planTall.tilstand === 'ok' &&
@@ -271,7 +290,7 @@ export const SCENARIER = {
     R.motor.start = await p.motor();
     R.tekst.start = await S.tekster(p);
     const [x, y, res] = await p.evaluate(() => {
-      const v = window.motor.kart.getView();
+      const v = window.motor!.kart.getView();
       return [...v.getCenter(), v.getResolution()];
     });
     await p.locator(S.kart).scrollIntoViewIfNeeded();
@@ -301,7 +320,7 @@ export const SCENARIER = {
         M.app.planInfo.tilstand === 'ingen' &&
         M.app.graa &&
         M.app.graa.tilstand === 'ok' &&
-        (M.NATURTEMA || M.NATURLAG).every(t => t.data)
+        (M.NATURTEMA || M.NATURLAG).every((t: { data: unknown }) => t.data)
       );
     });
     await p.rolig();
@@ -324,23 +343,34 @@ export const SCENARIER = {
 };
 
 /* S beskriver siden, se SIDEN. omskriv(fil, les) kan gi annet innhold for en fil enn det som ligger i kilde. */
-export async function kjor(kilde, ut, bare, S = SIDEN, omskriv = null) {
+export async function kjor(
+  kilde: string,
+  ut: string,
+  bare: string[] | null,
+  S: Siden = SIDEN,
+  omskriv: Omskriv | null = null
+) {
   fs.mkdirSync(ut, { recursive: true });
   const nettleser = await startNettleser(),
-    resultat = {};
+    resultat: Resultat = {};
   for (const navn of Object.keys(SCENARIER)) {
     if (bare && !bare.includes(navn)) continue;
     const t0 = Date.now(),
-      R = { tekst: {}, motor: {}, feil: [] },
-      p = await nySide(nettleser, kilde, R.feil, omskriv);
+      feil: string[] = [],
+      p = await nySide(nettleser, kilde, feil, omskriv);
     p.siden = S;
-    R.bilde = async n => {
-      await p.locator(S.kart).screenshot({ path: path.join(ut, `${navn}-${n}.png`) });
+    const R: Kjoring = {
+      tekst: {},
+      motor: {},
+      feil,
+      bilde: async n => {
+        await p.locator(S.kart).screenshot({ path: path.join(ut, `${navn}-${n}.png`) });
+      }
     };
     try {
       await SCENARIER[navn](p, R, S);
     } catch (e) {
-      R.feil.push('avbrutt: ' + String(e.message).split('\n')[0]);
+      R.feil.push('avbrutt: ' + String((e as Error).message).split('\n')[0]);
     }
     resultat[navn] = { motor: R.motor, tekst: R.tekst, feil: R.feil };
     await p.context().close();
@@ -353,20 +383,29 @@ export async function kjor(kilde, ut, bare, S = SIDEN, omskriv = null) {
   return resultat;
 }
 
+/* Resultatet av en kjøring, slik det lagres i resultat.json: tallene, teksten og feilene per scenario */
+type Resultat = Record<string, Omit<Kjoring, 'bilde'>>;
+
 /* Sammenligner to kjøringer: tallene fra motoren og teksten skal være like, og skjermbildene sammenlignes piksel for piksel.
    bareMotor sammenligner bare tallene, til sammenligning med en utgave der siden ser annerledes ut. */
-export async function sammenlign(a, b, { toleranse = 0.002, bareMotor = false } = {}) {
-  const A = JSON.parse(fs.readFileSync(path.join(a, 'resultat.json'), 'utf8')),
-    B = JSON.parse(fs.readFileSync(path.join(b, 'resultat.json'), 'utf8'));
+export async function sammenlign(
+  a: string,
+  b: string,
+  { toleranse = 0.002, bareMotor = false }: { toleranse?: number; bareMotor?: boolean } = {}
+) {
+  const A: Resultat = JSON.parse(fs.readFileSync(path.join(a, 'resultat.json'), 'utf8')),
+    B: Resultat = JSON.parse(fs.readFileSync(path.join(b, 'resultat.json'), 'utf8'));
   let avvik = 0;
-  const flat = (o, pre = '', ut = {}) => {
+  const flat = (o: Record<string, unknown>, pre = '', ut: Record<string, string> = {}) => {
     for (const k in o) {
-      if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])) flat(o[k], pre + k + '.', ut);
+      if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]))
+        flat(o[k] as Record<string, unknown>, pre + k + '.', ut);
       else ut[pre + k] = JSON.stringify(o[k]);
     }
     return ut;
   };
-  const del = R => (bareMotor ? Object.fromEntries(Object.entries(R).map(([n, x]) => [n, { motor: x.motor }])) : R);
+  const del = (R: Resultat) =>
+    bareMotor ? Object.fromEntries(Object.entries(R).map(([n, x]) => [n, { motor: x.motor }])) : R;
   const fa = flat(del(A)),
     fb = flat(del(B));
   for (const k of new Set([...Object.keys(fa), ...Object.keys(fb)])) {
@@ -386,11 +425,11 @@ export async function sammenlign(a, b, { toleranse = 0.002, bareMotor = false } 
       console.log(`BILDE ${f}: mangler i b`);
       continue;
     }
-    const les = m => 'data:image/png;base64,' + fs.readFileSync(path.join(m, f)).toString('base64');
+    const les = (m: string) => 'data:image/png;base64,' + fs.readFileSync(path.join(m, f)).toString('base64');
     const r = await p.evaluate(
-      async ([ua, ub]) => {
-        const last = u =>
-          new Promise((ok, feil) => {
+      async ([ua, ub]): Promise<{ ulik: number; storst: number; str?: string }> => {
+        const last = (u: string) =>
+          new Promise<HTMLImageElement>((ok, feil) => {
             const i = new Image();
             i.onload = () => ok(i);
             i.onerror = feil;
@@ -399,11 +438,11 @@ export async function sammenlign(a, b, { toleranse = 0.002, bareMotor = false } 
         const [ia, ib] = await Promise.all([last(ua), last(ub)]);
         if (ia.width !== ib.width || ia.height !== ib.height)
           return { ulik: 1, storst: 255, str: `${ia.width}x${ia.height} mot ${ib.width}x${ib.height}` };
-        const data = i => {
+        const data = (i: HTMLImageElement) => {
           const c = document.createElement('canvas');
           c.width = i.width;
           c.height = i.height;
-          const g = c.getContext('2d');
+          const g = c.getContext('2d')!;
           g.drawImage(i, 0, 0);
           return g.getImageData(0, 0, c.width, c.height).data;
         };
@@ -433,7 +472,7 @@ export async function sammenlign(a, b, { toleranse = 0.002, bareMotor = false } 
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = process.argv.slice(2),
-    valg = n => {
+    valg = (n: string) => {
       const i = arg.indexOf(n);
       return i < 0 ? null : arg.splice(i, 2)[1];
     };
@@ -444,7 +483,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     kildeValg = valg('--kilde'),
     ut = arg[0];
   if (!ut) {
-    console.log('Bruk: node verktoy/regresjon.js <ut-mappe> [--mot <git-ref>] [--kilde <bygget mappe>] [--bare a,b]');
+    console.log('Bruk: node verktoy/regresjon.ts <ut-mappe> [--mot <git-ref>] [--kilde <bygget mappe>] [--bare a,b]');
     process.exit(2);
   }
   await kjor(kildeValg ? path.resolve(kildeValg) : bygg(ROT), ut, bare);

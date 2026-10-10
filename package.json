@@ -10,9 +10,9 @@
     "dev": "vite",
     "bygg": "vite build",
     "forhandsvis": "vite preview",
-    "formater": "prettier --write src verktoy/*.js verktoy/*.ts",
-    "sjekk-format": "prettier --check src verktoy/*.js verktoy/*.ts",
-    "test": "node verktoy/regresjon.js ut/ny",
+    "formater": "prettier --write src verktoy/*.ts vite.config.ts",
+    "sjekk-format": "prettier --check src verktoy/*.ts vite.config.ts",
+    "test": "node verktoy/regresjon.ts ut/ny",
     "sjekk": "tsc -p . && tsc -p verktoy && node verktoy/sjekk-lag.ts"
   },
   "dependencies": {

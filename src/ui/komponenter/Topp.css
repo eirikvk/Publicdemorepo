@@ -1,4 +1,4 @@
-/* Toppen i Topp.jsx: navnet på løsningen, valg av fylke og kommune, og overskriften med kommunen som er valgt */
+/* Toppen i Topp.tsx: navnet på løsningen, valg av fylke og kommune, og overskriften med kommunen som er valgt */
 .topp {
   display: flex;
   flex-wrap: wrap;

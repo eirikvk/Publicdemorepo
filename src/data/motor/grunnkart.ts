@@ -4,8 +4,8 @@
    - Zoomet inn: kartbildene fra NIBIO, én flis om gangen.
    - Zoomet ut, i kommuner med lagret oversiktsbilde: bildet av hele kommunen (app.ov.buf).
    - Zoomet ut ellers: det sammensatte kartet, som datamotoren setter sammen av flisene som er hentet (app.ov.lerret, dynamisk).
-   Bildene har klassene i rene farger (DATAFARGE i solv/klasser.js). Klassen leses av fargen med klasseAv. Kartet får egne kopier i
-   visningsfargene, se ui/kart/grunnkart.js. */
+   Bildene har klassene i rene farger (DATAFARGE i solv/klasser.ts). Klassen leses av fargen med klasseAv. Kartet får egne kopier i
+   visningsfargene, se ui/kart/grunnkart.ts. */
 import { FLISNIVA, grunnkartUrl, hentGrunnkartFlis, hentOversiktsbilde } from '../bronse/nibio-grunnkart.ts';
 import { opptatt } from '../bronse/henting.ts';
 import { OPPLOSNINGER, ORIGO, flisUtsnitt, overlapper, type Flis, type Kommune, type Utsnitt } from '../solv/felles.ts';
@@ -65,7 +65,7 @@ export function nySamling(nr: string, ext: Utsnitt) {
       res,
       ext: [ext[0], ext[3] - c.height * res, ext[0] + c.width * res, ext[3]],
       har: new Set() /* flisene som er lagt inn, som «nivå/x/y» */,
-      blokker: new Map() /* planrutenettet per flis på nivå 9, se plan.js */
+      blokker: new Map() /* planrutenettet per flis på nivå 9, se plan.ts */
     };
   }
   samlinger.delete(nr);

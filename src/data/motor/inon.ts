@@ -1,7 +1,7 @@
 /* Datamotoren, inngrepsfri natur (INON) fra Miljødirektoratet: natur som ligger minst én kilometer fra tyngre tekniske inngrep, delt
-   i tre soner etter avstand. Sonene hentes som ett bilde av hele kommunen når kommunen velges (bronse/mdir-inon.js), gjøres om til
-   sone per rute (solv/inon.js) og areal per sone (gull/inon.js). Resultatet huskes for de siste kommunene så lenge siden er åpen,
-   så et nytt valg av samme kommune koster ingenting. Kartlaget tegnes av sonene per rute, se ui/kart/inon.js. */
+   i tre soner etter avstand. Sonene hentes som ett bilde av hele kommunen når kommunen velges (bronse/mdir-inon.ts), gjøres om til
+   sone per rute (solv/inon.ts) og areal per sone (gull/inon.ts). Resultatet huskes for de siste kommunene så lenge siden er åpen,
+   så et nytt valg av samme kommune koster ingenting. Kartlaget tegnes av sonene per rute, se ui/kart/inon.ts. */
 import { hentInonBilde } from '../bronse/mdir-inon.ts';
 import { husk } from '../bronse/henting.ts';
 import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.ts';

@@ -1,6 +1,6 @@
 /* Delene av OpenLayers som kartet bruker, samlet i ett navnerom med samme navn som i OpenLayers' egen samlede utgave
    (ol.layer.Tile, ol.extent.intersects og så videre). Bare det som er nevnt her, kommer med i det ferdige bygget. Projeksjonene
-   er de samme som datadelen bruker (solv/projeksjoner.js). */
+   er de samme som datadelen bruker (solv/projeksjoner.ts). */
 import Map from 'ol/Map.js';
 import View from 'ol/View.js';
 import Feature from 'ol/Feature.js';

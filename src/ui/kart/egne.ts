@@ -1,5 +1,5 @@
 /* Egne områder i kartet: tegning av et område, og omrisset med nummer for hvert eget område. Fargen inni kommer fra planlaget, som
-   viser hva som går med. Datamotoren tar imot det tegnede området og regner det ut, se data/motor/egne.js. */
+   viser hva som går med. Datamotoren tar imot det tegnede området og regner det ut, se data/motor/egne.ts. */
 import type Feature from 'ol/Feature.js';
 import type Polygon from 'ol/geom/Polygon.js';
 import type Draw from 'ol/interaction/Draw.js';

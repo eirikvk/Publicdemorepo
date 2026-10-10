@@ -12,8 +12,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "allowJs": true,
-    "checkJs": false
+    "allowJs": false
   },
-  "include": ["*.ts", "*.js", "../vite.config.ts"]
+  "include": ["*.ts", "../vite.config.ts"]
 }

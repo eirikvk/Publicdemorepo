@@ -1,7 +1,7 @@
 /* Datamotoren, tilstanden: alt siden vet om dataene, samlet i ett objekt (app), og lageret som sier fra når noe er endret.
    Datamotoren skriver hit. Brukergrensesnittet (ui/) leser herfra: React-komponentene og kartet abonnerer begge med abonner, og
    tegnes på nytt når noe er endret. Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i
-   ui/tilstand.js. Regnefunksjonene i sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter.
+   ui/tilstand.ts. Regnefunksjonene i sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter.
    Filen bruker verken React eller OpenLayers. */
 import type { Planopplysninger } from '../bronse/dibk-kommuneplan.ts';
 import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse/henting.ts';
@@ -113,7 +113,7 @@ export const app: Tilstand = {
   planSum: null /* planlagt utbygging på natur og jordbruk i km², til oversikten og regnskapet */,
   planTall: null /* hvor langt utregningen av planlagt utbygging er kommet: tom, zoom, regner, feil eller ok */,
   egne: [] /* egne områder, tegnet i kartet eller lastet opp. De finnes så lenge siden er åpen. */,
-  egneStatus: null /* hvordan siste tegning eller opplasting gikk: { hva, fil, ... }, se lastOppPlan i egne.js */,
+  egneStatus: null /* hvordan siste tegning eller opplasting gikk: { hva, fil, ... }, se lastOppPlan i egne.ts */,
   inon: null /* inngrepsfri natur i kommunen: tilstand, areal per sone og sonen per rute */,
   graa: null /* grått areal i kommunen: tilstand, areal per trinn og trinnet per rute */,
   graaKryss: null /* planlagt utbygging krysset med grått areal */,
@@ -124,7 +124,7 @@ export const app: Tilstand = {
   sisteKall: null /* siste runde med kartbilder fra én kilde */
 };
 
-/* Lageret: den som endrer noe i app (eller i ui/tilstand.js) som vises, kaller endret(). Varslene samles og sendes én gang når
+/* Lageret: den som endrer noe i app (eller i ui/tilstand.ts) som vises, kaller endret(). Varslene samles og sendes én gang når
    nettleseren er ferdig med det den holder på med, så mange endringer etter hverandre gir én ny tegning. */
 let utgave = 0,
   planlagt = false;

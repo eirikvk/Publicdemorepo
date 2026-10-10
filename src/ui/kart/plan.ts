@@ -1,5 +1,5 @@
 /* Kartlaget for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av. Planen hentes fra DiBK som
-   fliser i samme rutenett (data/bronse/dibk-kommuneplan.js). For hver flis legges planen oppå dagens klasser i nettleseren, og bare
+   fliser i samme rutenett (data/bronse/dibk-kommuneplan.ts). For hver flis legges planen oppå dagens klasser i nettleseren, og bare
    natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut tegnes laget fra planrutenettet i datamotoren. */
 import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
@@ -91,7 +91,7 @@ function grovPlanFlis(tc: TileCoord): Planbilde | null {
   return c;
 }
 /* Kartets egen regel for smale striper zoomet inn: en piksel vises når ruta den ligger i, eller en av de fire nabo­rutene, er
-   et felt som ble beholdt i planrutenettet. Tallene bruker selve rutenettet (ryddStriper i solv/planrutenett.js). */
+   et felt som ble beholdt i planrutenettet. Tallene bruker selve rutenettet (ryddStriper i solv/planrutenett.ts). */
 function iEllerInntil(R: Planrutenett, x: number, y: number) {
   if (x < 0 || y < 0 || x >= R.w || y >= R.h) return false;
   const i = y * R.w + x,

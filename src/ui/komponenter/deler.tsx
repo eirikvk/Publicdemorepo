@@ -1,6 +1,6 @@
 /* Små byggeklosser som designsystemet ikke har: fargeruter, stolper som viser en fordeling, tegnforklaringer, linjer i en liste
    med tall, lenker mellom sidene og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i
-   ui/farger.js. */
+   ui/farger.ts. */
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { adresse, velgSide } from '../sider.ts';
 import { dekar, prosent } from '../tekst.ts';

@@ -1,5 +1,5 @@
 /* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages i
-   ui/kart/kart.js og settes inn her. */
+   ui/kart/kart.ts og settes inn her. */
 import { useEffect, useLayoutEffect, useRef, type DragEvent } from 'react';
 import { lastOppPlan } from '../../data/motor/egne.ts';
 import { app } from '../../data/motor/tilstand.ts';

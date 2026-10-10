@@ -1,4 +1,4 @@
-/* Sideoppsettet i App.jsx: siden i midten med luft rundt, og to kolonner, kartet til venstre og tallene til høyre. På smal
+/* Sideoppsettet i App.tsx: siden i midten med luft rundt, og to kolonner, kartet til venstre og tallene til høyre. På smal
    skjerm kommer alt under hverandre. */
 .side {
   max-width: 1180px;

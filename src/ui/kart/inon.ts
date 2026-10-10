@@ -1,4 +1,4 @@
-/* Kartlaget for inngrepsfri natur. Kartflisene lages i nettleseren av sonene per rute i datamotoren (data/motor/inon.js), så laget
+/* Kartlaget for inngrepsfri natur. Kartflisene lages i nettleseren av sonene per rute i datamotoren (data/motor/inon.ts), så laget
    gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå dagens klasser og fargelegger bare det som er
    natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen. Laget deler lerret med klassene, så det får
    samme gjennomsiktighet og ser ut som en del av naturfargen. */

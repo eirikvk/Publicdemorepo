@@ -1,4 +1,4 @@
-/* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i datamotoren (data/motor/graa.js). Zoomet inn hentes
+/* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i datamotoren (data/motor/graa.ts). Zoomet inn hentes
    laget som fliser fra NIBIO, så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
    område: areal som er bebygd i grunnkartet, men ikke grått. */
 import type ImageTile from 'ol/ImageTile.js';

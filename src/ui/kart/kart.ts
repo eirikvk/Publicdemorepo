@@ -1,5 +1,5 @@
 /* Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling, bytte av kommune og trykk i kartet. Kartet lages av lagKart
-   når alle filene er lastet, og settes inn på siden av ui/komponenter/Kartpanel.jsx. Hvert kartlag ligger i sin egen fil her, og
+   når alle filene er lastet, og settes inn på siden av ui/komponenter/Kartpanel.tsx. Hvert kartlag ligger i sin egen fil her, og
    følger tilstanden i datamotoren på samme måte som React-komponentene: ved hver endring sjekker laget om det det tegnes av, er nytt.
    Kartet kaller datamotoren når brukeren gjør noe (velger en annen kommune), men datamotoren kaller aldri kartet. */
 import type OlMap from 'ol/Map.js';
@@ -69,7 +69,7 @@ export const view = new ol.View({
 export let kart: OlMap | null = null;
 /* Brukeren har bedt om mindre bevegelse: da flyttes ikke kart og side mykt. */
 export const rolig = () => !!window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-/* Ruller siden så kartet er synlig. Kartet ligger i elementet med klassen kartscene, se Kartpanel.jsx. */
+/* Ruller siden så kartet er synlig. Kartet ligger i elementet med klassen kartscene, se Kartpanel.tsx. */
 export const tilKartet = (mykt?: boolean) => {
   const k = document.querySelector('.kartscene');
   if (k) k.scrollIntoView({ behavior: mykt && !rolig() ? 'smooth' : 'auto', block: 'nearest' });
@@ -194,7 +194,7 @@ function maalFerdig() {
 /* Kartet som kommunevelger: et trykk utenfor valgt kommune slår opp kommunen i punktet hos Kartverket og viser en knapp
    rett over punktet, med en prikk der man trykket. Byttet skjer først når man trykker på knappen, så et bomtrykk ved grensen ikke bytter kommune.
    Knappen holdes innenfor kartflaten og unna zoomknappene, og følger punktet når kartet flyttes. Knappen er en del av siden
-   (Kartpanel.jsx), som gir kartet elementet med settByttKnapp. */
+   (Kartpanel.tsx), som gir kartet elementet med settByttKnapp. */
 let byttLag: Overlay | null = null,
   byttEl: HTMLElement | null = null,
   byttSok = 0,
@@ -253,7 +253,7 @@ async function finnKommune(koord: Coordinate) {
     byttKoord = koord;
     byttLag!.setPosition(koord);
     ui.bytt = { nr: t[1].nr, navn: t[1].navn };
-    settProbe({ punkt: `${t[1].navn} kommune` }); /* knappen plasseres når siden har tegnet den, se Kartpanel.jsx */
+    settProbe({ punkt: `${t[1].navn} kommune` }); /* knappen plasseres når siden har tegnet den, se Kartpanel.tsx */
   } catch (e) {
     if (mitt === byttSok) settProbe({ tekst: 'Fant ingen annen kommune her.' });
   }

@@ -1,7 +1,7 @@
 /* Bronse, felles for alle kildene: hvordan det hentes. Svar huskes så lenge siden er åpen, hvert kall måles og føres i kall-loggen,
    og kartbilder hentes gjennom en kø per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen.
    Filen vet ingenting om resten av siden. Hva som skjer, står i henteStatus, og den som vil vite det, gir en funksjon til
-   nårHentingEndres (datamotoren gjør det, se data/motor/tilstand.js). */
+   nårHentingEndres (datamotoren gjør det, se data/motor/tilstand.ts). */
 
 export const SAMTIDIG = 4; /* høyst fire kall om gangen mot hver kilde */
 

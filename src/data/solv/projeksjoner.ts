@@ -1,5 +1,5 @@
 /* Sølv, felles standard: projeksjonene siden kjenner, og omregning til UTM33. Kartet registrerer de samme projeksjonene i
-   OpenLayers (ui/kart/ol.js), så kart og data regner likt. */
+   OpenLayers (ui/kart/ol.ts), så kart og data regner likt. */
 import proj4 from 'proj4';
 import { UTM, type Punkt } from './felles.ts';
 

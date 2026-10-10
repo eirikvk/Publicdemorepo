@@ -32,7 +32,7 @@ jobs:
         run: npm ci
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-      - name: Sjekk navn og skillet mellom regning og tegning
+      - name: Typesjekk og sjekk av lagene
         run: npm run sjekk
       - name: Bygg
         run: npm run bygg

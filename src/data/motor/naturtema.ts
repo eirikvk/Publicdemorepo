@@ -1,8 +1,8 @@
 /* Datamotoren, naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Hvert tema hentes når en kommune
-   velges, og krysses med planrutenettet når det er regnet ut. Hvordan temaene hentes, står i bronse/mdir-naturtema.js, hvordan
-   flatene gjøres om, i solv/temaer.js, og arealet og kryssingen regnes ut i gull/temaer.js. Kartlagene ligger i ui/kart/naturtema.js,
-   og ordene sidene bruker om hvert tema, i ui/komponenter/Temaer.jsx.
-   Et nytt tema av samme slag legges til i bronse, i EGENSKAPER i solv/temaer.js, som en ny linje i listen under, og med ord og
+   velges, og krysses med planrutenettet når det er regnet ut. Hvordan temaene hentes, står i bronse/mdir-naturtema.ts, hvordan
+   flatene gjøres om, i solv/temaer.ts, og arealet og kryssingen regnes ut i gull/temaer.ts. Kartlagene ligger i ui/kart/naturtema.ts,
+   og ordene sidene bruker om hvert tema, i ui/komponenter/Temaer.tsx.
+   Et nytt tema av samme slag legges til i bronse, i EGENSKAPER i solv/temaer.ts, som en ny linje i listen under, og med ord og
    kartlag i ui/. */
 import { hentKartlagt, hentTemaflater } from '../bronse/mdir-naturtema.ts';
 import { husk } from '../bronse/henting.ts';

@@ -1,4 +1,4 @@
-/* Sidevelgeren i Sidevelger.jsx: designsystemets chips over kart og innhold. Knappene i en blokk står tett, og det er litt mer luft
+/* Sidevelgeren i Sidevelger.tsx: designsystemets chips over kart og innhold. Knappene i en blokk står tett, og det er litt mer luft
    mellom blokkene. En blokk med gruppenavn har navnet over knappene. Knappene brytes over flere linjer når de ikke får plass. */
 .sidevelger {
   display: flex;

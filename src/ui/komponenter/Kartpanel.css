@@ -1,4 +1,4 @@
-/* Kartpanelet i Kartpanel.jsx: rammen rundt kartet, merkelappene oppå det, kartets egne kontroller og linjen under kartet.
+/* Kartpanelet i Kartpanel.tsx: rammen rundt kartet, merkelappene oppå det, kartets egne kontroller og linjen under kartet.
    Selve kartet tegnes av OpenLayers i motoren. */
 .kartpanel {
   display: flex;

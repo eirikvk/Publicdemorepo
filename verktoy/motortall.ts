@@ -1,23 +1,39 @@
 /* Tallene motoren har regnet ut, hentet fra tilstanden i siden (window.motor, som siden setter med ?teknisk). Brukes av
-   regresjonstesten, så tallene kan sammenlignes direkte og ikke bare som tekst. Funksjonen kjøres i nettleseren. */
+   regresjonstesten, så tallene kan sammenlignes direkte og ikke bare som tekst. Funksjonen kjøres i nettleseren.
+   Testen leser også eldre utgaver av siden, der tilstanden har en annen form. Derfor er tilstanden beskrevet som fri (Fritt) her,
+   og ikke med typene fra src: verdiene rundes av og sammenlignes som de er, og navn som bare finnes i eldre utgaver, leses også. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Fritt = any;
+export interface Motor {
+  app: Fritt;
+  ui?: Fritt;
+  NATURTEMA?: Fritt;
+  NATURLAG?: Fritt /* temaene, under det gamle navnet */;
+  readonly kart: Fritt;
+}
+declare global {
+  interface Window {
+    motor?: Motor;
+  }
+}
 export function motortall() {
   const M = window.motor;
   if (!M) return null;
   const A = M.app,
-    T = M.NATURTEMA || M.NATURLAG /* temaene, under det nye eller det gamle navnet */,
-    side = id => (M.ui ? M.ui.side === id : null),
-    r = x => (typeof x === 'number' ? Math.round(x * 1e6) / 1e6 : x),
-    rund = o =>
+    T: Fritt[] = M.NATURTEMA || M.NATURLAG /* temaene, under det nye eller det gamle navnet */,
+    side = (id: string) => (M.ui ? M.ui.side === id : null),
+    r = (x: unknown) => (typeof x === 'number' ? Math.round(x * 1e6) / 1e6 : x),
+    rund = (o: Fritt): Fritt =>
       o == null
         ? o
         : Array.isArray(o) || ArrayBuffer.isView(o)
-          ? Array.from(o, rund)
+          ? Array.from(o as ArrayLike<Fritt>, rund)
           : typeof o === 'object'
             ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, rund(v)]))
             : r(o);
-  const plukk = (o, ...navn) => (o ? Object.fromEntries(navn.map(n => [n, rund(o[n])])) : null);
+  const plukk = (o: Fritt, ...navn: string[]) => (o ? Object.fromEntries(navn.map(n => [n, rund(o[n])])) : null);
   const R = A.planRaster && A.valgt && A.planRaster.nr === A.valgt.nr ? A.planRaster : null;
-  const sum = (o, f) => o.reduce((s, x) => s + (x[f] || 0), 0);
+  const sum = (o: Fritt[], f: string) => o.reduce((s, x) => s + (x[f] || 0), 0);
   return {
     valgt: A.valgt && A.valgt.nr,
     arealtall: plukk(A.arealtall, 'tilstand', 'a', 'aar'),
@@ -47,7 +63,7 @@ export function motortall() {
       if (!D || !A.valgt || D.nr !== A.valgt.nr) return { id: t.id, data: null };
       const o = D.omrader || [],
         /* ruter med planlagt utbygging per område: før lå de på områdene, nå i egne lister i temaets data */
-        per = f => (D[f] ? Array.from(D[f]) : o.map(x => x[f] || 0));
+        per = (f: string): number[] => (D[f] ? Array.from(D[f]) : o.map((x: Fritt) => x[f] || 0));
       return {
         id: t.id,
         feil: !!D.feil,
@@ -67,7 +83,13 @@ export function motortall() {
     inon: plukk(A.inon, 'tilstand', 'soner', 'sum'),
     graa: plukk(A.graa, 'tilstand', 'trinn', 'sum'),
     graaKryss: plukk(A.graaKryss, 'S', 'P', 'bebygd', 'gront', 'delvis', 'antallEgne'),
-    egne: A.egne.map(g => ({ navn: g.navn, kilde: g.kilde, km2: r(g.km2), deler: g.deler.length, tall: rund(g.tall) })),
+    egne: A.egne.map((g: Fritt) => ({
+      navn: g.navn,
+      kilde: g.kilde,
+      km2: r(g.km2),
+      deler: g.deler.length,
+      tall: rund(g.tall)
+    })),
     vis: {
       inon: M.ui ? side('inon') : A.inonPaa,
       graa: M.ui ? side('graa') : A.graaPaa,

@@ -1,6 +1,6 @@
-/* Felles for hele siden, hentet i main.jsx før komponentene. Her ligger det som gjelder overalt: designsystemets variabler som
+/* Felles for hele siden, hentet i main.tsx før komponentene. Her ligger det som gjelder overalt: designsystemets variabler som
    siden setter selv, grunnlaget for tekst, fokus og avstand mellom avsnitt, og små rettinger av designsystemet.
-   Hver komponent har sin egen stil ved siden av seg i src/visning, for eksempel Temaer.css for Temaer.jsx.
+   Hver komponent har sin egen stil ved siden av seg i src/ui/komponenter, for eksempel Temaer.css for Temaer.tsx.
 
    Fast mønster for hele siden, se også README:
    - Tekst: tre overskrifter med designsystemets klasser, brødtekst 16 px og liten tekst 14 px. Ingen andre størrelser.
@@ -8,7 +8,7 @@
    - Linjer: én tynn grå linje overalt.
    - Knapper: ramme for verktøyene, bare tekst for handlinger i lister og kort.
    - Farger, skrift, avstander og hjørner er designsystemets variabler (--md-*). Kartets farger er data og ligger som egne
-     variabler (--beb, --pnat og så videre), satt fra FARGER i motor/felles.js.
+     variabler (--beb, --pnat og så videre), satt fra FARGER i ui/farger.ts.
    - Avstander: designsystemets trinn. Mellom avsnitt i løpende tekst minst to ganger skriftstørrelsen, som designsystemet krever. */
 :root {
   /* Sofia Pro følger ikke med designsystemet og ligger ikke i denne løsningen. Uten den brukes Open Sans også i overskrifter. */

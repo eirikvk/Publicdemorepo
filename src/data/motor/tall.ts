@@ -1,5 +1,5 @@
-/* Tallene fra SSB, tabell 09594: arealklasser, land og vann, og arealet fra 2017 til utbredelsesregnskapet. Hentes i bronse/ssb.js
-   og tolkes i solv/ssb.js. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
+/* Tallene fra SSB, tabell 09594: arealklasser, land og vann, og arealet fra 2017 til utbredelsesregnskapet. Hentes i bronse/ssb.ts
+   og tolkes i solv/ssb.ts. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
 import { hentArealtall, hentTidsserie } from '../bronse/ssb.ts';
 import { tolkAreal, tolkHistorie } from '../solv/ssb.ts';
 import type { Kommune } from '../solv/felles.ts';

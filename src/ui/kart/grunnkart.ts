@@ -1,6 +1,6 @@
 /* Kartlaget med dagens arealklasser: flisene fra NIBIO når kartet er zoomet inn, og oversiktsbildet når det er zoomet ut, i
-   kartfargene. Bildene hentes i data/bronse/nibio-grunnkart.js. Oversiktsbildet er det lagrede, eller det sammensatte kartet
-   datamotoren lager av flisene som er hentet (data/motor/grunnkart.js). Kartet har sin egen kopi av det i kartfargene. */
+   kartfargene. Bildene hentes i data/bronse/nibio-grunnkart.ts. Oversiktsbildet er det lagrede, eller det sammensatte kartet
+   datamotoren lager av flisene som er hentet (data/motor/grunnkart.ts). Kartet har sin egen kopi av det i kartfargene. */
 import type ImageWrapper from 'ol/Image.js';
 import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
@@ -215,7 +215,7 @@ const fargeleggVentende = (k: Kopi | null | undefined) => {
 let etterTimer: number | undefined;
 export let etterVenter = false;
 export const pauseEtterarbeid = () => clearTimeout(etterTimer);
-export const maalEtterarbeid = ['']; /* til målingen under Tekniske valg, se kart.js */
+export const maalEtterarbeid = ['']; /* til målingen under Tekniske valg, se kart.ts */
 export function planleggEtterarbeid() {
   etterVenter = true;
   clearTimeout(etterTimer);

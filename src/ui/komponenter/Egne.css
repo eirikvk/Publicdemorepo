@@ -1,4 +1,4 @@
-/* Egne områder i Egne.jsx: listen over områdene, hvert i et hvitt kort */
+/* Egne områder i Egne.tsx: listen over områdene, hvert i et hvitt kort */
 .egneliste {
   display: flex;
   flex-direction: column;

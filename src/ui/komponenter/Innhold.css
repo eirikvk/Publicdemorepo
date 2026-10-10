@@ -1,4 +1,4 @@
-/* Innholdet i Innhold.jsx: én side om gangen ved siden av kartet, med delene av siden skilt av en tynn linje */
+/* Innholdet i Innhold.tsx: én side om gangen ved siden av kartet, med delene av siden skilt av en tynn linje */
 .innhold {
   min-width: 0;
 }
