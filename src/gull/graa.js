@@ -1,6 +1,7 @@
 /* Gull for grått areal: arealet per trinn i kommunen, og kryssingen med planrutenettet. */
-import { ruteX, ruteY } from '../solv/felles.js';
+import { RUTE, ruteX, ruteY } from '../solv/felles.js';
 import { graaVed } from '../solv/graa.js';
+import { andel, bildeStatus } from './felles.js';
 
 /* Arealet i km² per trinn og samlet, fra antall ruter per trinn (n) i rutenettet med ruter på res meter. skala er m2PerKm2 for
    kommunen. Avrundet til nærmeste 10 dekar. */
@@ -50,4 +51,28 @@ export function kryssGraa(R, D, delvis) {
     if (b) legg(P, e, k, c);
   }
   return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis };
+}
+
+/* Det temasiden og oversikten viser: tilstanden, arealet samlet og per trinn, andelen av landarealet, grønt i bebygd område og
+   planlagt utbygging på grått areal. D er grått areal for kommunen, K kryssingen med planen (eller null) og land landarealet i km². */
+export function byggGraa(D, K, land) {
+  const S = K && K.S.tot ? K.S : null;
+  return {
+    tilstand: bildeStatus(D),
+    sum: D ? D.sum : 0,
+    trinn: D ? D.trinn : null,
+    andelLand: D ? andel(D.sum, land) : null,
+    gront: K ? { km2: K.gront * RUTE, delvis: K.delvis } : null,
+    plan: S
+      ? {
+          km2: S.tot * RUTE,
+          graa: S.graa * RUTE,
+          gron: S.gron * RUTE,
+          gront: S.gront * RUTE,
+          andelGraa: andel(S.graa, S.tot),
+          delvis: K.delvis,
+          antallEgne: K.antallEgne
+        }
+      : null
+  };
 }

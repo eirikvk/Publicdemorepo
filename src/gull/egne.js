@@ -1,9 +1,26 @@
-/* Gull for egne områder: radene som sammenligner kommuneplanen alene med kommuneplanen og egne områder. */
+/* Gull for egne områder: hva som ligger i hvert område, og radene som sammenligner kommuneplanen alene med kommuneplanen og egne
+   områder. Arealer er i km², andeler i prosent. */
+import { RUTE } from '../solv/felles.js';
+import { andel } from './felles.js';
+
+/* Hva som ligger i et eget område i dag, i km², fra tellingen T i planrutenettet. ukjent er ruter der kartet ikke er hentet eller
+   som ligger utenfor kommunen. smal sier at området tar natur eller jordbruk i planrutenettet, men at alt faller for regelen om
+   smale striper. */
+export const byggEgetOmrade = T => ({
+  kjent: !!(T.nat + T.jor + T.beb + T.vann),
+  natur: T.nat * RUTE,
+  jordbruk: T.jor * RUTE,
+  bebygd: T.beb * RUTE,
+  vann: T.vann * RUTE,
+  ukjent: T.ukjent * RUTE,
+  smal: !!(T.nat + T.jor) && !(T.nnat + T.njor)
+});
 
 /* Radene i sammenligningen mellom kommuneplanen og egne områder. e er null for hele kommunen, ellers nummeret til området, og T er
    tallene for det området. R er planrutenettet, GK kryssingen med grått areal, tema temaene som er krysset med planen ({ navn, id,
-   klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er [navn, farge, planen alene, med egne områder, hva
-   andelen regnes av, gruppe], med tallene i ruter. */
+   klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er { navn, farge, gruppe, plan, ny, endring, andelPlan,
+   andelNy }: planen alene (null uten kommuneplan), med egne områder og forskjellen i km², og andelen av det som finnes i dag i
+   prosent der det er regnet ut. */
 export function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
   const ut = [];
   ut.push([
@@ -47,5 +64,14 @@ export function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
       0,
       'Av dette i'
     ]);
-  return ut.concat(verdi);
+  return ut.concat(verdi).map(([navn, farge, plan, ny, av, gruppe]) => ({
+    navn,
+    farge,
+    gruppe,
+    plan: plan === null ? null : plan * RUTE,
+    ny: ny * RUTE,
+    endring: (ny - (plan || 0)) * RUTE,
+    andelPlan: av && plan !== null ? andel(plan, av) : null,
+    andelNy: av ? andel(ny, av) : null
+  }));
 }

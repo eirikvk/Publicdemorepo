@@ -1,53 +1,46 @@
 /* Utbredelsesregnskapet: hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre. Først forklart med
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
-   Til slutt land og vann. Tallene hentes i motoren, her blir de tekst, stolper og tabell. */
-import { KL } from '../solv/klasser.js';
+   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.js. Her blir de tekst, stolper og tabell. */
+import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann } from '../gull/regnskap.js';
 import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
-import { landOgVann } from '../gull/regnskap.js';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.jsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from './tekst.js';
 import './Regnskap.css';
 
-/* Klassene med natur først, med plassen i SSB-tallene (bebygd, jordbruk, natur) */
-const KLASSER = KL.map(([id, navn], i) => [id, navn, i]).reverse();
-
 /* Hele dekar fra km², og en endring i hele dekar med fortegn */
 const hele = km2 => nf(Math.round(km2 * 1000), 0),
   endring = km2 => medFortegn(Math.round(km2 * 1000), v => nf(v, 0));
-const sum = a => a[0] + a[1] + a[2];
 
 /* Forskjellen fra 2017 for hver klasse, som stolper ut fra en midtlinje: til venstre er mindre, til høyre er mer. Den lengste
    stolpen fyller halve bredden. */
-function Endring({ H }) {
-  if (H.endret)
+function Endring({ E }) {
+  if (E.endret)
     return (
       <div className="utvikling">
-        <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {H.fra}?</h3>
+        <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {E.fra}?</h3>
         <p>
-          Kommunens flate er ikke den samme i SSBs tall for {H.fra} og {H.til}, trolig fordi grensen er flyttet. Tallene
+          Kommunens flate er ikke den samme i SSBs tall for {E.fra} og {E.til}, trolig fordi grensen er flyttet. Tallene
           kan derfor ikke sammenlignes.
         </p>
       </div>
     );
-  const d = KLASSER.map(([id, navn, i]) => [id, navn, H.a1[i] - H.a0[i]]),
-    maks = Math.max(...d.map(x => Math.abs(x[2]))) || 1;
   const tekst = ramse(
-    d.map(
-      ([, navn, v]) =>
+    E.klasser.map(
+      ({ navn, km2: v }) =>
         `${navn.toLowerCase()} ${Math.round(v * 1000) ? `${v < 0 ? 'ned' : 'opp'} ${iTekst(Math.abs(v))}` : 'uendret'}`
     )
   );
   return (
     <div className="utvikling">
-      <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {H.fra}?</h3>
+      <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {E.fra}?</h3>
       <p>
-        Fra {H.fra} til {H.til}: {tekst}. Det er forskjellen mellom to årganger av SSBs statistikk, ikke målt endring.
+        Fra {E.fra} til {E.til}: {tekst}. Det er forskjellen mellom to årganger av SSBs statistikk, ikke målt endring.
         Noe av forskjellen kan skyldes bedre kartlegging.
       </p>
       <ul className="endring">
-        {d.map(([id, navn, v]) => (
+        {E.klasser.map(({ id, navn, km2: v }) => (
           <li key={id}>
             <span className="navn">
               <Rute id={id} />
@@ -56,7 +49,7 @@ function Endring({ H }) {
             <span className="akse" aria-hidden="true">
               <i
                 className={v < 0 ? 'ned' : 'opp'}
-                style={{ '--c': `var(--${id})`, '--b': (Math.abs(v) / maks) * 50 + '%' }}
+                style={{ '--c': `var(--${id})`, '--b': (Math.abs(v) / E.maks) * 50 + '%' }}
               />
             </span>
             <span className="tall">{endring(v)} daa</span>
@@ -70,48 +63,43 @@ function Endring({ H }) {
 /* Det pedagogiske: hvor mye natur det er nå, fordelingen på de tre klassene, og forskjellen fra 2017 */
 function Utbredelse() {
   const T = app.arealtall,
-    ok = !!T && T.tilstand === 'ok',
-    a = ok ? T.a : null,
-    land = ok ? sum(a) : 0,
-    H = gjeldende(app.historie);
+    U = byggUtbredelse(T),
+    natur = U && U.klasser[0],
+    E = byggEndring(gjeldende(app.historie));
   return (
     <section className="utbredelse" aria-labelledby="regnskap-tittel">
       <h2 className="md-typography-heading-s" id="regnskap-tittel">
         Utbredelsesregnskap
       </h2>
       <p>Hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre over tid.</p>
-      {!ok ? (
+      {!U ? (
         <p>{T && T.tilstand === 'feil' ? 'Tallene kunne ikke hentes fra SSB.' : 'Henter …'}</p>
       ) : (
         <div className="fordeling">
           <p className="total">
-            <b>{dekar(a[2])}</b> natur i {T.aar}, {andelTekst((a[2] / land) * 100)} av landarealet
+            <b>{dekar(natur.km2)}</b> natur i {U.aar}, {andelTekst(natur.andel)} av landarealet
           </p>
           <Stripe
-            hva={`Landarealet i ${T.aar}`}
-            deler={KLASSER.map(([id, navn, i]) => [
-              navn,
-              '--' + id,
-              Math.max(a[i], 0.0001),
-              `${navn}: ${dekar(a[i])}, ${andelTekst((a[i] / land) * 100)}`
+            hva={`Landarealet i ${U.aar}`}
+            deler={U.klasser.map(k => [
+              k.navn,
+              '--' + k.id,
+              Math.max(k.km2, 0.0001),
+              `${k.navn}: ${dekar(k.km2)}, ${andelTekst(k.andel)}`
             ])}
           />
-          <Forklaring deler={KLASSER.map(([id, navn, i]) => [navn, '--' + id, andelTekst((a[i] / land) * 100)])} />
+          <Forklaring deler={U.klasser.map(k => [k.navn, '--' + k.id, andelTekst(k.andel)])} />
         </div>
       )}
-      {H && <Endring H={H} />}
+      {E && <Endring E={E} />}
     </section>
   );
 }
 
 /* Regnskapsoppstillingen: én kolonne per klasse og en sum, og radene areal ved start, netto endring og areal ved slutt */
 function Oppstilling() {
-  const H = gjeldende(app.historie);
-  if (!H || H.endret) return null;
-  const kol = a => [...KLASSER.map(([, , i]) => a[i]), sum(a)],
-    a0 = kol(H.a0),
-    a1 = kol(H.a1),
-    avvik = Math.round((sum(H.a1) - sum(H.a0)) * 1000);
+  const O = byggOppstilling(gjeldende(app.historie));
+  if (!O) return null;
   const P = app.planSum && app.valgt && app.planSum.nr === app.valgt.nr && !utenPlan() ? app.planSum : null;
   return (
     <section className="regnskap prosa" aria-labelledby="oppstilling-tittel">
@@ -119,17 +107,17 @@ function Oppstilling() {
         Regnskapsoppstilling
       </h2>
       <Talltabell
-        kolonner={['daa', ...KLASSER.map(k => k[1]), 'Sum']}
+        kolonner={['daa', ...O.kolonner]}
         rader={[
-          { navn: `Inngående areal ${H.fra}`, tall: a0.map(v => [hele(v)]) },
-          { navn: 'Netto endring', tall: a1.map((v, j) => [endring(v - a0[j])]) },
-          { navn: `Utgående areal ${H.til}`, klasse: 'sum', tall: a1.map(v => [hele(v)]) }
+          { navn: `Inngående areal ${O.fra}`, tall: O.inngaende.map(v => [hele(v)]) },
+          { navn: 'Netto endring', tall: O.netto.map(v => [endring(v)]) },
+          { navn: `Utgående areal ${O.til}`, klasse: 'sum', tall: O.utgaende.map(v => [hele(v)]) }
         ]}
       />
-      {avvik !== 0 && (
+      {O.avvik !== 0 && (
         <p>
           Summen av landarealet er ikke den samme i de to årgangene, så netto endring går ikke i null. Forskjellen er{' '}
-          {nf(Math.abs(avvik), 0)} dekar.
+          {nf(Math.abs(O.avvik), 0)} dekar.
         </p>
       )}
       <p>

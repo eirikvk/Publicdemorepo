@@ -4,8 +4,7 @@
 
    Formateringen av tall og areal (nf, dekar, iTekst, andelTekst) ligger i motoren, fordi motoren også skriver noen tekster. Den
    hentes videre herfra, så komponentene finner alt om tekst på ett sted. */
-import { RUTE } from '../solv/felles.js';
-import { iTekst, nf } from '../motor/felles.js';
+import { nf } from '../motor/felles.js';
 export { andelTekst, dekar, iTekst, nf } from '../motor/felles.js';
 
 /* Tall til og med tolv med bokstaver. en er ordet for 1, som avhenger av kjønnet på det som telles (ett område, én lokalitet). */
@@ -22,11 +21,12 @@ export const ramse = deler => {
   return d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0] || '';
 };
 
-/* Hvor mange prosent del er av helheten, uten prosenttegnet. 0 hvis helheten mangler. */
-export const prosent = (del, av, desimaler = 1) => (av > 0 ? nf((del / av) * 100, desimaler) : '0');
+/* En andel fra gull, i prosent som tekst uten prosenttegnet. 0 når andelen ikke kan regnes ut (null). */
+export const pst = (a, desimaler = 1) => (a === null || a === undefined ? '0' : nf(a, desimaler));
 
-/* Areal i en setning, fra et antall ruter på 21 meter. Planlagt utbygging og kryssingene med den regnes i slike ruter. */
-export const dekarFraRuter = n => iTekst(n * RUTE);
+/* Hvor mange prosent del er av helheten, uten prosenttegnet. 0 hvis helheten mangler. Brukes av stripene, som regner ut andelene av
+   det de tegner. */
+export const prosent = (del, av, desimaler = 1) => (av > 0 ? nf((del / av) * 100, desimaler) : '0');
 
 /* En endring med fortegn: +5, −3 eller 0. vis skriver tallet uten fortegn. */
 export const medFortegn = (v, vis) => (!v ? '0' : (v < 0 ? '−' : '+') + vis(Math.abs(v)));

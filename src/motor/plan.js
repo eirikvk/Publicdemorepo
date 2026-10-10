@@ -2,9 +2,10 @@
    utregningen ligger i solv/planrutenett.js. */
 import { ol } from './ol.js';
 import { hentKommuneplanFlis, hentPlandekning, hentPlaninfo, kommuneplanUrl } from '../bronse/dibk-kommuneplan.js';
-import { BILDE_PLANDEKNING, PLANNIVA, PLAN_FINNES, RUTE, RUTE_M, rutenett } from '../solv/felles.js';
+import { BILDE_PLANDEKNING, PLANNIVA, PLAN_FINNES, RUTE_M, rutenett } from '../solv/felles.js';
 import { JOR, KL, NAT, klasseAv } from '../solv/klasser.js';
 import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.js';
+import { byggPlanSum } from '../gull/planlagt.js';
 import { tegneflate } from '../solv/raster.js';
 import { egenMaske, mine, utenPlan } from './egne.js';
 import { SVAKEST, UTM, app, endret, gjeldende, rgb, tidSlutt, valgNr } from './felles.js';
@@ -219,8 +220,7 @@ async function regnPlan() {
   }
   if (mitt !== regnNr || nr !== (app.valgt && app.valgt.nr)) return;
   const tStart = performance.now(),
-    m = RUTE_M,
-    km2 = v => v * RUTE;
+    m = RUTE_M;
   app.planRaster = byggPlanRaster(
     nr,
     [...under.keys()].map(k => k.split('/').map(Number)),
@@ -234,7 +234,7 @@ async function regnPlan() {
   });
   friskOpp(planLag);
   tidSlutt('plantall', tStart);
-  app.planSum = { nr, nat: km2(app.planRaster.sum.rn), jor: km2(app.planRaster.sum.rj), delvis: dyn, egne: E.length };
+  app.planSum = byggPlanSum(app.planRaster);
   sett('ok');
 }
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker, se

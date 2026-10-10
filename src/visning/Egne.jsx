@@ -1,7 +1,7 @@
-/* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene regnes ut i motor/plan.js og
-   motor/egne.js, radene i tabellene i byggEgneRader. */
+/* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene kommer ferdig regnet ut fra
+   gull/egne.js: byggEgetOmrade for hvert område, og radene i tabellene fra byggEgneRader (som motor/egne.js henter fram). */
 import { useRef } from 'react';
-import { RUTE } from '../solv/felles.js';
+import { byggEgetOmrade } from '../gull/egne.js';
 import { app, gjeldende } from '../motor/felles.js';
 import {
   angrePunkt,
@@ -27,28 +27,29 @@ import {
   MdIconUpload,
   MdRadioGroup
 } from './md.js';
-import { antallOrd, dekar, dekarFraRuter, medFortegn, prosent, ramse } from './tekst.js';
+import { antallOrd, dekar, iTekst, medFortegn, pst, ramse } from './tekst.js';
 import './Egne.css';
 
 /* Antall flater i tekst, med tall til og med tolv i ord */
 const flater = n => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
 
-/* Tabellen som sammenligner planen alene med egne områder. Radene fra motoren er [navn, farge, planen, med egne, hva andelen
-   regnes av, gruppe]. Tallene er ruter på 21 meter. */
+/* Tabellen som sammenligner planen alene med egne områder. Radene kommer fra byggEgneRader: { navn, farge, gruppe, plan, ny,
+   endring, andelPlan, andelNy }, med arealer i km² og andeler i prosent (null der andelen ikke regnes ut). plan er null uten
+   kommuneplan. */
 function EgenTabell({ rader, navnPlan, navnNy }) {
-  const tall = n => (n ? dekar(n * RUTE).replace(' daa', '') : '0');
+  const tall = km2 => (km2 ? dekar(km2).replace(' daa', '') : '0'),
+    andel = a => (a !== null ? pst(a) + ' %' : '');
   const ut = [];
   let gruppe = '';
-  for (const [navn, farge, plan, ny, av, gr] of rader) {
-    if (gr !== gruppe) ut.push({ gruppe: (gruppe = gr) });
-    const andel = n => (av ? prosent(n, av) + ' %' : '');
+  for (const r of rader) {
+    if (r.gruppe !== gruppe) ut.push({ gruppe: (gruppe = r.gruppe) });
     ut.push({
-      navn,
-      farge,
+      navn: r.navn,
+      farge: r.farge,
       tall: [
-        plan === null ? ['–'] : [tall(plan), andel(plan)],
-        [tall(ny), andel(ny)],
-        [medFortegn(ny - (plan || 0), tall)]
+        r.plan === null ? ['–'] : [tall(r.plan), andel(r.andelPlan)],
+        [tall(r.ny), andel(r.andelNy)],
+        [medFortegn(r.endring, tall)]
       ]
     });
   }
@@ -56,39 +57,38 @@ function EgenTabell({ rader, navnPlan, navnNy }) {
 }
 
 function EgetOmrade({ g, nr, R }) {
-  const T = R ? g.tall : null,
+  const O = R && g.tall ? byggEgetOmrade(g.tall) : null,
     tekster = [];
   let tabell = null;
-  if (!T) tekster.push(ingenPlan() || app.ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
+  if (!O) tekster.push(ingenPlan() || app.ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
   else {
-    const kjent = T.nat + T.jor + T.beb + T.vann;
     tekster.push(
-      kjent
+      O.kjent
         ? `I dag ligger det ${ramse(
             [
-              [T.nat, 'natur'],
-              [T.jor, 'jordbruk'],
-              [T.beb, 'bebygd'],
-              [T.vann, 'vann']
-            ].map(([v, hva]) => (v ? dekarFraRuter(v) + ' ' + hva : ''))
+              [O.natur, 'natur'],
+              [O.jordbruk, 'jordbruk'],
+              [O.bebygd, 'bebygd'],
+              [O.vann, 'vann']
+            ].map(([v, hva]) => (v ? iTekst(v) + ' ' + hva : ''))
           )} her.`
         : 'Kartet er ikke hentet for dette området ennå.'
     );
-    if (T.ukjent && kjent)
+    if (O.ukjent && O.kjent)
       tekster.push(
-        `For ca. ${dekarFraRuter(T.ukjent)} er kartet ikke hentet, eller området ligger utenfor kommunen. Zoom inn over området for å få med mer.`
+        `For ca. ${iTekst(O.ukjent)} er kartet ikke hentet, eller området ligger utenfor kommunen. Zoom inn over området for å få med mer.`
       );
-    if (kjent)
+    if (O.kjent)
       tabell = (
         <EgenTabell
-          rader={egneRader(nr).filter((r, i) => i < 2 || r[2] || r[3] || r[0] === 'Grått areal')}
+          rader={egneRader(nr).filter((r, i) => i < 2 || r.plan || r.ny || r.navn === 'Grått areal')}
           navnPlan="Planen her"
           navnNy={g.kilde === 'fil' ? 'Opplastet' : 'Tegningen'}
         />
       );
   }
   const smal =
-    T && g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && T.nat + T.jor && !(T.nnat + T.njor)
+    O && g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && O.smal
       ? 'Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.'
       : '';
   return (

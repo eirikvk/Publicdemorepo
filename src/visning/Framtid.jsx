@@ -1,12 +1,12 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
-   planen. */
-import { OPPLOSNINGER } from '../solv/felles.js';
+   planen. Tallene kommer ferdig regnet ut fra gull/planlagt.js. */
+import { byggPlanlagt } from '../gull/planlagt.js';
 import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
 import { ingenPlan } from '../motor/plan.js';
 import Egne from './Egne.jsx';
 import { Rute } from './deler.jsx';
-import { antallOrd, iTekst, prosent } from './tekst.js';
+import { antallOrd, iTekst, pst } from './tekst.js';
 import { MdAlertMessage } from './md.js';
 
 /* Planlagt utbygging: status for kommuneplanen og arealet natur og jordbruk som settes av. */
@@ -38,24 +38,19 @@ function Planlagt() {
           ? 'Arealet kunne ikke regnes ut.'
           : '';
   } else {
-    const m = OPPLOSNINGER[R.z] / 2,
-      km2 = v => (v * m * m) / 1e6,
-      der = R.delvis ? ' i det hentede kartet' : '';
-    const n = R.n,
-      { rn, rj } = R.sum,
-      basis = R.basis,
-      antall = R.antallEgne;
+    const P = byggPlanlagt(R, app.ssbSum),
+      der = P.delvis ? ' i det hentede kartet' : '',
+      antall = P.antallEgne;
     egnemerk = !antall
       ? ''
-      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : basis.rn + basis.rj ? `Kommuneplanen alene setter av ca. ${iTekst(km2(basis.rn))} natur og ca. ${iTekst(km2(basis.rj))} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
-    natur = `ca. ${iTekst(km2(rn))}, ${prosent(rn, n.nat)} % av naturen${der}${antall ? '' : ` (${iTekst(km2(n.pnat))} med smale striper)`}`;
-    jordbruk = `ca. ${iTekst(km2(rj))}, ${prosent(rj, n.jor)} % av jordbruket${der}${antall ? '' : ` (${iTekst(km2(n.pjor))} med smale striper)`}`;
+      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !P.basis.tom ? `Kommuneplanen alene setter av ca. ${iTekst(P.basis.natur)} natur og ca. ${iTekst(P.basis.jordbruk)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
+    natur = `ca. ${iTekst(P.natur.km2)}, ${pst(P.natur.andel)} % av naturen${der}${antall ? '' : ` (${iTekst(P.natur.medStriper)} med smale striper)`}`;
+    jordbruk = `ca. ${iTekst(P.jordbruk.km2)}, ${pst(P.jordbruk.andel)} % av jordbruket${der}${antall ? '' : ` (${iTekst(P.jordbruk.medStriper)} med smale striper)`}`;
     const felles =
       'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg på siden Om og metode. Anslag til illustrasjon, ikke offisiell statistikk.';
-    if (R.delvis) {
-      const a = km2(n.beb + n.jor + n.nat);
-      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(a)} land${app.ssbSum ? ` av ${iTekst(app.ssbSum)} (${prosent(Math.min(a, app.ssbSum), app.ssbSum)} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${R.rute} meter. ${felles}`;
-    } else note = `Regnet ut i nettleseren fra ${R.fliser} kartfliser med piksler på ${R.rute} meter. ${felles}`;
+    if (P.hentet)
+      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(P.hentet.km2)} land${P.hentet.land ? ` av ${iTekst(P.hentet.land)} (${pst(P.hentet.andel)} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${P.rute} meter. ${felles}`;
+    else note = `Regnet ut i nettleseren fra ${P.fliser} kartfliser med piksler på ${P.rute} meter. ${felles}`;
   }
   return (
     <section className="planlagt" aria-labelledby="plan-tittel">

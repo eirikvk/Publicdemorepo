@@ -1,34 +1,40 @@
 /* Oversikten: det viktigste fra hver side, kort. Hver linje har sidens navn som lenke, ett tall og én eller to setninger. Tallene er
-   de samme som på sidene selv. Linjene står i de samme blokkene som i sidevelgeren, så temaene står under «Naturen i kommunen». */
+   de samme som på sidene selv, fordi de kommer fra de samme funksjonene i gull. Linjene står i de samme blokkene som i sidevelgeren,
+   så temaene står under «Naturen i kommunen». */
 import { Fragment } from 'react';
+import { byggGraa } from '../gull/graa.js';
+import { byggInon } from '../gull/inon.js';
+import { byggEndring, byggUtbredelse } from '../gull/regnskap.js';
+import { byggNaturTall } from '../gull/temaer.js';
 import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
 import { BLOKKER } from '../motor/handlinger.js';
-import { byggNaturTall } from '../gull/temaer.js';
 import { NATURLAG } from '../motor/naturtema.js';
-import { ETT, bildeStatus } from './Temaer.jsx';
+import { ETT } from './Temaer.jsx';
 import { Sidelenke } from './deler.jsx';
-import { andelTekst, antallOrd, dekar, dekarFraRuter, iTekst, stor } from './tekst.js';
+import { andelTekst, antallOrd, dekar, iTekst, stor } from './tekst.js';
 import './Oversikt.css';
 
 const HENTER = { tall: '', tekst: 'Henter …' },
   ingenTall = tekst => ({ tall: '', tekst });
-const andel = km2 => (app.ssbSum ? `, ${andelTekst((km2 / app.ssbSum) * 100)} av landarealet` : '');
+/* Andelen av landarealet fra gull, som tillegg til en setning. Tomt når landarealet mangler (null). */
+const avLand = a => (a !== null ? `, ${andelTekst(a)} av landarealet` : '');
 
 /* Utbredelsesregnskapet: natur nå, og forskjellen fra 2017 */
 function regnskap() {
   const T = app.arealtall;
   if (!T || T.tilstand === 'henter') return HENTER;
   if (T.tilstand !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
-  const nat = T.a[2],
-    H = gjeldende(app.historie),
-    d = H && !H.endret ? H.a1[2] - H.a0[2] : 0;
+  const U = byggUtbredelse(T),
+    natur = U.klasser[0],
+    E = byggEndring(gjeldende(app.historie)),
+    d = E && !E.endret ? E.klasser[0].km2 : 0;
   return {
-    tall: dekar(nat),
+    tall: dekar(natur.km2),
     tekst:
-      `Natur i ${T.aar}${andel(nat)}.` +
+      `Natur i ${U.aar}${avLand(natur.andel)}.` +
       (Math.round(d * 1000)
-        ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${H.fra}, men forskjellen mellom årgangene er ikke målt endring.`
+        ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E.fra}, men forskjellen mellom årgangene er ikke målt endring.`
         : '')
   };
 }
@@ -39,41 +45,39 @@ function naturtema(id) {
     D = t.data;
   if (!D || !app.valgt || D.nr !== app.valgt.nr) return HENTER;
   if (D.feil) return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
-  const o = D.omrader;
-  if (!o.length) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
-  const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum),
-    verdi =
-      t.klasser && D.klasser ? ` Ca. ${iTekst(D.klasser[0] + D.klasser[1])} har stor eller svært stor verdi.` : '',
+  const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum);
+  if (!N.antall) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
+  const verdi = N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : '',
     plan =
       utenPlan() || !D.regnet
         ? ''
         : N.plan
-          ? ` Ca. ${dekarFraRuter(N.plan)} planlagt utbygging innenfor.`
+          ? ` Ca. ${iTekst(N.planKm2)} planlagt utbygging innenfor.`
           : ' Ingen planlagt utbygging innenfor.';
   return {
-    tall: dekar(D.sum || 0),
-    tekst: `${stor(antallOrd(o.length, ETT[id]))} ${o.length === 1 ? t.en : t.fl}.${verdi}${plan}`
+    tall: dekar(N.sum),
+    tekst: `${stor(antallOrd(N.antall, ETT[id]))} ${N.antall === 1 ? t.en : t.fl}.${verdi}${plan}`
   };
 }
 
 /* Inngrepsfri natur og grått areal hentes som ett bilde av kommunen */
 function inon() {
-  const D = gjeldende(app.inon),
-    s = bildeStatus(D);
+  const I = byggInon(gjeldende(app.inon), app.ssbSum),
+    s = I.tilstand;
   if (s === 'henter') return HENTER;
   if (s === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
   if (s === 'ingen') return ingenTall('Ingen. Alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep.');
-  return { tall: dekar(D.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${andel(D.sum)}.` };
+  return { tall: dekar(I.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
 }
 function graa() {
-  const D = gjeldende(app.graa),
-    s = bildeStatus(D);
+  const G = byggGraa(gjeldende(app.graa), null, app.ssbSum),
+    s = G.tilstand;
   if (s === 'henter') return HENTER;
   if (s === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
   if (s === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
   return {
-    tall: dekar(D.sum),
-    tekst: `Tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet${andel(D.sum)}.`
+    tall: dekar(G.sum),
+    tekst: `Tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet${avLand(G.andelLand)}.`
   };
 }
 

@@ -1,9 +1,10 @@
 /* Gull for naturtemaene: arealet av verdsatt natur per verdikategori, kryssingen med planrutenettet (hvor mye planlagt utbygging
    som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.js) og
    planrutenettet (solv/planrutenett.js). Arealer er i km², kryssinger i ruter. */
-import { HALV, RUTENETT_VERDI, m2PerKm2, omriss, ruteX, ruteY, rutenett } from '../solv/felles.js';
+import { HALV, RUTE, RUTENETT_VERDI, m2PerKm2, omriss, ruteX, ruteY, rutenett } from '../solv/felles.js';
 import { sti, tegneflate } from '../solv/raster.js';
 import { naturMaske } from '../solv/temaer.js';
+import { andel } from './felles.js';
 
 /* Omløpsretningen til en ring: true når den går mot klokka */
 const motKlokka = ring => {
@@ -161,36 +162,69 @@ export function kryssNatur(D, R, nK, medDekning, kommune) {
   return { kryss: { S, P: B ? P : null }, gap, plan, smal };
 }
 
-/* Tallene som vises for et naturtema, regnet ut fra områdene. D er temaets data, klasser verdikategoriene hvis temaet har det,
-   medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km².
-   Gir per verdikategori antall lokaliteter og ruter med planlagt utbygging, helhetsbildet (landarealet delt i kartlagt og ikke
-   kartlagt, og verdsatt natur i hver del), ruter med planlagt utbygging og i smale striper, antall områder som berøres, og
-   områdene som skal listes. */
+/* Tallene en temaside og oversikten viser for et naturtema. D er temaets data, klasser verdikategoriene hvis temaet har det,
+   medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Arealer er i
+   km², andeler i prosent, og ruter med planlagt utbygging står både som antall og som km².
+   Gir arealet i kommunen og andelen av landarealet, per verdikategori antall lokaliteter og planlagt utbygging, arealet med stor
+   eller svært stor verdi, kartleggingsgraden, helhetsbildet (landarealet delt i kartlagt og ikke kartlagt, og verdsatt natur i hver
+   del), planlagt utbygging innenfor og i smale striper, antall områder som berøres, planlagt utbygging på natur som ikke er kartlagt,
+   og områdene som skal listes (med plassen i listen over alle områder). */
 export function byggNaturTall(D, klasser, medDekning, samlet, land) {
   const o = D.omrader,
-    E = D.ekstra;
-  const perKlasse =
-    klasser && D.klasser && o.length
-      ? klasser.map((_, v) => {
-          const av = o.filter(x => x.v === v);
-          return { antall: av.length, plan: av.reduce((s, x) => s + x.plan, 0) };
-        })
-      : null;
+    E = D.ekstra,
+    sum = D.sum || 0,
+    harKlasser = !!(klasser && D.klasser && o.length);
+  const perKlasse = harKlasser
+    ? klasser.map((_, v) => {
+        const av = o.filter(x => x.v === v),
+          plan = av.reduce((s, x) => s + x.plan, 0);
+        return { antall: av.length, km2: D.klasser[v], plan, planKm2: plan * RUTE };
+      })
+    : null;
   let helhet = null;
   if (medDekning && E && E.km2 > 0 && E.inne && D.klasser && land > 0 && o.length > 0) {
     const L = land,
       K = Math.min(E.km2, L),
       U = Math.max(0, L - K),
       inne = E.inne,
-      ute = D.klasser.map((a, v) => Math.max(0, a - inne[v]));
-    helhet = { L, K, U, inne, ute, si: inne.reduce((a, b) => a + b, 0), su: ute.reduce((a, b) => a + b, 0) };
+      ute = D.klasser.map((a, v) => Math.max(0, a - inne[v])),
+      si = inne.reduce((a, b) => a + b, 0),
+      su = ute.reduce((a, b) => a + b, 0);
+    helhet = {
+      L,
+      K,
+      U,
+      inne,
+      ute,
+      si,
+      su,
+      andelKartlagt: andel(K, L),
+      andelIkkeKartlagt: andel(U, L),
+      andelInne: andel(si, K),
+      andelUte: andel(su, U)
+    };
   }
+  const plan = o.reduce((s, x) => s + x.plan, 0),
+    smal = o.reduce((s, x) => s + x.smal, 0),
+    G = D.gap;
   return {
+    sum,
+    andelLand: andel(sum, land),
+    antall: o.length,
     klasser: perKlasse,
+    hoyVerdi: harKlasser ? D.klasser[0] + D.klasser[1] : null,
+    kartlagt: E ? { km2: E.km2, andelLand: andel(Math.min(E.km2, land), land), fra: E.fra, til: E.til } : null,
     helhet,
-    plan: o.reduce((s, x) => s + x.plan, 0),
-    smal: o.reduce((s, x) => s + x.smal, 0),
+    plan,
+    planKm2: plan * RUTE,
+    smal,
+    smalKm2: smal * RUTE,
     berort: o.filter(x => x.plan).length,
-    vises: samlet ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan) : o
+    gap: G ? { nat: G.nat, natKm2: G.nat * RUTE, ukjentKm2: G.ukjent * RUTE, andel: andel(G.ukjent, G.nat) } : null,
+    vises: (samlet ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan) : o).map(x => ({
+      omr: x,
+      nr: o.indexOf(x),
+      planKm2: x.plan * RUTE
+    }))
   };
 }
