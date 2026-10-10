@@ -1,48 +1,16 @@
-/* Grunnkartet fra NIBIO som kartfliser, og dagens klasser i en flis til lagene som tegnes i nettleseren. */
+/* Grunnkartet fra NIBIO som kartlag, og dagens klasser i en flis til lagene som tegnes i nettleseren. Bildene hentes i
+   bronse/nibio-grunnkart.js. */
 import { ol } from './ol.js';
-import { SLD, fargeleggBlob } from './farger.js';
-import { FLISNIVA, MAKSRES, UTM, WMS, app, tidSlutt } from './felles.js';
-import {
-  flisnett,
-  friskOpp,
-  kartflagg,
-  kommuneSti,
-  lagHenter,
-  lerret,
-  plannett,
-  tegnUtsnitt,
-  utdaterte
-} from './grunnlag.js';
+import { grunnkartUrl, hentGrunnkartFlis } from '../bronse/nibio-grunnkart.js';
+import { fargeleggBlob } from './farger.js';
+import { FLISNIVA, MAKSRES, UTM, app, tidSlutt } from './felles.js';
+import { flisnett, friskOpp, kartflagg, kommuneSti, lerret, plannett, tegnUtsnitt, utdaterte } from './grunnlag.js';
 import { view } from './kart.js';
 import { leggISamling, ovBildet, ovRes, oversiktSynlig } from './oversikt.js';
 export const klare = new Set(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
-function flisUrl(tc) {
-  return (
-    WMS +
-    '?' +
-    new URLSearchParams({
-      service: 'WMS',
-      version: '1.3.0',
-      request: 'GetMap',
-      layers: 'okosystemtype',
-      styles: '',
-      crs: UTM,
-      bbox: flisnett
-        .getTileCoordExtent(tc)
-        .map(v => v.toFixed(2))
-        .join(','),
-      width: 512,
-      height: 512,
-      format: 'image/png; mode=8bit',
-      transparent: 'true',
-      sld_body: SLD
-    })
-  );
-}
-export const hentRaa = lagHenter('NIBIO', 'Kart'),
-  hentPlan = lagHenter('DiBK', 'Kommuneplan');
+const flisUrl = tc => grunnkartUrl(flisnett.getTileCoordExtent(tc));
 function lastFlis(tile, src) {
-  hentRaa(src)
+  hentGrunnkartFlis(src)
     .then(buf => {
       leggISamling(tile.getTileCoord(), buf);
       return fargeleggBlob(buf);
@@ -76,7 +44,8 @@ export async function dagensKlasser(tc) {
   /* dagens klasser i flisens piksler, i de rene fargene fra NIBIO */
   const c = lerret(),
     g = c.getContext('2d', { willReadFrequently: true });
-  if (tc[0] >= FLISNIVA) g.drawImage(await createImageBitmap(new Blob([await hentRaa(flisUrl(tc))])), 0, 0, 512, 512);
+  if (tc[0] >= FLISNIVA)
+    g.drawImage(await createImageBitmap(new Blob([await hentGrunnkartFlis(flisUrl(tc))])), 0, 0, 512, 512);
   else if (app.ov && app.ov.buf) {
     const u = plannett.getTileCoordExtent(tc);
     tegnUtsnitt(

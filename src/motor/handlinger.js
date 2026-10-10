@@ -2,7 +2,9 @@
 import { ol } from './ol.js';
 import { sluttTegning, visEgneLag } from './egne.js';
 import { areal, m2PerKm2 } from '../solv/felles.js';
-import { KV, UTM, app, endret, flater, hent, nyttValg, valgNr } from './felles.js';
+import { hentKommunegrense, hentKommuneliste } from '../bronse/kartverket.js';
+import { hentOversiktsregister } from '../bronse/nibio-grunnkart.js';
+import { UTM, app, endret, flater, nyttValg, valgNr } from './felles.js';
 import { tema } from './fliser.js';
 import { graaLag, sjekkGraa, visGraa } from './graa.js';
 import { friskOpp } from './grunnlag.js';
@@ -77,9 +79,9 @@ export function settSlor(paa) {
 
 async function hentGrense(k, mitt, behold) {
   try {
-    const j = await hent('Kartverket', `Grense for ${k.navn}`, `${KV}/kommuner/${k.nr}/omrade?utkoordsys=25833`);
+    const omrade = await hentKommunegrense(k);
     if (mitt !== valgNr) return;
-    const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
+    const geom = new ol.format.GeoJSON().readGeometry(omrade, { dataProjection: UTM, featureProjection: UTM });
     grenseKilde.clear();
     grenseKilde.addFeature(new ol.Feature(geom));
     app.flate = areal(flater(geom)) / m2PerKm2(geom.getExtent()); /* flaten i km², rettet for målestokken i UTM */
@@ -162,37 +164,14 @@ export const velgFylke = nr => {
   if (f) velg(f.kommuner[0].nr);
 };
 
-const boksAv = b => {
-  const c = b && b.coordinates && b.coordinates[0];
-  if (!c) return null;
-  const x = c.map(q => q[0]),
-    y = c.map(q => q[1]);
-  return [Math.min(...x), Math.min(...y), Math.max(...x), Math.max(...y)];
-};
 /* Oppstart: kartet lages, listen over kommuner og registeret over oversiktsbilder hentes, og kommunen i adressen velges (eller
    Trondheim). Kalles av siden når kartet har fått plassen sin, så kartet kan zoome til kommunen med en gang. */
 export function startOpp() {
   if (startet) return;
   startet = true;
-  hent('Egen fil', 'Fylker og kommuner', 'kommuner.json', true)
-    .then(j =>
-      j.map(f => ({ nr: f[0], navn: f[1], kommuner: f[2].map(k => ({ nr: k[0], navn: k[1], boks: k.slice(2) })) }))
-    )
-    .catch(() =>
-      hent('Kartverket', 'Fylker og kommuner', `${KV}/fylkerkommuner`).then(j =>
-        j.map(f => ({
-          nr: f.fylkesnummer,
-          navn: f.fylkesnavn,
-          kommuner: f.kommuner.map(k => ({
-            nr: k.kommunenummer,
-            navn: k.kommunenavnNorsk,
-            boks: boksAv(k.avgrensningsboks)
-          }))
-        }))
-      )
-    )
+  hentKommuneliste()
     .then(async liste => {
-      const reg = await hent('Egen fil', 'Register over oversiktsbilder', 'oversikt.json', true).catch(() => null);
+      const reg = await hentOversiktsregister().catch(() => null);
       if (reg && reg.kommuner) {
         app.oversikter = reg.kommuner;
         app.oversiktInfo = { versjon: reg.versjon, hentet: reg.hentet };

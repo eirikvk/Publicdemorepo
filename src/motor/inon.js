@@ -5,32 +5,15 @@
    Laget deler lerret med klassene, så det får samme gjennomsiktighet og ser ut som en del av naturfargen. Arealet per sone regnes ut
    i solv/inon.js (sølv) og gull/inon.js (gull). */
 import { ol } from './ol.js';
+import { hentInonBilde } from '../bronse/mdir-inon.js';
 import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.js';
 import { inonAreal } from '../gull/inon.js';
 import { UTENFOR, tolkInon } from '../solv/inon.js';
 import { NAT, klasseAv } from '../solv/klasser.js';
 import { tegneflate } from '../solv/raster.js';
-import { UTM, app, endret, gjeldende, hent, husk, rgb, tidSlutt, valgNr } from './felles.js';
+import { app, endret, gjeldende, husk, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, friskOppGamle } from './fliser.js';
 import { TOM, friskOpp, jevn, kommuneSti, lerret, plannett, tegnUtsnitt, tegnetKilde } from './grunnlag.js';
-const INON = 'https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms';
-const inonBilde = (u, w, h) =>
-  INON +
-  '?' +
-  new URLSearchParams({
-    service: 'WMS',
-    version: '1.3.0',
-    request: 'GetMap',
-    layers: 'status',
-    styles: '',
-    crs: UTM,
-    bbox: u.map(v => v.toFixed(2)).join(','),
-    width: w,
-    height: h,
-    format: 'image/png8',
-    transparent: 'true',
-    format_options: 'antialias:none'
-  });
 /* Kommunebildet er gjort om til tre masker i hver sin fargekanal: minst 1 km, minst 3 km og minst 5 km fra inngrep. Når en flis
    forstørres fra bildet, jevner nettleseren ut hver maske for seg, og grensen settes der masken er halvveis. Sonegrensene blir
    dermed glatte kurver også når kartet er zoomet langt inn, selv om bildet har ruter på 20 meter eller mer. */
@@ -123,7 +106,7 @@ export async function sjekkInon(k, geom, mitt) {
   visInon();
   try {
     const { res, w, h, u } = rutenett(geom.getExtent(), ...BILDE_TEMA);
-    const buf = await hent('Miljødirektoratet', `Inngrepsfri natur i ${k.navn}`, inonBilde(u, w, h), false, true);
+    const buf = await hentInonBilde(k, u, w, h);
     if (mitt !== valgNr) return;
     const t0 = performance.now(),
       a = tegneflate(w, h),

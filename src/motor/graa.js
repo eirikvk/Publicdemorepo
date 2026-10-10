@@ -1,45 +1,18 @@
-/* Grått areal fra Miljødirektoratets kart over grå arealer (NIBIO, testversjon): areal som alt er tatt i bruk eller sterkt påvirket
-   av bygge- og anleggsaktivitet. Flatene har andel vegetasjon i fem trinn. Hentes som to bilder av hele kommunen når den velges,
-   med egen stil uten kantstrek. Kartlaget zoomet ut lages av det i nettleseren. Zoomet inn hentes laget som fliser. Tallene og
-   kryssingen med planen regnes ut i solv/graa.js (sølv) og gull/graa.js (gull). Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
+/* Grått areal: kartlaget, og hentingen og utregningen når en kommune velges. Bildene hentes i bronse/nibio-graa.js, trinnene per rute
+   lages i solv/graa.js, og arealet og kryssingen med planen regnes ut i gull/graa.js. Kartlaget zoomet ut tegnes fra bildet av hele
+   kommunen. Zoomet inn hentes laget som fliser. Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
    fabrikktomt. */
 import { ol } from './ol.js';
+import { graaFlisUrl, hentGraaBilde, hentGraaFlis } from '../bronse/nibio-graa.js';
 import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.js';
 import { graaAreal, kryssGraa } from '../gull/graa.js';
 import { GRAATRINN, graaTrinn, tolkGraa } from '../solv/graa.js';
 import { klasseAv } from '../solv/klasser.js';
 import { tegneflate } from '../solv/raster.js';
 import { utenPlan } from './egne.js';
-import { FLISNIVA, UTM, app, endret, gjeldende, hent, husk, rgb, tidSlutt, valgNr } from './felles.js';
+import { FLISNIVA, app, endret, gjeldende, husk, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, friskOppGamle } from './fliser.js';
-import { TOM, friskOpp, jevn, kommuneSti, lagHenter, lerret, plannett, tegnUtsnitt, tegnetKilde } from './grunnlag.js';
-const GRAA = 'https://wms.nibio.no/cgi-bin/graastruktur';
-/* Egne stiler uten kantstrek. Alt grått areal tegnes i svart. Flatene med oppgitt andel vegetasjon får en rødfarge som sier hvilket
-   trinn de er i. Kartflisene henter begge lagene i ett bilde. Til tallene hentes de hver for seg: i ett bilde blandes fargene
-   langs kantene, og med ruter på 20 meter ga det for mye grått areal og for lite vegetasjon. */
-const graaFyll = f =>
-  `<PolygonSymbolizer><Fill><CssParameter name="fill">${f}</CssParameter></Fill></PolygonSymbolizer>`;
-const graaLagStil = [
-  `<NamedLayer><Name>graa_arealer</Name><UserStyle><FeatureTypeStyle><Rule>${graaFyll('#000000')}</Rule></FeatureTypeStyle></UserStyle></NamedLayer>`,
-  `<NamedLayer><Name>andel_med_vegetasjon</Name><UserStyle><FeatureTypeStyle>${GRAATRINN.map(([, , fra, til], i) => `<Rule><ogc:Filter><ogc:And><ogc:PropertyIsGreaterThanOrEqualTo><ogc:PropertyName>andelgron</ogc:PropertyName><ogc:Literal>${fra}</ogc:Literal></ogc:PropertyIsGreaterThanOrEqualTo><ogc:PropertyIsLessThan><ogc:PropertyName>andelgron</ogc:PropertyName><ogc:Literal>${til}</ogc:Literal></ogc:PropertyIsLessThan></ogc:And></ogc:Filter>${graaFyll('#' + (51 * (i + 1)).toString(16).padStart(2, '0') + '0000')}</Rule>`).join('')}</FeatureTypeStyle></UserStyle></NamedLayer>`
-];
-const graaBilde = (hva, u, w, h) =>
-  GRAA +
-  '?' +
-  new URLSearchParams({
-    service: 'WMS',
-    version: '1.3.0',
-    request: 'GetMap',
-    layers: ['graa_arealer', 'andel_med_vegetasjon'].filter((_, i) => hva.includes(i)).join(','),
-    sld_body: `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc">${graaLagStil.filter((_, i) => hva.includes(i)).join('')}</StyledLayerDescriptor>`,
-    crs: UTM,
-    bbox: u.map(v => v.toFixed(2)).join(','),
-    width: w,
-    height: h,
-    format: 'image/png',
-    transparent: 'true'
-  });
-const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
+import { TOM, friskOpp, jevn, kommuneSti, lerret, plannett, tegnUtsnitt, tegnetKilde } from './grunnlag.js';
 const graaMinne = new Map();
 async function lastGraaFlis(tile) {
   try {
@@ -55,13 +28,7 @@ async function lastGraaFlis(tile) {
     g.imageSmoothingEnabled = true;
     if (tc[0] >= FLISNIVA) {
       /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
-      g.drawImage(
-        await createImageBitmap(new Blob([await hentGraaFlis(graaBilde([0, 1], u, 512, 512))])),
-        0,
-        0,
-        512,
-        512
-      );
+      g.drawImage(await createImageBitmap(new Blob([await hentGraaFlis(graaFlisUrl(u))])), 0, 0, 512, 512);
       const K = await dagensKlasser(tc).catch(
         () => null
       ); /* dagens klasser: bebygd som ikke er grått, tegnes som grønt i bebygd område */
@@ -176,10 +143,7 @@ export async function sjekkGraa(k, geom, mitt) {
   visGraa();
   try {
     const { res, w, h, u } = rutenett(geom.getExtent(), ...BILDE_TEMA);
-    const [b1, b2] = await Promise.all([
-      hent('NIBIO', `Grått areal i ${k.navn}`, graaBilde([0], u, w, h), false, true),
-      hent('NIBIO', `Vegetasjon i grått areal i ${k.navn}`, graaBilde([1], u, w, h), false, true)
-    ]);
+    const [b1, b2] = await Promise.all([hentGraaBilde(k, 0, u, w, h), hentGraaBilde(k, 1, u, w, h)]);
     if (mitt !== valgNr) return;
     const t0 = performance.now(),
       a = tegneflate(w, h),

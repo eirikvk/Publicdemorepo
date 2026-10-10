@@ -1,11 +1,13 @@
 /* Oversiktsbildet som vises når kartet er zoomet ut: det lagrede, eller det nettleseren setter sammen selv. */
 import { ol } from './ol.js';
+import { opptatt } from '../bronse/henting.js';
+import { hentGrunnkartFlis, hentOversiktsbilde } from '../bronse/nibio-grunnkart.js';
 import { fargeleggBlob, klassefarger, tilFarge } from './farger.js';
 import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
-import { FLISNIVA, MAKSRES, UTM, app, hent, tidSlutt, valgNr } from './felles.js';
-import { friskOppGamle, hentRaa } from './fliser.js';
+import { FLISNIVA, MAKSRES, UTM, app, tidSlutt, valgNr } from './felles.js';
+import { friskOppGamle } from './fliser.js';
 import { graaLag } from './graa.js';
-import { flisnett, kartflagg, opptatt, utdaterte } from './grunnlag.js';
+import { flisnett, kartflagg, utdaterte } from './grunnlag.js';
 import { inonLag } from './inon.js';
 import { kartStatus, maalTekst, view, visMaaling } from './kart.js';
 import { regnAlt, tegnPlan } from './plan.js';
@@ -142,7 +144,7 @@ export function nySamling(nr, ext) {
    etterpå. Når en kommune velges, legges derfor alle hentede fliser som berører den, inn fra minnet. Én om gangen, uten nye kall. */
 async function fyllSamling(s) {
   const str = 256 * OPPLOSNINGER[FLISNIVA];
-  for (const [url, buf] of [...hentRaa.lager]) {
+  for (const [url, buf] of [...hentGrunnkartFlis.lager]) {
     if (s !== samle) return;
     let b;
     try {
@@ -284,7 +286,7 @@ export async function hentOversikt(k, mitt) {
   oversiktSynlig(true);
   if (!app.oversikter[k.nr]) return;
   try {
-    const buf = await hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
+    const buf = await hentOversiktsbilde(k);
     if (mitt !== valgNr) return;
     app.ov = { buf, ext: app.oversikter[k.nr] };
     await tegnOversikt();

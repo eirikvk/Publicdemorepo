@@ -1,24 +1,8 @@
-/* Farger: stilen som sendes til NIBIO, og fargelegging av kartbildene i nettleseren. Tolkingen av fargene til klasser ligger i
-   solv/klasser.js. */
-import { ALLE, BLANDING, DATAFARGE, fargeNr } from '../solv/klasser.js';
+/* Farger: fargelegging av kartbildene i nettleseren. Stilen som sendes til NIBIO, ligger i bronse/nibio-grunnkart.js, og
+   tolkingen av fargene til klasser i solv/klasser.js. */
+import { ALLE, BLANDING, fargeNr } from '../solv/klasser.js';
 import { app, rgb, tidSlutt } from './felles.js';
 import { ingenPlan } from './plan.js';
-/* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
-export const SLD = (() => {
-  const hex = f => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
-  const regler = ALLE.map(([id, , verdier]) => {
-    let f = verdier
-      .map(
-        v =>
-          `<ogc:PropertyIsEqualTo><ogc:PropertyName>okosystemtypeniva1</ogc:PropertyName><ogc:Literal>${v}</ogc:Literal></ogc:PropertyIsEqualTo>`
-      )
-      .join('');
-    if (verdier.length > 1) f = `<ogc:Or>${f}</ogc:Or>`;
-    return `<Rule><ogc:Filter>${f}</ogc:Filter><PolygonSymbolizer><Fill><CssParameter name="fill">${hex(DATAFARGE[id])}</CssParameter></Fill></PolygonSymbolizer></Rule>`;
-  }).join('');
-  return `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;
-})();
-
 /* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve
    bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se
    BLANDING i solv/klasser.js, og får en tilsvarende blanding av visningsfargene. */

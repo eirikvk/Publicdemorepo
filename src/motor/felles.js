@@ -4,7 +4,6 @@
 import proj4 from 'proj4';
 import { ol } from './ol.js';
 
-export const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 export const KV = 'https://api.kartverket.no/kommuneinfo/v1';
 export const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data';
 /* Kartet bruker UTM sone 33 (EPSG:25833), som dataene er laget i og som NIBIOs egen kartløsning Kilden bruker.
@@ -155,40 +154,6 @@ export const kb = b => (b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Mat
 export let valgNr = 0;
 export const nyttValg = () => ++valgNr;
 
-/* Kall-logg: hvert kall mot en åpen kilde måles i nettleseren. */
-export function logg(kilde, hva, ms, bytes, feil) {
-  app.kall = [
-    [
-      kilde,
-      hva,
-      feil ? 'feilet' : ms >= 1000 ? nf(ms / 1000) + ' s' : Math.round(ms) + ' ms',
-      feil ? '' : kb(bytes),
-      !!feil
-    ],
-    ...app.kall
-  ].slice(0, 8);
-  endret();
-}
-/* Svarene huskes så lenge siden er åpen. Bytter man tilbake til en kommune, hentes verken grense, tall eller plansjekk på nytt.
-   Ingenting lagres varig i nettleseren. */
-const svar = new Map();
-export async function hent(kilde, hva, url, stille, bytes, glem, kropp) {
-  const nokkel = kropp ? url + ' ' + kropp : url;
-  if (svar.has(nokkel)) return svar.get(nokkel);
-  const t0 = performance.now();
-  try {
-    const r = await fetch(url, kropp ? { method: 'POST', body: kropp } : undefined);
-    if (!r.ok) throw new Error(r.status);
-    const b = await r.blob();
-    logg(kilde, hva, performance.now() - t0, b.size);
-    const verdi = bytes ? await b.arrayBuffer() : JSON.parse(await b.text());
-    if (!glem) husk(svar, nokkel, verdi, 80);
-    return verdi;
-  } catch (e) {
-    if (!stille) logg(kilde, hva, 0, 0, true);
-    throw e;
-  }
-}
 /* Flatene i en geometri fra OpenLayers, som flerflate med vanlige koordinater, slik analysene tar dem. */
 export const flater = geom => (geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()]);
 /* Minne med fast plass: det eldste går ut når det blir fullt, og det som legges inn på nytt, regnes som nytt. */

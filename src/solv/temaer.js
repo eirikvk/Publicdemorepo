@@ -5,6 +5,42 @@ import polygonClipping from 'polygon-clipping';
 import { RUTENETT_MASKE, areal, flerflate, m2PerKm2, omriss, snitt, tomt } from './felles.js';
 import { sti, tegneflate } from './raster.js';
 
+/* Egenskapene til flatene i hvert tema gjort om til felles form: navn, lenke til faktaark, en kort beskrivelse (under) og, for
+   verdsatt natur, verdikategorien v (0 svært stor, 1 stor, 2 middels, 3 noe verdi). */
+export const EGENSKAPER = {
+  vern: p => ({
+    navn: p.offisieltNavn || 'Uten navn',
+    url: p.faktaark || '',
+    under: [
+      String(p.verneform || '')
+        .replace(/([a-zæøå])([A-ZÆØÅ])/g, '$1 $2')
+        .toLowerCase()
+        .replace(/omraade/g, 'område')
+        .replace(/^./, c => c.toUpperCase()),
+      p.vernedato ? 'vernet ' + new Date(p.vernedato).getUTCFullYear() : ''
+    ]
+      .filter(Boolean)
+      .join(', ')
+  }),
+  rein: p => ({
+    navn: String(p['villreinområdeNavn'] || 'Uten navn').replace(/\s*-\s*leveområde\s*$/i, ''),
+    url: p.faktaark || '',
+    under: [
+      p['villreinområdeNasjonalt'] === 'Ja' ? 'Nasjonalt villreinområde' : 'Villreinområde',
+      p.funksjon ? String(p.funksjon).toLowerCase() : '',
+      p.funksjonsperiode ? String(p.funksjonsperiode).toLowerCase() : ''
+    ]
+      .filter(Boolean)
+      .join(', ')
+  }),
+  verdi: p => ({
+    navn: p['Områdenavn'] || p.Naturtype || 'Uten navn',
+    url: p.FaktaarkLokalitet || p.Faktaark || '',
+    v: Math.max(0, ['Svært stor verdi', 'Stor verdi', 'Middels verdi', 'Noe verdi'].indexOf(p.Verdikategori)),
+    under: [p.Naturtype, String(p.Verdikategori || '').toLowerCase()].filter(Boolean).join(', ')
+  })
+};
+
 /* Et område som et lite rutenett med dekningen per rute (a, 0–255), til oppslag fra planrutenettet. flate er { koord, ext }.
    kommune oppgis bare når flaten ikke alt er klippet mot kommunen. m2 er arealet i kartets kvadratmeter. */
 export function naturMaske(flate, kommune) {

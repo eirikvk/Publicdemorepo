@@ -1,49 +1,22 @@
 /* Planlagt utbygging: kommuneplanen fra DiBK som kartlag, hentingen til planrutenettet og samordningen av utregningen. Selve
    utregningen ligger i solv/planrutenett.js. */
 import { ol } from './ol.js';
+import { hentKommuneplanFlis, hentPlandekning, hentPlaninfo, kommuneplanUrl } from '../bronse/dibk-kommuneplan.js';
 import { BILDE_PLANDEKNING, PLANNIVA, PLAN_FINNES, RUTE, RUTE_M, rutenett } from '../solv/felles.js';
 import { JOR, KL, NAT, klasseAv } from '../solv/klasser.js';
 import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.js';
 import { tegneflate } from '../solv/raster.js';
 import { egenMaske, mine, utenPlan } from './egne.js';
-import { SVAKEST, UTM, app, endret, gjeldende, hent, rgb, tidSlutt, valgNr } from './felles.js';
-import { dagensKlasser, fargeleggFliser, hentPlan } from './fliser.js';
+import { SVAKEST, UTM, app, endret, gjeldende, rgb, tidSlutt, valgNr } from './felles.js';
+import { dagensKlasser, fargeleggFliser } from './fliser.js';
 import { regnGraa } from './graa.js';
 import { TOM, friskOpp, kommuneSti, lerret, plannett } from './grunnlag.js';
 import { NATURLAG, regnNatur } from './naturtema.js';
 import { samle, tegnOversikt } from './oversikt.js';
-/* Kommuneplanen fra DiBK: områder satt av til framtidig bebyggelse, anlegg og samferdsel (arealformål 1000- og 2000-serien
-   med arealbruksstatus 2), hentet som fliser i samme rutenett. For hver flis legges planen oppå dagens klasser i nettleseren,
-   og bare natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut brukes oversiktsbildet som dagens klasser:
-   det lagrede, eller det nettleseren selv har satt sammen av flisene den har hentet. */
-const PLAN = 'https://nap.ft.dibk.no/services/wms/kommuneplaner/';
-const planSom = v =>
-  `<PropertyIsLike wildCard="*" singleChar="?" escapeChar="!"><PropertyName>arealformål</PropertyName><Literal>${v}</Literal></PropertyIsLike>`;
-const PLANFILTER = `<Filter xmlns="http://www.opengis.net/ogc"><And><PropertyIsEqualTo><PropertyName>arealbruksstatus</PropertyName><Literal>2</Literal></PropertyIsEqualTo><Or>${planSom('1*')}${planSom('2*')}</Or></And></Filter>`;
-/* Flatene hentes med en egen stil som bare fyller dem, uten kantstrek. DiBKs standardstil tegner en strek rundt hver flate, og den
-   er like bred i piksler uansett målestokk. Med ruter på 21 meter la streken rundt en fjerdedel til arealet i et testområde. */
-const PLANSTIL =
-  '<?xml version="1.0" encoding="UTF-8"?><StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld"><NamedLayer><Name>kparealformalomrade</Name><UserStyle><FeatureTypeStyle><Rule><PolygonSymbolizer><Fill><CssParameter name="fill">#000000</CssParameter></Fill></PolygonSymbolizer></Rule></FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>';
-const planUrl = tc =>
-  PLAN +
-  '?' +
-  new URLSearchParams({
-    service: 'WMS',
-    version: '1.3.0',
-    request: 'GetMap',
-    layers: 'kparealformalomrade',
-    sld_body: PLANSTIL,
-    crs: UTM,
-    bbox: plannett
-      .getTileCoordExtent(tc)
-      .map(v => v.toFixed(2))
-      .join(','),
-    width: 512,
-    height: 512,
-    format: 'image/png8',
-    transparent: 'true',
-    filter: PLANFILTER
-  });
+/* Kartlaget: kommuneplanen fra DiBK (se bronse/dibk-kommuneplan.js), hentet som fliser i samme rutenett. For hver flis legges
+   planen oppå dagens klasser i nettleseren, og bare natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut brukes
+   oversiktsbildet som dagens klasser: det lagrede, eller det nettleseren selv har satt sammen av flisene den har hentet. */
+const planUrl = tc => kommuneplanUrl(plannett.getTileCoordExtent(tc));
 
 /* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra et rutenett
    for hele kommunen (21 meter per rute, laget av arealutregningen). En flispiksel får farge bare hvis det faktisk ligger
@@ -118,7 +91,7 @@ async function lastPlanFlis(tile, src) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentPlan(src)]);
+    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentKommuneplanFlis(src)]);
     if (!K) throw new Error('mangler dagens klasser');
     const c = lerret(),
       g = c.getContext('2d', { willReadFrequently: true }),
@@ -192,7 +165,7 @@ export const tegnPlan = () => planLag.setSource(nyPlanKilde());
 let regnNr = 0;
 
 async function hentBlokk(tc, fliser) {
-  const [K, buf] = await Promise.all([dagensKlasser(tc), ingenPlan() ? null : hentPlan(planUrl(tc))]);
+  const [K, buf] = await Promise.all([dagensKlasser(tc), ingenPlan() ? null : hentKommuneplanFlis(planUrl(tc))]);
   if (!K) throw new Error('mangler dagens klasser');
   const g = lerret().getContext('2d', { willReadFrequently: true });
   if (buf) g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
@@ -274,23 +247,7 @@ export async function sjekkPlan(k, geom, mitt) {
   endret();
   try {
     const { res, w, h, u } = rutenett(geom.getExtent(), ...BILDE_PLANDEKNING);
-    const felles = {
-      service: 'WMS',
-      version: '1.3.0',
-      layers: 'kparealformalomrade',
-      styles: 'polygon',
-      crs: UTM,
-      bbox: u.map(v => v.toFixed(1)).join(','),
-      width: w,
-      height: h
-    };
-    const buf = await hent(
-      'DiBK',
-      `Dekning av kommuneplan for ${k.navn}`,
-      PLAN + '?' + new URLSearchParams({ ...felles, request: 'GetMap', format: 'image/png8', transparent: 'true' }),
-      false,
-      true
-    );
+    const buf = await hentPlandekning(k, u, w, h);
     if (mitt !== valgNr) return;
     const a = tegneflate(w, h),
       b = tegneflate(w, h);
@@ -302,22 +259,7 @@ export async function sjekkPlan(k, geom, mitt) {
     if (dekning >= PLAN_FINNES)
       try {
         const q = treff[treff.length >> 1];
-        const j = await hent(
-          'DiBK',
-          `Opplysninger om kommuneplanen for ${k.navn}`,
-          PLAN +
-            '?' +
-            new URLSearchParams({
-              ...felles,
-              request: 'GetFeatureInfo',
-              query_layers: 'kparealformalomrade',
-              info_format: 'application/json',
-              feature_count: 5,
-              i: q % w,
-              j: Math.floor(q / w)
-            }),
-          true
-        );
+        const j = await hentPlaninfo(k, u, w, h, q % w, Math.floor(q / w));
         const f = (j.features || []).map(x => x.properties || {}).find(x => x['arealplanId.kommunenummer'] === k.nr);
         if (f) {
           const d = /^(\d{4})-(\d\d)-(\d\d)/.exec(f['kopidata.kopidato'] || ''),

@@ -1,12 +1,13 @@
 /* Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling og trykk i kartet. Kartet lages av lagKart når alle filene
    i motoren er lastet, og settes inn på siden av visning/Kart.jsx. */
 import { ol } from './ol.js';
+import { opptatt } from '../bronse/henting.js';
+import { bakgrunnUrl, hentKommuneIPunkt } from '../bronse/kartverket.js';
 import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
 import { ALLE } from '../solv/klasser.js';
 import { egneLag, sluttTegning, tegner } from './egne.js';
 import {
   FLISNIVA,
-  KV,
   MAKSRES,
   MAKSTETTHET,
   UTM,
@@ -14,14 +15,13 @@ import {
   bruk,
   endret,
   farge,
-  hent,
   nullstillBruk,
   rgb,
   tidSlutt
 } from './felles.js';
 import { friskOppGamle, klare, tema } from './fliser.js';
 import { graaLag } from './graa.js';
-import { flisnett, kartflagg, opptatt } from './grunnlag.js';
+import { flisnett, kartflagg } from './grunnlag.js';
 import { finn, velg } from './handlinger.js';
 import { inonLag } from './inon.js';
 import { NATURLAG, dekLag, flateLag, markLag, omrissLag } from './naturtema.js';
@@ -42,8 +42,7 @@ const bakgrunn = new ol.layer.Tile({
     crossOrigin: 'anonymous',
     attributions: '© Kartverket, NIBIO, DiBK',
     tileGrid: new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256 }),
-    tileUrlFunction: ([z, x, y]) =>
-      `https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/utm33n/${String(z).padStart(2, '0')}/${y}/${x}.png`
+    tileUrlFunction: bakgrunnUrl
   })
 });
 export const grenseKilde = new ol.source.Vector();
@@ -223,14 +222,7 @@ async function finnKommune(koord) {
   const mitt = byttSok;
   settProbe({ tekst: 'Slår opp kommunen …' });
   try {
-    const j = await hent(
-      'Kartverket',
-      'Kommune i punktet',
-      `${KV}/punkt?nord=${koord[1].toFixed(0)}&ost=${koord[0].toFixed(0)}&koordsys=25833`,
-      true,
-      false,
-      true
-    );
+    const j = await hentKommuneIPunkt(koord);
     if (mitt !== byttSok) return;
     const t = finn(j.kommunenummer);
     if (!t || (app.valgt && t[1].nr === app.valgt.nr)) throw new Error('ingen annen kommune');

@@ -1,18 +1,18 @@
 /* Naturtema fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Her ligger kartlagene, hentingen og samordningen.
    Arealet, kartleggingsgraden og kryssingen med planen regnes ut i solv/temaer.js (sølv) og gull/temaer.js (gull). */
 import { ol } from './ol.js';
+import { hentKartlagt, hentTemaflater } from '../bronse/mdir-naturtema.js';
 import { OPPLOSNINGER } from '../solv/felles.js';
 import { klasseAreal, kryssNatur } from '../gull/temaer.js';
-import { byggDekning, klippNatur, lokaliteter } from '../solv/temaer.js';
+import { EGENSKAPER, byggDekning, klippNatur, lokaliteter } from '../solv/temaer.js';
 import { utenPlan } from './egne.js';
-import { app, endret, farge, flater, hent, husk, rgb, rolig, tidSlutt, tilKartet, valgNr } from './felles.js';
+import { app, endret, farge, flater, husk, rgb, rolig, tidSlutt, tilKartet, valgNr } from './felles.js';
 import { TOM, friskOpp, kommuneSti, lerret, plannett, tegnetKilde } from './grunnlag.js';
 import { view } from './kart.js';
-/* Naturlag fra Miljødirektoratet: verneområder og leveområder for villrein. Tjenestene gir selve flatene med navn og opplysninger,
-   ikke bare et bilde. Hvert datasett blir et kartlag med egen knapp og egen del i tallpanelet, og krysses med planlagt utbygging. Delen i tallpanelet
-   lages av visning/Tema.jsx ut fra feltene under.
-   Et nytt datasett av samme slag legges til som en ny linje i listen under. */
-const MD = 'https://kart.miljodirektoratet.no/arcgis/rest/services/';
+/* Naturlag fra Miljødirektoratet: verneområder, leveområder for villrein og verdsatt natur. Tjenestene gir selve flatene med navn og
+   opplysninger, ikke bare et bilde. Hvert tema blir et kartlag og en egen side, og krysses med planlagt utbygging. Hvordan temaet
+   hentes, står i bronse/mdir-naturtema.js, og hvordan egenskapene leses, i EGENSKAPER i solv/temaer.js. Et nytt tema av samme slag
+   legges til der og som en ny linje i listen under. */
 export const NATURLAG = [
   {
     id: 'vern',
@@ -21,24 +21,7 @@ export const NATURLAG = [
     fl: 'verneområder',
     best: 'verneområdene',
     vann: true,
-    url: MD + 'vern/MapServer/0/query',
-    felt: 'offisieltNavn,verneform,vernedato,faktaark',
-    slakk: 5,
-    kildetekst: 'Miljødirektoratet, naturvernområder',
-    les: p => ({
-      navn: p.offisieltNavn || 'Uten navn',
-      url: p.faktaark || '',
-      under: [
-        String(p.verneform || '')
-          .replace(/([a-zæøå])([A-ZÆØÅ])/g, '$1 $2')
-          .toLowerCase()
-          .replace(/omraade/g, 'område')
-          .replace(/^./, c => c.toUpperCase()),
-        p.vernedato ? 'vernet ' + new Date(p.vernedato).getUTCFullYear() : ''
-      ]
-        .filter(Boolean)
-        .join(', ')
-    })
+    kildetekst: 'Miljødirektoratet, naturvernområder'
   },
   {
     id: 'rein',
@@ -46,21 +29,7 @@ export const NATURLAG = [
     en: 'villreinområde',
     fl: 'villreinområder',
     best: 'villreinområdene',
-    url: MD + 'villrein/MapServer/1/query',
-    felt: '*',
-    slakk: 20,
-    kildetekst: 'Miljødirektoratet, leveområder for villrein',
-    les: p => ({
-      navn: String(p['villreinområdeNavn'] || 'Uten navn').replace(/\s*-\s*leveområde\s*$/i, ''),
-      url: p.faktaark || '',
-      under: [
-        p['villreinområdeNasjonalt'] === 'Ja' ? 'Nasjonalt villreinområde' : 'Villreinområde',
-        p.funksjon ? String(p.funksjon).toLowerCase() : '',
-        p.funksjonsperiode ? String(p.funksjonsperiode).toLowerCase() : ''
-      ]
-        .filter(Boolean)
-        .join(', ')
-    })
+    kildetekst: 'Miljødirektoratet, leveområder for villrein'
   },
   /* Naturtyper med verdi etter Miljødirektoratets fire verdikategorier. Det er mange små lokaliteter, så de tegnes fylt og uten hvit
      kant, i fire toner av samme farge: mørkere jo høyere verdi. I tallpanelet listes bare lokalitetene som berøres av planlagt utbygging.
@@ -81,19 +50,8 @@ export const NATURLAG = [
       ['Middels verdi', 'verdi3'],
       ['Noe verdi', 'verdi4']
     ],
-    url: MD + 'naturtyper_kuverdi/MapServer/0/query',
-    hvor: nr =>
-      `Verdikategori IN ('Svært stor verdi','Stor verdi','Middels verdi','Noe verdi') AND Kommune LIKE '%(${nr})%'`,
-    felt: 'Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark',
-    slakk: 5,
     kildetekst: 'Miljødirektoratet, naturtyper med KU-verdi og dekningskart for naturtypekartlegging',
-    ekstra: hentDekning,
-    les: p => ({
-      navn: p['Områdenavn'] || p.Naturtype || 'Uten navn',
-      url: p.FaktaarkLokalitet || p.Faktaark || '',
-      v: Math.max(0, ['Svært stor verdi', 'Stor verdi', 'Middels verdi', 'Noe verdi'].indexOf(p.Verdikategori)),
-      under: [p.Naturtype, String(p.Verdikategori || '').toLowerCase()].filter(Boolean).join(', ')
-    })
+    ekstra: hentDekning
   }
 ].map(t => {
   t.kilde = new ol.source.Vector();
@@ -219,27 +177,7 @@ function tegnFlateflis(t, tile) {
 }
 /* Kartleggingsgrad: hvor stor del av kommunen som er kartlagt etter Miljødirektoratets instruks. Uten den er «ingen registrert» lett å misforstå. */
 async function hentDekning(k, geom) {
-  const j = await hent(
-    'Miljødirektoratet',
-    `Kartlagt område i ${k.navn}`,
-    MD +
-      'naturtyper_nin/MapServer/1/query?' +
-      new URLSearchParams({
-        where: '1=1',
-        geometry: geom
-          .getExtent()
-          .map(v => Math.round(v))
-          .join(','),
-        geometryType: 'esriGeometryEnvelope',
-        inSR: 25833,
-        outSR: 25833,
-        spatialRel: 'esriSpatialRelIntersects',
-        outFields: 'Årstall',
-        maxAllowableOffset: 10,
-        geometryPrecision: 0,
-        f: 'geojson'
-      })
-  );
+  const j = await hentKartlagt(k, geom.getExtent());
   const D = byggDekning(j.features || [], kommunen(geom));
   if (D.flate) D.f = D.flate.map(p => new ol.Feature(new ol.geom.Polygon(p))); /* til sløret i kartet */
   return D;
@@ -253,20 +191,7 @@ export async function hentNatur(t, k, geom, mitt) {
   try {
     let pakke = t.minne.get(k.nr);
     if (!pakke) {
-      const j = await hent(
-        'Miljødirektoratet',
-        `${t.navn} i ${k.navn}`,
-        t.url +
-          '?' +
-          new URLSearchParams({
-            where: t.hvor ? t.hvor(k.nr) : `kommune LIKE '%(${k.nr})%'`,
-            outFields: t.felt,
-            outSR: 25833,
-            maxAllowableOffset: t.slakk,
-            geometryPrecision: 0,
-            f: 'geojson'
-          })
-      );
+      const j = await hentTemaflater(t.id, t.navn, k);
       if (mitt !== valgNr) return;
       if (!j || !Array.isArray(j.features)) throw new Error('uventet svar');
       const med = o => {
@@ -282,7 +207,7 @@ export async function hentNatur(t, k, geom, mitt) {
       };
       if (t.samlet) {
         const kom = kommunen(geom),
-          alle = lokaliteter(j.features, kom, t.les),
+          alle = lokaliteter(j.features, kom, EGENSKAPER[t.id]),
           r = klasseAreal(alle, t.klasser ? t.klasser.length : 1, kom),
           omrader = alle.map(med);
         pakke = {
@@ -293,7 +218,7 @@ export async function hentNatur(t, k, geom, mitt) {
           ufullstendig: !!j.exceededTransferLimit
         };
       } else {
-        const omrader = klippNatur(j.features, kommunen(geom), t.les).map(med);
+        const omrader = klippNatur(j.features, kommunen(geom), EGENSKAPER[t.id]).map(med);
         pakke = { omrader, sum: omrader.reduce((s, o) => s + o.km2, 0), vis: omrader.map(o => o.f) };
       }
       husk(t.minne, k.nr, pakke, 30);

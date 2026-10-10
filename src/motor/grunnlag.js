@@ -1,10 +1,10 @@
-/* Det de andre filene i motoren trenger allerede når de lastes: rutenettene for flisene, køen for kall mot kartkildene og hjelpere
-   for lag som tegnes i nettleseren. Filen importerer bare fra felles.js og solv/, så den er alltid ferdig lastet før filene som bruker den.
+/* Det de andre filene i motoren trenger allerede når de lastes: rutenettene for flisene, hva kartet holder på med, og hjelpere for
+   lag som tegnes i nettleseren. Filen importerer bare fra felles.js og solv/, så den er alltid ferdig lastet før filene som bruker den.
    Resten av motoren kaller hverandre fram og tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import { ol } from './ol.js';
 import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
 import { sti } from '../solv/raster.js';
-import { FLISNIVA, SAMTIDIG, UTM, app, endret, flater, husk, kb, logg, nf } from './felles.js';
+import { FLISNIVA, UTM, flater } from './felles.js';
 /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
    så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
 export const flisnett = new ol.tilegrid.TileGrid({
@@ -25,90 +25,6 @@ export const kartflagg = {
   nyeKall: false /* det er hentet nye fliser siden kartet sist begynte å flytte seg */,
   feilIVisning: false /* en flis i utsnittet kunne ikke hentes */
 };
-/* Én henter per kilde: egen kø med høyst fire kall om gangen, eget minne for rå flisbilder
-   (så fargebytte og skjuling ikke krever nye kall), og én linje i kall-loggen per runde. */
-const hentere = [];
-export const opptatt = () => hentere.some(h => h.opptatt());
-export function lagHenter(kilde, hva) {
-  const lager = new Map(),
-    ko = [];
-  let aktive = 0,
-    timer = null,
-    runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
-  const slipp = () => {
-    while (aktive < SAMTIDIG && ko.length) {
-      aktive++;
-      ko.shift()();
-    }
-  };
-  function ferdig() {
-    if (aktive || ko.length) return;
-    const fliser = n => `${n} ${n === 1 ? 'flis' : 'fliser'}`,
-      ms = performance.now() - runde.t0;
-    if (runde.n) {
-      logg(kilde, `${hva}, ${fliser(runde.n)}`, ms, runde.bytes);
-      app.siste = `Siste kall mot ${kilde}: ${fliser(runde.n)}, ${nf(ms / 1000)} s, ${kb(runde.bytes)}`;
-    }
-    if (runde.feil) {
-      logg(kilde, `${hva}, ${fliser(runde.feil)}`, 0, 0, true);
-      if (!runde.n) app.siste = `Kallet mot ${kilde} feilet.`;
-    }
-    app.laster = opptatt();
-    endret();
-    runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
-  }
-  /* Kartlaget og planlaget trenger samme flis fra NIBIO samtidig. Et kall som alt er underveis, deles i stedet for å sendes to ganger. */
-  const underveis = new Map();
-  const hent = src => {
-    const har = lager.get(src);
-    if (har) return Promise.resolve(har);
-    let p = underveis.get(src);
-    if (!p) {
-      p = hentNy(src);
-      underveis.set(src, p);
-      p.then(
-        () => underveis.delete(src),
-        () => underveis.delete(src)
-      );
-    }
-    return p;
-  };
-  const hentNy = async src => {
-    await new Promise(ok => {
-      ko.push(ok);
-      slipp();
-    });
-    clearTimeout(timer);
-    if (!runde.t0) runde.t0 = performance.now();
-    kartflagg.nyeKall = true;
-    if (!app.laster) {
-      app.laster = true;
-      endret();
-    }
-    try {
-      const r = await fetch(src);
-      if (!r.ok) throw new Error(r.status);
-      if (!(r.headers.get('content-type') || '').startsWith('image')) throw new Error('ikke bilde');
-      const buf = await r.arrayBuffer();
-      husk(lager, src, buf, 400);
-      runde.n++;
-      runde.bytes += buf.byteLength;
-      return buf;
-    } catch (e) {
-      runde.feil++;
-      kartflagg.feilIVisning = true;
-      throw e;
-    } finally {
-      aktive--;
-      slipp();
-      if (!aktive && !ko.length) timer = setTimeout(ferdig, 200);
-    }
-  };
-  hent.opptatt = () => aktive > 0 || ko.length > 0;
-  hent.lager = lager;
-  hentere.push(hent);
-  return hent;
-}
 export const lerret = () => {
   const c = document.createElement('canvas');
   c.width = c.height = 512;
