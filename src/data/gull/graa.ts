@@ -1,14 +1,11 @@
 /* Gull for grått areal: arealet per trinn i kommunen, og kryssingen med planrutenettet. */
-import { RUTE, ruteX, ruteY, type Rutebilde } from '../solv/felles.ts';
+import { RUTE, ruteX, ruteY } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
 import type { Planrutenett } from '../solv/planrutenett.ts';
-import { andel, bildeStatus, type Bildetema } from './felles.ts';
+import { andel, bildetall, type Kommunebilde } from './felles.ts';
 
-/* Grått areal for kommunen: areal per trinn (plass 1–6) og samlet i km², og trinnet per rute i kommunebildet */
-export interface Graa extends Bildetema, Partial<Rutebilde> {
-  kl?: Uint8Array;
-  trinn?: number[];
-}
+/* Grått areal for kommunen: når det er hentet, areal per trinn (plass 1–6) i km², og trinnet per rute i kommunebildet */
+export type Graa = Kommunebilde<{ kl: Uint8Array; trinn: number[] }>;
 /* Ruter med planlagt utbygging på land (tot), på grått areal (graa), på grått areal med minst halvparten vegetasjon (gron), og på
    grønt i bebygd område (gront) */
 export interface Graatall {
@@ -74,23 +71,22 @@ export function kryssGraa(R: Planrutenett, D: Graatrinn, delvis: boolean): Graak
 /* Det temasiden og oversikten viser: tilstanden, arealet samlet og per trinn, andelen av landarealet, grønt i bebygd område og
    planlagt utbygging på grått areal. D er grått areal for kommunen, K kryssingen med planen (eller null) og land landarealet i km². */
 export function byggGraa(D: Graa | null, K: Graakryss | null, land: number) {
-  const S = K && K.S.tot ? K.S : null;
-  return {
-    tilstand: bildeStatus(D),
-    sum: D ? D.sum : 0,
-    trinn: D ? D.trinn : null,
-    andelLand: D ? andel(D.sum!, land) : null,
+  return bildetall(D, H => ({
+    sum: H.sum,
+    trinn: H.trinn,
+    andelLand: andel(H.sum, land),
     gront: K ? { km2: K.gront * RUTE, delvis: K.delvis } : null,
-    plan: S
-      ? {
-          km2: S.tot * RUTE,
-          graa: S.graa * RUTE,
-          gron: S.gron * RUTE,
-          gront: S.gront * RUTE,
-          andelGraa: andel(S.graa, S.tot),
-          delvis: K!.delvis,
-          antallEgne: K!.antallEgne
-        }
-      : null
-  };
+    plan:
+      K && K.S.tot
+        ? {
+            km2: K.S.tot * RUTE,
+            graa: K.S.graa * RUTE,
+            gron: K.S.gron * RUTE,
+            gront: K.S.gront * RUTE,
+            andelGraa: andel(K.S.graa, K.S.tot),
+            delvis: K.delvis,
+            antallEgne: K.antallEgne
+          }
+        : null
+  }));
 }

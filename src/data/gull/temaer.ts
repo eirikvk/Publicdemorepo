@@ -47,11 +47,11 @@ export interface TemaData {
   ufullstendig?: boolean;
   ekstra?: Kartlagt | null;
   inne?: number[];
-  regnet?: boolean;
-  plan?: Int32Array;
-  smal?: Int32Array;
-  kryss?: { S: Kryss; P: Kryss | null } | null;
-  gap?: Gap | null;
+  regnet: boolean;
+  plan: Int32Array;
+  smal: Int32Array;
+  kryss: { S: Kryss; P: Kryss | null } | null;
+  gap: Gap | null;
 }
 /* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
 export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
@@ -236,7 +236,7 @@ export function byggNaturTall(
     E = D.ekstra,
     sum = D.sum || 0,
     harKlasser = !!(klasser && D.klasser && o.length),
-    P = D.plan || new Int32Array(o.length); /* ruter med planlagt utbygging per område, fra kryssNatur */
+    P = D.plan; /* ruter med planlagt utbygging per område, fra kryssNatur */
   const perKlasse = harKlasser
     ? klasser.map((_, v) => {
         let antall = 0,
@@ -273,7 +273,7 @@ export function byggNaturTall(
     };
   }
   const plan = summen(P),
-    smal = summen(D.smal || []),
+    smal = summen(D.smal),
     G = D.gap;
   return {
     sum,

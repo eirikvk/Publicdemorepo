@@ -3,7 +3,7 @@
    planen regnes ut i gull/graa.ts. Flyten er den samme som for inngrepsfri natur, se kommunebilde.ts. Grått betyr ikke ledig: et
    boligområde i bruk er like grått som en nedlagt fabrikktomt. Kartlaget tegnes av trinnene per rute, se ui/kart/graa.ts. */
 import { hentGraaBilde } from '../bronse/nibio-graa.ts';
-import { tolkGraa, type Graatrinn } from '../solv/graa.ts';
+import { tolkGraa } from '../solv/graa.ts';
 import { kryssGraa } from '../gull/graa.ts';
 import { utenPlan } from './egne.ts';
 import { kommunebilde } from './kommunebilde.ts';
@@ -25,7 +25,7 @@ export function regnGraa() {
   const R = gjelder(app.planRaster) && app.planRaster.pl && !utenPlan() ? app.planRaster : null,
     D = gjelder(app.graa) && app.graa.tilstand === 'ok' ? app.graa : null,
     t0 = performance.now();
-  app.graaKryss = R && D ? kryssGraa(R, D as Graatrinn, !!(app.ov && app.ov.dynamisk)) : null;
+  app.graaKryss = R && D ? kryssGraa(R, D, !!(app.ov && app.ov.dynamisk)) : null;
   if (app.graaKryss) tidSlutt('grått areal, kryssing', t0);
   endret();
 }

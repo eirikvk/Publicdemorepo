@@ -104,7 +104,7 @@ export async function hentNatur(t: Naturtema, k: Kommune, grense: Grense, mitt: 
       }
       husk(t.minne, k.nr, pakke, 30);
     }
-    t.data = { nr: k.nr, ...pakke, pakke };
+    t.data = { nr: k.nr, ...pakke, pakke, ...ikkeKrysset(pakke.omrader.length) };
     endret();
     if (t.dekning && pakke.ekstra === undefined) {
       pakke.ekstra = null;
@@ -125,10 +125,19 @@ export async function hentNatur(t: Naturtema, k: Kommune, grense: Grense, mitt: 
     }
   } catch (e) {
     if (mitt !== valgNr) return;
-    t.data = { nr: k.nr, feil: true, omrader: [], sum: 0 };
+    t.data = { nr: k.nr, feil: true, omrader: [], sum: 0, ...ikkeKrysset(0) };
   }
   regnNatur(t);
 }
+
+/* Kryssingen før den er regnet ut: ingen ruter med planlagt utbygging i n områder */
+const ikkeKrysset = (n: number) => ({
+  regnet: false,
+  plan: new Int32Array(n),
+  smal: new Int32Array(n),
+  kryss: null,
+  gap: null
+});
 
 /* Maskene til områdene og det kartlagte, til kryssingen. De lages første gang de trengs, og huskes så lenge området finnes. */
 const masker = new WeakMap<object, Maske | null>();
@@ -143,11 +152,7 @@ export function regnNatur(t: Naturtema) {
   const R = gjelder(app.planRaster) && !utenPlan() ? app.planRaster : null,
     t0 = performance.now();
   const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, app.grense!, maske) : null;
-  D.plan = r ? r.plan : new Int32Array(D.omrader.length);
-  D.smal = r ? r.smal : new Int32Array(D.omrader.length);
-  D.regnet = !!R;
-  D.kryss = r ? r.kryss : null;
-  D.gap = r ? r.gap : null;
+  Object.assign(D, r ? { ...r, regnet: true } : ikkeKrysset(D.omrader.length));
   endret();
   tidSlutt(t.navn.toLowerCase(), t0);
 }

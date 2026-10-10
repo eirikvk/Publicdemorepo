@@ -112,15 +112,12 @@ export function egneRader(e: number | null) {
   const R = app.planRaster!,
     GK = gjelder(app.graaKryss) && app.graaKryss.antallEgne === R.antallEgne ? app.graaKryss : null;
   const data = (t: Naturtema) => gjeldende(t.data);
-  const tema = NATURTEMA.filter(t => {
+  const tema = NATURTEMA.flatMap(t => {
     const D = data(t);
-    return D && D.kryss && D.kryss.P && D.omrader.length;
-  }).map(t => ({
-    navn: t.navn,
-    id: t.id,
-    klasser: t.klasser,
-    kryss: t.data!.kryss!
-  }));
+    return D && D.kryss && D.kryss.P && D.omrader.length
+      ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: D.kryss }]
+      : [];
+  });
   const V = NATURTEMA.find(t => t.dekning),
     DV = V ? data(V) : null;
   return byggEgneRader(e, e === null ? null : mine()[e].tall, R, !ingenPlan(), GK, tema, DV ? DV.gap : null);

@@ -56,8 +56,11 @@ export function motortall() {
         inne: D.inne ? rund(D.inne) : null
       };
     }),
-    inon: plukk(A.inon, 'tilstand', 'soner', 'sum'),
-    graa: plukk(A.graa, 'tilstand', 'trinn', 'sum'),
+    /* kommunebildene: tallene når de er hentet, ellers bare tilstanden */
+    inon:
+      A.inon && (A.inon.tilstand === 'ok' ? plukk(A.inon, 'tilstand', 'soner', 'sum') : { tilstand: A.inon.tilstand }),
+    graa:
+      A.graa && (A.graa.tilstand === 'ok' ? plukk(A.graa, 'tilstand', 'trinn', 'sum') : { tilstand: A.graa.tilstand }),
     graaKryss: plukk(A.graaKryss, 'S', 'P', 'bebygd', 'gront', 'delvis', 'antallEgne'),
     egne: A.egne.map(g => ({ navn: g.navn, kilde: g.kilde, km2: r(g.km2), deler: g.deler.length, tall: rund(g.tall) })),
     vis: { inon: side('inon'), graa: side('graa'), smale: M.ui.visSmale },

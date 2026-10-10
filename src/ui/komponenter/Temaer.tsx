@@ -5,6 +5,7 @@
 import { byggGraa } from '../../data/gull/graa.ts';
 import { byggInon } from '../../data/gull/inon.ts';
 import type { ReactNode } from 'react';
+import type { Bildetall } from '../../data/gull/felles.ts';
 import { byggNaturTall, type NaturTall } from '../../data/gull/temaer.ts';
 import { GRAATRINN } from '../../data/solv/graa.ts';
 import { INONSONER } from '../../data/solv/inon.ts';
@@ -59,18 +60,14 @@ export const TEMAORD: Record<string, Temaord> = {
 function Temaside({
   id,
   navn,
-  status,
-  sum,
-  andel,
+  tall,
   under,
   kilde,
   children
 }: {
   id: string;
   navn: string;
-  status: 'henter' | 'feil' | 'ingen' | 'ok';
-  sum?: number;
-  andel?: number | null;
+  tall: Bildetall<{ sum: number; andelLand: number | null }>;
   under?: ReactNode;
   kilde: ReactNode;
   children?: ReactNode;
@@ -81,15 +78,16 @@ function Temaside({
         <Rute id={id} />
         {navn}
       </h2>
-      {status === 'ok' && (
+      {tall.tilstand === 'ok' && (
         <div>
           <p>
-            <b>{dekar(sum!)}</b> i kommunen{andel !== null ? `, ${andelTekst(andel!)} av landarealet` : ''}
+            <b>{dekar(tall.sum)}</b> i kommunen
+            {tall.andelLand !== null ? `, ${andelTekst(tall.andelLand)} av landarealet` : ''}
           </p>
           {under && <p className="hint temaunder">{under}</p>}
         </div>
       )}
-      {status === 'henter' ? <p>{app.valgt ? 'Henter …' : ''}</p> : children}
+      {tall.tilstand === 'henter' ? <p>{app.valgt ? 'Henter …' : ''}</p> : children}
       {kilde}
     </div>
   );
@@ -154,7 +152,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       {t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}
     </p>
   );
-  if (!ok) return <Temaside id={t.id} navn={t.navn} status="henter" kilde={kilde} />;
+  if (!ok) return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} kilde={kilde} />;
   const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum),
     E = N.kartlagt,
     der = app.ov && app.ov.dynamisk ? ' i den delen av kommunen det er hentet kart for' : '',
@@ -211,9 +209,13 @@ export function Naturtema({ t: tema }: { t: Tema }) {
     <Temaside
       id={t.id}
       navn={t.navn}
-      status={D.feil ? 'feil' : N.antall ? 'ok' : 'ingen'}
-      sum={N.sum}
-      andel={N.andelLand}
+      tall={
+        D.feil
+          ? { tilstand: 'feil' }
+          : N.antall
+            ? { tilstand: 'ok', sum: N.sum, andelLand: N.andelLand }
+            : { tilstand: 'ingen' }
+      }
       under={under}
       kilde={kilde}
     >
@@ -304,14 +306,13 @@ export function Naturtema({ t: tema }: { t: Tema }) {
 /* Inngrepsfri natur: sonene etter avstand til inngrep. Krysses ikke med planlagt utbygging. */
 export function Inon() {
   const I = byggInon(gjeldende(app.inon), app.ssbSum),
-    status = I.tilstand,
-    har = status === 'ok';
+    har = I.tilstand === 'ok';
   const tekst =
-    status === 'feil'
+    I.tilstand === 'feil'
       ? 'Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.'
-      : !har
+      : I.tilstand !== 'ok'
         ? 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'
-        : `Ca. ${iTekst(I.sum!)} av kommunen${I.andelLand !== null ? `, ${pst(I.andelLand)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
+        : `Ca. ${iTekst(I.sum)} av kommunen${I.andelLand !== null ? `, ${pst(I.andelLand)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
   const kilde = (
     <p className="hint">
       Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele
@@ -324,9 +325,7 @@ export function Inon() {
     <Temaside
       id="inon"
       navn="Inngrepsfri natur"
-      status={status}
-      sum={I.sum}
-      andel={I.andelLand}
+      tall={I}
       under={har ? 'krysses ikke med planlagt utbygging' : ''}
       kilde={kilde}
     >
@@ -341,7 +340,7 @@ export function Inon() {
                 key={i}
                 id={INONSONER[i][1]}
                 navn={INONSONER[i][4]}
-                tall={dekar(I.soner![i])}
+                tall={dekar(I.soner[i])}
                 under={INONSONER[i][3]}
               />
             ))}
@@ -361,15 +360,14 @@ export function Inon() {
    ligger der. */
 export function Graa() {
   const G = byggGraa(gjeldende(app.graa), gjeldende(app.graaKryss), app.ssbSum),
-    status = G.tilstand,
-    har = status === 'ok',
-    P = G.plan;
+    har = G.tilstand === 'ok',
+    P = G.tilstand === 'ok' ? G.plan : null;
   const tekst =
-    status === 'feil'
+    G.tilstand === 'feil'
       ? 'Grått areal kunne ikke hentes fra NIBIO.'
-      : !har
+      : G.tilstand !== 'ok'
         ? 'Kartet over grå arealer har ingen flater i kommunen.'
-        : `Ca. ${iTekst(G.sum!)} av kommunen${G.andelLand !== null ? `, ${pst(G.andelLand)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Listen under viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
+        : `Ca. ${iTekst(G.sum)} av kommunen${G.andelLand !== null ? `, ${pst(G.andelLand)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Listen under viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
   let plan = null;
   if (har) {
     if (P) {
@@ -401,9 +399,7 @@ export function Graa() {
     <Temaside
       id="graa"
       navn="Grått areal"
-      status={status}
-      sum={G.sum}
-      andel={G.andelLand}
+      tall={G}
       kilde={kilde}
       under={
         har && P
@@ -415,9 +411,9 @@ export function Graa() {
       {har && (
         <ul className="talliste">
           {GRAATRINN.map(([id, navn], i) => (
-            <Fargelinje key={id} id={id} navn={navn} tall={dekar(G.trinn![i + 1])} />
+            <Fargelinje key={id} id={id} navn={navn} tall={dekar(G.trinn[i + 1])} />
           ))}
-          {G.trinn![6] > 0 && <Fargelinje id="graa0" navn="Uten oppgitt andel, som veier" tall={dekar(G.trinn![6])} />}
+          {G.trinn[6] > 0 && <Fargelinje id="graa0" navn="Uten oppgitt andel, som veier" tall={dekar(G.trinn[6])} />}
           <Fargelinje
             id="gront"
             navn="Grønt i bebygd område"

@@ -67,21 +67,20 @@ function naturtema(id: string) {
 
 /* Inngrepsfri natur og grått areal hentes som ett bilde av kommunen */
 function inon() {
-  const I = byggInon(gjeldende(app.inon), app.ssbSum),
-    s = I.tilstand;
-  if (s === 'henter') return HENTER;
-  if (s === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
-  if (s === 'ingen') return ingenTall('Ingen. Alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep.');
-  return { tall: dekar(I.sum!), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
+  const I = byggInon(gjeldende(app.inon), app.ssbSum);
+  if (I.tilstand === 'henter') return HENTER;
+  if (I.tilstand === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
+  if (I.tilstand === 'ingen')
+    return ingenTall('Ingen. Alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep.');
+  return { tall: dekar(I.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
 }
 function graa() {
-  const G = byggGraa(gjeldende(app.graa), null, app.ssbSum),
-    s = G.tilstand;
-  if (s === 'henter') return HENTER;
-  if (s === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
-  if (s === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
+  const G = byggGraa(gjeldende(app.graa), null, app.ssbSum);
+  if (G.tilstand === 'henter') return HENTER;
+  if (G.tilstand === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
+  if (G.tilstand === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
   return {
-    tall: dekar(G.sum!),
+    tall: dekar(G.sum),
     tekst: `Tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet${avLand(G.andelLand)}.`
   };
 }

@@ -107,7 +107,9 @@ utsnitt i `src/data/generelt/geometri.ts`, og for flisnett og rutebilder i `src/
 dem selv når verktøyene kjøres. Koden bruker derfor bare TypeScript som kan fjernes uten å endre noe (`erasableSyntaxOnly`), og
 importer har filendelsen med (`./tilstand.ts`).
 
-Der en verdi kan mangle, sier typen det (`| null`). Der koden vet mer enn typene, står det et `!` (verdien finnes her) eller en
+Der noe hentes, sier typen hvilken tilstand det er i. Inngrepsfri natur og grått areal er for eksempel enten under henting,
+feilet, eller hentet med alle tallene (`Kommunebilde` i `src/data/gull/felles.ts`), og sidene får tallene som henter, feil, ingen
+eller ok (`Bildetall`). Tallene finnes da bare der de kan brukes. Der en verdi kan mangle, sier typen det (`| null`). Der koden vet mer enn typene, står det et `!` (verdien finnes her) eller en
 `as` (verdien har denne formen). Kartet har flest av dem, fordi typene i OpenLayers er videre enn det kartet faktisk bruker. I
 bronse står `as` der et svar fra en tjeneste leses: typen sier hvilken form svaret skal ha. Testverktøyene bruker de samme typene
 som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i typesjekken.
@@ -219,8 +221,9 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og oversiktsbildet zoomet ut |
 | `plan.ts` | Planlagt utbygging |
 | `naturtema.ts` | Verneområder, villrein og verdsatt natur, sløret over det som ikke er kartlagt, og markering av ett område |
-| `inon.ts` | Inngrepsfri natur |
-| `graa.ts` | Grått areal |
+| `kommunebilde.ts` | Felles for lagene som tegnes av et bilde av kommunen: masken, flisene og når laget vises |
+| `inon.ts` | Inngrepsfri natur: fargene for sonene |
+| `graa.ts` | Grått areal: fargene for trinnene, og fliser fra NIBIO når kartet er zoomet inn |
 | `egne.ts` | Egne områder: tegning i kartet og omrissene |
 
 React-komponentene, i `src/ui/komponenter/`. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av

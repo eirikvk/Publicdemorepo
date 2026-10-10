@@ -1,21 +1,16 @@
 /* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i datamotoren (data/motor/graa.ts). Zoomet inn hentes
    laget som fliser fra NIBIO, så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
-   område: areal som er bebygd i grunnkartet, men ikke grått. */
-import type ImageTile from 'ol/ImageTile.js';
-import { ol } from './ol.ts';
+   område: areal som er bebygd i grunnkartet, men ikke grått. Det som er felles med inngrepsfri natur, står i kommunebilde.ts. */
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { graaFlisUrl, hentGraaFlis } from '../../data/bronse/nibio-graa.ts';
-import { HALV, SYNLIG, type Flis, type Rutebilde } from '../../data/solv/felles.ts';
+import { HALV, SYNLIG } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
 import { klasseAv } from '../../data/solv/klasser.ts';
-import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
-import type { Graa } from '../../data/gull/graa.ts';
+import { bildePiksler } from '../../data/solv/raster.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
-import { abonner, app, gjeldende, tidSlutt, gjelder } from '../../data/motor/tilstand.ts';
+import { app, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
-import { ui } from '../tilstand.ts';
-import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.ts';
-import { friskOppGamle, tegnesOppaa } from './grunnkart.ts';
+import { bildelag, fargPiksel } from './kommunebilde.ts';
 
 /* Kartets egne terskler for grått areal. Arealet regnes med halvregelen (HALV). I flisene fra NIBIO er en piksel grå fra en
    fjerdedel dekning, så kantene på små flater ikke forsvinner når kartet er zoomet langt inn. Langs kanten av den utjevnede masken
@@ -23,91 +18,57 @@ import { friskOppGamle, tegnesOppaa } from './grunnkart.ts';
 const KART_GRAA = 64,
   KART_KANT = 64;
 
-/* Det grå som maske: hvitt der det er grått, jevnet ut så kanten blir glatt når kartet er zoomet inn. Lages én gang per kommune. */
-/* Grått areal når det er hentet (tilstand ok): da har det rutebildet og trinnet per rute */
-type Trinn = Graa & Rutebilde & { kl: Uint8Array };
-const masker = new WeakMap<Trinn, HTMLCanvasElement>();
-function maske(D: Trinn) {
-  let c = masker.get(D);
-  if (c) return c;
-  c = document.createElement('canvas');
-  c.width = D.w;
-  c.height = D.h;
-  const g = c.getContext('2d')!,
-    bilde = g.createImageData(D.w, D.h),
-    P = bilde.data;
-  for (let q = 0, i = 0; q < D.kl.length; q++, i += 4) {
-    P[i] = P[i + 1] = P[i + 2] = D.kl[q] ? 255 : 0;
-    P[i + 3] = 255;
-  }
-  jevn(P, D.w, D.h);
-  g.putImageData(bilde, 0, 0);
-  masker.set(D, c);
-  return c;
-}
+/* Fargene per trinn (plass 1–6), og grønt i bebygd område */
+const trinnfarger = () => [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')];
+/* Grønt i bebygd område: bebygd i dagens klasser K (klasse 0), men ikke grått */
+const gront = (K: Uint8ClampedArray | null, i: number) =>
+  !!K && K[i + 3] >= SYNLIG && klasseAv(K[i], K[i + 1], K[i + 2]) === 0;
 
-async function lastGraaFlis(tile: ImageTile) {
-  try {
-    const D = (gjelder(app.graa) && app.graa.tilstand === 'ok' ? app.graa : null) as Trinn | null,
-      tc = tile.getTileCoord() as Flis,
-      u = plannett.getTileCoordExtent(tc);
-    if (!D || !ol.extent.intersects(u, D.u)) {
-      tile.setState(TOM);
-      return;
+/* Masken er det grå: hvitt der det er grått, jevnet ut én gang så kanten blir glatt når kartet er zoomet inn. Laget tegnes på nytt
+   også når kryssingen med planen endres. */
+export const graaLag = bildelag({
+  side: 'graa',
+  data: () => app.graa,
+  folgOgsaa: () => app.graaKryss,
+  jevninger: 1,
+  fyll: (P, D) => {
+    for (let q = 0, i = 0; q < D.kl.length; q++, i += 4) {
+      P[i] = P[i + 1] = P[i + 2] = D.kl[q] ? 255 : 0;
+      P[i + 3] = 255;
     }
-    const c = flislerret(),
-      g = c.getContext('2d', { willReadFrequently: true })!;
-    g.imageSmoothingEnabled = true;
+  },
+  tegn: async (g, D, tegnMaske, tc, u) => {
+    const F = trinnfarger(),
+      GR = rgb('gront');
     if (tc[0] >= FLISNIVA) {
       /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
-      g.drawImage(await createImageBitmap(new Blob([await hentGraaFlis(graaFlisUrl(u))])), 0, 0, 512, 512);
+      const o = await bildePiksler(await hentGraaFlis(graaFlisUrl(u)), 512, 512);
       const K = await dagensKlasser(tc).catch(
         () => null
       ); /* dagens klasser: bebygd som ikke er grått, tegnes som grønt i bebygd område */
-      const t1 = performance.now(),
-        bilde = g.getImageData(0, 0, 512, 512),
-        o = bilde.data,
-        F = [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')],
-        GR = rgb('gront');
+      const t1 = performance.now();
       let noe = false;
       for (let i = 0; i < o.length; i += 4) {
-        const a = o[i + 3],
-          k = a >= KART_GRAA ? graaTrinn(o[i], 255) : 0,
-          f = k ? F[k] : K && K[i + 3] >= SYNLIG && klasseAv(K[i], K[i + 1], K[i + 2]) === 0 ? GR : null;
+        const k = o[i + 3] >= KART_GRAA ? graaTrinn(o[i], 255) : 0,
+          f = k ? F[k] : gront(K, i) ? GR : null;
         if (!f) {
           o[i + 3] = 0;
           continue;
         }
-        o[i] = f[0];
-        o[i + 1] = f[1];
-        o[i + 2] = f[2];
-        o[i + 3] = 255;
+        fargPiksel(o, i, f);
         noe = true;
       }
-      if (!noe) {
-        tile.setState(TOM);
-        return;
-      }
-      g.putImageData(bilde, 0, 0);
-      tile.setImage(c);
+      if (!noe) return false;
+      g.putImageData(new ImageData(o, 512, 512), 0, 0);
       tidSlutt('grått areal, fliser', t1);
-      return;
+      return true;
     }
     const K = await dagensKlasser(tc).catch(() => null),
-      t0 = performance.now(),
-      GR = rgb('gront');
-    tegnUtsnitt(
-      g,
-      maske(D),
-      (u[0] - D.u[0]) / D.res,
-      (D.u[3] - u[3]) / D.res,
-      (u[2] - u[0]) / D.res,
-      (u[3] - u[1]) / D.res
-    ); /* utjevnet maske: glatt kant rundt det grå */
+      t0 = performance.now();
+    tegnMaske(); /* utjevnet maske: glatt kant rundt det grå */
     const P = g.getImageData(0, 0, 512, 512).data,
       ut = g.createImageData(512, 512),
       o = ut.data,
-      F = [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')],
       m = (u[2] - u[0]) / 512;
     let tegnet = false;
     const kol = new Int32Array(512),
@@ -132,40 +93,15 @@ async function lastGraaFlis(tile: ImageTile) {
                 6
             ];
         } /* i kanten kan masken nå litt lenger enn rutene */
-        else if (K && (!inne || P[i] < KART_KANT) && K[i + 3] >= SYNLIG && klasseAv(K[i], K[i + 1], K[i + 2]) === 0)
-          f = GR;
+        else if ((!inne || P[i] < KART_KANT) && gront(K, i)) f = GR;
         if (!f) continue;
-        o[i] = f[0];
-        o[i + 1] = f[1];
-        o[i + 2] = f[2];
-        o[i + 3] = 255;
+        fargPiksel(o, i, f);
         tegnet = true;
       }
     }
-    if (!tegnet) {
-      tile.setState(TOM);
-      return;
-    }
+    if (!tegnet) return false;
     g.putImageData(ut, 0, 0);
-    tile.setImage(c);
     tidSlutt('grått areal, fliser', t0);
-  } catch (e) {
-    tile.setState(3);
-  }
-}
-export const graaLag = new ol.layer.Tile({ className: 'tema', visible: false, source: tegnetKilde(lastGraaFlis) });
-tegnesOppaa(graaLag);
-
-/* Laget følger tilstanden: det vises på siden for grått areal når det er hentet og kommunen har noe. */
-const ny = nyttSiden();
-abonner(() => {
-  if (ny('grense', app.grense) && app.grense) graaLag.setExtent(app.grense.ext);
-  if (ny('data', app.graa)) friskOpp(graaLag);
-  const D = gjeldende(app.graa),
-    synlig = ui.side === 'graa' && !!app.grense && !!D && D.tilstand === 'ok' && D.sum! > 0,
-    nyKryssing = ny('kryssing', app.graaKryss);
-  if (ny('synlig', synlig) || nyKryssing) {
-    graaLag.setVisible(synlig);
-    friskOppGamle();
+    return true;
   }
 });

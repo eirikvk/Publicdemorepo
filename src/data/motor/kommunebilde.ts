@@ -6,15 +6,11 @@
       avrundet til nærmeste 10 dekar (gull).
    4. Resultatet legges i tilstanden. Svar som kommer etter at en annen kommune er valgt, kastes.
    Det som er eget for hvert tema, gis inn som et oppsett, se inon.ts og graa.ts. */
-import { arealFraRuter, type Bildetema } from '../gull/felles.ts';
+import { arealFraRuter, type Kommunebilde } from '../gull/felles.ts';
 import { husk } from '../generelt/minne.ts';
 import { BILDE_TEMA, m2PerKm2, rutenett, type Kommune, type Piksler, type Rutebilde } from '../solv/felles.ts';
 import { bildePiksler, flatePiksler } from '../solv/raster.ts';
 import { endret, tidSlutt, valgNr, type Grense } from './tilstand.ts';
-
-/* Resultatet for et tema i én kommune: mens det hentes eller når det feilet, bare tilstanden. Når det er hentet, også rutenettet,
-   arealet samlet (sum) og det som er eget for temaet (E). */
-export type Kommunebilde<E> = Bildetema | (Bildetema & Rutebilde & E);
 
 /* Det som er eget for hvert tema. S er det sølv gir for bildene, med antall ruter per klasse (n), og E det som legges i tilstanden
    i tillegg til arealet samlet og rutenettet. */
@@ -49,7 +45,7 @@ export function kommunebilde<S extends { n: ArrayLike<number> }, E>(o: Oppsett<S
       for (const b of bilder) P.push(await bildePiksler(b, R.w, R.h));
       const S = o.tolk(P, flatePiksler(grense.koord, R)),
         A = arealFraRuter(S.n, R.res, m2PerKm2(grense.ext)),
-        D: Bildetema & Rutebilde & E = { nr: k.nr, tilstand: 'ok', ...o.resultat(S, A.km2), sum: A.sum, ...R };
+        D: Kommunebilde<E> = { nr: k.nr, tilstand: 'ok', ...o.resultat(S, A.km2), sum: A.sum, ...R };
       o.sett(D);
       husk(minne, k.nr, D, 3);
       tidSlutt(o.navn + ', kommunebilde', t0);
