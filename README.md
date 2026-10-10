@@ -38,15 +38,16 @@ dataplattformer, og datamotoren samordner dem:
       │
       ▼
 src/data/
-  generelt/     Det som ikke handler om noe bestemt: flategeometri, minne med fast
-                plass, summer og nærmeste farge. Alle lagene i data bruker det.
+  generelt/     Det som ikke handler om noe bestemt: flategeometri, summer, nærmeste
+                farge og PNG. Alle lagene i data bruker det.
   bronse/       Bronse: hvordan hver tjeneste brukes. Adresser, parametre og stiler.
                 Svarene kommer urørt tilbake. Alt nettverk går gjennom dette laget.
   solv/         Sølv: felles standard, så dataene fra flere kilder kan brukes sammen.
                 UTM33, km², de tre klassene, kommunen og rutenettene.
   gull/         Gull: svarene. Arealer, andeler, kryssinger og regnskap, i den formen
                 hver side trenger.
-  motor/        Datamotoren: tilstanden (app), og hva som hentes og regnes når.
+  motor/        Datamotoren: katalogen over alt som er hentet og regnet ut, valgene
+                (app), og hva som hentes og regnes når.
       │
       ▼  leser tilstanden, og kaller datamotoren når brukeren gjør noe
 src/ui/
@@ -56,6 +57,8 @@ src/ui/
 ```
 
 Sølv og gull får alt som argumenter og gir svaret tilbake. De bruker verken kartet, siden eller nettet, og kan kjøres i Node.
+Bronse, sølv og gull er ETL-koden: den henter, tolker og regner ut, men husker ingenting. Det som skal huskes, legger datamotoren i
+katalogen, se under.
 
 React-komponentene og kartet er to likestilte deler av brukergrensesnittet, og fungerer på samme måte: de abonnerer på tilstanden,
 tegner seg på nytt når den endres, og kaller datamotoren når brukeren gjør noe. Datamotoren vet ikke at de finnes.
@@ -63,12 +66,13 @@ tegner seg på nytt når den endres, og kaller datamotoren når brukeren gjør n
 Slik går en runde, for eksempel når brukeren velger kommune:
 
 1. Brukeren velger Trondheim i `Topp.tsx`. Komponenten kaller `velgKommune` i `data/motor/kommune.ts`.
-2. Datamotoren ber bronse hente grensen, tallene fra SSB, kommuneplanen og temaene. Sølv gjør dem om til felles standard, og
-   datamotoren legger dem i `app`. Kryssingene med planlagt utbygging tar tid, så datamotoren kjører dem i gull én gang og legger
-   svaret i `app`.
-3. Hver gang noe er klart, kaller datamotoren `endret()`. React tegner da siden på nytt: hver komponent gir det som ligger i `app`
-   til en `bygg`-funksjon i gull, og viser svaret. Samtidig ser hvert kartlag etter om det det tegnes av, er nytt, og tegner seg
-   på nytt hvis det er det. Grensen kommer for eksempel som koordinater i `app.grense`, og kartet lager sin egen geometri av dem.
+2. Datamotoren ber katalogen om grensen, tallene fra SSB, kommuneplanen og temaene for kommunen. Det som ikke ligger der, går
+   gjennom hele kjeden: bronse henter, sølv gjør det om til felles standard, og katalogen husker resultatet. Kryssingene med
+   planlagt utbygging tar tid, så de regnes ut i gull én gang og huskes også.
+3. Hver gang noe er klart, sier katalogen fra med `endret()`. React tegner da siden på nytt: hver komponent spør
+   `data/motor/gulldata.ts` etter sine tall (for eksempel `inonTall()`), og viser svaret. Samtidig ser hvert kartlag etter om det
+   det tegnes av, er nytt, og tegner seg på nytt hvis det er det. Grensen kommer for eksempel som koordinater fra `grense()`, og
+   kartet lager sin egen geometri av dem.
 
 Velger brukeren en side, kaller `Sidevelger.tsx` funksjonen `velgSide` i `ui/sider.ts`. Den husker siden i `ui.side`, og kartet
 viser temaet til den siden. Adressen følger med, for eksempel `#5001/verdi`. Lenkene mellom sidene, som navnene på oversikten,
@@ -139,15 +143,15 @@ regner likt. Filene importerer ingenting.
 | Fil | Innhold |
 |---|---|
 | `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp |
-| `minne.ts` | Minne med fast plass (`husk`): svar fra kildene og resultater for kommuner som er valgt før |
 | `tall.ts` | Summen av en liste tall (`summen`) |
 | `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
+| `png.ts` | PNG-filer: bitene i en fil, og et bilde med fargetabell (til de lagrede oversiktsbildene) |
 
 Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan det hentes og for kartjenester etter WMS.
 
 | Fil | Innhold |
 |---|---|
-| `henting.ts` | Henting med minne, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `henting.ts` | Henting, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Husker ingenting: det gjør katalogen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
@@ -189,16 +193,15 @@ Datamotoren, i `src/data/motor/`.
 
 | Fil | Innhold |
 |---|---|
-| `tilstand.ts` | Tilstanden (`app`), lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen |
-| `kommune.ts` | Listen over kommuner, og valg av kommune: alt som hentes og regnes ut når en kommune velges |
-| `tall.ts` | Tallene fra SSB |
+| `katalog.ts` | Katalogen: hvordan datasett lagres, leses gjennom og glemmes, og oversikten over hva den inneholder |
+| `datasett.ts` | Alt datapipelinen lagrer, samlet: hvert datasett med navn, nøkkel, hvor mange som huskes, og oppskriften |
+| `gulldata.ts` | Det visningen spør etter, for valgt kommune: én funksjon per ting en side eller kartet viser |
+| `tilstand.ts` | Tilstanden som gjelder nå (`app`): valgene og det tekniske. Lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen. |
+| `kommune.ts` | Listen over kommuner, valg av kommune, og det som hentes og regnes ut med en gang når en kommune velges |
 | `grunnkart.ts` | Dagens klasser: det lagrede oversiktsbildet, det sammensatte kartet av flisene som er hentet, og klassene i én flis |
-| `plan.ts` | Om DiBK har kommuneplanen, og samordningen av planrutenettet |
-| `naturtema.ts` | Verneområder, villrein og verdsatt natur: hvilke temaer som finnes, hentingen og kryssingen med planen |
-| `kommunebilde.ts` | Flyten for temaene som hentes som ett bilde av kommunen: minnet, hentingen, tolkingen og arealet |
-| `inon.ts` | Inngrepsfri natur: oppsettet for kommunebildet |
-| `graa.ts` | Grått areal: oppsettet for kommunebildet, og kryssingen med planen |
-| `egne.ts` | Egne områder: tegnede og opplastede, og det radene i sammenligningen bygges av |
+| `plan.ts` | Samordningen av planrutenettet, og kryssingene som følger det |
+| `naturtema.ts` | Verneområder, villrein og verdsatt natur: hvilke temaer som finnes |
+| `egne.ts` | Egne områder: tegnede og opplastede |
 
 ### Brukergrensesnittet
 
@@ -249,7 +252,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Graa.tsx` | Siden for grått areal |
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
-| `Om.tsx` | Om og metode: kall-loggen, hvordan klassene er satt sammen, om siden og tekniske valg |
+| `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |
 | `lager.ts` | Kroken som kobler komponentene til tilstanden |
@@ -264,12 +267,47 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 
 Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
 
+## Katalogen
+
+Alt datapipelinen husker, ligger i katalogen i datamotoren (`src/data/motor/katalog.ts`), og hvert datasett står i
+`src/data/motor/datasett.ts`. Koden som henter, tolker og regner ut (ETL-koden i bronse, sølv og gull), er dermed skilt fra
+resultatene den lager. ETL-koden kan leses som ren forretningslogikk: den får det den trenger og gir svaret tilbake.
+
+Et datasett har et navn som sier hvilket lag verdien kommer fra, en nøkkel (som regel kommunenummeret), hvor mange nøkler som
+huskes, og en oppskrift:
+
+```ts
+export const INON = datasett({
+  navn: 'solv.inon',
+  om: 'sonen per rute i bildet av kommunen, og antall ruter per sone innenfor kommunen',
+  husk: 3,
+  lag: async nr => tolketBilde(nr, [await hent(INONBILDE, nr)], 'inngrepsfri natur', ([P], M) => tolkInon(P, M))
+});
+```
+
+- **Les-gjennom.** Den som trenger noe, spør katalogen (`hent`, eller `les` fra visningen). Ligger det der, brukes det. Ellers
+  kjøres oppskriften, som selv spør katalogen etter det den bygger på, og så videre bakover til kilden. Et kall som alt er
+  underveis, deles.
+- **Bare det som er verdt å huske.** Svar fra kildene lagres i formen de brukes i. Det som er raskt å regne ut, lagres ikke, men
+  regnes ut når visningen spør (`gulldata.ts`). Det som er tungt, som kryssingene med planen, lagres som `gull.`-datasett.
+- **Ingen kopier.** Verdiene lagres som de er, uten å gjøres om til tekst. Det som ligger i katalogen, endres derfor ikke etterpå:
+  et nytt resultat erstatter det gamle. Unntakene er merket voksende: det sammensatte kartet og planrutenettets blokker.
+- **Valgt kommune.** Visningen leser alt med nummeret til valgt kommune, så ingenting fra en annen kommune kan vises.
+- **Grensene** står per datasett. Det som er brukt lengst siden, går ut først. Ingenting lagres i nettleseren etter at siden er
+  lukket.
+- **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» hva som ligger der akkurat nå, med størrelse.
+
+Det finnes tre slags tilstand: den som gjelder nå (`app` i datamotoren og `ui` i visningen), katalogen, og kartets egen (OpenLayers
+og kartkoden, som bare husker det som er laget for å tegne, som ferdige fliser og masker).
+
 ## Datamotoren og brukergrensesnittet
 
 Datamotoren henter og regner ut. Brukergrensesnittet viser og tar imot det brukeren gjør. De er skilt slik:
 
-- Tilstanden for dataene ligger i ett objekt, `app`, i `src/data/motor/tilstand.ts`: valgt kommune, grensen, tallene fra SSB,
-  planrutenettet, egne områder og hentingen. Temaene fra Miljødirektoratet har dataene sine i `NATURTEMA`, ett objekt per tema.
+- Tilstanden som gjelder nå, ligger i ett objekt, `app`, i `src/data/motor/tilstand.ts`: valgt kommune og egne områder (valgene
+  brukeren har gjort), og hentingen og om kartet flyttes (det tekniske). Alt som er hentet og regnet ut, ligger i katalogen.
+- Komponentene og kartet får tallene fra `src/data/motor/gulldata.ts`, som leser katalogen for valgt kommune og regner ut svaret
+  med gull.
 - Det som bare gjelder visningen, ligger i `ui` i `src/ui/tilstand.ts`: valgt side, hva som er slått på i kartet, og det som vises
   over og under kartet. Datamotoren bruker det ikke.
 - Den som endrer noe som vises, kaller `endret()`. Varslene samles, så mange endringer etter hverandre gir én ny tegning.
@@ -281,9 +319,6 @@ Datamotoren henter og regner ut. Brukergrensesnittet viser og tar imot det bruke
 - Det som ikke er tilstand, men en hendelse, sies fra med `varsle` og `lytt`: datamotoren sier fra hver gang det er lagt en ny
   flis inn i det sammensatte kartet, og hvor, så kartet kan fargelegge sin kopi.
 - Bronse sier fra om hentingen gjennom én funksjon (`nårHentingEndres`). Datamotoren legger det som vises, i `app`.
-
-De store rutenettene og bildene ligger i `app` sammen med tallene. Det går fordi siden aldri sammenligner eller kopierer tilstanden,
-bare leser den.
 
 ### Lasting av filene
 
@@ -301,7 +336,7 @@ Både mappen og navnet på en funksjon sier hva den gjør:
 | `src/data/generelt/` | | Det som ikke handler om noe bestemt. Får alt som argumenter og gir svaret tilbake. |
 | `src/data/bronse/` | `hent` | Henter fra én tjeneste og gir svaret urørt tilbake. Det eneste stedet det går kall ut på nettet. |
 | `src/data/solv/` og `src/data/gull/` | `tolk`, `kryss`, `bygg`, `tell` og andre | Regner. Får alt som argumenter og gir svaret tilbake. Leser ikke fra siden, skriver ikke til den, henter ikke fra nettet og bruker ikke delt tilstand. |
-| `src/data/motor/` | `hent`, `sjekk`, `regn`, `velg` | Samordner. Ber bronse hente, kaller sølv og gull, legger svaret i tilstanden og sier fra. |
+| `src/data/motor/` | `hent`, `les`, `regn`, `velg` | Samordner. Spør katalogen, som kjører oppskriftene med bronse, sølv og gull, husker svaret og sier fra. |
 | `src/ui/kart/` | `tegn`, `vis`, `last` | Tegner kartet: lag, fliser og markeringer. Regner ikke ut nye tall. |
 | `src/ui/komponenter/` | Store bokstaver | React-komponenter: gjør gull om til tekst, tabeller og stolper. |
 
@@ -310,7 +345,8 @@ tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.
 
 `node verktoy/sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, generelt
 importerer ingenting, sølv og gull holder seg for seg selv, bronse og datamotoren bruker ikke OpenLayers eller React, React-komponentene henter ikke fra bronse og
-tar bare navn og faste verdier fra sølv, og det har ikke havnet regnefunksjoner i datamotoren.
+tar bare navn og faste verdier fra sølv, det har ikke havnet regnefunksjoner i datamotoren, og ingen andre enn katalogen har minne
+i data.
 
 Komponentene regner ikke. Tallene og andelene kommer fra gull, og komponentene velger ord, avrunding og enhet. Unntaket er
 stripene i `deler.tsx`, som regner ut bredden på hver del av det de tegner. Kartet tegner piksel for piksel og bruker derfor
@@ -412,8 +448,9 @@ commit og kommentar.
 
 ## Tester
 
-Testene ligger i `test/`, én fil for hvert av generelt, sølv og gull. De prøver regnefunksjonene med små, faste eksempler, som
-arealet av et kvadrat med hull, tolking av fargene og avrunding til 10 dekar. De bruker Nodes egen testkjører, trenger verken nett
+Testene ligger i `test/`, én fil for hvert av generelt, sølv og gull, og én for katalogen. De prøver regnefunksjonene med små,
+faste eksempler, som arealet av et kvadrat med hull, tolking av fargene og avrunding til 10 dekar, og at katalogen leser gjennom,
+holder seg innenfor grensen og husker feil riktig. De bruker Nodes egen testkjører, trenger verken nett
 eller nettleser, og tar under ett sekund: `npm test`. Funksjonene som tegner i et lerret (`solv/raster.ts` og arealet av verdsatt
 natur) trenger nettleseren og prøves av regresjonstesten.
 
@@ -424,11 +461,12 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `utgave.ts` setter utgavemerke, se over.
 - `regresjon.ts` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
   tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `npm run regresjon` kjører den, og
-  `node verktoy/regresjon.ts ut/ny --mot HEAD` sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
-  tas samme dag. Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, men sølv sorterer dem på en fast måte, så to
+  `node verktoy/regresjon.ts ut/ny --mot HEAD` sammenligner arbeidskopien med siste commit. Den gamle utgaven kjøres med sitt eget
+  testverktøy, så hver utgave leser tallene fra sin egen datamotor. Tallene kommer fra åpne tjenester og endrer seg over tid, så de
+  to kjøringene må tas samme dag. Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, men sølv sorterer dem på en fast måte, så to
   kjøringer av samme kode gir nøyaktig like tall.
-- `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene og kartet
-  tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
+- `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene, gull-dataene,
+  katalogen og kartet tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
 - `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
   (`tsc`) for `src` og `verktoy`, og så denne.
 - `oversiktsbilde.ts` lager de lagrede oversiktsbildene, for eksempel `npm run oversiktsbilde -- --fylke 50`. Arbeidet gjøres i

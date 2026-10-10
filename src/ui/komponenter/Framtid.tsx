@@ -1,9 +1,10 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
-   planen. Tallene kommer ferdig regnet ut fra gull/planlagt.ts. */
-import { byggPlanlagt } from '../../data/gull/planlagt.ts';
+   planen. Tallene kommer ferdig regnet ut fra gull/planlagt.ts, gjennom gulldata.ts. */
+import type { Planinfo } from '../../data/motor/datasett.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
+import { planinfo, planlagt, planTall } from '../../data/motor/gulldata.ts';
 import { ingenPlan } from '../../data/motor/plan.ts';
-import { app, gjeldende, type Planinfo } from '../../data/motor/tilstand.ts';
+import { app } from '../../data/motor/tilstand.ts';
 import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
 import { antallOrd, iTekst, pst } from '../tekst.ts';
@@ -17,7 +18,7 @@ export const planKilde = (p: Planinfo['plan']) =>
 
 /* Planlagt utbygging: status for kommuneplanen og arealet natur og jordbruk som settes av. */
 function Planlagt() {
-  const i = gjeldende(app.planInfo),
+  const i = planinfo(),
     ingen = ingenPlan(),
     navn = app.valgt ? app.valgt.navn : '';
   const status = !i
@@ -29,13 +30,13 @@ function Planlagt() {
         : ingen
           ? `Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for ${navn}, så planlagt utbygging kan ikke vises eller regnes ut.`
           : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.plan ? ': ' + planKilde(i.plan) : ''}.${i.dekning! < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning! * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
-  const tilstand = app.planTall ? app.planTall.tilstand : 'tom',
-    R = gjeldende(app.planRaster);
+  const tilstand = planTall(),
+    P = planlagt();
   let natur = '',
     jordbruk = '',
     note = '',
     egnemerk = '';
-  if (tilstand !== 'ok' || !R) {
+  if (!P) {
     natur = jordbruk = tilstand === 'regner' ? 'regner …' : '';
     note =
       tilstand === 'zoom'
@@ -44,8 +45,7 @@ function Planlagt() {
           ? 'Arealet kunne ikke regnes ut.'
           : '';
   } else {
-    const P = byggPlanlagt(R, app.ssbSum),
-      der = P.delvis ? ' i det hentede kartet' : '',
+    const der = P.delvis ? ' i det hentede kartet' : '',
       antall = P.antallEgne;
     egnemerk = !antall
       ? ''

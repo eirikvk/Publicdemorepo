@@ -52,7 +52,7 @@ GitHub Pages. `dist/` kan legges på en hvilken som helst webserver, også i en 
 |---|---|---|
 | `npm run sjekk` | Typesjekken (`tsc`) av all koden, og sjekken av at sølv og gull holder seg for seg selv og at lagene bruker hverandre i riktig retning | Sekunder |
 | `npm run sjekk-format` | Sjekker formateringen. `npm run formater` retter den. | Sekunder |
-| `npm test` | Testene av regnefunksjonene i generelt, sølv og gull, uten nett og nettleser | Under ett sekund |
+| `npm test` | Testene av regnefunksjonene i generelt, sølv og gull, og av katalogen, uten nett og nettleser | Under ett sekund |
 | `npm run regresjon` | Regresjonstesten: bygger siden og kjører Trondheim, Surnadal og Oslo i Chromium | Noen minutter |
 
 Regresjonstesten trenger en Chromium til Playwright. Hent den én gang med `npx playwright install chromium`. For å sammenligne

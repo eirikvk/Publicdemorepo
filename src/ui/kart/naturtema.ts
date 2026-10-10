@@ -1,6 +1,6 @@
 /* Kartlagene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur, sløret over det som ikke er kartlagt,
-   og markeringen av ett område valgt fra en liste. Dataene hentes og regnes ut i data/motor/naturtema.ts. Hvert tema vises på sin
-   egen side. */
+   og markeringen av ett område valgt fra en liste. Områdene og det kartlagte leses fra katalogen gjennom data/motor/gulldata.ts.
+   Hvert tema vises på sin egen side. */
 import type Feature from 'ol/Feature.js';
 import type { FeatureLike } from 'ol/Feature.js';
 import type ImageTile from 'ol/ImageTile.js';
@@ -14,8 +14,10 @@ import { ol } from './ol.ts';
 import { flislerret } from '../../data/solv/raster.ts';
 import { OPPLOSNINGER } from '../../data/solv/felles.ts';
 import type { Kartlagt } from '../../data/solv/temaer.ts';
+import type { TemaOmrade } from '../../data/gull/temaer.ts';
+import { grense, kartlagt as kartlagtFor, temaomrader } from '../../data/motor/gulldata.ts';
 import { NATURTEMA, type Naturtema } from '../../data/motor/naturtema.ts';
-import { abonner, app, endret, tidSlutt, gjelder } from '../../data/motor/tilstand.ts';
+import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { farge, rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
@@ -25,8 +27,8 @@ import { rolig, tilKartet, view } from './kart.ts';
    farge: mørkere jo høyere verdi. De andre tegnes som omriss. */
 const FYLT: Record<string, boolean> = { verdi: true };
 
-/* Ett lag per tema, med en kilde for flatene. Flatene lages én gang per hentet tema (pakke) og huskes. Fylte temaer tegnes som
-   fliser (Flislag), de andre som omriss (VectorLayer). */
+/* Ett lag per tema, med en kilde for flatene. Flatene lages én gang per hentet tema og huskes så lenge temaet ligger i katalogen.
+   Fylte temaer tegnes som fliser (Flislag), de andre som omriss (VectorLayer). */
 type Flate = Feature<MultiPolygon>;
 interface Temalag {
   lag: Flislag | VectorLayer<VectorSource<Flate>>;
@@ -79,12 +81,12 @@ for (const t of NATURTEMA) {
   LAG.set(t.id, { lag, kilde });
 }
 /* Flatene i kartet for et hentet tema: én per område, i samme rekkefølge */
-const flater = (D: NonNullable<Naturtema['data']>) => {
-  const p = D.pakke || D;
-  let f = flaterFor.get(p);
+type Omradene = { omrader: TemaOmrade[] };
+const flater = (O: Omradene) => {
+  let f = flaterFor.get(O);
   if (!f) {
-    f = D.omrader.map(o => new ol.Feature({ geometry: new ol.geom.MultiPolygon(o.koord), navn: o.navn, v: o.v || 0 }));
-    flaterFor.set(p, f);
+    f = O.omrader.map(o => new ol.Feature({ geometry: new ol.geom.MultiPolygon(o.koord), navn: o.navn, v: o.v || 0 }));
+    flaterFor.set(O, f);
   }
   return f;
 };
@@ -123,13 +125,13 @@ function tegnSlorflis(tile: ImageTile) {
   tidSlutt('slør, fliser', t0);
 }
 export const dekLag = new ol.layer.Tile({ className: 'plan', visible: false, source: tegnetKilde(tegnSlorflis) });
-const kartlagtFor = new WeakMap<Kartlagt, Feature<Polygon>[]>();
+const kartlagteFlater = new WeakMap<Kartlagt, Feature<Polygon>[]>();
 function settDekning(E: Kartlagt | null | undefined) {
   /* de kartlagte flatene for valgt kommune inn i sløret */
   dekKilde.clear();
   if (E && E.flate) {
-    let f = kartlagtFor.get(E);
-    if (!f) kartlagtFor.set(E, (f = E.flate.map(p => new ol.Feature(new ol.geom.Polygon(p)))));
+    let f = kartlagteFlater.get(E);
+    if (!f) kartlagteFlater.set(E, (f = E.flate.map(p => new ol.Feature(new ol.geom.Polygon(p)))));
     dekKilde.addFeatures(f);
   }
   friskOpp(dekLag);
@@ -182,10 +184,11 @@ function tegnFlateflis(t: Naturtema, tile: ImageTile) {
 /* Navnet på områdene i punktet c, i temaene som vises, til trykk i kartet */
 export function navnVed(c: Coordinate) {
   return NATURTEMA.map(t => {
-    const { lag } = lagFor(t);
-    if (!lag.getVisible() || !t.data) return null;
-    const F = flater(t.data),
-      i = t.data.omrader.findIndex(
+    const { lag } = lagFor(t),
+      O = temaomrader(t);
+    if (!lag.getVisible() || !O) return null;
+    const F = flater(O),
+      i = O.omrader.findIndex(
         (o, a) =>
           c[0] >= o.ext[0] &&
           c[0] <= o.ext[2] &&
@@ -193,7 +196,7 @@ export function navnVed(c: Coordinate) {
           c[1] <= o.ext[3] &&
           F[a].getGeometry()!.intersectsCoordinate(c)
       ),
-      o = i < 0 ? null : t.data.omrader[i];
+      o = i < 0 ? null : O.omrader[i];
     return o ? ` · ${o.navn}${t.samlet && o.under ? ` (${o.under.toLowerCase()})` : ''}` : null;
   })
     .filter(Boolean)
@@ -237,10 +240,11 @@ export function fjernMerket() {
    finne veien tilbake dit. */
 export function visIKartet(id: string, nr: number, liId: string) {
   const t = NATURTEMA.find(x => x.id === id),
-    o = t && t.data && t.data.omrader[nr];
+    O = t && temaomrader(t),
+    o = O && O.omrader[nr];
   if (!o) return;
   markKilde.clear();
-  markKilde.addFeature(new ol.Feature(flater(t!.data!)[nr].getGeometry()));
+  markKilde.addFeature(new ol.Feature(flater(O!)[nr].getGeometry()));
   ui.vist = { id: t!.id, navn: o.navn, liId };
   endret();
   view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig() ? 0 : 400 });
@@ -254,23 +258,23 @@ const ny = nyttSiden();
 abonner(() => {
   if (ny('valgt', app.valgt)) fjernMerket();
   if (ui.vist && ui.side !== ui.vist.id) fjernMerket();
-  const nyGrense = ny('grense', app.grense);
+  const G = grense(),
+    nyGrense = ny('grense', G);
   for (const t of NATURTEMA) {
     const { lag, kilde } = lagFor(t),
-      D = t.data,
-      ok = gjelder(D),
+      O = temaomrader(t),
       paa = ui.side === t.id;
-    if (ny('data ' + t.id, D)) {
+    if (ny('data ' + t.id, O)) {
       kilde.clear();
-      if (ok && !D.feil) kilde.addFeatures(flater(D));
+      if (O) kilde.addFeatures(flater(O));
       if (FYLT[t.id]) friskOpp(lag as Flislag);
     }
-    lag.setVisible(paa && !!app.grense && ok && D.omrader.length > 0);
+    lag.setVisible(paa && !!G && !!O && O.omrader.length > 0);
     if (t.dekning) {
-      if (ny('kartlagt', ok ? D.ekstra || null : null)) settDekning(ok ? D.ekstra : null);
-      if (nyGrense && app.grense) dekLag.setExtent(app.grense.ext);
-      const kartlagt = ok && !!D.ekstra && D.ekstra.km2 > 0;
-      dekLag.setVisible(paa && ui.slorPaa && !!app.grense && kartlagt);
+      const E = O ? kartlagtFor(t) : null;
+      if (ny('kartlagt', E)) settDekning(E);
+      if (nyGrense && G) dekLag.setExtent(G.ext);
+      dekLag.setVisible(paa && ui.slorPaa && !!G && !!E && E.km2 > 0);
     }
   }
 });

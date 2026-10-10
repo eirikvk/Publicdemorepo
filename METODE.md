@@ -151,8 +151,8 @@ planrutenettet, og regnes om med 0,448 dekar per rute i gull. Inngrepsfri natur 
 De andre tallene rundes først på siden: hele dekar fra 100 og oppover, én desimal under 100, og «under 0,1» for det minste. Tall som
 er regnet ut i nettleseren, står med «ca.» i setninger.
 
-**Ingenting lagres.** Svar fra kildene huskes så lenge siden er åpen, og hentes på nytt neste gang. Tallene kan derfor endre seg fra
-dag til dag når kildene oppdateres.
+**Ingenting lagres.** Svar fra kildene og det som er regnet ut av dem, huskes i katalogen i datamotoren så lenge siden er åpen
+(`src/data/motor/datasett.ts`), og hentes på nytt neste gang. Tallene kan derfor endre seg fra dag til dag når kildene oppdateres.
 
 ## Arealklassene
 
@@ -241,7 +241,7 @@ eller mindre natur enn i 2017?
 - Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.
 
 **Kode.** Bronse: `hentArealtall`, `hentTidsserie` og `hentSSB` i `src/data/bronse/ssb.ts`. Sølv: `src/data/solv/ssb.ts`. Gull:
-`src/data/gull/regnskap.ts`. Samordningen: `hentTall` og `hentHistorie` i `src/data/motor/tall.ts`.
+`src/data/gull/regnskap.ts`. Datasettene: `solv.arealtall` og `solv.historie` i `src/data/motor/datasett.ts`.
 
 ## Planlagt utbygging
 
@@ -333,7 +333,8 @@ bygger på. Planene i den er kopiert fra DiBK 11. januar 2026 for de fleste komm
 Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres på nytt herfra.
 
 **Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/planrutenett.ts`. Gull: `src/data/gull/planlagt.ts`. Samordningen:
-`hentBlokk`, `regnPlan` og `sjekkPlan` i `src/data/motor/plan.ts`. Kartlaget: `src/ui/kart/plan.ts`.
+`hentBlokk` og `regnPlan` i `src/data/motor/plan.ts`. Datasettene: `solv.planinfo`, `bronse.planflis`, `solv.planblokker` og
+`solv.planrutenett` i `src/data/motor/datasett.ts`. Kartlaget: `src/ui/kart/plan.ts`.
 
 ## Egne områder og opplastet plan
 
@@ -370,8 +371,8 @@ nettleseren og sendes ingen steder.
 - Lastes kommuneplanen selv opp, kan tabellen vise små forskjeller som bare kommer av at flatene legges i rutenettet på en annen
   måte enn bildene fra DiBK.
 
-**Kode.** Bronse: `src/data/bronse/planfil.ts`. Sølv: `src/data/solv/egne.ts`. Gull: `src/data/gull/egne.ts`. Opplasting og det radene bygges av:
-`src/data/motor/egne.ts`. Tegning i kartet: `src/ui/kart/egne.ts`.
+**Kode.** Bronse: `src/data/bronse/planfil.ts`. Sølv: `src/data/solv/egne.ts`. Gull: `src/data/gull/egne.ts`. Opplasting:
+`src/data/motor/egne.ts`. Det radene bygges av: `egneRader` i `src/data/motor/gulldata.ts`. Tegning i kartet: `src/ui/kart/egne.ts`.
 
 ## Naturtemaene
 
@@ -437,7 +438,8 @@ utbygging per område, per verdikategori og innenfor og utenfor det kartlagte.
 **Kontroll.** Rutenettmetoden for verdsatt natur ga under 0,2 % avvik fra geometrisk sammenslåing av flatene i Trondheim.
 
 **Kode.** Bronse: `hentTemaflater` og `hentKartlagt` i `src/data/bronse/mdir-naturtema.ts`. Sølv: `src/data/solv/temaer.ts`. Gull:
-`src/data/gull/temaer.ts`. Samordningen: `hentNatur`, `hentDekning` og `regnNatur` i `src/data/motor/naturtema.ts`. Kartlagene:
+`src/data/gull/temaer.ts`. Datasettene: `solv.temaomrader`, `gull.temaareal`, `solv.kartlagt`, `gull.temainne`, `solv.temamaske`
+og `gull.temakryss` i `src/data/motor/datasett.ts`. Det sidene viser: `temadata` i `src/data/motor/gulldata.ts`. Kartlagene:
 `src/ui/kart/naturtema.ts`.
 
 ## Inngrepsfri natur
@@ -465,9 +467,9 @@ kommunen i kommunebildenes rutenett, uten glatting av kantene.
   sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.
 - I kartet får bare klassen natur sonefarge.
 
-**Kode.** Bronse: `hentInonBilde` i `src/data/bronse/mdir-inon.ts`. Sølv: `src/data/solv/inon.ts`. Gull: `src/data/gull/inon.ts`. Samordningen:
-`sjekkInon` i `src/data/motor/inon.ts`, med flyten i `src/data/motor/kommunebilde.ts`, som er felles med grått areal. Kartlaget:
-`src/ui/kart/inon.ts`.
+**Kode.** Bronse: `hentInonBilde` i `src/data/bronse/mdir-inon.ts`. Sølv: `src/data/solv/inon.ts`. Gull: `src/data/gull/inon.ts`.
+Datasettene: `bronse.inonbilde` og `solv.inon` i `src/data/motor/datasett.ts`, med tolkingen i `tolketBilde`, som er felles med
+grått areal. Arealet: `inonbilde` i `src/data/motor/gulldata.ts`. Kartlaget: `src/ui/kart/inon.ts`.
 
 ## Grått areal
 
@@ -505,9 +507,10 @@ grått areal, på grått areal med minst halvparten vegetasjon, og på grønt i 
 areal i Trondheim. I en gjennomgang av Trondheim på 10 meters ruter var 98,9 % av det som er bebygd, men ikke grått, det
 grunnkartet kaller grønne arealer.
 
-**Kode.** Bronse: `hentGraaBilde` i `src/data/bronse/nibio-graa.ts`. Sølv: `src/data/solv/graa.ts`. Gull: `src/data/gull/graa.ts`. Samordningen:
-`sjekkGraa` og `regnGraa` i `src/data/motor/graa.ts`, med flyten i `src/data/motor/kommunebilde.ts`, som er felles med inngrepsfri
-natur. Kartlaget: `src/ui/kart/graa.ts`.
+**Kode.** Bronse: `hentGraaBilde` i `src/data/bronse/nibio-graa.ts`. Sølv: `src/data/solv/graa.ts`. Gull: `src/data/gull/graa.ts`.
+Datasettene: `bronse.graabilder`, `solv.graa`, `bronse.graaflis` og `gull.graakryss` i `src/data/motor/datasett.ts`, med tolkingen i
+`tolketBilde`, som er felles med inngrepsfri natur. Arealet: `graabilde` i `src/data/motor/gulldata.ts`. Kartlaget:
+`src/ui/kart/graa.ts`.
 
 ## Utenfor analysene: trykk i kartet
 
@@ -566,6 +569,24 @@ kommunemasken tegnes med `flatePiksler`. Den gamle tolkingen var den samme model
 ligger nærmest), men regnet uten oppslagstabell. Bildet for Trondheim ble laget med begge samme dag: klassen var lik i 99,86 % av
 pikslene, synligheten i 99,94 %, og arealene per klasse skilte med høyst 0,3 km². De lagrede bildene er laget med Python-utgaven og
 er ikke laget på nytt.
+
+**Katalogen, 10. oktober 2026.** Alt som hentes og regnes ut, huskes nå i én katalog i datamotoren
+(`src/data/motor/katalog.ts`), og hvert datasett står i `src/data/motor/datasett.ts` med navn, nøkkel, grense og oppskrift. Bronse,
+sølv og gull husker ingenting selv, og sidene og kartet leser alt med nummeret til valgt kommune. Metoden ble ikke endret. Noen ting
+virker litt annerledes, uten at tallene endres:
+- Hvor mye som huskes, står per datasett. Før gjaldt én grense for de 80 siste svarene fra alle kildene til sammen.
+- Alle kartbilder fra NIBIO som hentes mens en kommune uten lagret oversiktsbilde er valgt, legges inn i det sammensatte kartet,
+  også de som hentes til kartlagene for planen, inngrepsfri natur og grått areal. Før ble bare grunnkartlagets egne fliser lagt
+  inn med en gang, og resten først når kommunen ble valgt på nytt.
+- Planrutenettets blokker huskes bare for valgt kommune. Velges en kommune på nytt, regnes blokkene ut igjen av det som er
+  husket, uten nye kall.
+- Kryssingen med grått areal får vite om bare hentet kart er med, fra planrutenettet den krysses med. Før ble det lest av dagens
+  klasser i samme øyeblikk, som gir det samme.
+- Feiler det lagrede oversiktsbildet, brukes det sammensatte kartet i stedet.
+
+Utgaven med katalogen ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme dag: tallene fra motoren, teksten
+på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene
+da Trondheim ble valgt igjen.
 
 **Omleggingen til bronse, sølv og gull, 10. oktober 2026.** Koden ble delt i tre lag: henting (bronse), felles standard (sølv) og
 svarene sidene viser (gull). Metoden ble ikke endret. Hvert steg som flyttet kode, ble sammenlignet med steget før:

@@ -112,7 +112,7 @@ export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMed
    naturMaske i sølv. maske(nokkel, lag) gir masken: den som kaller, kan huske maskene per område (nokkel) og bare kalle lag() første
    gang. */
 export function kryssNatur(
-  D: TemaData,
+  D: Pick<TemaData, 'omrader' | 'ekstra'>,
   R: Planrutenett,
   nK: number,
   medDekning: boolean,

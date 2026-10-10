@@ -1,6 +1,6 @@
 /* Sidene og navigeringen: hvilke sider som finnes, valg av side, adressen i nettleseren, og oppstarten. Sidevelgeren og lenkene
    mellom sidene bruker dette, og kartet viser temaet til siden som er valgt. */
-import { finn, hentKommuner, velgKommune } from '../data/motor/kommune.ts';
+import { finn, hentKommuner, kommuner, velgKommune } from '../data/motor/kommune.ts';
 import { abonner, app, endret } from '../data/motor/tilstand.ts';
 import { ui } from './tilstand.ts';
 
@@ -53,7 +53,7 @@ export function startOpp() {
   let [forst, side] = (location.hash || '').replace('#', '').split('/');
   hentKommuner().then(ok => {
     if (!ok) return;
-    if (!finn(forst)) forst = finn('5001') ? '5001' : app.fylker[0].kommuner[0].nr;
+    if (!finn(forst)) forst = finn('5001') ? '5001' : kommuner()[0].kommuner[0].nr;
     velgKommune(forst);
     if (side) velgSide(side);
   });

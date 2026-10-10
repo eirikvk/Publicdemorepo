@@ -1,4 +1,4 @@
-/* Tester for src/data/generelt: geometri, minne, tall og farger. Kjør: npm test */
+/* Tester for src/data/generelt: geometri, tall, farger og PNG. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -11,7 +11,6 @@ import {
   tomt,
   utsnitt
 } from '../src/data/generelt/geometri.ts';
-import { husk } from '../src/data/generelt/minne.ts';
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
 import { palettPng, pngBit, pngBiter } from '../src/data/generelt/png.ts';
@@ -43,14 +42,6 @@ test('utsnitt, omriss, snitt og overlapp', () => {
   assert.equal(tomt(snitt([0, 0, 1, 1], [2, 2, 3, 3])), true);
   assert.equal(overlapper([0, 0, 1, 1], [1, 1, 2, 2]), true);
   assert.equal(flerflate({ type: 'Polygon', coordinates: [kvadrat(0, 0, 1)] }).length, 1);
-});
-
-test('husk: det eldste går ut, og det som legges inn på nytt, blir nytt', () => {
-  const m = new Map<string, number>();
-  for (const k of ['a', 'b', 'c']) husk(m, k, 1, 2);
-  assert.deepEqual([...m.keys()], ['b', 'c']);
-  husk(m, 'b', 2, 2);
-  assert.deepEqual([...m.keys()], ['c', 'b']);
 });
 
 test('summen og nærmeste farge', () => {

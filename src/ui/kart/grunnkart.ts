@@ -1,31 +1,31 @@
 /* Kartlaget med dagens arealklasser: flisene fra NIBIO når kartet er zoomet inn, og oversiktsbildet når det er zoomet ut, i
-   kartfargene. Bildene hentes i data/bronse/nibio-grunnkart.ts. Oversiktsbildet er det lagrede, eller det sammensatte kartet
-   datamotoren lager av flisene som er hentet (data/motor/grunnkart.ts). Kartet har sin egen kopi av det i kartfargene. */
+   kartfargene. Flisene hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn i det sammensatte kartet.
+   Oversiktsbildet er det lagrede, eller det sammensatte kartet datamotoren lager av flisene som er hentet
+   (data/motor/grunnkart.ts). Kartet har sin egen kopi av det i kartfargene. */
 import type ImageWrapper from 'ol/Image.js';
 import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
 import type { Extent } from 'ol/extent.js';
 import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
-import { grunnkartUrl, hentGrunnkartFlis } from '../../data/bronse/nibio-grunnkart.ts';
+import { grunnkartUrl } from '../../data/bronse/nibio-grunnkart.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
-import { UTM, type Flis } from '../../data/solv/felles.ts';
-import { leggISamling } from '../../data/motor/grunnkart.ts';
-import { abonner, app, lytt, tidSlutt, type Oversikt, type Sted } from '../../data/motor/tilstand.ts';
+import { UTM } from '../../data/solv/felles.ts';
+import { GRUNNKARTFLIS, type Oversikt } from '../../data/motor/datasett.ts';
+import { oversikt } from '../../data/motor/grunnkart.ts';
+import { hent } from '../../data/motor/katalog.ts';
+import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
 import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte, type Flislag } from './felles.ts';
 import { kartStatus, opplosning } from './kart.ts';
 import { tegnPlan } from './plan.ts';
 
-/* Flisene fra NIBIO. Den rå flisen legges også inn i det sammensatte kartet i datamotoren. */
+/* Flisene fra NIBIO, fargelagt i kartfargene */
 export const klare = new Set<string>(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
 const flisUrl = (tc: TileCoord) => grunnkartUrl(flisnett.getTileCoordExtent(tc));
 function lastFlis(tile: ImageTile, src: string) {
-  hentGrunnkartFlis(src)
-    .then(buf => {
-      leggISamling(tile.getTileCoord() as Flis, buf);
-      return fargeleggBlob(buf);
-    })
+  hent(GRUNNKARTFLIS, src)
+    .then(fargeleggBlob)
     .then(blob => {
       const img = tile.getImage() as HTMLImageElement,
         url = URL.createObjectURL(blob!);
@@ -70,7 +70,10 @@ export const tegnesOppaa = (lag: Flislag) => oppaa.push(lag);
    det forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
    zoombevegelse rekker ikke å laste bildet sitt, og da blinket bakgrunnskartet gjennom første gang man zoomet inn. */
 export const oversiktLag = new ol.layer.Image({ className: 'tema' });
-const ovRes = () => (app.ov ? app.ov.res : 0);
+const ovRes = () => {
+  const ov = oversikt();
+  return ov ? ov.res : 0;
+};
 oversiktLag.on('prerender', e => {
   (e.context as CanvasRenderingContext2D).imageSmoothingEnabled = e.frameState!.viewState.resolution >= ovRes();
 });
@@ -85,7 +88,7 @@ export const oversiktSynlig = (v: boolean) => oversiktLag.setVisible(v && !!over
 let ovUrl: string | null = null;
 async function visLagret(denne: Oversikt) {
   const blob = await fargeleggBlob(denne.buf!);
-  if (denne !== app.ov) return;
+  if (denne !== oversikt()) return;
   const url = URL.createObjectURL(blob!),
     gammel = ovUrl;
   ovUrl = url;
@@ -222,11 +225,12 @@ export function planleggEtterarbeid() {
   clearTimeout(etterTimer);
   etterTimer = setTimeout(async () => {
     if (kartflagg.iBevegelse) return; /* moveend tar opp tråden igjen */
-    const k = app.ov && app.ov.lerret ? kopier.get(app.ov.lerret) : null,
+    const ov = oversikt(),
+      k = ov && ov.lerret ? kopier.get(ov.lerret) : null,
       t0 = performance.now(),
       antall = k ? k.venter.length : 0;
     if (k && k.venter.length) {
-      while (k.venter.length && !kartflagg.iBevegelse && app.ov && k.c === app.ov.lerret) {
+      while (k.venter.length && !kartflagg.iBevegelse && k.c === (oversikt() || {}).lerret) {
         fargeleggSamling(k, ...k.venter.shift()!);
         await new Promise(ok => setTimeout(ok, 0));
       }
@@ -249,14 +253,16 @@ lytt('nyFlis', (c, r) => {
   planleggEtterarbeid();
 });
 /* Zoomet ut: alt som venter, fargelegges med en gang */
-export const fargeleggAltSomVenter = () =>
-  fargeleggVentende(app.ov && app.ov.lerret ? kopier.get(app.ov.lerret) : null);
+export const fargeleggAltSomVenter = () => {
+  const ov = oversikt();
+  fargeleggVentende(ov && ov.lerret ? kopier.get(ov.lerret) : null);
+};
 
 /* Laget følger tilstanden: nytt oversiktsbilde for valgt kommune */
 const ny = nyttSiden();
 abonner(() => {
-  if (!ny('ov', app.ov)) return;
-  const denne = app.ov;
+  const denne = oversikt();
+  if (!ny('ov', denne)) return;
   if (!denne) {
     oversiktLag.setSource(null);
     oversiktSynlig(true);

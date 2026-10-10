@@ -9,7 +9,8 @@ import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { bakgrunnUrl } from '../../data/bronse/kartverket.ts';
 import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
-import { kartetFlyttes } from '../../data/motor/grunnkart.ts';
+import { kartetFlyttes, lagretUtsnitt, oversikt } from '../../data/motor/grunnkart.ts';
+import { grense as kommunegrensen, grenseFeil } from '../../data/motor/gulldata.ts';
 import { abonner, app, endret } from '../../data/motor/tilstand.ts';
 import { farge } from '../farger.ts';
 import { kb, nf } from '../tekst.ts';
@@ -81,13 +82,14 @@ export function kartStatus() {
     varSiste = ui.siste;
   if (opplosning() < MAKSRES) ui.ute = false;
   else {
-    const o = (app.ov && app.ov.ext) || (app.valgt && app.oversikter[app.valgt.nr]),
+    const ov = oversikt(),
+      o = (ov && ov.ext) || (app.valgt && lagretUtsnitt(app.valgt.nr)),
       treff = !!o && !!kart && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
     oversiktSynlig(true);
     ui.ute = !treff && !!app.valgt;
     ui.siste = !treff
       ? ''
-      : app.ov && app.ov.dynamisk
+      : ov && ov.dynamisk
         ? 'Viser kart nettleseren allerede har hentet'
         : 'Viser lagret oversiktsbilde';
   }
@@ -111,10 +113,11 @@ abonner(() => {
     kartStatus();
     endret();
   }
-  if (ny('grense', app.grense) && app.grense) {
+  const G = kommunegrensen();
+  if (ny('grense', G) && G) {
     const k = app.valgt,
-      ext = app.grense.ext;
-    const flate = new ol.geom.MultiPolygon(app.grense.koord);
+      ext = G.ext;
+    const flate = new ol.geom.MultiPolygon(G.koord);
     settKlipp(flate);
     grenseKilde.clear();
     grenseKilde.addFeature(new ol.Feature(flate));
@@ -123,12 +126,13 @@ abonner(() => {
     if (k && !k.boks && !beholdes(k.nr)) view.fit(ext, { padding: [16, 16, 16, 16], duration: 350 });
     glemBehold();
   }
-  if (ny('grenseFeil', app.grenseFeil) && app.grenseFeil) {
+  const feil = grenseFeil();
+  if (ny('grenseFeil', feil) && feil) {
     ui.probe = { tekst: 'Kommunegrensen kunne ikke hentes.' };
     tema.setVisible(true);
     endret();
   }
-  if (ny('oversikt', app.valgt && app.oversikter[app.valgt.nr])) kartStatus();
+  if (ny('oversikt', app.valgt && lagretUtsnitt(app.valgt.nr))) kartStatus();
   if (ny('sisteKall', app.sisteKall) && app.sisteKall) {
     const s = app.sisteKall,
       fliser = (n: number) => `${n} ${n === 1 ? 'flis' : 'fliser'}`;
@@ -186,7 +190,7 @@ export function lagKart() {
   tema.on('prerender', e => {
     const fs = e.frameState!,
       res = fs.viewState.resolution;
-    if (!app.ov || !oversiktLag.getVisible() || res >= MAKSRES) return;
+    if (!oversikt() || !oversiktLag.getVisible() || res >= MAKSRES) return;
     const c = e.context as CanvasRenderingContext2D;
     flisnett.forEachTileCoord(fs.extent!, flisnett.getZForResolution(res), tc => {
       if (!dekket(tc)) return;

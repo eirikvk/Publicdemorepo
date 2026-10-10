@@ -7,6 +7,7 @@ import { ol } from './ol.ts';
 import { hentKommuneIPunkt } from '../../data/bronse/kartverket.ts';
 import { naermesteFarge } from '../../data/generelt/farge.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
+import { oversikt } from '../../data/motor/grunnkart.ts';
 import { finn, velgKommune } from '../../data/motor/kommune.ts';
 import { app, endret } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
@@ -106,7 +107,7 @@ export function trykkIKartet(e: MapBrowserEvent) {
     return;
   }
   let d = (tema.getVisible() ? tema.getData(e.pixel) : null) as Uint8ClampedArray | null;
-  if ((!d || d[3] < 40) && app.ov && oversiktLag.getVisible())
+  if ((!d || d[3] < 40) && oversikt() && oversiktLag.getVisible())
     d = oversiktLag.getData(e.pixel) as Uint8ClampedArray | null;
   if (!d || d[3] < 40) {
     settProbe({ tekst: 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).' });

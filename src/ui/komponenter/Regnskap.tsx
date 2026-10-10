@@ -1,11 +1,19 @@
 /* Utbredelsesregnskapet: hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre. Først forklart med
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
-   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.ts. Her blir de tekst, stolper og tabell. */
+   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.ts, gjennom gulldata.ts. Her blir de tekst, stolper og
+   tabell. */
 import type { CSSProperties } from 'react';
-import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann, type Endring } from '../../data/gull/regnskap.ts';
+import type { Endring } from '../../data/gull/regnskap.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
+import {
+  arealtall,
+  endring as endringen,
+  landOgVannet,
+  oppstilling,
+  planSum,
+  utbredelse
+} from '../../data/motor/gulldata.ts';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.ts';
 import './Regnskap.css';
@@ -63,10 +71,10 @@ function Endring({ E }: { E: Endring }) {
 
 /* Det pedagogiske: hvor mye natur det er nå, fordelingen på de tre klassene, og forskjellen fra 2017 */
 function Utbredelse() {
-  const T = app.arealtall,
-    U = byggUtbredelse(T),
+  const T = arealtall(),
+    U = utbredelse(),
     natur = U && U.klasser[0],
-    E = byggEndring(gjeldende(app.historie));
+    E = endringen();
   return (
     <section className="utbredelse" aria-labelledby="regnskap-tittel">
       <h2 className="md-typography-heading-s" id="regnskap-tittel">
@@ -99,9 +107,9 @@ function Utbredelse() {
 
 /* Regnskapsoppstillingen: én kolonne per klasse og en sum, og radene areal ved start, netto endring og areal ved slutt */
 function Oppstilling() {
-  const O = byggOppstilling(gjeldende(app.historie));
+  const O = oppstilling();
   if (!O) return null;
-  const P = gjelder(app.planSum) && !utenPlan() ? app.planSum : null;
+  const P = utenPlan() ? null : planSum();
   return (
     <section className="regnskap prosa" aria-labelledby="oppstilling-tittel">
       <h2 className="md-typography-heading-s" id="oppstilling-tittel">
@@ -140,7 +148,7 @@ function Oppstilling() {
 
 /* Land og vann: land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate minus land og ferskvann. */
 function LandOgVann() {
-  const V = landOgVann(app.flate, app.ssbSum, app.ferskvann);
+  const V = landOgVannet();
   return (
     <section className="vann" aria-labelledby="vann-tittel">
       <h2 className="md-typography-heading-s" id="vann-tittel">

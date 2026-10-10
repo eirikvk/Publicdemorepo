@@ -17,6 +17,9 @@
      flater og leser bilder i et lerret.
    - De har ingen variabler på toppnivå som kan endres (let). Det som gis inn, kommer som argumenter.
    Og datamotoren har ingen regnefunksjoner: funksjoner som heter tolk, kryss, bygg eller tell noe, hører hjemme i sølv eller gull.
+   Alt datapipelinen husker, ligger i katalogen (data/motor/katalog.ts). Ingen andre filer i data har minne på toppnivå (new Map,
+   WeakMap, Set eller WeakSet). Unntaket er listen over hvem som abonnerer, i data/motor/tilstand.ts. Kartet kan ha sitt eget minne
+   for det som tegnes.
 
    Typene sjekkes av TypeScript (tsc). Denne sjekken ser bare på hvem som importerer fra hvem, og på reglene over. Koden leses med
    oxc-parser, som kan lese TypeScript og JSX.
@@ -54,6 +57,8 @@ const UNNTAK: Record<string, string[]> = {
   'data/solv/raster': ['document', 'createImageBitmap']
 }; /* fil uten endelse */
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
+const MINNE = ['Map', 'WeakMap', 'Set', 'WeakSet'],
+  MINNE_LOV = ['data/motor/katalog', 'data/motor/tilstand']; /* fil uten endelse */
 const FAST_VERDI = /^[A-ZÆØÅ][A-ZÆØÅ0-9_]*$/;
 
 /* En node i syntakstreet, slik oxc-parser gir den (ESTree, med TypeScript i tillegg) */
@@ -101,6 +106,16 @@ for (const [lag, regel] of Object.entries(LAG)) {
       const d: Node = n.type === 'ExportNamedDeclaration' && n.declaration ? n.declaration : n;
       if (regel.ren && d.type === 'VariableDeclaration' && d.kind === 'let')
         feil.push(`${navn}:${linje(d)} har en variabel på toppnivå som kan endres (let)`);
+      if (
+        lag.startsWith('data/') &&
+        !MINNE_LOV.includes(navn.replace(/\.[jt]sx?$/, '')) &&
+        d.type === 'VariableDeclaration'
+      )
+        for (const x of d.declarations as Node[])
+          if (x.init && x.init.type === 'NewExpression' && MINNE.includes(x.init.callee.name))
+            feil.push(
+              `${navn}:${linje(d)} har minne på toppnivå (new ${x.init.callee.name}): det hører hjemme i katalogen (data/motor/katalog.ts)`
+            );
       if (lag === 'data/motor') {
         const navnene: string[] =
           d.type === 'FunctionDeclaration'

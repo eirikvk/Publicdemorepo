@@ -38,7 +38,7 @@ export const grunnkartUrl = (u: Utsnitt, w = 512, h = 512) =>
     transparent: 'true',
     sld_body: SLD
   });
-/* Kartbildene hentes gjennom en egen kø, og de rå bildene huskes (hentGrunnkartFlis.lager) */
+/* Kartbildene hentes gjennom en egen kø */
 export const hentGrunnkartFlis = lagHenter('NIBIO', 'Kart');
 
 /* Registeret over lagrede oversiktsbilder: hvilke kommuner som har et, og utsnittet bildet dekker */

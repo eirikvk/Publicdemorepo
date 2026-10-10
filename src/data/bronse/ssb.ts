@@ -25,7 +25,6 @@ async function hentSSB(hva: string, nytt: string, region: Utvalg, tid: Utvalg): 
     SSB0,
     false,
     false,
-    false,
     JSON.stringify({
       query: [
         valg('Region', ...region),

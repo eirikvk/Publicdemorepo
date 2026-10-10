@@ -1,10 +1,10 @@
 /* Temasidene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Toppen svarer på hvor mye som finnes i
    kommunen, hvor stor del av landarealet det er, og hvor mye planlagt utbygging som ligger innenfor. Under står områdene som liste,
-   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull (byggNaturTall). */
-import { byggNaturTall, type NaturTall } from '../../data/gull/temaer.ts';
+   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull (naturtemaet i gulldata.ts). */
+import type { NaturTall } from '../../data/gull/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
+import { bareHentetKart, naturtemaet } from '../../data/motor/gulldata.ts';
 import type { Naturtema as Tema } from '../../data/motor/naturtema.ts';
-import { app, gjelder } from '../../data/motor/tilstand.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
 import { Fargelinje, Forklaring, Stripe, type Stripedel } from './deler.tsx';
@@ -97,8 +97,7 @@ function Helhet({ t, H, E }: { t: Tema; H: NonNullable<NaturTall['helhet']>; E: 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
 export function Naturtema({ t: tema }: { t: Tema }) {
   const t = { ...tema, ...TEMAORD[tema.id] },
-    D = tema.data,
-    ok = gjelder(D);
+    T = naturtemaet(tema);
   const kilde = (
     <p className="hint">
       Kilde: {t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i
@@ -106,10 +105,11 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       {t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}
     </p>
   );
-  if (!ok) return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} kilde={kilde} />;
-  const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum),
+  if (!T) return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} kilde={kilde} />;
+  const { D, N } = T,
     E = N.kartlagt,
-    der = app.ov && app.ov.dynamisk ? ' i den delen av kommunen det er hentet kart for' : '',
+    hentet = bareHentetKart(),
+    der = hentet ? ' i den delen av kommunen det er hentet kart for' : '',
     helhet = !!t.dekning && !!N.helhet,
     kartlagt = !!E && E.km2 > 0;
   const under = !N.antall
@@ -123,7 +123,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
         : !D.regnet
           ? 'planlagt utbygging ikke regnet ut ennå'
           : (N.plan ? `ca. ${dekar(N.planKm2)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') +
-            (app.ov && app.ov.dynamisk ? ', i hentet kart' : ''));
+            (hentet ? ', i hentet kart' : ''));
   const sumTekst = D.feil
     ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.`
     : !N.antall

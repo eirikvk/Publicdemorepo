@@ -1,20 +1,21 @@
-/* Datamotoren, egne områder: tegnede områder og opplastede planer, og det radene i sammenligningen med kommuneplanen bygges av.
-   Hvilke flater som er utbygging og hvordan de legges inn i planrutenettet, står i solv/egne.ts, og radene bygges i gull/egne.ts.
-   Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og
-   hører til kommunen de ble tegnet i. */
+/* Datamotoren, egne områder: tegnede områder og opplastede planer. Hvilke flater som er utbygging og hvordan de legges inn i
+   planrutenettet, står i solv/egne.ts, og radene i sammenligningen med kommuneplanen bygges i gull/egne.ts (se egneRader i
+   gulldata.ts). Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder er valg brukeren har gjort, og ligger i app.egne.
+   De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. */
 import { lesPlanfil } from '../bronse/planfil.ts';
 import { areal, utsnitt, type Flerflate } from '../generelt/geometri.ts';
 import { EGET_MIN_M2, arealKm2 } from '../solv/felles.ts';
 import { planflater, type Type } from '../solv/egne.ts';
 import { tilUTM } from '../solv/projeksjoner.ts';
-import { byggEgneRader } from '../gull/egne.ts';
+import { se } from './katalog.ts';
+import { GRENSE } from './datasett.ts';
 import { finn, velgKommune } from './kommune.ts';
-import { NATURTEMA, type Naturtema } from './naturtema.ts';
 import { ingenPlan, regnAlt } from './plan.ts';
-import { app, endret, type EgetOmrade, type EgneStatus, gjelder, gjeldende } from './tilstand.ts';
+import { app, endret, type EgetOmrade, type EgneStatus } from './tilstand.ts';
 
 let egenTeller = 0;
-export const mine = () => app.egne.filter(gjelder);
+/* De egne områdene i valgt kommune */
+export const mine = () => app.egne.filter(g => !!app.valgt && g.nr === app.valgt.nr);
 /* Uten kommuneplan og uten egne områder finnes det ingen planlagt utbygging å regne på */
 export const utenPlan = () => ingenPlan() && !mine().length;
 
@@ -42,8 +43,7 @@ export function leggTilEget(koord: Flerflate) {
     kilde: 'tegnet',
     deler: [{ koord, type: 'bygg', ext }],
     ext,
-    km2: arealKm2(koord, ext),
-    tall: null
+    km2: arealKm2(koord, ext)
   });
   egneEndret();
 }
@@ -62,9 +62,11 @@ export async function lastOppPlan(fil: File | null | undefined) {
     melding('leser');
     await new Promise(ok => setTimeout(ok, 30));
     const midtAv = (nr: string) => {
-      const k = finn(nr)![1];
-      return app.valgt && app.valgt.nr === nr && app.grense
-        ? [(app.grense.ext[0] + app.grense.ext[2]) / 2, (app.grense.ext[1] + app.grense.ext[3]) / 2]
+      const k = finn(nr)![1],
+        g = app.valgt && app.valgt.nr === nr ? se(GRENSE, nr) : null,
+        e = g && g.status === 'ok' ? g.verdi!.ext : null;
+      return e
+        ? [(e[0] + e[2]) / 2, (e[1] + e[3]) / 2]
         : k.boks
           ? tilUTM('EPSG:4326')([(k.boks[0] + k.boks[2]) / 2, (k.boks[1] + k.boks[3]) / 2])
           : null;
@@ -79,7 +81,6 @@ export async function lastOppPlan(fil: File | null | undefined) {
       nr,
       navn: fil.name.replace(/\.(geo)?json$/i, ''),
       kilde: 'fil',
-      tall: null,
       ...plan
     });
     melding('lest', {
@@ -102,23 +103,4 @@ export function settType(g: EgetOmrade, type: Type) {
 export function slettEget(g: EgetOmrade) {
   app.egne.splice(app.egne.indexOf(g), 1);
   egneEndret();
-}
-
-/* Radene i sammenligningen mellom kommuneplanen og egne områder, for hele kommunen eller ett område. Radene bygges av byggEgneRader i
-   gull/egne.ts: natur og jordbruk som går med, og hvor mye av det som ligger i grått areal, verneområder, villreinområder,
-   verdsatt natur per verdi og natur som ikke er kartlagt. Hver rad viser kommuneplanen alene, tallet med egne områder og endringen. */
-export function egneRader(e: number | null) {
-  /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */
-  const R = app.planRaster!,
-    GK = gjelder(app.graaKryss) && app.graaKryss.antallEgne === R.antallEgne ? app.graaKryss : null;
-  const data = (t: Naturtema) => gjeldende(t.data);
-  const tema = NATURTEMA.flatMap(t => {
-    const D = data(t);
-    return D && D.kryss && D.kryss.P && D.omrader.length
-      ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: D.kryss }]
-      : [];
-  });
-  const V = NATURTEMA.find(t => t.dekning),
-    DV = V ? data(V) : null;
-  return byggEgneRader(e, e === null ? null : mine()[e].tall, R, !ingenPlan(), GK, tema, DV ? DV.gap : null);
 }

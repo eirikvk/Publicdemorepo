@@ -1,5 +1,7 @@
 /* Hele siden. Kroken useApp gjør at siden tegnes på nytt når tilstanden er endret. */
 import { useEffect, useState } from 'react';
+import * as gulldata from '../../data/motor/gulldata.ts';
+import { innhold } from '../../data/motor/katalog.ts';
 import { NATURTEMA } from '../../data/motor/naturtema.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { kart } from '../kart/kart.ts';
@@ -14,8 +16,8 @@ import './App.css';
 
 /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
    Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på.
-   Med teknisk visning er tilstanden, temaene og kartet også tilgjengelig som window.motor (se teknisk.ts), til feilsøking og til
-   regresjonstesten. */
+   Med teknisk visning er tilstanden, temaene, gull-dataene, katalogen og kartet også tilgjengelig som window.motor (se teknisk.ts),
+   til feilsøking og til regresjonstesten. */
 const tekniskIAdressen = () => new URLSearchParams(location.search).has('teknisk');
 
 export default function App() {
@@ -36,6 +38,8 @@ export default function App() {
         app,
         ui,
         NATURTEMA,
+        data: gulldata,
+        katalog: innhold,
         get kart() {
           return kart;
         }

@@ -30,7 +30,7 @@ export const kommuneplanUrl = (u: Utsnitt) =>
     transparent: 'true',
     filter: PLANFILTER
   });
-/* Kartbildene hentes gjennom en egen kø, og de rå bildene huskes */
+/* Kartbildene hentes gjennom en egen kø */
 export const hentKommuneplanFlis = lagHenter('DiBK', 'Kommuneplan');
 
 /* Sjekken av om kommunen har plan: ett lite bilde av hele planlaget over utsnittet u, med w x h ruter, i DiBKs egen stil. Utsnittet

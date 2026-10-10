@@ -48,7 +48,7 @@ export async function lagOversikt(nr: string) {
         th = Math.min(FLIS, kh - ty),
         u = [minx + tx * kres, maxy - (ty + th) * kres, minx + (tx + tw) * kres, maxy - ty * kres],
         t0 = performance.now();
-      const buf = await medForsok(() => hent('NIBIO', 'Oversiktsbilde', grunnkartUrl(u, tw, th), true, true, true));
+      const buf = await medForsok(() => hent('NIBIO', 'Oversiktsbilde', grunnkartUrl(u, tw, th), true, true));
       kall++;
       ms += performance.now() - t0;
       const P = await bildePiksler(buf, tw, th);

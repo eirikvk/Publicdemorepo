@@ -1,97 +1,98 @@
-/* Datamotoren, kommunen: listen over kommuner, valg av kommune, og alt som hentes og regnes ut når en kommune velges. Grensen
-   hentes først, fordi temaene, planen og bildene av hele kommunen klippes mot den. */
-import { hentKommunegrense, hentKommuneliste } from '../bronse/kartverket.ts';
-import { hentOversiktsregister } from '../bronse/nibio-grunnkart.ts';
-import { flerflate, utsnitt } from '../generelt/geometri.ts';
-import { arealKm2, type Fylke, type Kommune } from '../solv/felles.ts';
-import { hentOversikt, nySamling, stoppRegning } from './grunnkart.ts';
-import { sjekkGraa } from './graa.ts';
-import { sjekkInon } from './inon.ts';
-import { NATURTEMA, hentNatur } from './naturtema.ts';
-import { regnAlt, sjekkPlan } from './plan.ts';
-import { hentHistorie, hentTall, nullstillTall } from './tall.ts';
-import { app, endret, nyttValg, valgNr } from './tilstand.ts';
+/* Datamotoren, kommunen: listen over kommuner, valg av kommune, og det som hentes og regnes ut med en gang når en kommune velges.
+   Alt som hentes, går gjennom katalogen. Visningen spør selv etter det den trenger (les-gjennom), men slik er det meste klart før
+   noen spør, og sidene kan byttes uten å vente. */
+import { ferdig, hent, se } from './katalog.ts';
+import {
+  AREALTALL,
+  GRAA,
+  GRENSE,
+  HISTORIE,
+  INON,
+  KARTLAGT,
+  KOMMUNER,
+  OVERSIKTSBILDE,
+  OVERSIKTSREGISTER,
+  PLANINFO,
+  TEMAAREAL,
+  TEMAINNE,
+  TEMAOMRADER
+} from './datasett.ts';
+import type { Fylke, Kommune } from '../solv/felles.ts';
+import { lagret, startSamling, stoppRegning } from './grunnkart.ts';
+import { NATURTEMA, type Naturtema } from './naturtema.ts';
+import { regnAlt, regnKryss } from './plan.ts';
+import { app, endret } from './tilstand.ts';
 
+/* Fylkene med kommunene sine, sortert etter navn. Tom til listen er hentet. */
+export const kommuner = (): Fylke[] => ferdig(KOMMUNER, '') || [];
+/* Kommunelisten kunne ikke hentes */
+export const listeFeil = () => {
+  const e = se(KOMMUNER, '');
+  return !!e && e.status === 'feil';
+};
 /* Listen over fylker og kommuner, og registeret over lagrede oversiktsbilder. Kalles én gang når siden åpnes. */
 export async function hentKommuner() {
   try {
-    const liste = await hentKommuneliste();
-    const reg = await hentOversiktsregister().catch(() => null);
-    if (reg && reg.kommuner) {
-      app.oversikter = reg.kommuner;
-      app.oversiktInfo = { versjon: reg.versjon, hentet: reg.hentet };
-    }
-    app.fylker = liste.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
-    app.fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
-    endret();
-    return true;
+    await hent(KOMMUNER, '');
   } catch (e) {
-    app.listeFeil = true;
-    endret();
     return false;
   }
+  await hent(OVERSIKTSREGISTER, '');
+  return true;
 }
 
 export const finn = (nr: string): [Fylke, Kommune] | null => {
-  for (const f of app.fylker) for (const k of f.kommuner) if (k.nr === nr) return [f, k];
+  for (const f of kommuner()) for (const k of f.kommuner) if (k.nr === nr) return [f, k];
   return null;
 };
 
-/* Grensen er hentet: temaene, planen og bildene av hele kommunen hentes og regnes ut. */
-async function hentGrense(k: Kommune, mitt: number) {
-  try {
-    const omrade = await hentKommunegrense(k);
-    if (mitt !== valgNr) return;
-    const koord = flerflate(omrade),
-      ext = utsnitt(koord);
-    app.grense = { nr: k.nr, koord, ext };
-    app.flate = arealKm2(koord, ext); /* flaten i km², rettet for målestokken i UTM */
-    endret();
+const stille = () => {}; /* en feil står i katalogen, og siden viser den */
+
+/* Det sidene viser for kommunen nr, hentes og regnes ut med en gang. Grensen kommer først, fordi temaene, planen og bildene av hele
+   kommunen klippes mot den. */
+function hentForSidene(nr: string) {
+  regnAlt();
+  /* Med lagret oversiktsbilde regnes planlagt utbygging ut for hele kommunen når bildet er hentet. Feiler det, brukes det
+     sammensatte kartet i stedet. */
+  if (lagret(nr)) hent(OVERSIKTSBILDE, nr).then(regnAlt, () => startSamling(nr).catch(stille));
+  hent(AREALTALL, nr).catch(stille);
+  hent(HISTORIE, nr).catch(stille);
+  hent(GRENSE, nr).then(() => {
     regnAlt();
-    sjekkPlan(k, app.grense, mitt);
-    sjekkInon(k, app.grense, mitt);
-    sjekkGraa(k, app.grense, mitt);
-    NATURTEMA.forEach(t => hentNatur(t, k, app.grense!, mitt));
-    if (!app.oversikter[k.nr]) nySamling(k.nr, ext);
-  } catch (e) {
-    if (mitt === valgNr) {
-      app.grenseFeil = true;
-      endret();
-    }
-  }
+    hent(PLANINFO, nr).then(regnAlt, regnAlt);
+    hent(INON, nr).catch(stille);
+    hent(GRAA, nr).then(regnKryss, stille);
+    for (const tema of NATURTEMA) hentTema(tema, nr);
+    if (!lagret(nr)) startSamling(nr).catch(stille);
+  }, stille);
+}
+/* Et naturtema: områdene, arealet, og for verdsatt natur det kartlagte og arealet innenfor det. Kryssingen følger når områdene
+   er hentet. */
+function hentTema(tema: Naturtema, nr: string) {
+  const x = { tema, nr };
+  hent(TEMAOMRADER, x).then(() => {
+    hent(TEMAAREAL, x).catch(stille);
+    regnKryss();
+    if (tema.dekning)
+      hent(KARTLAGT, nr).then(() => {
+        if (tema.klasser) hent(TEMAINNE, x).catch(stille);
+        regnKryss();
+      }, stille);
+  }, stille);
 }
 
-/* Velger kommunen nr: det som gjaldt forrige kommune, nullstilles, og alt for den nye hentes. */
+/* Velger kommunen nr. Det som gjelder kommunen, leses fra katalogen med kommunenummeret, så ingenting fra forrige kommune kan vises
+   for denne. */
 export function velgKommune(nr: string) {
   const t = finn(nr);
   if (!t) return;
-  const [, k] = t,
-    mitt = nyttValg();
-  app.valgt = k;
-  nullstillTall('henter');
-  app.grense = null;
-  app.grenseFeil = false;
-  app.flate = 0;
-  app.planRaster = null;
-  app.historie = null;
-  app.planSum = null;
+  app.valgt = t[1];
   stoppRegning();
-  app.planInfo = null;
-  app.inon = null;
-  app.graa = null;
-  app.graaKryss = null;
-  NATURTEMA.forEach(t => {
-    t.data = null;
-  });
-  regnAlt();
   endret();
-  hentOversikt(k, mitt);
-  hentTall(k, mitt);
-  hentHistorie(k, mitt);
-  hentGrense(k, mitt);
+  hentForSidene(t[1].nr);
 }
 /* Første kommune i et fylke, når fylket byttes */
 export const velgFylke = (nr: string) => {
-  const f = app.fylker.find(x => x.nr === nr);
+  const f = kommuner().find(x => x.nr === nr);
   if (f) velgKommune(f.kommuner[0].nr);
 };

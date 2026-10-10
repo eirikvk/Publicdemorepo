@@ -51,14 +51,12 @@ export const hentKommunegrense = (k: Kommune) =>
     j => (j as { omrade: GeoJsonFlate }).omrade
   );
 
-/* Kommunen i et punkt [øst, nord] i UTM33. Svaret huskes ikke. */
+/* Kommunen i et punkt [øst, nord] i UTM33 */
 export const hentKommuneIPunkt = (p: number[]) =>
   hent(
     'Kartverket',
     'Kommune i punktet',
     `${KV}/punkt?nord=${p[1].toFixed(0)}&ost=${p[0].toFixed(0)}&koordsys=25833`,
-    true,
-    false,
     true
   ) as Promise<{ kommunenummer: string }>;
 

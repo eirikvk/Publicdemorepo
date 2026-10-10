@@ -1,46 +1,17 @@
-/* Datamotoren, tilstanden: alt siden vet om dataene, samlet i ett objekt (app), og lageret som sier fra når noe er endret.
-   Datamotoren skriver hit. Brukergrensesnittet (ui/) leser herfra: React-komponentene og kartet abonnerer begge med abonner, og
-   tegnes på nytt når noe er endret. Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i
-   ui/tilstand.ts. Regnefunksjonene i sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter.
-   Filen bruker verken React eller OpenLayers. */
-import type { Planopplysninger } from '../bronse/dibk-kommuneplan.ts';
+/* Datamotoren, tilstanden som gjelder nå: valgene brukeren har gjort (valgt kommune og egne områder) og det tekniske (kall-loggen,
+   om kartet flyttes). Alt som er hentet og regnet ut, ligger i katalogen (katalog.ts og datasett.ts), og leses derfra for valgt
+   kommune (gulldata.ts). Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i ui/tilstand.ts.
+   Her er også lageret: React-komponentene og kartet abonnerer med abonner, og tegnes på nytt når noe er endret. Regnefunksjonene i
+   sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter. Filen bruker verken React eller OpenLayers. */
 import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse/henting.ts';
 import type { Planfeil } from '../bronse/planfil.ts';
 import type { Del } from '../solv/egne.ts';
-import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
-import type { Fylke, Kommune } from '../solv/felles.ts';
-import type { Blokk, EgetTall, Planrutenett } from '../solv/planrutenett.ts';
-import type { Historie } from '../solv/ssb.ts';
-import type { Graa, Graakryss } from '../gull/graa.ts';
-import type { Inon } from '../gull/inon.ts';
-import type { PlanSum } from '../gull/planlagt.ts';
-import type { SsbTall } from '../gull/regnskap.ts';
+import type { Utsnitt } from '../generelt/geometri.ts';
+import type { Kommune } from '../solv/felles.ts';
 
-/* Kommunegrensen: flerflaten i UTM33 og utsnittet */
-export interface Grense {
-  nr: string;
-  koord: Flerflate;
-  ext: Utsnitt;
-}
-/* Dagens klasser zoomet ut for valgt kommune: det lagrede oversiktsbildet (buf, som PNG), eller det sammensatte kartet (lerret,
-   dynamisk). ext er utsnittet bildet dekker, og res meter per piksel. blokker er planrutenettet per flis, se plan.ts. */
-export interface Oversikt {
-  ext: Utsnitt;
-  res: number;
-  buf?: ArrayBuffer;
-  lerret?: HTMLCanvasElement;
-  dynamisk?: boolean;
-  blokker?: Map<string, Blokk>;
-}
-/* Om DiBK har kommuneplanen: hvor stor del av kommunen planlaget dekker, og hvilken plan det er */
-export interface Planinfo {
-  nr: string;
-  tilstand: 'sjekker' | 'feil' | 'ok' | 'ingen';
-  dekning?: number;
-  plan?: Planopplysninger | null;
-}
-/* Et eget område, tegnet i kartet eller lastet opp som fil. tall er hva som ligger i det, fra planrutenettet. En opplastet plan har
-   også antall flater som er utbygging (bygg) og ikke (annet), plan-id, om den mangler arealformål, og projeksjonen den var i. */
+/* Et eget område, tegnet i kartet eller lastet opp som fil, i kommunen nr. En opplastet plan har også antall flater som er
+   utbygging (bygg) og ikke (annet), plan-id, om den mangler arealformål, og projeksjonen den var i. Hva som ligger i området, står i
+   planrutenettet, se egetTall i gulldata.ts. */
 export interface EgetOmrade {
   id: number;
   nr: string;
@@ -50,7 +21,6 @@ export interface EgetOmrade {
   deler: Del[];
   ext: Utsnitt;
   km2: number;
-  tall: EgetTall | null;
   bygg?: number;
   annet?: number;
   planid?: string;
@@ -66,28 +36,9 @@ export interface EgneStatus {
 }
 
 export interface Tilstand {
-  fylker: Fylke[];
-  listeFeil: boolean;
   valgt: Kommune | null;
-  grense: Grense | null;
-  grenseFeil: boolean;
-  flate: number;
-  oversikter: Record<string, Utsnitt>;
-  oversiktInfo: { versjon?: string; hentet?: string } | null;
-  ov: Oversikt | null;
-  arealtall: SsbTall | null;
-  ssbSum: number;
-  ferskvann: { inn: number; elv: number } | null;
-  historie: Historie | null;
-  planInfo: Planinfo | null;
-  planRaster: Planrutenett | null;
-  planSum: PlanSum | null;
-  planTall: { tilstand: 'tom' | 'zoom' | 'regner' | 'feil' | 'ok' } | null;
   egne: EgetOmrade[];
   egneStatus: EgneStatus | null;
-  inon: Inon | null;
-  graa: Graa | null;
-  graaKryss: Graakryss | null;
   kartFlyttes: boolean;
   laster: boolean;
   kall: Kall[];
@@ -95,34 +46,15 @@ export interface Tilstand {
 }
 
 export const app: Tilstand = {
-  fylker: [] /* fylkene med kommunene sine, fra Kartverket */,
-  listeFeil: false /* kommunelisten kunne ikke hentes */,
+  /* Valgene */
   valgt: null /* kommunen som er valgt: { nr, navn, boks } */,
-  grense: null /* kommunegrensen når den er hentet: { nr, koord, ext }, koord som flerflate i UTM33 */,
-  grenseFeil: false /* kommunegrensen kunne ikke hentes */,
-  flate: 0 /* kommunens flate i km², land og vann */,
-  oversikter: {} /* kommunene som har lagret oversiktsbilde, med utsnittet bildet dekker */,
-  oversiktInfo: null /* årsversjon og dato for de lagrede oversiktsbildene, fra registeret */,
-  ov: null /* dagens klasser zoomet ut for valgt kommune: det lagrede oversiktsbildet, eller det sammensatte (dynamisk) */,
-  arealtall:
-    null /* tallene fra SSB: { tilstand: 'henter' | 'feil' | 'ok', a: [bebygd, jordbruk, natur] i km², aar } */,
-  ssbSum: 0 /* landarealet i km², summen av de tre klassene. 0 til tallene er hentet. */,
-  ferskvann: null /* { inn, elv } i km², fra SSB */,
-  historie: null /* arealet per klasse i 2017 og i siste år */,
-  planInfo: null /* om DiBK har en kommuneplan for kommunen, og hvilken */,
-  planRaster: null /* planrutenettet for hele kommunen, med tallene som er regnet ut fra det */,
-  planSum: null /* planlagt utbygging på natur og jordbruk i km², til oversikten og regnskapet */,
-  planTall: null /* hvor langt utregningen av planlagt utbygging er kommet: tom, zoom, regner, feil eller ok */,
   egne: [] /* egne områder, tegnet i kartet eller lastet opp. De finnes så lenge siden er åpen. */,
   egneStatus: null /* hvordan siste tegning eller opplasting gikk: { hva, fil, ... }, se lastOppPlan i egne.ts */,
-  inon: null /* inngrepsfri natur i kommunen: tilstand, areal per sone og sonen per rute */,
-  graa: null /* grått areal i kommunen: tilstand, areal per trinn og trinnet per rute */,
-  graaKryss: null /* planlagt utbygging krysset med grått areal */,
+  /* Det tekniske */
   kartFlyttes: false /* kartet flyttes nå. Da venter utregningene som kan vente, så kartet ikke hakker. */,
-  /* Hentingen, fra bronse */
-  laster: false /* om det hentes kartbilder nå */,
-  kall: [] /* de siste kallene mot åpne kilder, nyeste først */,
-  sisteKall: null /* siste runde med kartbilder fra én kilde */
+  laster: false /* om det hentes kartbilder nå, fra bronse */,
+  kall: [] /* de siste kallene mot åpne kilder, nyeste først, fra bronse */,
+  sisteKall: null /* siste runde med kartbilder fra én kilde, fra bronse */
 };
 
 /* Lageret: den som endrer noe i app (eller i ui/tilstand.ts) som vises, kaller endret(). Varslene samles og sendes én gang når
@@ -171,15 +103,6 @@ nårHentingEndres(() => {
   app.laster = henteStatus.laster;
   endret();
 });
-
-/* Hvert valg av kommune får et nytt nummer. Svar som kommer tilbake etter at en annen kommune er valgt, kastes. */
-export let valgNr = 0;
-export const nyttValg = () => ++valgNr;
-/* Resultater merkes med kommunenummeret de gjelder. gjelder sier om x gjelder kommunen som er valgt nå, og gjeldende gir x hvis det
-   gjør det, ellers null. Alle sjekker av om noe hører til valgt kommune, går gjennom disse. */
-export const gjelder = <T extends { nr: string }>(x: T | null | undefined): x is T =>
-  !!x && !!app.valgt && x.nr === app.valgt.nr;
-export const gjeldende = <T extends { nr: string }>(x: T | null | undefined): T | null => (gjelder(x) ? x : null);
 
 /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. Vises under
    Tekniske valg. */

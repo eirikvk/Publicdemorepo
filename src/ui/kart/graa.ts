@@ -1,14 +1,17 @@
-/* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i datamotoren (data/motor/graa.ts). Zoomet inn hentes
-   laget som fliser fra NIBIO, så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
+/* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i katalogen (solv.graa). Zoomet inn hentes laget som
+   fliser fra NIBIO gjennom katalogen (bronse.graaflis), så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
    område: areal som er bebygd i grunnkartet, men ikke grått. Det som er felles med inngrepsfri natur, står i kommunebilde.ts. */
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
-import { graaFlisUrl, hentGraaFlis } from '../../data/bronse/nibio-graa.ts';
+import { graaFlisUrl } from '../../data/bronse/nibio-graa.ts';
 import { HALV, SYNLIG } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
 import { klasseAv } from '../../data/solv/klasser.ts';
 import { bildePiksler } from '../../data/solv/raster.ts';
+import { GRAAFLIS } from '../../data/motor/datasett.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
-import { app, tidSlutt } from '../../data/motor/tilstand.ts';
+import { graaKryss, graaRuter, graaTall } from '../../data/motor/gulldata.ts';
+import { hent } from '../../data/motor/katalog.ts';
+import { tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { fargPiksel } from './felles.ts';
 import { bildelag } from './kommunebilde.ts';
@@ -29,8 +32,9 @@ const gront = (K: Uint8ClampedArray | null, i: number) =>
    også når kryssingen med planen endres. */
 export const graaLag = bildelag({
   side: 'graa',
-  data: () => app.graa,
-  folgOgsaa: () => app.graaKryss,
+  data: graaRuter,
+  noe: () => graaTall().tilstand === 'ok',
+  folgOgsaa: graaKryss,
   jevninger: 1,
   fyll: (P, D) => {
     for (let q = 0, i = 0; q < D.kl.length; q++, i += 4) {
@@ -43,7 +47,7 @@ export const graaLag = bildelag({
       GR = rgb('gront');
     if (tc[0] >= FLISNIVA) {
       /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
-      const o = await bildePiksler(await hentGraaFlis(graaFlisUrl(u)), 512, 512);
+      const o = await bildePiksler(await hent(GRAAFLIS, graaFlisUrl(u)), 512, 512);
       const K = await dagensKlasser(tc).catch(
         () => null
       ); /* dagens klasser: bebygd som ikke er grått, tegnes som grønt i bebygd område */

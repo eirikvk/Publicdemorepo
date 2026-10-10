@@ -195,15 +195,8 @@ export const SCENARIER: Record<string, Scenario> = {
     await vent(p, R, 'trondheim', () => {
       const M = window.motor;
       if (!M || !M.app.valgt) return false;
-      const v = M.NATURTEMA.find(t => t.id === 'verdi')!;
-      return (
-        M.app.planTall &&
-        M.app.planTall.tilstand === 'ok' &&
-        v.data &&
-        v.data.gap &&
-        M.app.graaKryss &&
-        M.app.graaKryss.nr === M.app.valgt.nr
-      );
+      const v = M.data.temadata(M.NATURTEMA.find(t => t.id === 'verdi')!);
+      return M.data.planTall() === 'ok' && !!v && !!v.gap && !!M.data.graaKryss();
     });
     await p.rolig();
     R.motor.start = await p.motor();
@@ -275,16 +268,9 @@ export const SCENARIER: Record<string, Scenario> = {
   async surnadal(p, R, S) {
     await p.goto('http://demo.test/' + S.adresse('1566'));
     await vent(p, R, 'surnadal', () => {
-      const M = window.motor;
-      return (
-        M &&
-        M.app.inon &&
-        M.app.inon.tilstand === 'ok' &&
-        M.app.arealtall &&
-        M.app.arealtall.tilstand === 'ok' &&
-        M.app.graa &&
-        M.app.graa.tilstand === 'ok'
-      );
+      const M = window.motor,
+        ok = (x: { tilstand: string } | null) => !!x && x.tilstand === 'ok';
+      return !!M && ok(M.data.inonbilde()) && ok(M.data.arealtall()) && ok(M.data.graabilde());
     });
     await p.rolig();
     R.motor.start = await p.motor();
@@ -314,14 +300,10 @@ export const SCENARIER: Record<string, Scenario> = {
     await p.goto('http://demo.test/' + S.adresse('0301'));
     await vent(p, R, 'oslo', () => {
       const M = window.motor;
-      return (
-        M &&
-        M.app.planInfo &&
-        M.app.planInfo.tilstand === 'ingen' &&
-        M.app.graa &&
-        M.app.graa.tilstand === 'ok' &&
-        M.NATURTEMA.every(t => t.data)
-      );
+      if (!M) return false;
+      const P = M.data.planinfo(),
+        G = M.data.graabilde();
+      return !!P && P.tilstand === 'ingen' && !!G && G.tilstand === 'ok' && M.NATURTEMA.every(t => M.data.temadata(t));
     });
     await p.rolig();
     R.motor.start = await p.motor();
@@ -332,7 +314,7 @@ export const SCENARIER: Record<string, Scenario> = {
     await p.waitForTimeout(6000);
     await vent(p, R, 'malvik', () => {
       const M = window.motor;
-      return M && M.app.planTall && M.app.planTall.tilstand === 'ok' && M.app.graaKryss;
+      return !!M && M.data.planTall() === 'ok' && !!M.data.graaKryss();
     });
     await p.rolig();
     R.motor.malvik = await p.motor();
@@ -488,16 +470,21 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
   await kjor(kildeValg ? path.resolve(kildeValg) : bygg(ROT), ut, bare);
   if (mot) {
-    /* Den andre utgaven hentes fra git og bygges med de samme pakkene som arbeidskopien har installert. */
+    /* Den andre utgaven hentes fra git og bygges med de samme pakkene som arbeidskopien har installert. Den kjøres med sitt eget
+       testverktøy, så hver utgave leser tallene fra sin egen datamotor. Det som sammenlignes, er tallene, teksten og bildene. */
     const gammel = fs.mkdtempSync(path.join(os.tmpdir(), 'regresjon-')),
-      utGammel = ut.replace(/\/+$/, '') + '-' + mot.replace(/[^\w.-]/g, '_');
+      utGammel = path.resolve(ut.replace(/\/+$/, '') + '-' + mot.replace(/[^\w.-]/g, '_'));
     execSync(`git -C "${ROT}" archive ${mot} | tar -x -C "${gammel}"`);
     fs.symlinkSync(
       path.join(ROT, 'node_modules'),
       path.join(gammel, 'node_modules'),
       'junction'
     ); /* junction: virker også på Windows uten administrator */
-    await kjor(bygg(gammel), utGammel, bare);
+    execSync(
+      `node "${path.join(gammel, 'verktoy', 'regresjon.ts')}" "${utGammel}" --kilde "${bygg(gammel)}"` +
+        (bareTekst ? ` --bare ${bareTekst}` : ''),
+      { stdio: 'inherit' }
+    );
     process.exit((await sammenlign(utGammel, ut)) ? 1 : 0);
   }
 }

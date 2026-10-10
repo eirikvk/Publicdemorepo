@@ -5,16 +5,19 @@ import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
 import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
-import { hentKommuneplanFlis, kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
+import { kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
 import { HALV, SYNLIG, UTM, type Flis } from '../../data/solv/felles.ts';
 import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
 import type { Del } from '../../data/solv/egne.ts';
 import type { Planrutenett } from '../../data/solv/planrutenett.ts';
 import { flislerret, sti } from '../../data/solv/raster.ts';
+import { PLANFLIS } from '../../data/motor/datasett.ts';
 import { mine, utenPlan } from '../../data/motor/egne.ts';
-import { dagensKlasser } from '../../data/motor/grunnkart.ts';
-import { abonner, app, endret, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
+import { dagensKlasser, lagret } from '../../data/motor/grunnkart.ts';
+import { grense, planrutenett } from '../../data/motor/gulldata.ts';
+import { hent } from '../../data/motor/katalog.ts';
+import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { SVAKEST, TOM, fargPiksel, friskOpp, nyttSiden, plannett, type Flistegner } from './felles.ts';
@@ -51,7 +54,7 @@ function egenMaske(u: Utsnitt) {
    vises som svake enkeltpiksler. tom sier at ingenting er tegnet. */
 type Planbilde = HTMLCanvasElement & { tom?: boolean };
 function grovPlanFlis(tc: TileCoord): Planbilde | null {
-  const R = app.planRaster;
+  const R = planrutenett();
   if (!R) return null;
   const [z, x, y] = tc,
     f = 2 ** (R.z - z),
@@ -119,7 +122,7 @@ async function lastPlanFlis(tile: ImageTile, src: string) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord() as Flis), hentKommuneplanFlis(src)]);
+    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord() as Flis), hent(PLANFLIS, src)]);
     if (!K) throw new Error('mangler dagens klasser');
     const c = flislerret(),
       g = c.getContext('2d', { willReadFrequently: true })!,
@@ -133,16 +136,14 @@ async function lastPlanFlis(tile: ImageTile, src: string) {
       pnat = rgb('pnat');
     /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
     const [tz, tx, ty] = tile.getTileCoord(),
-      R = !ui.visSmale && gjeldende(app.planRaster),
+      R = !ui.visSmale && planrutenett(),
       sh = R ? tz - R.z : 0;
     let tegnet = false;
     const vent =
       !ui.visSmale &&
       !R &&
       app.valgt &&
-      !app.oversikter[
-        app.valgt.nr
-      ]; /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
+      !lagret(app.valgt.nr); /* rutenettet lages av det som er hentet, og flisen tegnes på nytt når det er klart */
     const EM = egenMaske(
       plannett.getTileCoordExtent(tile.getTileCoord())
     ); /* egne områder i flisen: 1 utbygging, 2 ikke utbygging */
@@ -195,9 +196,10 @@ export function settSmale(paa: boolean) {
    planrutenettet er regnet ut på nytt eller smale striper slås av eller på. */
 const ny = nyttSiden();
 abonner(() => {
-  if (ny('grense', app.grense) && app.grense) planLag.setExtent(app.grense.ext);
-  const nyttRutenett = ny('rutenett', app.planRaster),
+  const G = grense();
+  if (ny('grense', G) && G) planLag.setExtent(G.ext);
+  const nyttRutenett = ny('rutenett', planrutenett()),
     nyeStriper = ny('smale', ui.visSmale);
   if (nyttRutenett || nyeStriper) friskOpp(planLag);
-  planLag.setVisible(!!app.grense && !utenPlan());
+  planLag.setVisible(!!G && !utenPlan());
 });

@@ -1,4 +1,4 @@
-/* Kartlaget for inngrepsfri natur. Kartflisene lages i nettleseren av sonene per rute i datamotoren (data/motor/inon.ts), så laget
+/* Kartlaget for inngrepsfri natur. Kartflisene lages i nettleseren av sonene per rute i katalogen (solv.inon), så laget
    gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå dagens klasser og fargelegger bare det som er
    natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen. Laget deler lerret med klassene, så det får
    samme gjennomsiktighet og ser ut som en del av naturfargen. Det som er felles med grått areal, står i kommunebilde.ts. */
@@ -6,7 +6,8 @@ import { HALV, SYNLIG } from '../../data/solv/felles.ts';
 import { UTENFOR } from '../../data/solv/inon.ts';
 import { NAT, klasseAv } from '../../data/solv/klasser.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
-import { app, tidSlutt } from '../../data/motor/tilstand.ts';
+import { inonRuter, inonTall } from '../../data/motor/gulldata.ts';
+import { tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { fargPiksel } from './felles.ts';
 import { bildelag } from './kommunebilde.ts';
@@ -17,7 +18,8 @@ import { bildelag } from './kommunebilde.ts';
    eller mer. */
 export const inonLag = bildelag({
   side: 'inon',
-  data: () => app.inon,
+  data: inonRuter,
+  noe: () => inonTall().tilstand === 'ok',
   jevninger: 2,
   fyll: (P, D) => {
     for (let q = 0, i = 0; q < D.sone.length; q++, i += 4) {

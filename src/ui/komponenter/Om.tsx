@@ -1,11 +1,14 @@
-/* Om og metode: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
+/* Om og metode: kall-loggen og katalogen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
+import { useState } from 'react';
+import { oversiktsregister } from '../../data/motor/gulldata.ts';
+import { innhold } from '../../data/motor/katalog.ts';
 import { finn } from '../../data/motor/kommune.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.ts';
-import { kb, tid } from '../tekst.ts';
+import { kb, nf, tid } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { VERSJON } from '../../utgave.ts';
-import { MdCheckbox, MdLink, MdToggle } from './md.ts';
+import { MdButton, MdCheckbox, MdLink, MdToggle } from './md.ts';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 
@@ -15,9 +18,57 @@ export interface Tekniskvalg {
   settTeknisk: (paa: boolean) => void;
 }
 
+/* Katalogen: alt datapipelinen husker akkurat nå, per datasett. Innholdet leses når man ber om det, så det ikke regnes ut på nytt
+   hver gang siden tegnes. */
+function Katalog() {
+  const [K, settK] = useState<ReturnType<typeof innhold> | null>(null);
+  return (
+    <section className="prosa">
+      <h2 className="md-typography-heading-s">Katalogen</h2>
+      <p>
+        Alt siden husker fra kildene og utregningene, per datasett: hvor mange nøkler det har, hvor mange det kan huske,
+        og omtrent hvor stort det er. Nøkkelen er som regel kommunenummeret. Navnet sier hvilket lag det kommer fra:
+        bronse er svar fra kildene, sølv er tolket til felles standard, og gull er regnet ut. Det som er raskt å regne
+        ut, huskes ikke, men regnes ut når siden spør. Ingenting lagres i nettleseren etter at siden er lukket.
+      </p>
+      <MdButton theme="secondary" mode="small" onClick={() => settK(innhold())}>
+        {K ? 'Oppdater' : 'Vis innholdet nå'}
+      </MdButton>
+      {K && (
+        <ul className="talliste">
+          {K.map(d => {
+            const n = d.noekler,
+              uferdige = n.filter(x => x.status !== 'ok'),
+              noekler =
+                n.length && n.length <= 8 && n.every(x => x.nokkel.length <= 24)
+                  ? ': ' + n.map(x => x.nokkel || 'tom nøkkel').join(', ')
+                  : '';
+            return (
+              <li key={d.navn}>
+                <b className="navn">{d.navn}</b>
+                <span className="tall">{n.length ? kb(n.reduce((sum, x) => sum + x.byte, 0)) : ''}</span>
+                <small>
+                  <b>
+                    {nf(n.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
+                    {noekler}
+                  </b>
+                  {uferdige.length
+                    ? ` (${uferdige.map(x => `${x.nokkel || 'tom nøkkel'} ${x.status}`).join(', ')})`
+                    : ''}
+                  {'. ' + d.om[0].toUpperCase() + d.om.slice(1) + (d.om.endsWith('.') ? '' : '.')}
+                </small>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
-  const medBilde = Object.keys(app.oversikter).filter(nr => finn(nr)),
-    reg = app.oversiktInfo;
+  const reg = oversiktsregister(),
+    medBilde = Object.keys((reg && reg.kommuner) || {}).filter(nr => finn(nr));
   return (
     <>
       {teknisk && (
@@ -50,12 +101,13 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
             </table>
           </div>
           <p>
-            Viser de siste kallene nettleseren din har gjort. Kartfliser nettleseren allerede har, hentes ikke på nytt.
-            Grenser, tall, plansjekk, verneområder og villreinområder huskes også så lenge siden er åpen.
-            Bakgrunnskartet er ferdige fliser fra Kartverket og er ikke med i listen.
+            Viser de siste kallene nettleseren din har gjort. Det som er hentet, huskes i katalogen så lenge siden er
+            åpen, og hentes ikke på nytt, se under. Bakgrunnskartet er ferdige fliser fra Kartverket, som kartet henter
+            og husker selv, og er ikke med i listen.
           </p>
         </section>
       )}
+      {teknisk && <Katalog />}
       <section className="prosa">
         <h2 className="md-typography-heading-s">Slik er klassene satt sammen</h2>
         <div className="tabellramme">

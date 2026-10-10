@@ -1,9 +1,8 @@
-/* Bronse, felles for alle kildene: hvordan det hentes. Svar huskes så lenge siden er åpen, hvert kall måles og føres i kall-loggen,
-   og kartbilder hentes gjennom en kø per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen.
+/* Bronse, felles for alle kildene: hvordan det hentes. Hvert kall måles og føres i kall-loggen, og kartbilder hentes gjennom en kø
+   per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen. Bronse husker ingenting: det som skal huskes, legger
+   datamotoren i katalogen (data/motor/katalog.ts), og den deler også kall som alt er underveis.
    Filen vet ingenting om resten av siden. Hva som skjer, står i henteStatus, og den som vil vite det, gir en funksjon til
    nårHentingEndres (datamotoren gjør det, se data/motor/tilstand.ts). */
-
-import { husk } from '../generelt/minne.ts';
 
 export const SAMTIDIG = 4; /* høyst fire kall om gangen mot hver kilde */
 
@@ -42,19 +41,15 @@ function logg(kilde: string, hva: string, ms: number, bytes: number, feil?: bool
   henteStatus.kall = [{ kilde, hva, ms, bytes, feilet: !!feil }, ...henteStatus.kall].slice(0, 8);
   melding();
 }
-/* Svarene huskes så lenge siden er åpen. Bytter man tilbake til en kommune, hentes verken grense, tall eller plansjekk på nytt.
-   Ingenting lagres varig i nettleseren. */
-const svar = new Map<string, unknown>();
 /* Henter fra url. kilde og hva står i kall-loggen. stille: feil føres ikke i loggen. bytes: svaret er et bilde eller en annen fil
-   (ArrayBuffer), ellers JSON. glem: svaret huskes ikke. kropp: spørringen sendes som POST med denne teksten. JSON-svaret er
-   unknown: filen for hver kilde sier hvilken form det har. */
+   (ArrayBuffer), ellers JSON. kropp: spørringen sendes som POST med denne teksten. JSON-svaret er unknown: filen for hver kilde sier
+   hvilken form det har. */
 export function hent(
   kilde: string,
   hva: string,
   url: string,
   stille: boolean,
   bytes: true,
-  glem?: boolean,
   kropp?: string
 ): Promise<ArrayBuffer>;
 export function hent(
@@ -63,7 +58,6 @@ export function hent(
   url: string,
   stille?: boolean,
   bytes?: false,
-  glem?: boolean,
   kropp?: string
 ): Promise<unknown>;
 export async function hent(
@@ -72,38 +66,30 @@ export async function hent(
   url: string,
   stille?: boolean,
   bytes?: boolean,
-  glem?: boolean,
   kropp?: string
 ): Promise<unknown> {
-  const nokkel = kropp ? url + ' ' + kropp : url;
-  if (svar.has(nokkel)) return svar.get(nokkel);
   const t0 = performance.now();
   try {
     const r = await fetch(url, kropp ? { method: 'POST', body: kropp } : undefined);
     if (!r.ok) throw new Error(String(r.status));
     const b = await r.blob();
     logg(kilde, hva, performance.now() - t0, b.size);
-    const verdi = bytes ? await b.arrayBuffer() : JSON.parse(await b.text());
-    if (!glem) husk(svar, nokkel, verdi, 80);
-    return verdi;
+    return bytes ? await b.arrayBuffer() : JSON.parse(await b.text());
   } catch (e) {
     if (!stille) logg(kilde, hva, 0, 0, true);
     throw e;
   }
 }
-/* Én henter per kilde: egen kø med høyst fire kall om gangen, eget minne for rå flisbilder
-   (så fargebytte og skjuling ikke krever nye kall), og én linje i kall-loggen per runde. */
+/* Én henter per kilde for kartbilder: egen kø med høyst fire kall om gangen, og én linje i kall-loggen per runde. */
 const hentere: Henter[] = [];
 export const opptatt = () => hentere.some(h => h.opptatt());
-/* En henter for kartbilder fra én kilde: henter(adresse) gir bildet. opptatt sier om den holder på, og lager er de rå bildene. */
+/* En henter for kartbilder fra én kilde: henter(adresse) gir bildet, og opptatt sier om den holder på */
 export interface Henter {
   (src: string): Promise<ArrayBuffer>;
   opptatt: () => boolean;
-  lager: Map<string, ArrayBuffer>;
 }
 export function lagHenter(kilde: string, hva: string): Henter {
-  const lager = new Map<string, ArrayBuffer>(),
-    ko: (() => void)[] = [];
+  const ko: (() => void)[] = [];
   let aktive = 0,
     timer: ReturnType<typeof setTimeout> | undefined,
     runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
@@ -124,23 +110,7 @@ export function lagHenter(kilde: string, hva: string): Henter {
     melding();
     runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   }
-  /* Kartlaget og planlaget trenger samme flis fra NIBIO samtidig. Et kall som alt er underveis, deles i stedet for å sendes to ganger. */
-  const underveis = new Map<string, Promise<ArrayBuffer>>();
-  const hent = (src: string): Promise<ArrayBuffer> => {
-    const har = lager.get(src);
-    if (har) return Promise.resolve(har);
-    let p = underveis.get(src);
-    if (!p) {
-      p = hentNy(src);
-      underveis.set(src, p);
-      p.then(
-        () => underveis.delete(src),
-        () => underveis.delete(src)
-      );
-    }
-    return p;
-  };
-  const hentNy = async (src: string) => {
+  const hent = async (src: string) => {
     await new Promise<void>(ok => {
       ko.push(ok);
       slipp();
@@ -157,7 +127,6 @@ export function lagHenter(kilde: string, hva: string): Henter {
       if (!r.ok) throw new Error(String(r.status));
       if (!(r.headers.get('content-type') || '').startsWith('image')) throw new Error('ikke bilde');
       const buf = await r.arrayBuffer();
-      husk(lager, src, buf, 400);
       runde.n++;
       runde.bytes += buf.byteLength;
       return buf;
@@ -172,7 +141,6 @@ export function lagHenter(kilde: string, hva: string): Henter {
     }
   };
   hent.opptatt = () => aktive > 0 || ko.length > 0;
-  hent.lager = lager;
   hentere.push(hent);
   return hent;
 }

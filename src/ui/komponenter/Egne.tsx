@@ -1,12 +1,14 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene kommer ferdig regnet ut fra
-   gull/egne.ts: byggEgetOmrade for hvert område, og radene i tabellene fra byggEgneRader (som motor/egne.ts henter fram). */
+   gull/egne.ts gjennom gulldata.ts: egetOmrade for hvert område, og radene i tabellene fra egneRader. */
 import { useRef, type ReactNode } from 'react';
-import { byggEgetOmrade, type EgenRad } from '../../data/gull/egne.ts';
+import type { EgenRad } from '../../data/gull/egne.ts';
 import type { Type } from '../../data/solv/egne.ts';
 import type { Planrutenett } from '../../data/solv/planrutenett.ts';
-import { egneRader, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
+import { lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
+import { oversikt } from '../../data/motor/grunnkart.ts';
+import { bareHentetKart, egetOmrade, egneRader, egneRutenett, grense } from '../../data/motor/gulldata.ts';
 import { ingenPlan } from '../../data/motor/plan.ts';
-import { app, gjeldende, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
+import { app, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
 import { Talltabell, type Tabellrad } from './deler.tsx';
 import {
@@ -68,10 +70,10 @@ function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: s
 }
 
 function EgetOmrade({ g, nr, R }: { g: Eget; nr: number; R: Planrutenett | null }) {
-  const O = R && g.tall ? byggEgetOmrade(g.tall) : null,
+  const O = R ? egetOmrade(g) : null,
     tekster: string[] = [];
   let tabell: ReactNode = null;
-  if (!O) tekster.push(ingenPlan() || app.ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
+  if (!O) tekster.push(ingenPlan() || oversikt() ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
   else {
     tekster.push(
       O.kjent
@@ -157,8 +159,7 @@ function EgetOmrade({ g, nr, R }: { g: Eget; nr: number; R: Planrutenett | null 
 export default function Egne() {
   const fil = useRef<HTMLInputElement>(null),
     E = mine(),
-    P = gjeldende(app.planRaster),
-    R = P && P.eget && P.antallEgne === E.length ? P : null,
+    R = egneRutenett(),
     t = tegner(),
     m = app.egneStatus && STATUS[app.egneStatus.hva](app.egneStatus),
     s = m && { tekst: m[0], type: m[1] };
@@ -175,7 +176,7 @@ export default function Egne() {
               theme="secondary"
               leftIcon={<MdIconEdit />}
               onClick={startTegning}
-              disabled={!app.grense}
+              disabled={!grense()}
             >
               Tegn eget område
             </MdButton>
@@ -241,9 +242,9 @@ export default function Egne() {
           />
           <p className="hint">
             Planen er kommuneplanen fra DiBK alene. Prosenten under tallene er andelen av dagens natur eller jordbruk i
-            kommunen{app.ov && app.ov.dynamisk ? ', i den delen nettleseren har hentet kart for' : ''}. Endring er
-            forskjellen fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i bruk. Smale striper er
-            ikke med for natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.
+            kommunen{bareHentetKart() ? ', i den delen nettleseren har hentet kart for' : ''}. Endring er forskjellen
+            fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i bruk. Smale striper er ikke med for
+            natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.
           </p>
         </div>
       )}

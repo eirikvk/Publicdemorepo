@@ -2,13 +2,18 @@
    de samme som på sidene selv, fordi de kommer fra de samme funksjonene i gull. Linjene står i de samme blokkene som i sidevelgeren,
    så temaene står under «Naturen i kommunen». */
 import { Fragment } from 'react';
-import { byggGraa } from '../../data/gull/graa.ts';
-import { byggInon } from '../../data/gull/inon.ts';
-import { byggEndring, byggUtbredelse } from '../../data/gull/regnskap.ts';
-import { byggNaturTall } from '../../data/gull/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
+import {
+  arealtall,
+  endring,
+  graaTall,
+  inonTall,
+  naturtemaet,
+  planSum,
+  planTall,
+  utbredelse
+} from '../../data/motor/gulldata.ts';
 import { NATURTEMA } from '../../data/motor/naturtema.ts';
-import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
 import { BLOKKER } from '../sider.ts';
 import { ETT, TEMAORD } from './Naturtema.tsx';
 import { Sidelenke } from './deler.tsx';
@@ -27,12 +32,12 @@ const avLand = (a: number | null) => (a !== null ? `, ${andelTekst(a)} av landar
 
 /* Utbredelsesregnskapet: natur nå, og forskjellen fra 2017 */
 function regnskap() {
-  const T = app.arealtall;
+  const T = arealtall();
   if (!T || T.tilstand === 'henter') return HENTER;
   if (T.tilstand !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
-  const U = byggUtbredelse(T),
+  const U = utbredelse(),
     natur = U!.klasser[0],
-    E = byggEndring(gjeldende(app.historie)),
+    E = endring(),
     d = E && !E.endret ? E.klasser[0].km2 : 0;
   return {
     tall: dekar(natur.km2),
@@ -46,11 +51,12 @@ function regnskap() {
 
 /* Verneområder, villrein og verdsatt natur: antall, areal og planlagt utbygging innenfor */
 function naturtema(id: string) {
-  const t = { ...NATURTEMA.find(x => x.id === id), ...TEMAORD[id] },
-    D = t.data;
-  if (!gjelder(D)) return HENTER;
+  const tema = NATURTEMA.find(x => x.id === id)!,
+    t = { ...tema, ...TEMAORD[id] },
+    T = naturtemaet(tema);
+  if (!T) return HENTER;
+  const { D, N } = T;
   if (D.feil) return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
-  const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum);
   if (!N.antall) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
   const verdi = N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : '',
     plan =
@@ -67,7 +73,7 @@ function naturtema(id: string) {
 
 /* Inngrepsfri natur og grått areal hentes som ett bilde av kommunen */
 function inon() {
-  const I = byggInon(gjeldende(app.inon), app.ssbSum);
+  const I = inonTall();
   if (I.tilstand === 'henter') return HENTER;
   if (I.tilstand === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
   if (I.tilstand === 'ingen')
@@ -75,7 +81,7 @@ function inon() {
   return { tall: dekar(I.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
 }
 function graa() {
-  const G = byggGraa(gjeldende(app.graa), null, app.ssbSum);
+  const G = graaTall();
   if (G.tilstand === 'henter') return HENTER;
   if (G.tilstand === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
   if (G.tilstand === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
@@ -88,13 +94,13 @@ function graa() {
 /* Utvikling fremover: natur og jordbruk som kommuneplanen setter av til utbygging */
 function framtid() {
   if (utenPlan()) return ingenTall('Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for kommunen.');
-  const P = gjeldende(app.planSum);
+  const P = planSum();
   if (P)
     return {
       tall: dekar(P.nat),
       tekst: `Natur som kommuneplanen setter av til framtidig utbygging. I tillegg ca. ${iTekst(P.jor)} jordbruk.${P.egne ? ' Egne områder er med.' : ''}${P.delvis ? ' Gjelder bare den delen av kommunen nettleseren har hentet kart for.' : ''}`
     };
-  const tilstand = app.planTall ? app.planTall.tilstand : 'tom';
+  const tilstand = planTall();
   return tilstand === 'zoom'
     ? ingenTall('Zoom inn i kartet for å få et anslag.')
     : tilstand === 'feil'
