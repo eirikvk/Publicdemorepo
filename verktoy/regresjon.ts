@@ -107,7 +107,7 @@ export type Siden = typeof SIDEN;
 /* En side i testen: Playwrights side med hjelperne rolig, flytt og motor, og beskrivelsen av siden (siden) */
 export type Testside = Page & {
   rolig: (stille?: number, maks?: number) => Promise<void>;
-  flytt: (x: number | null, y: number | null, res: number) => Promise<void>;
+  flytt: (x: number | null, y: number, res: number) => Promise<void>;
   motor: () => Promise<ReturnType<typeof motortall>>;
   siden: Siden;
 };
@@ -160,11 +160,11 @@ async function nySide(nettleser: Browser, kilde: string, feil: string[], omskriv
   p.flytt = async (x, y, res) => {
     await p.evaluate(
       ([x, y, res]) => {
-        const v = window.motor!.kart.getView();
+        const v = window.motor!.kart!.getView();
         if (x !== null) v.setCenter([x, y]);
         v.setResolution(res);
       },
-      [x, y, res]
+      [x, y, res] as const
     );
     await p.rolig();
   };
@@ -195,7 +195,7 @@ export const SCENARIER: Record<string, Scenario> = {
     await vent(p, R, 'trondheim', () => {
       const M = window.motor;
       if (!M || !M.app.valgt) return false;
-      const v = (M.NATURTEMA || M.NATURLAG).find((t: { id: string }) => t.id === 'verdi');
+      const v = M.NATURTEMA.find(t => t.id === 'verdi')!;
       return (
         M.app.planTall &&
         M.app.planTall.tilstand === 'ok' &&
@@ -290,8 +290,8 @@ export const SCENARIER: Record<string, Scenario> = {
     R.motor.start = await p.motor();
     R.tekst.start = await S.tekster(p);
     const [x, y, res] = await p.evaluate(() => {
-      const v = window.motor!.kart.getView();
-      return [...v.getCenter(), v.getResolution()];
+      const v = window.motor!.kart!.getView();
+      return [...v.getCenter()!, v.getResolution()!];
     });
     await p.locator(S.kart).scrollIntoViewIfNeeded();
     await trykk(p, S.side(p, 'inon'));
@@ -320,7 +320,7 @@ export const SCENARIER: Record<string, Scenario> = {
         M.app.planInfo.tilstand === 'ingen' &&
         M.app.graa &&
         M.app.graa.tilstand === 'ok' &&
-        (M.NATURTEMA || M.NATURLAG).every((t: { data: unknown }) => t.data)
+        M.NATURTEMA.every(t => t.data)
       );
     });
     await p.rolig();

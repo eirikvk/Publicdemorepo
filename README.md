@@ -107,8 +107,8 @@ importer har filendelsen med (`./tilstand.ts`).
 
 Der en verdi kan mangle, sier typen det (`| null`). Der koden vet mer enn typene, står det et `!` (verdien finnes her) eller en
 `as` (verdien har denne formen). Kartet har flest av dem, fordi typene i OpenLayers er videre enn det kartet faktisk bruker. I
-bronse står `as` der et svar fra en tjeneste leses: typen sier hvilken form svaret skal ha. Testverktøyet leser også eldre utgaver
-av siden og beskriver derfor tilstanden der løst (`verktoy/motortall.ts`).
+bronse står `as` der et svar fra en tjeneste leses: typen sier hvilken form svaret skal ha. Testverktøyene bruker de samme typene
+som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i typesjekken.
 
 ## Filene
 
@@ -192,6 +192,7 @@ Felles, i `src/ui/`:
 | `sider.ts` | Sidene, valg av side, adressen, og oppstarten |
 | `farger.ts` | Fargene i kartet og i tegnforklaringene |
 | `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
+| `teknisk.ts` | Formen på `window.motor`: det siden gjør tilgjengelig med `?teknisk`, til feilsøking og regresjonstesten |
 
 Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 
@@ -395,8 +396,7 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   av verdsatt natur per verdikategori kan skille med under én dekar mellom kjøringer, og når to lokaliteter har nøyaktig samme
   flate, kan planlagt utbygging havne på den ene eller den andre.
 - `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene og kartet
-  tilgjengelig som `window.motor`. Den leser både den nye og den gamle formen på tilstanden, så en utgave kan sammenlignes med
-  utgaver fra før omleggingen.
+  tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
 - `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
   (`tsc`) for `src` og `verktoy`, og så denne.
 - `oversiktsbilde.py` lager de lagrede oversiktsbildene, for eksempel `python3 verktoy/oversiktsbilde.py --fylke 50`.
