@@ -113,6 +113,24 @@ export function naturMaske(flate: FlateMedUtsnitt, kommune: FlateMedUtsnitt | nu
   return { u, res, w, h, a, m2: dekketM2(d, res) };
 }
 
+/* Fast rekkefølge for områder som er like etter sorteringen (samme verdi og samme areal): første punkt, så navn, beskrivelse og
+   nettadresse, og til slutt hele flaten. Miljødirektoratet sender områdene i tilfeldig rekkefølge, og mange lokaliteter har nøyaktig
+   samme areal, fordi koordinatene er hele meter. Rekkefølgen påvirker tegningen av overlappende flater i lerretet litt, og hvilket
+   område en planrute regnes til. Uten fast rekkefølge kunne arealet av verdsatt natur skille med opptil én dekar mellom to hentinger. */
+const tekst = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const fastRekkefolge = (a: Omrade, b: Omrade) => {
+  const pa = (a.koord[0] && a.koord[0][0] && a.koord[0][0][0]) || [0, 0],
+    pb = (b.koord[0] && b.koord[0][0] && b.koord[0][0][0]) || [0, 0];
+  return (
+    pa[0] - pb[0] ||
+    pa[1] - pb[1] ||
+    tekst(a.navn, b.navn) ||
+    tekst(a.under, b.under) ||
+    tekst(a.url, b.url) ||
+    tekst(JSON.stringify(a.koord), JSON.stringify(b.koord))
+  );
+};
+
 /* Verneområder og villreinområder: hver flate klippes mot kommunen, og arealet av det som ligger i kommunen regnes ut. Feiler
    klippingen, regnes arealet i stedet av flaten tegnet i et rutenett og klippet mot kommunen der (uklippet). les gir navn og
    opplysninger fra egenskapene. Gir områdene sortert etter areal, størst først. Overlapper to flater, telles overlappet to ganger. */
@@ -144,7 +162,7 @@ export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Le
       return km2 > 0 ? { koord, uklippet, km2, ...les(f.properties || {}) } : null;
     })
     .filter((o): o is Omrade => !!o)
-    .sort((a, b) => b.km2 - a.km2);
+    .sort((a, b) => b.km2 - a.km2 || fastRekkefolge(a, b));
 }
 
 /* Verdsatt natur: lokalitetene med areal hver for seg, uten klipping mot kommunen (til listen). Arealet per verdikategori i kommunen
@@ -158,7 +176,7 @@ export function lokaliteter(features: Objekt[], kommune: FlateMedUtsnitt, les: L
       const koord = flerflate(f.geometry as GeoJsonFlate);
       return { koord, uklippet: false, km2: koord.length ? areal(koord) / skala : 0, ...les(f.properties || {}) };
     })
-    .sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2);
+    .sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2 || fastRekkefolge(a, b));
   return omrader;
 }
 

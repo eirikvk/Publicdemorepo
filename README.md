@@ -407,9 +407,8 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `regresjon.ts` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
   tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `node verktoy/regresjon.ts ut/ny --mot HEAD`
   sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
-  tas samme dag. Ett kjent avvik som ikke skyldes koden: Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, så arealet
-  av verdsatt natur per verdikategori kan skille med under én dekar mellom kjøringer, og når to lokaliteter har nøyaktig samme
-  flate, kan planlagt utbygging havne på den ene eller den andre.
+  tas samme dag. Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, men sølv sorterer dem på en fast måte, så to
+  kjøringer av samme kode gir nøyaktig like tall.
 - `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene og kartet
   tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
 - `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken

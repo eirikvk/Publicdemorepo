@@ -62,8 +62,8 @@ endringene dine med siste commit:
 node verktoy/regresjon.ts ut/ny --mot HEAD
 ```
 
-Tallene kommer fra de åpne tjenestene og endrer seg over tid, så sammenligningen kjører begge utgavene samme dag. Arealet av
-verdsatt natur kan skille med under én dekar mellom to kjøringer, også av samme kode. Det er kjent og skyldes ikke endringen.
+Tallene kommer fra de åpne tjenestene og endrer seg over tid, så sammenligningen kjører begge utgavene samme dag. To kjøringer av
+samme kode gir nøyaktig like tall.
 
 ## Python-verktøyene
 

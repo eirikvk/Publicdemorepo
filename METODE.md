@@ -433,8 +433,6 @@ utbygging per område, per verdikategori og innenfor og utenfor det kartlagte.
 - Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen verdsatt natur der kan ikke overføres til resten. Utenfor det
   kartlagte betyr «ingen registrert» at det ikke er lett, ikke at naturen mangler verdi. Dekningsflatene kan ligge delvis i vann,
   mens graden regnes av landarealet.
-- Arealet av verdsatt natur per kategori kan variere med under én dekar mellom to kjøringer, fordi tjenesten sender lokalitetene i
-  tilfeldig rekkefølge. Se Kontroller.
 
 **Kontroll.** Rutenettmetoden for verdsatt natur ga under 0,2 % avvik fra geometrisk sammenslåing av flatene i Trondheim.
 
@@ -525,14 +523,15 @@ skjermbilder av kartet, og kan sammenligne to utgaver av koden. Tallene kommer f
 kjøringene må tas samme dag.
 
 **Rekkefølgen fra Miljødirektoratet.** Tjenesten for verdsatt natur sender lokalitetene i tilfeldig rekkefølge, og rekkefølgen kan
-være en annen hver gang. Det gir to kjente avvik mellom kjøringer av samme utgave:
+være en annen hver gang. Svarene har ingen id. Mange lokaliteter har nøyaktig samme areal, fordi koordinatene er hele meter, så
+sorteringen etter verdi og areal lot rekkefølgen fra tjenesten avgjøre blant dem. Det ga to avvik mellom kjøringer av samme utgave:
+arealet per verdikategori kunne skille med under én dekar, fordi flatene tegnes i et lerret og glattingen langs kantene blir litt
+forskjellig med en annen rekkefølge, og to like lokaliteter i Nordtiller øst i Trondheim byttet plass i listen.
 
-- Arealet per verdikategori kan skille med under én dekar. Flatene tegnes i et lerret i den rekkefølgen de kommer, og glattingen
-  langs kantene blir litt forskjellig. Med samme rekkefølge blir tallene like.
-- Har to lokaliteter samme flate, samme verdi og samme areal, får den som kommer først rutene med planlagt utbygging. I Trondheim
-  gjelder det to lokaliteter i Nordtiller øst. Summene blir de samme, men listen viser utbyggingen på den ene eller den andre.
-
-Begge kunne vært fjernet ved å sortere lokalitetene på en fast måte før de brukes, for eksempel etter id. Det er ikke gjort.
+Fra 10. oktober 2026 sorterer sølv områdene på en fast måte når verdi og areal er like: etter første punkt, navn, beskrivelse,
+nettadresse og til slutt hele flaten (`fastRekkefolge` i `src/data/solv/temaer.ts`). Fire ulike rekkefølger av svaret for Oslo og
+Trondheim ga deretter nøyaktig samme arealer, samme liste og samme verneområder. Endringen flyttet arealet av verdsatt natur med
+under én dekar én gang, og to kjøringer av samme kode gir nå like tall.
 
 **Overgangen til React, 8. oktober 2026.** Den nye utgaven ble sammenlignet med utgaven fra 7. oktober. Alle tall var like, bortsett
 fra den kjente variasjonen i verdsatt natur. Kartbildene var like piksel for piksel når de ble forskjøvet ett skjermpunkt, fordi
