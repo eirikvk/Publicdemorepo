@@ -1,6 +1,6 @@
 /* Om og metode: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
-import { app, VERSJON } from '../motor/felles.js';
-import { finn, settSmale } from '../motor/handlinger.js';
+import { app, VERSJON } from '../../data/motor/felles.js';
+import { finn, settSmale } from '../../data/motor/handlinger.js';
 import { MdCheckbox, MdLink, MdToggle } from './md.js';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';

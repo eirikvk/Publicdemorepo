@@ -1,11 +1,11 @@
 /* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages av
    motoren (motor/kart.js) og settes inn her. */
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { app, rolig } from '../motor/felles.js';
-import { velgSide } from '../motor/handlinger.js';
-import { byttTilValgt, lagKart, plasserBytt, settByttKnapp } from '../motor/kart.js';
-import { lastOppPlan } from '../motor/egne.js';
-import { fjernMerket } from '../motor/naturtema.js';
+import { app, rolig } from '../../data/motor/felles.js';
+import { velgSide } from '../../data/motor/handlinger.js';
+import { byttTilValgt, lagKart, plasserBytt, settByttKnapp } from '../../data/motor/kart.js';
+import { lastOppPlan } from '../../data/motor/egne.js';
+import { fjernMerket } from '../../data/motor/naturtema.js';
 import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.js';
 import './Kartpanel.css';
 

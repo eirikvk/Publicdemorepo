@@ -1,9 +1,9 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
    planen. Tallene kommer ferdig regnet ut fra gull/planlagt.js. */
-import { byggPlanlagt } from '../gull/planlagt.js';
-import { app, gjeldende } from '../motor/felles.js';
-import { utenPlan } from '../motor/egne.js';
-import { ingenPlan } from '../motor/plan.js';
+import { byggPlanlagt } from '../../data/gull/planlagt.js';
+import { app, gjeldende } from '../../data/motor/felles.js';
+import { utenPlan } from '../../data/motor/egne.js';
+import { ingenPlan } from '../../data/motor/plan.js';
 import Egne from './Egne.jsx';
 import { Rute } from './deler.jsx';
 import { antallOrd, iTekst, pst } from './tekst.js';

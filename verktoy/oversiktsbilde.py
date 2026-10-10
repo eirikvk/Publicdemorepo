@@ -28,7 +28,7 @@ LENGSTE = 2048     # piksler på lengste side i det ferdige bildet
 FLIS = 2048        # piksler per kall mot NIBIO
 GRENSE = 17.0      # groveste oppløsning NIBIO tegner grunnkartet i (1:50 000), meter per piksel
 
-# Rene farger fra NIBIO, de samme som DATAFARGE i src/analyse/klasser.js. Blandingen av to klasser kan ikke forveksles med blandingen av to andre.
+# Rene farger fra NIBIO, de samme som DATAFARGE i src/data/solv/klasser.js. Blandingen av to klasser kan ikke forveksles med blandingen av to andre.
 FARGER = np.array([[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 128, 255], [0, 128, 255], [255, 128, 128]], float)
 KLASSER = [['bebygdOpparbeidetAreal'], ['dyrketmark', 'grasmark'],
            ['skog', 'heiBuskmark', 'liteVegetertMark', 'vatmark', 'kyststrenderSvabergDyner'],

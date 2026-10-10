@@ -4,8 +4,8 @@
 
    Formateringen av tall og areal (nf, dekar, iTekst, andelTekst) ligger i motoren, fordi motoren også skriver noen tekster. Den
    hentes videre herfra, så komponentene finner alt om tekst på ett sted. */
-import { nf } from '../motor/felles.js';
-export { andelTekst, dekar, iTekst, nf } from '../motor/felles.js';
+import { nf } from '../../data/motor/felles.js';
+export { andelTekst, dekar, iTekst, nf } from '../../data/motor/felles.js';
 
 /* Tall til og med tolv med bokstaver. en er ordet for 1, som avhenger av kjønnet på det som telles (ett område, én lokalitet). */
 const ORD = ['null', 'én', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni', 'ti', 'elleve', 'tolv'];

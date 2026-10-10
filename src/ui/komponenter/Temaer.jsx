@@ -2,15 +2,15 @@
    egen side. Toppen svarer på det samme for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er,
    og hvor mye planlagt utbygging som ligger innenfor. Under står detaljene. Tallene kommer ferdig regnet ut fra gull (byggNaturTall,
    byggInon og byggGraa). Her blir de tekst og lister. */
-import { byggGraa } from '../gull/graa.js';
-import { byggInon } from '../gull/inon.js';
-import { byggNaturTall } from '../gull/temaer.js';
-import { GRAATRINN } from '../solv/graa.js';
-import { INONSONER } from '../solv/inon.js';
-import { app, gjeldende } from '../motor/felles.js';
-import { utenPlan } from '../motor/egne.js';
-import { visIKartet } from '../motor/naturtema.js';
-import { settSlor } from '../motor/handlinger.js';
+import { byggGraa } from '../../data/gull/graa.js';
+import { byggInon } from '../../data/gull/inon.js';
+import { byggNaturTall } from '../../data/gull/temaer.js';
+import { GRAATRINN } from '../../data/solv/graa.js';
+import { INONSONER } from '../../data/solv/inon.js';
+import { app, gjeldende } from '../../data/motor/felles.js';
+import { utenPlan } from '../../data/motor/egne.js';
+import { visIKartet } from '../../data/motor/naturtema.js';
+import { settSlor } from '../../data/motor/handlinger.js';
 import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
 import { andelTekst, antallOrd, dekar, iTekst, nf, periode, pst, stor } from './tekst.js';

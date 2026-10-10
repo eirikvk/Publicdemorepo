@@ -2,9 +2,9 @@
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
    Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.js. Her blir de tekst, stolper og tabell. */
-import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann } from '../gull/regnskap.js';
-import { app, gjeldende } from '../motor/felles.js';
-import { utenPlan } from '../motor/egne.js';
+import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann } from '../../data/gull/regnskap.js';
+import { app, gjeldende } from '../../data/motor/felles.js';
+import { utenPlan } from '../../data/motor/egne.js';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.jsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from './tekst.js';
 import './Regnskap.css';

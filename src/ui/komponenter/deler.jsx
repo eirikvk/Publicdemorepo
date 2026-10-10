@@ -1,7 +1,7 @@
 /* Små byggeklosser som designsystemet ikke har: fargeruter, stolper som viser en fordeling, tegnforklaringer, linjer i en liste
    med tall, lenker mellom sidene og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i
    motor/felles.js. */
-import { adresse, velgSide } from '../motor/handlinger.js';
+import { adresse, velgSide } from '../../data/motor/handlinger.js';
 import { dekar, prosent } from './tekst.js';
 import './deler.css';
 

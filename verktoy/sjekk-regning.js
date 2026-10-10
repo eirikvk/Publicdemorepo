@@ -24,7 +24,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src'),
-  MOTOR = path.join(SRC, 'motor');
+  DATA = path.join(SRC, 'data'),
+  MOTOR = path.join(DATA, 'motor');
 const PAKKER = ['polygon-clipping'];
 /* Lagene som sjekkes, og hvor hvert av dem kan importere fra */
 const LAG = {
@@ -36,8 +37,8 @@ const UNNTAK = { 'solv/raster.js': ['document'] };
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
 /* Retningen mellom lagene: hva hvert lag ikke kan importere fra */
 const IKKE_FRA = {
-  bronse: ['../gull/', '../visning/'],
-  visning: ['../bronse/']
+  'data/bronse': ['../gull/', '../../ui/'],
+  'ui/komponenter': ['../../data/bronse/']
 };
 const KONSTANT = /^[A-ZÆØÅ][A-ZÆØÅ0-9_]*$/;
 
@@ -52,9 +53,9 @@ const feil = [];
 let antall = 0;
 
 for (const [lag, lovligFra] of Object.entries(LAG)) {
-  for (const f of fs.readdirSync(path.join(SRC, lag)).filter(f => f.endsWith('.js'))) {
+  for (const f of fs.readdirSync(path.join(DATA, lag)).filter(f => f.endsWith('.js'))) {
     const navn = `${lag}/${f}`,
-      tre = les(path.join(SRC, lag, f)),
+      tre = les(path.join(DATA, lag, f)),
       lov = UNNTAK[navn] || [];
     antall++;
     for (const n of tre.body) {
@@ -109,7 +110,7 @@ for (const [lag, forbudt] of Object.entries(IKKE_FRA)) {
       const fra = n.source.value,
         sted = `${lag}/${f}:${n.loc.start.line}`;
       if (forbudt.some(p => fra.startsWith(p))) feil.push(`${sted} importerer fra ${fra}`);
-      if (lag === 'visning' && fra.startsWith('../solv/'))
+      if (lag === 'ui/komponenter' && fra.startsWith('../../data/solv/'))
         for (const x of n.specifiers)
           if (x.type !== 'ImportSpecifier' || !KONSTANT.test(x.imported.name))
             feil.push(`${sted} importerer ${x.local.name} fra sølv: visningen skal få tallene fra gull`);

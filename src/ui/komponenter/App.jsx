@@ -1,9 +1,9 @@
 /* Hele siden. Kroken useApp gjør at siden tegnes på nytt når motoren melder at tilstanden er endret. */
 import { useEffect, useState } from 'react';
-import { app } from '../motor/felles.js';
-import { startOpp } from '../motor/handlinger.js';
-import { kart } from '../motor/kart.js';
-import { NATURLAG } from '../motor/naturtema.js';
+import { app } from '../../data/motor/felles.js';
+import { startOpp } from '../../data/motor/handlinger.js';
+import { kart } from '../../data/motor/kart.js';
+import { NATURLAG } from '../../data/motor/naturtema.js';
 import { useApp } from './lager.js';
 import Topp from './Topp.jsx';
 import Sidevelger from './Sidevelger.jsx';

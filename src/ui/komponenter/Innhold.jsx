@@ -1,8 +1,8 @@
 /* Innholdet: én side for hvert valg i sidevelgeren. Alle sidene ligger i siden hele tiden, men bare den valgte vises. Da beholder
    hver side det som er åpnet i den, og «Til listen» fra kartet finner området uansett hvilken side som var valgt. */
-import { app } from '../motor/felles.js';
-import { SIDER } from '../motor/handlinger.js';
-import { NATURLAG } from '../motor/naturtema.js';
+import { app } from '../../data/motor/felles.js';
+import { SIDER } from '../../data/motor/handlinger.js';
+import { NATURLAG } from '../../data/motor/naturtema.js';
 import Oversikt from './Oversikt.jsx';
 import Regnskap from './Regnskap.jsx';
 import { Graa, Inon, Naturtema } from './Temaer.jsx';

@@ -1,7 +1,7 @@
 /* Sidevelgeren: én knapp per side, i designsystemets chip-form. Den valgte siden bestemmer innholdet ved siden av kartet og hvilket
    tema kartet viser. Sidene står i blokker, og en blokk med gruppenavn, som «Naturen i kommunen», har navnet over knappene. */
-import { app } from '../motor/felles.js';
-import { BLOKKER, velgSide } from '../motor/handlinger.js';
+import { app } from '../../data/motor/felles.js';
+import { BLOKKER, velgSide } from '../../data/motor/handlinger.js';
 import './Sidevelger.css';
 
 export default function Sidevelger() {

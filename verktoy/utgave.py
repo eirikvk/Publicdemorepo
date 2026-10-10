@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Setter nytt utgavemerke før en endring legges ut.
 
-Teksten vises under «Vis teknisk informasjon» (VERSJON i src/motor/felles.js), så man ser hvilken utgave en fane kjører.
+Teksten vises under «Vis teknisk informasjon» (VERSJON i src/data/motor/felles.js), så man ser hvilken utgave en fane kjører.
 Skriptet setter klokkeslettet nå, norsk tid. Filene i bygget får selv nye navn når innholdet endres, så nettleseren
 blander ikke ny og gammel kode.
 
@@ -16,10 +16,10 @@ MND = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 's
 na = datetime.now(ZoneInfo('Europe/Oslo'))
 tekst = f'{na.day}. {MND[na.month - 1]} kl. {na:%H.%M}'
 
-sti = os.path.join(ROT, 'src', 'motor', 'felles.js')
+sti = os.path.join(ROT, 'src', 'data', 'motor', 'felles.js')
 s = open(sti, encoding='utf8').read()
 s, n = re.subn(r"const VERSJON =\s*'[^']*'", f"const VERSJON = '{tekst}'", s)
 if not n:
-    raise SystemExit('Fant ikke utgavemerket i src/motor/felles.js')
+    raise SystemExit('Fant ikke utgavemerket i src/data/motor/felles.js')
 open(sti, 'w', encoding='utf8').write(s)
 print(f'Utgave: {tekst}')
