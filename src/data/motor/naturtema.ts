@@ -5,8 +5,9 @@
    Et nytt tema av samme slag legges til i bronse, i EGENSKAPER i solv/temaer.ts, som en ny linje i listen under, og med ord og
    kartlag i ui/. */
 import { hentKartlagt, hentTemaflater } from '../bronse/mdir-naturtema.ts';
-import { husk } from '../bronse/henting.ts';
-import { utsnitt, type Kommune } from '../solv/felles.ts';
+import { husk } from '../generelt/minne.ts';
+import { utsnitt } from '../generelt/geometri.ts';
+import type { Kommune } from '../solv/felles.ts';
 import {
   EGENSKAPER,
   byggDekning,
@@ -25,7 +26,7 @@ import {
   type TemaOmrade
 } from '../gull/temaer.ts';
 import { utenPlan } from './egne.ts';
-import { app, endret, tidSlutt, valgNr, type Grense } from './tilstand.ts';
+import { app, endret, tidSlutt, valgNr, type Grense, gjelder } from './tilstand.ts';
 
 /* Det som er hentet og regnet ut for et tema i én kommune. Det huskes per kommune, så det ikke må hentes på nytt. ekstra er det
    kartlagte (undefined før det er bedt om, null mens det hentes), og inne arealet per verdikategori innenfor det kartlagte. */
@@ -138,8 +139,8 @@ const maske: HuskMaske = (nokkel, lag) =>
    planlagt utbygging per område, i samme rekkefølge som områdene. */
 export function regnNatur(t: Naturtema) {
   const D = t.data;
-  if (!D || !app.valgt || D.nr !== app.valgt.nr) return endret();
-  const R = app.planRaster && app.planRaster.nr === app.valgt.nr && !utenPlan() ? app.planRaster : null,
+  if (!gjelder(D)) return endret();
+  const R = gjelder(app.planRaster) && !utenPlan() ? app.planRaster : null,
     t0 = performance.now();
   const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, app.grense!, maske) : null;
   D.plan = r ? r.plan : new Int32Array(D.omrader.length);

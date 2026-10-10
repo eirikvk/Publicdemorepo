@@ -17,6 +17,7 @@ import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { bakgrunnUrl, hentKommuneIPunkt } from '../../data/bronse/kartverket.ts';
 import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
+import { naermesteFarge } from '../../data/generelt/farge.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
 import { kartetFlyttes } from '../../data/motor/grunnkart.ts';
 import { finn, velgKommune } from '../../data/motor/kommune.ts';
@@ -269,10 +270,8 @@ function trykkIKartet(e: MapBrowserEvent) {
   const iTema = navnVed(e.coordinate);
   const pl = (planLag.getVisible() ? planLag.getData(e.pixel) : null) as Uint8ClampedArray | null;
   if (pl && pl[3] > 40) {
-    const av = (c: number[]) => (pl[0] - c[0]) ** 2 + (pl[1] - c[1]) ** 2 + (pl[2] - c[2]) ** 2;
-    settProbe({
-      punkt: (av(rgb('pjor')) < av(rgb('pnat')) ? 'Jordbruk' : 'Natur') + ', satt av til framtidig utbygging' + iTema
-    });
+    const jordbruk = naermesteFarge(pl[0], pl[1], pl[2], [rgb('pnat'), rgb('pjor')]) === 1;
+    settProbe({ punkt: (jordbruk ? 'Jordbruk' : 'Natur') + ', satt av til framtidig utbygging' + iTema });
     return;
   }
   let d = (tema.getVisible() ? tema.getData(e.pixel) : null) as Uint8ClampedArray | null;
@@ -282,16 +281,16 @@ function trykkIKartet(e: MapBrowserEvent) {
     settProbe({ tekst: 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).' });
     return;
   }
-  let best: string | null = null,
-    min = 1e9;
-  [...ALLE, ['slor', null] as const].forEach(([id, navn]) => {
-    const c = rgb(id),
-      a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2;
-    if (a < min) {
-      min = a;
-      best = navn;
-    }
-  });
+  const valg = [...ALLE, ['slor', null] as const],
+    best =
+      valg[
+        naermesteFarge(
+          d[0],
+          d[1],
+          d[2],
+          valg.map(([id]) => rgb(id))
+        )
+      ][1];
   if (!best) {
     settProbe({ tekst: 'Kartlaget for dette punktet er skjult.' });
     return;

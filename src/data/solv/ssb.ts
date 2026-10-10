@@ -1,5 +1,6 @@
 /* Sølv for SSB, tabell 09594: svarene (JSON-stat 2.0) gjort om til arealet i km² per klasse (bebygd, jordbruk, natur), med innsjø og
    elv for seg, for nyeste år og for 2017. */
+import { summen } from '../generelt/tall.ts';
 import { GRENSE_FLYTTET } from './felles.ts';
 import { KL } from './klasser.ts';
 
@@ -35,10 +36,10 @@ export function tolkAreal(j: JsonStat): Arealtall {
   const ix = j.dimension.ArealKlasse.category.index,
     tid = j.dimension.Tid.category.index;
   const pos: Record<string, number> = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix,
-    a = KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0));
+    a = KL.map(x => summen(x[3].map(c => j.value[pos[c]] || 0)));
   return {
     a,
-    land: a[0] + a[1] + a[2],
+    land: summen(a),
     aar: Array.isArray(tid) ? tid[0] : Object.keys(tid)[0],
     ferskvann: { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 }
   };
@@ -52,16 +53,16 @@ export function tolkHistorie(j: JsonStat, nr: string): Historie | null {
     aar = liste(j.dimension.Tid.category.index),
     nT = aar.length;
   const v = (c: string, t: number) => j.value[kl.indexOf(c) * nT + t] || 0,
-    sum = (t: number) => KL.map(x => x[3].reduce((s, c) => s + v(c, t), 0)),
-    alt = (t: number) => sum(t).reduce((s, x) => s + x, 0) + v('22.01', t) + v('22.02', t);
+    klasser = (t: number) => KL.map(x => summen(x[3].map(c => v(c, t)))),
+    alt = (t: number) => summen(klasser(t)) + v('22.01', t) + v('22.02', t);
   const f = aar.indexOf('2017');
   if (f < 0 || nT - f < 2 || !alt(f) || !alt(nT - 1)) return null;
   return {
     nr,
     fra: aar[f],
     til: aar[nT - 1],
-    a0: sum(f),
-    a1: sum(nT - 1),
+    a0: klasser(f),
+    a1: klasser(nT - 1),
     endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > GRENSE_FLYTTET
   };
 }

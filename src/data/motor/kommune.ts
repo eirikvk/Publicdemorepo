@@ -2,7 +2,8 @@
    hentes først, fordi temaene, planen og bildene av hele kommunen klippes mot den. */
 import { hentKommunegrense, hentKommuneliste } from '../bronse/kartverket.ts';
 import { hentOversiktsregister } from '../bronse/nibio-grunnkart.ts';
-import { arealKm2, flerflate, utsnitt, type Fylke, type Kommune } from '../solv/felles.ts';
+import { flerflate, utsnitt } from '../generelt/geometri.ts';
+import { arealKm2, type Fylke, type Kommune } from '../solv/felles.ts';
 import { hentOversikt, nySamling, stoppRegning } from './grunnkart.ts';
 import { sjekkGraa } from './graa.ts';
 import { sjekkInon } from './inon.ts';

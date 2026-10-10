@@ -1,8 +1,10 @@
 /* Bronse for kart over grå arealer (NIBIO, WMS, testversjon): bilder av alt grått areal og av flatene med oppgitt andel vegetasjon.
    Stilen tegner trinnene i GRAATRINN (solv/graa.ts) i rødt med styrken 51 · trinn, så trinnet kan leses av fargen. */
 import { GRAATRINN } from '../solv/graa.ts';
-import type { Kommune, Utsnitt } from '../solv/felles.ts';
+import type { Utsnitt } from '../generelt/geometri.ts';
+import type { Kommune } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
+import { wmsBilde } from './wms.ts';
 
 const GRAA = 'https://wms.nibio.no/cgi-bin/graastruktur';
 /* Egne stiler uten kantstrek. Alt grått areal tegnes i svart. Flatene med oppgitt andel vegetasjon får en rødfarge som sier hvilket
@@ -15,18 +17,9 @@ const graaLagStil = [
   `<NamedLayer><Name>andel_med_vegetasjon</Name><UserStyle><FeatureTypeStyle>${GRAATRINN.map(([, , fra, til], i) => `<Rule><ogc:Filter><ogc:And><ogc:PropertyIsGreaterThanOrEqualTo><ogc:PropertyName>andelgron</ogc:PropertyName><ogc:Literal>${fra}</ogc:Literal></ogc:PropertyIsGreaterThanOrEqualTo><ogc:PropertyIsLessThan><ogc:PropertyName>andelgron</ogc:PropertyName><ogc:Literal>${til}</ogc:Literal></ogc:PropertyIsLessThan></ogc:And></ogc:Filter>${graaFyll('#' + (51 * (i + 1)).toString(16).padStart(2, '0') + '0000')}</Rule>`).join('')}</FeatureTypeStyle></UserStyle></NamedLayer>`
 ];
 const graaBilde = (hva: number[], u: Utsnitt, w: number, h: number) =>
-  GRAA +
-  '?' +
-  new URLSearchParams({
-    service: 'WMS',
-    version: '1.3.0',
-    request: 'GetMap',
+  wmsBilde(GRAA, u, w, h, {
     layers: ['graa_arealer', 'andel_med_vegetasjon'].filter((_, i) => hva.includes(i)).join(','),
     sld_body: `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc">${graaLagStil.filter((_, i) => hva.includes(i)).join('')}</StyledLayerDescriptor>`,
-    crs: 'EPSG:25833',
-    bbox: u.map(v => v.toFixed(2)).join(','),
-    width: String(w),
-    height: String(h),
     format: 'image/png',
     transparent: 'true'
   });

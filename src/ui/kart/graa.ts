@@ -11,7 +11,7 @@ import { klasseAv } from '../../data/solv/klasser.ts';
 import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
 import type { Graa } from '../../data/gull/graa.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
-import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
+import { abonner, app, gjeldende, tidSlutt, gjelder } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.ts';
@@ -48,9 +48,7 @@ function maske(D: Trinn) {
 
 async function lastGraaFlis(tile: ImageTile) {
   try {
-    const D = (
-        app.graa && app.valgt && app.graa.nr === app.valgt.nr && app.graa.tilstand === 'ok' ? app.graa : null
-      ) as Trinn | null,
+    const D = (gjelder(app.graa) && app.graa.tilstand === 'ok' ? app.graa : null) as Trinn | null,
       tc = tile.getTileCoord() as Flis,
       u = plannett.getTileCoordExtent(tc);
     if (!D || !ol.extent.intersects(u, D.u)) {

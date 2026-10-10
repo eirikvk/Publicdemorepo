@@ -1,5 +1,6 @@
 /* Sølv for inngrepsfri natur: bildet av hele kommunen fra Miljødirektoratets kartlag (status) gjort om til sone per rute, etter
    avstand til tyngre tekniske inngrep. */
+import { naermesteFarge } from '../generelt/farge.ts';
 import { HALV, type Piksler } from './felles.ts';
 
 /* Sonene: [kode i tjenesten, farge i kartet her, farge i tjenestens bilder, avstand, navn] */
@@ -11,19 +12,8 @@ export const INONSONER: [kode: string, farge: string, rgb: number[], avstand: st
 export const UTENFOR = 255; /* rute uten sone */
 
 /* Sonen en farge ligger nærmest: 0 villmarkspreget, 1 sone 1, 2 sone 2 */
-export const inonSone = (r: number, g: number, b: number) => {
-  let best = 0,
-    min = 1e9;
-  for (let i = 0; i < 3; i++) {
-    const f = INONSONER[i][2],
-      d = (r - f[0]) ** 2 + (g - f[1]) ** 2 + (b - f[2]) ** 2;
-    if (d < min) {
-      min = d;
-      best = i;
-    }
-  }
-  return best;
-};
+const SONEFARGER = INONSONER.map(s => s[2]);
+export const inonSone = (r: number, g: number, b: number) => naermesteFarge(r, g, b, SONEFARGER);
 
 /* Tolker bildet av sonene. P er bildet fra tjenesten og M kommunens flate, som piksler (RGBA) i samme rutenett. En rute hører til en
    sone når den er minst halvt dekket. Gir sonen per rute (UTENFOR uten sone), og antall ruter per sone innenfor kommunen. */

@@ -93,10 +93,10 @@ navet i analysene, og det hører til sølv: det er den felles formen planen, dag
 
 ## Felles grunnlag
 
-`src/data/solv/felles.ts` og `src/data/solv/raster.ts`
+`src/data/solv/felles.ts`, `src/data/solv/raster.ts` og `src/data/generelt/geometri.ts`
 
 **Koordinatsystem.** Alt regnes i UTM sone 33 (EPSG:25833), som dataene er laget i. Flater er lister med koordinater, som i
-GeoJSON.
+GeoJSON. Arealet av en flate, utsnittet rundt den og hvilken vei en ring går rundt, regnes ett sted (`geometri.ts`).
 
 **Areal og målestokk.** Arealet av en flate regnes ut fra koordinatene, med ytterkanten minus hullene (`areal`). I UTM er flater litt
 større i kartet enn i terrenget, og mer jo lenger øst eller vest for sonens midtlinje. Hvert areal deles derfor på k², der
@@ -456,7 +456,7 @@ kommunen i kommunebildenes rutenett, uten glatting av kantene.
 
 1. Hver rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller
    villmarkspreget (5 km eller mer). Rutene innenfor kommunegrensen telles per sone (`tolkInon`, sølv).
-2. Antall ruter regnes om til areal, avrundet til nærmeste 10 dekar (`inonAreal`, gull).
+2. Antall ruter regnes om til areal, avrundet til nærmeste 10 dekar (`arealFraRuter`, gull).
 
 **Resultat.** Arealet per sone og samlet, i km².
 
@@ -486,7 +486,7 @@ vegetasjon. Stilen tegner trinn n i rødt med styrken 51 · n, så trinnet kan l
 1. Hver rute får et trinn (`tolkGraa` og `graaTrinn`, sølv): under 1 %, 1–25 %, 25–50 %, 50–75 % eller 75–100 % vegetasjon. Grått areal
    uten oppgitt andel, som veier, er et eget trinn. En rute er grå når den er minst halvt dekket.
 2. Rutene innenfor kommunen telles per trinn (`tolkGraa`, sølv) og regnes om til areal, avrundet til nærmeste 10 dekar
-   (`graaAreal`, gull).
+   (`arealFraRuter`, gull, den samme som for inngrepsfri natur).
 3. Kryssingen med planrutenettet (`kryssGraa`, gull): midtpunktet i hver rute med planlagt utbygging på land slås opp i bildet. Her er
    alle ruter med, også der det alt er bebygd og i smale striper. «Minst halvparten vegetasjon» er trinnene fra 50 % og opp.
 4. Grønt i bebygd område er ruter som er bebygd i grunnkartet, men ikke grå (`kryssGraa`).
@@ -549,6 +549,14 @@ kommunegrensen og flatene er vanlige koordinater, flisnettet regnes ut i sølv p
 opplastet plan regnes om med proj4 i stedet for gjennom OpenLayers. Metoden ble ikke endret. Utgaven med kartet flyttet ut og
 sluttresultatet ble begge sammenlignet med utgaven før: tallene fra motoren var like, kartbildene var like, og teksten på siden var
 lik bortsett fra rekkefølgen fra Miljødirektoratet.
+
+**Generelle hjelpere samlet, 10. oktober 2026.** Det som ikke handler om noe bestemt, ble samlet i `src/data/generelt/`, og logikk
+som fantes flere steder, ble samlet til én implementasjon: arealet og omløpsretningen til en ring, utsnittet rundt en flate, summer,
+nærmeste farge, areal fra antall ruter avrundet til nærmeste 10 dekar, adressene til kartjenestene, lesingen av bilder og
+kommunemasken, og sjekken av om et resultat gjelder valgt kommune. Omløpsretningen ble før regnet på en annen måte for verdsatt
+natur enn arealet. Nå brukes arealet med fortegn begge steder. De to gir samme svar for alle 6 818 ringene i verneområder, villrein
+og verdsatt natur i Trondheim, Oslo og Surnadal. Tallene fra motoren var ellers like, kartbildene var like, og teksten var lik
+bortsett fra rekkefølgen fra Miljødirektoratet.
 
 **Omleggingen til bronse, sølv og gull, 10. oktober 2026.** Koden ble delt i tre lag: henting (bronse), felles standard (sølv) og
 svarene sidene viser (gull). Metoden ble ikke endret. Hvert steg som flyttet kode, ble sammenlignet med steget før:

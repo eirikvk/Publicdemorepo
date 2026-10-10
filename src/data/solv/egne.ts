@@ -1,6 +1,7 @@
 /* Sølv for egne områder og opplastet plan: hvilke flater som regnes som utbygging, og hvordan de legges inn i planrutenettet, så de
    kan brukes sammen med kommuneplanen. */
-import { HALV, ORIGO, arealKm2, overlapper, type Flerflate, type Utsnitt } from './felles.ts';
+import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
+import { HALV, ORIGO, arealKm2 } from './felles.ts';
 import { sti, tegneflate } from './raster.ts';
 
 /* Utbygging ('bygg') eller ikke utbygging ('fri') */

@@ -3,20 +3,18 @@
    området for naturtyper. Flatene kommer som GeoJSON. */
 import polygonClipping from 'polygon-clipping';
 import {
-  RUTENETT_MASKE,
   areal,
   flerflate,
-  m2PerKm2,
   omriss,
   snitt,
   tomt,
   type Flerflate,
   type FlateMedUtsnitt,
   type GeoJsonFlate,
-  type Rutebilde,
   type Utsnitt
-} from './felles.ts';
-import { sti, tegneflate } from './raster.ts';
+} from '../generelt/geometri.ts';
+import { RUTENETT_MASKE, m2PerKm2, type Rutebilde } from './felles.ts';
+import { sti, tegneflate, dekketM2 } from './raster.ts';
 
 /* Flatene slik polygon-clipping vil ha dem */
 type Mangekant = polygonClipping.MultiPolygon;
@@ -111,12 +109,8 @@ export function naturMaske(flate: FlateMedUtsnitt, kommune: FlateMedUtsnitt | nu
   }
   const d = k.getImageData(0, 0, w, h).data,
     a = new Uint8Array(w * h);
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) {
-    a[i] = d[4 * i + 3];
-    sum += a[i];
-  }
-  return { u, res, w, h, a, m2: (sum / 255) * res * res };
+  for (let i = 0; i < a.length; i++) a[i] = d[4 * i + 3];
+  return { u, res, w, h, a, m2: dekketM2(d, res) };
 }
 
 /* Verneområder og villreinområder: hver flate klippes mot kommunen, og arealet av det som ligger i kommunen regnes ut. Feiler

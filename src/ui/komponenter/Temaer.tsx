@@ -10,7 +10,7 @@ import { GRAATRINN } from '../../data/solv/graa.ts';
 import { INONSONER } from '../../data/solv/inon.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import type { Naturtema as Tema } from '../../data/motor/naturtema.ts';
-import { app, gjeldende } from '../../data/motor/tilstand.ts';
+import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
 import { Fargelinje, Forklaring, Rute, Stripe, type Stripedel } from './deler.tsx';
@@ -146,7 +146,7 @@ function Helhet({ t, H, E }: { t: Tema; H: NonNullable<NaturTall['helhet']>; E: 
 export function Naturtema({ t: tema }: { t: Tema }) {
   const t = { ...tema, ...TEMAORD[tema.id] },
     D = tema.data,
-    ok = !!D && !!app.valgt && D.nr === app.valgt.nr;
+    ok = gjelder(D);
   const kilde = (
     <p className="hint">
       Kilde: {t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i

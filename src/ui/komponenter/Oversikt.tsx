@@ -8,7 +8,7 @@ import { byggEndring, byggUtbredelse } from '../../data/gull/regnskap.ts';
 import { byggNaturTall } from '../../data/gull/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { NATURTEMA } from '../../data/motor/naturtema.ts';
-import { app, gjeldende } from '../../data/motor/tilstand.ts';
+import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
 import { BLOKKER } from '../sider.ts';
 import { ETT, TEMAORD } from './Temaer.tsx';
 import { Sidelenke } from './deler.tsx';
@@ -48,7 +48,7 @@ function regnskap() {
 function naturtema(id: string) {
   const t = { ...NATURTEMA.find(x => x.id === id), ...TEMAORD[id] },
     D = t.data;
-  if (!D || !app.valgt || D.nr !== app.valgt.nr) return HENTER;
+  if (!gjelder(D)) return HENTER;
   if (D.feil) return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
   const N = byggNaturTall(D, t.klasser, !!t.dekning, !!t.samlet, app.ssbSum);
   if (!N.antall) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
@@ -89,7 +89,7 @@ function graa() {
 /* Utvikling fremover: natur og jordbruk som kommuneplanen setter av til utbygging */
 function framtid() {
   if (utenPlan()) return ingenTall('Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for kommunen.');
-  const P = app.planSum && app.valgt && app.planSum.nr === app.valgt.nr ? app.planSum : null;
+  const P = gjeldende(app.planSum);
   if (P)
     return {
       tall: dekar(P.nat),

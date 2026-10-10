@@ -5,7 +5,7 @@
 import type { CSSProperties } from 'react';
 import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann, type Endring } from '../../data/gull/regnskap.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { app, gjeldende } from '../../data/motor/tilstand.ts';
+import { app, gjeldende, gjelder } from '../../data/motor/tilstand.ts';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.ts';
 import './Regnskap.css';
@@ -101,7 +101,7 @@ function Utbredelse() {
 function Oppstilling() {
   const O = byggOppstilling(gjeldende(app.historie));
   if (!O) return null;
-  const P = app.planSum && app.valgt && app.planSum.nr === app.valgt.nr && !utenPlan() ? app.planSum : null;
+  const P = gjelder(app.planSum) && !utenPlan() ? app.planSum : null;
   return (
     <section className="regnskap prosa" aria-labelledby="oppstilling-tittel">
       <h2 className="md-typography-heading-s" id="oppstilling-tittel">

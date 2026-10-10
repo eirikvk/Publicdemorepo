@@ -8,7 +8,8 @@
    visningsfargene, se ui/kart/grunnkart.ts. */
 import { FLISNIVA, grunnkartUrl, hentGrunnkartFlis, hentOversiktsbilde } from '../bronse/nibio-grunnkart.ts';
 import { opptatt } from '../bronse/henting.ts';
-import { OPPLOSNINGER, ORIGO, flisUtsnitt, overlapper, type Flis, type Kommune, type Utsnitt } from '../solv/felles.ts';
+import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
+import { OPPLOSNINGER, ORIGO, flisUtsnitt, type Flis, type Kommune } from '../solv/felles.ts';
 import type { Blokk } from '../solv/planrutenett.ts';
 import { flislerret, sti, tegnUtsnitt } from '../solv/raster.ts';
 import { regnAlt } from './plan.ts';

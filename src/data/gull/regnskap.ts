@@ -1,5 +1,6 @@
 /* Gull for utbredelsesregnskapet og land og vann: det siden viser om arealet i kommunen, regnet ut fra SSB-tallene i sølv. Klassene
    står med natur først. Alle arealer er i km². */
+import { summen } from '../generelt/tall.ts';
 import { HAV_MIN_ANDEL, HAV_MIN_KM2 } from '../solv/felles.ts';
 import { KL, type KlasseId } from '../solv/klasser.ts';
 import type { Historie } from '../solv/ssb.ts';
@@ -13,13 +14,12 @@ export interface SsbTall {
 
 /* Klassene med natur først, med plassen i SSB-tallene (bebygd, jordbruk, natur) */
 const KLASSER = KL.map(([id, navn], i): [KlasseId, string, number] => [id, navn, i]).reverse();
-const sum = (a: number[]) => a[0] + a[1] + a[2];
 
 /* Utbredelsen i nyeste år: landarealet, og arealet og andelen av landarealet for hver klasse. T er SSB-tallene fra sølv. */
 export function byggUtbredelse(T: SsbTall | null) {
   if (!T || T.tilstand !== 'ok' || !T.a) return null;
   const a = T.a,
-    land = sum(a);
+    land = summen(a);
   return {
     aar: T.aar,
     land,
@@ -49,7 +49,7 @@ export type Endring = NonNullable<ReturnType<typeof byggEndring>>;
    hvor mye landarealet er endret mellom årgangene, i hele dekar. */
 export function byggOppstilling(H: Historie | null) {
   if (!H || H.endret) return null;
-  const kol = (a: number[]) => [...KLASSER.map(([, , i]) => a[i]), sum(a)],
+  const kol = (a: number[]) => [...KLASSER.map(([, , i]) => a[i]), summen(a)],
     a0 = kol(H.a0),
     a1 = kol(H.a1);
   return {
@@ -59,7 +59,7 @@ export function byggOppstilling(H: Historie | null) {
     inngaende: a0,
     netto: a1.map((v, j) => v - a0[j]),
     utgaende: a1,
-    avvik: Math.round((sum(H.a1) - sum(H.a0)) * 1000)
+    avvik: Math.round((summen(H.a1) - summen(H.a0)) * 1000)
   };
 }
 

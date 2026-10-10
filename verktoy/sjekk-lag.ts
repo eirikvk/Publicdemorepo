@@ -1,18 +1,20 @@
 /* Sjekker at lagene i koden holdes fra hverandre, slik README beskriver. Hvert lag kan bare importere fra lagene under seg:
 
    src/data/            alt om dataene, uten React og OpenLayers
-     bronse/            henting fra hver kilde. Importerer bare fra bronse og sølv, og bruker ikke tilstanden (app).
-     solv/              felles standard. Importerer bare fra sølv.
-     gull/              svarene sidene viser. Importerer bare fra gull og sølv.
+     generelt/          det som ikke handler om noe bestemt: geometri, minne, tall og farger. Importerer ingenting, og alle lagene
+                        i data kan bruke det.
+     bronse/            henting fra hver kilde. Importerer bare fra bronse, sølv og generelt, og bruker ikke tilstanden (app).
+     solv/              felles standard. Importerer bare fra sølv og generelt.
+     gull/              svarene sidene viser. Importerer bare fra gull, sølv og generelt.
      motor/             datamotoren: tilstanden, og hva som hentes og regnes når. Importerer fra data, men aldri fra ui/.
    src/ui/              brukergrensesnittet. Importerer fra data, men data importerer aldri herfra.
      komponenter/       React. Henter ikke selv og regner ikke selv: importerer ikke fra bronse, og fra sølv bare navn, faste
                         verdier (navn med store bokstaver, som GRAATRINN) og typer. Tallene kommer fra gull.
      kart/              OpenLayers. Bruker ikke React-komponentene.
 
-   For sølv og gull gjelder i tillegg, så beregningene kan leses, testes og flyttes til en annen løsning uten å ta med seg siden:
+   For generelt, sølv og gull gjelder i tillegg, så beregningene kan leses, testes og flyttes til en annen løsning uten å ta med seg siden:
    - De bruker ikke nettleseren (document, window, fetch og lignende) eller tilstanden (app). Unntaket er solv/raster.ts, som tegner
-     flater i et lerret.
+     flater og leser bilder i et lerret.
    - De har ingen variabler på toppnivå som kan endres (let). Det som gis inn, kommer som argumenter.
    Og datamotoren har ingen regnefunksjoner: funksjoner som heter tolk, kryss, bygg eller tell noe, hører hjemme i sølv eller gull.
 
@@ -38,16 +40,19 @@ interface Regel {
   solvBareFasteVerdier?: boolean;
 }
 const LAG: Record<string, Regel> = {
-  'data/bronse': { fra: ['./', '../solv/'], pakker: [], utenTilstand: true },
-  'data/solv': { fra: ['./'], pakker: ['polygon-clipping', 'proj4'], ren: true },
-  'data/gull': { fra: ['./', '../solv/'], pakker: ['polygon-clipping'], ren: true },
-  'data/motor': { fra: ['./', '../bronse/', '../solv/', '../gull/'], pakker: [] },
+  'data/generelt': { fra: ['./'], pakker: [], ren: true },
+  'data/bronse': { fra: ['./', '../generelt/', '../solv/'], pakker: [], utenTilstand: true },
+  'data/solv': { fra: ['./', '../generelt/'], pakker: ['polygon-clipping', 'proj4'], ren: true },
+  'data/gull': { fra: ['./', '../generelt/', '../solv/'], pakker: ['polygon-clipping'], ren: true },
+  'data/motor': { fra: ['./', '../generelt/', '../bronse/', '../solv/', '../gull/'], pakker: [] },
   ui: { ikkeFra: ['./komponenter/', './kart/'] },
   'ui/komponenter': { ikkeFra: ['../../data/bronse/'], solvBareFasteVerdier: true },
   'ui/kart': { ikkeFra: ['../komponenter/'] }
 };
 const NETTLESER = ['document', 'window', 'fetch', 'navigator', 'location', 'history', 'createImageBitmap'];
-const UNNTAK: Record<string, string[]> = { 'data/solv/raster': ['document'] }; /* fil uten endelse */
+const UNNTAK: Record<string, string[]> = {
+  'data/solv/raster': ['document', 'createImageBitmap']
+}; /* fil uten endelse */
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
 const FAST_VERDI = /^[A-ZÆØÅ][A-ZÆØÅ0-9_]*$/;
 

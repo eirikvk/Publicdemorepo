@@ -10,7 +10,7 @@ import { NAT, klasseAv } from '../../data/solv/klasser.ts';
 import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
 import type { Inon } from '../../data/gull/inon.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
-import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
+import { abonner, app, gjeldende, tidSlutt, gjelder } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.ts';
@@ -48,11 +48,7 @@ function maske(D: Soner) {
 
 async function lastInonFlis(tile: ImageTile) {
   try {
-    const D = (
-        app.inon && app.valgt && app.inon.nr === app.valgt.nr && app.inon.tilstand === 'ok' && app.inon.sone
-          ? app.inon
-          : null
-      ) as Soner | null,
+    const D = (gjelder(app.inon) && app.inon.tilstand === 'ok' && app.inon.sone ? app.inon : null) as Soner | null,
       tc = tile.getTileCoord() as Flis,
       u = plannett.getTileCoordExtent(tc);
     if (!D || !ol.extent.intersects(u, D.u)) {

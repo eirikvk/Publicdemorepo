@@ -7,7 +7,8 @@ import type { Planopplysninger } from '../bronse/dibk-kommuneplan.ts';
 import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse/henting.ts';
 import type { Planfeil } from '../bronse/planfil.ts';
 import type { Del } from '../solv/egne.ts';
-import type { Flerflate, Fylke, Kommune, Utsnitt } from '../solv/felles.ts';
+import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
+import type { Fylke, Kommune } from '../solv/felles.ts';
 import type { Blokk, EgetTall, Planrutenett } from '../solv/planrutenett.ts';
 import type { Historie } from '../solv/ssb.ts';
 import type { Graa, Graakryss } from '../gull/graa.ts';
@@ -174,9 +175,11 @@ nårHentingEndres(() => {
 /* Hvert valg av kommune får et nytt nummer. Svar som kommer tilbake etter at en annen kommune er valgt, kastes. */
 export let valgNr = 0;
 export const nyttValg = () => ++valgNr;
-/* Resultater merkes med kommunenummeret de gjelder. Dette gir resultatet hvis det gjelder kommunen som er valgt nå, ellers ingenting. */
-export const gjeldende = <T extends { nr: string }>(x: T | null | undefined): T | null =>
-  x && app.valgt && x.nr === app.valgt.nr ? x : null;
+/* Resultater merkes med kommunenummeret de gjelder. gjelder sier om x gjelder kommunen som er valgt nå, og gjeldende gir x hvis det
+   gjør det, ellers null. Alle sjekker av om noe hører til valgt kommune, går gjennom disse. */
+export const gjelder = <T extends { nr: string }>(x: T | null | undefined): x is T =>
+  !!x && !!app.valgt && x.nr === app.valgt.nr;
+export const gjeldende = <T extends { nr: string }>(x: T | null | undefined): T | null => (gjelder(x) ? x : null);
 
 /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. Vises under
    Tekniske valg. */

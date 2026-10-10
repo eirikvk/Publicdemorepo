@@ -38,6 +38,8 @@ dataplattformer, og datamotoren samordner dem:
       │
       ▼
 src/data/
+  generelt/     Det som ikke handler om noe bestemt: flategeometri, minne med fast
+                plass, summer og nærmeste farge. Alle lagene i data bruker det.
   bronse/       Bronse: hvordan hver tjeneste brukes. Adresser, parametre og stiler.
                 Svarene kommer urørt tilbake. Alt nettverk går gjennom dette laget.
   solv/         Sølv: felles standard, så dataene fra flere kilder kan brukes sammen.
@@ -100,8 +102,8 @@ Stilen kommer i tre lag, der hvert lag kan bygge på det forrige: designsystemet
 ## TypeScript
 
 All koden er TypeScript med streng typesjekk. Typene beskriver hva som går inn og ut av hver del: for eksempel `Tilstand` for
-datamotorens tilstand (`src/data/motor/tilstand.ts`), `Visning` for visningens (`src/ui/tilstand.ts`), og typene for flater,
-utsnitt og rutebilder i `src/data/solv/felles.ts`. Typene er bare beskrivelser: Vite fjerner dem når siden bygges, og Node fjerner
+datamotorens tilstand (`src/data/motor/tilstand.ts`), `Visning` for visningens (`src/ui/tilstand.ts`), typene for flater og
+utsnitt i `src/data/generelt/geometri.ts`, og for flisnett og rutebilder i `src/data/solv/felles.ts`. Typene er bare beskrivelser: Vite fjerner dem når siden bygges, og Node fjerner
 dem selv når verktøyene kjøres. Koden bruker derfor bare TypeScript som kan fjernes uten å endre noe (`erasableSyntaxOnly`), og
 importer har filendelsen med (`./tilstand.ts`).
 
@@ -127,11 +129,22 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 
 ### Data
 
-Bronse, i `src/data/bronse/`. Én fil per tjeneste, og en felles fil for hvordan det hentes.
+Generelt, i `src/data/generelt/`. Det som ikke vet noe om natur, kommuner eller kilder. Hver ting finnes bare her, så alle lagene
+regner likt. Filene importerer ingenting.
+
+| Fil | Innhold |
+|---|---|
+| `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp |
+| `minne.ts` | Minne med fast plass (`husk`): svar fra kildene og resultater for kommuner som er valgt før |
+| `tall.ts` | Summen av en liste tall (`summen`) |
+| `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
+
+Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan det hentes og for kartjenester etter WMS.
 
 | Fil | Innhold |
 |---|---|
 | `henting.ts` | Henting med minne, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
 | `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, og de lagrede oversiktsbildene |
@@ -145,9 +158,9 @@ Sølv, i `src/data/solv/`. METODE.md forklarer metoden bak hver fil.
 
 | Fil | Innhold |
 |---|---|
-| `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM og arealet av en flate |
+| `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, og målestokken i UTM: arealet av en flate i km² i terrenget |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
-| `raster.ts` | Fra flater til ruter: flatene tegnes i et lerret. Den eneste filen i sølv og gull som bruker nettleseren. |
+| `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Den eneste filen i sølv og gull som bruker nettleseren. |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og tolking av fargene i kartbildene |
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017 |
 | `planrutenett.ts` | Kommuneplanen lagt oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort, og om kommunen har plan |
@@ -160,13 +173,13 @@ Gull, i `src/data/gull/`. Funksjonene som heter `bygg` noe, gir det en side vise
 
 | Fil | Innhold |
 |---|---|
-| `felles.ts` | Andel i prosent, og tilstanden for temaene som hentes som ett bilde |
+| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, og tilstanden for temaene som hentes som ett bilde |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
 | `temaer.ts` | Arealet per verdikategori, kryssingen med planen, og tallene på temasidene |
-| `inon.ts` | Arealet per sone og tallene på siden |
-| `graa.ts` | Arealet per trinn, kryssingen med planen, og tallene på siden |
+| `inon.ts` | Tallene på siden |
+| `graa.ts` | Kryssingen med planen, og tallene på siden |
 
 Datamotoren, i `src/data/motor/`.
 
@@ -273,6 +286,7 @@ Både mappen og navnet på en funksjon sier hva den gjør:
 
 | Hvor | Navn begynner med | Hva funksjonen gjør |
 |---|---|---|
+| `src/data/generelt/` | | Det som ikke handler om noe bestemt. Får alt som argumenter og gir svaret tilbake. |
 | `src/data/bronse/` | `hent` | Henter fra én tjeneste og gir svaret urørt tilbake. Det eneste stedet det går kall ut på nettet. |
 | `src/data/solv/` og `src/data/gull/` | `tolk`, `kryss`, `bygg`, `tell` og andre | Regner. Får alt som argumenter og gir svaret tilbake. Leser ikke fra siden, skriver ikke til den, henter ikke fra nettet og bruker ikke delt tilstand. |
 | `src/data/motor/` | `hent`, `sjekk`, `regn`, `velg` | Samordner. Ber bronse hente, kaller sølv og gull, legger svaret i tilstanden og sier fra. |
@@ -282,8 +296,8 @@ Både mappen og navnet på en funksjon sier hva den gjør:
 Sølv og gull er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
 tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.ts`).
 
-`node verktoy/sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, sølv og
-gull holder seg for seg selv, bronse og datamotoren bruker ikke OpenLayers eller React, React-komponentene henter ikke fra bronse og
+`node verktoy/sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, generelt
+importerer ingenting, sølv og gull holder seg for seg selv, bronse og datamotoren bruker ikke OpenLayers eller React, React-komponentene henter ikke fra bronse og
 tar bare navn og faste verdier fra sølv, og det har ikke havnet regnefunksjoner i datamotoren.
 
 Komponentene regner ikke. Tallene og andelene kommer fra gull, og komponentene velger ord, avrunding og enhet. Unntaket er

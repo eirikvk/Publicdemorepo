@@ -1,9 +1,10 @@
 /* Sølv, felles standard: projeksjonene siden kjenner, og omregning til UTM33. Kartet registrerer de samme projeksjonene i
    OpenLayers (ui/kart/ol.ts), så kart og data regner likt. */
 import proj4 from 'proj4';
-import { UTM, type Punkt } from './felles.ts';
+import type { Punkt } from '../generelt/geometri.ts';
+import { UTM } from './felles.ts';
 
-proj4.defs('EPSG:25833', '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
+proj4.defs(UTM, '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:25832', '+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:25835', '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:4258', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');

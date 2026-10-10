@@ -28,13 +28,6 @@ export interface Graakryss {
   delvis: boolean;
 }
 
-/* Arealet i km² per trinn og samlet, fra antall ruter per trinn (n) i rutenettet med ruter på res meter. skala er m2PerKm2 for
-   kommunen. Avrundet til nærmeste 10 dekar. */
-export function graaAreal(n: ArrayLike<number>, res: number, skala: number) {
-  const trinn = Array.from(n, v => Math.round(((v * res * res) / skala) * 100) / 100);
-  return { trinn, sum: Math.round(trinn.reduce((x, y) => x + y, 0) * 100) / 100 };
-}
-
 /* Planlagt utbygging krysset med grått areal: hvor mye av all planlagt utbygging på land som ligger på areal som alt er grått, altså
    gjenbruk, og hvor mye av det som er minst halvparten vegetasjon (trinn 4 og 5). Regnes for planen med egne områder (S) og planen
    alene (P), for hele kommunen og per eget område. Her er alle ruter med planlagt utbygging på land med, også der det er bebygd i

@@ -1,5 +1,6 @@
 /* Bronse for Kartverket: listen over fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet. */
-import type { Flis, Fylke, GeoJsonFlate, Kommune } from '../solv/felles.ts';
+import { utsnitt, type GeoJsonFlate } from '../generelt/geometri.ts';
+import type { Flis, Fylke, Kommune } from '../solv/felles.ts';
 import { hent } from './henting.ts';
 
 const KV = 'https://api.kartverket.no/kommuneinfo/v1';
@@ -7,10 +8,7 @@ const KV = 'https://api.kartverket.no/kommuneinfo/v1';
 /* Avgrensningsboksen til en kommune som [vest, sør, øst, nord] i grader */
 const boksAv = (b: { coordinates?: number[][][] } | null) => {
   const c = b && b.coordinates && b.coordinates[0];
-  if (!c) return null;
-  const x = c.map(q => q[0]),
-    y = c.map(q => q[1]);
-  return [Math.min(...x), Math.min(...y), Math.max(...x), Math.max(...y)];
+  return c ? utsnitt([[c]]) : null;
 };
 /* Fylkene med kommunene sine: [{ nr, navn, kommuner: [{ nr, navn, boks }] }]. En kopi av listen ligger sammen med siden
    (kommuner.json). Kan den ikke hentes, spørres Kartverket. */

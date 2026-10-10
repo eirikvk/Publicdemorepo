@@ -2,6 +2,7 @@
    med tall, lenker mellom sidene og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i
    ui/farger.ts. */
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import { summen } from '../../data/generelt/tall.ts';
 import { adresse, velgSide } from '../sider.ts';
 import { dekar, prosent } from '../tekst.ts';
 import './deler.css';
@@ -21,7 +22,7 @@ export const Rute = ({ id, className = '' }: { id?: string; className?: string }
    hva er navnet på det hele, til skjermlesere. tittel er teksten som vises når man holder over en del. */
 export type Stripedel = [navn: string, farge: string, verdi: number, tittel?: string];
 export function Stripe({ deler, hva, className = '' }: { deler: Stripedel[]; hva?: string; className?: string }) {
-  const sum = deler.reduce((s, d) => s + d[2], 0),
+  const sum = summen(deler.map(d => d[2])),
     synlige = deler.filter(d => d[2] > 0);
   return (
     <div

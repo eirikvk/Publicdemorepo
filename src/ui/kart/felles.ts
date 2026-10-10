@@ -9,7 +9,8 @@ import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
 import { ol } from './ol.ts';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
-import { OPPLOSNINGER, ORIGO, UTM, type Flerflate, type Utsnitt } from '../../data/solv/felles.ts';
+import type { Flerflate, Utsnitt } from '../../data/generelt/geometri.ts';
+import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
 import { sti } from '../../data/solv/raster.ts';
 
 export const MAKSRES = 30; /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */

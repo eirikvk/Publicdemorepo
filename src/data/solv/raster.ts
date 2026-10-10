@@ -1,7 +1,8 @@
 /* Sølv, felles standard: fra flater til ruter. Flatene tegnes i et lerret (canvas) i nettleseren, og dekningen leses per rute som
    alfa fra 0 til 255. Lerretet glatter kantene, så en rute i kanten av en flate får delvis dekning. Dette er den eneste filen i
    sølv og gull som bruker nettleseren. Skal beregningene kjøres et annet sted, er det denne som må byttes ut. */
-import type { Flerflate, Utsnitt } from './felles.ts';
+import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
+import type { Piksler, Rutebilde } from './felles.ts';
 
 /* Et lerret på w x h ruter, klart til å tegne i og lese fra */
 export function tegneflate(w: number, h: number): CanvasRenderingContext2D {
@@ -50,4 +51,24 @@ export function sti(g: CanvasRenderingContext2D, koord: Flerflate, u: Utsnitt, s
       );
       g.closePath();
     }
+}
+
+/* En flerflate tegnet i rutenettet R, som piksler: dekningen av hver rute står i alfa. Kommunens flate brukes slik som maske. */
+export function flatePiksler(koord: Flerflate, R: Rutebilde) {
+  const g = tegneflate(R.w, R.h);
+  sti(g, koord, R.u, 1 / R.res);
+  g.fill('evenodd');
+  return g.getImageData(0, 0, R.w, R.h).data;
+}
+/* Et bilde fra en kilde (PNG) som piksler, skalert til w x h ruter */
+export async function bildePiksler(buf: ArrayBuffer, w: number, h: number) {
+  const g = tegneflate(w, h);
+  g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h);
+  return g.getImageData(0, 0, w, h).data;
+}
+/* Arealet en tegning dekker, i kvadratmeter i kartet: summen av dekningen (alfa) i rutene, med ruter på res meter */
+export function dekketM2(d: Piksler, res: number) {
+  let sum = 0;
+  for (let i = 3; i < d.length; i += 4) sum += d[i];
+  return (sum / 255) * res * res;
 }

@@ -3,17 +3,18 @@
    Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder ligger i app.egne. De finnes bare så lenge siden er åpen, og
    hører til kommunen de ble tegnet i. */
 import { lesPlanfil } from '../bronse/planfil.ts';
-import { EGET_MIN_M2, areal, arealKm2, utsnitt, type Flerflate } from '../solv/felles.ts';
+import { areal, utsnitt, type Flerflate } from '../generelt/geometri.ts';
+import { EGET_MIN_M2, arealKm2 } from '../solv/felles.ts';
 import { planflater, type Type } from '../solv/egne.ts';
 import { tilUTM } from '../solv/projeksjoner.ts';
 import { byggEgneRader } from '../gull/egne.ts';
 import { finn, velgKommune } from './kommune.ts';
 import { NATURTEMA, type Naturtema } from './naturtema.ts';
 import { ingenPlan, regnAlt } from './plan.ts';
-import { app, endret, type EgetOmrade, type EgneStatus } from './tilstand.ts';
+import { app, endret, type EgetOmrade, type EgneStatus, gjelder, gjeldende } from './tilstand.ts';
 
 let egenTeller = 0;
-export const mine = () => (app.valgt ? app.egne.filter(g => g.nr === app.valgt!.nr) : []);
+export const mine = () => app.egne.filter(gjelder);
 /* Uten kommuneplan og uten egne områder finnes det ingen planlagt utbygging å regne på */
 export const utenPlan = () => ingenPlan() && !mine().length;
 
@@ -109,11 +110,8 @@ export function slettEget(g: EgetOmrade) {
 export function egneRader(e: number | null) {
   /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */
   const R = app.planRaster!,
-    GK =
-      app.graaKryss && app.valgt && app.graaKryss.nr === app.valgt.nr && app.graaKryss.antallEgne === R.antallEgne
-        ? app.graaKryss
-        : null;
-  const data = (t: Naturtema) => (t.data && app.valgt && t.data.nr === app.valgt.nr ? t.data : null);
+    GK = gjelder(app.graaKryss) && app.graaKryss.antallEgne === R.antallEgne ? app.graaKryss : null;
+  const data = (t: Naturtema) => gjeldende(t.data);
   const tema = NATURTEMA.filter(t => {
     const D = data(t);
     return D && D.kryss && D.kryss.P && D.omrader.length;

@@ -14,17 +14,16 @@ import {
 } from '../solv/felles.ts';
 import type { Blokk } from '../solv/planrutenett.ts';
 import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.ts';
-import { flislerret, sti, tegneflate } from '../solv/raster.ts';
+import { bildePiksler, flatePiksler } from '../solv/raster.ts';
 import { byggPlanSum } from '../gull/planlagt.ts';
 import { mine, utenPlan } from './egne.ts';
 import { regnGraa } from './graa.ts';
 import { dagensKlasser, samle } from './grunnkart.ts';
 import { NATURTEMA, regnNatur } from './naturtema.ts';
-import { app, endret, tidSlutt, valgNr, type Grense, type Tilstand } from './tilstand.ts';
+import { app, endret, gjeldende, tidSlutt, valgNr, type Grense, type Tilstand } from './tilstand.ts';
 
 /* Kommunen har ingen kommuneplan hos DiBK */
-export const ingenPlan = () =>
-  !!app.planInfo && !!app.valgt && app.planInfo.nr === app.valgt.nr && app.planInfo.tilstand === 'ingen';
+export const ingenPlan = () => gjeldende(app.planInfo)?.tilstand === 'ingen';
 
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker, se
    planDekning i solv/planrutenett.ts. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
@@ -32,15 +31,11 @@ export async function sjekkPlan(k: Kommune, grense: Grense, mitt: number) {
   app.planInfo = { nr: k.nr, tilstand: 'sjekker' };
   endret();
   try {
-    const { res, w, h, u } = rutenett(grense.ext, ...BILDE_PLANDEKNING);
+    const R = rutenett(grense.ext, ...BILDE_PLANDEKNING),
+      { w, h, u } = R;
     const buf = await hentPlandekning(k, u, w, h);
     if (mitt !== valgNr) return;
-    const a = tegneflate(w, h),
-      b = tegneflate(w, h);
-    a.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h);
-    sti(b, grense.koord, u, 1 / res);
-    b.fill('evenodd');
-    const { dekning, finnes, treff } = planDekning(a.getImageData(0, 0, w, h).data, b.getImageData(0, 0, w, h).data);
+    const { dekning, finnes, treff } = planDekning(await bildePiksler(buf, w, h), flatePiksler(grense.koord, R));
     let plan = null;
     if (finnes)
       try {
@@ -67,9 +62,10 @@ async function hentBlokk(tc: Flis, fliser: Flis[] | null): Promise<Blokk> {
     ingenPlan() ? null : hentKommuneplanFlis(kommuneplanUrl(flisUtsnitt(tc)))
   ]);
   if (!K) throw new Error('mangler dagens klasser');
-  const g = flislerret().getContext('2d', { willReadFrequently: true })!;
-  if (buf) g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
-  return { ...tellBlokk(K, g.getImageData(0, 0, 512, 512).data, tc, fliser), utenPlan: !buf };
+  const P = buf
+    ? await bildePiksler(buf, 512, 512)
+    : new Uint8ClampedArray(512 * 512 * 4); /* uten plan: ingen piksler satt */
+  return { ...tellBlokk(K, P, tc, fliser), utenPlan: !buf };
 }
 /* Samordner utregningen: finner ut hva som kan regnes ut nå, henter blokkene som mangler, bygger rutenettet og sier fra. */
 async function regnPlan() {

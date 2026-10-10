@@ -1,14 +1,14 @@
 /* Bronse for en opplastet planfil: GeoJSON i samme format som DiBKs nedlasting av plandata, med arealformål og arealbruksstatus.
    Filen leses i nettleseren og sendes ingen steder. Flatene gjøres om til UTM33. */
 import {
-  UTM,
   flerflate,
   utsnitt,
   type Flerflate,
   type GeoJsonFlate,
   type Punkt,
   type Utsnitt
-} from '../solv/felles.ts';
+} from '../generelt/geometri.ts';
+import { UTM } from '../solv/felles.ts';
 import type { Planflate } from '../solv/egne.ts';
 import { kjent, tilUTM } from '../solv/projeksjoner.ts';
 

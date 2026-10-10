@@ -14,7 +14,7 @@ import { ol } from './ol.ts';
 import { OPPLOSNINGER } from '../../data/solv/felles.ts';
 import type { Kartlagt } from '../../data/solv/temaer.ts';
 import { NATURTEMA, type Naturtema } from '../../data/motor/naturtema.ts';
-import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
+import { abonner, app, endret, tidSlutt, gjelder } from '../../data/motor/tilstand.ts';
 import { farge, rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
@@ -260,7 +260,7 @@ abonner(() => {
   for (const t of NATURTEMA) {
     const { lag, kilde } = lagFor(t),
       D = t.data,
-      ok = !!D && !!app.valgt && D.nr === app.valgt.nr,
+      ok = gjelder(D),
       paa = ui.side === t.id;
     if (ny('data ' + t.id, D)) {
       kilde.clear();

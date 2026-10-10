@@ -1,22 +1,11 @@
 /* Gull for naturtemaene: arealet av verdsatt natur per verdikategori, kryssingen med planrutenettet (hvor mye planlagt utbygging
    som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.ts) og
    planrutenettet (solv/planrutenett.ts). Arealer er i km², kryssinger i ruter. */
-import {
-  HALV,
-  RUTE,
-  RUTENETT_VERDI,
-  m2PerKm2,
-  omriss,
-  ruteX,
-  ruteY,
-  rutenett,
-  type Flerflate,
-  type FlateMedUtsnitt,
-  type Ring,
-  type Utsnitt
-} from '../solv/felles.ts';
+import { motKlokka, omriss, type Flerflate, type FlateMedUtsnitt, type Utsnitt } from '../generelt/geometri.ts';
+import { summen } from '../generelt/tall.ts';
+import { HALV, RUTE, RUTENETT_VERDI, m2PerKm2, ruteX, ruteY, rutenett } from '../solv/felles.ts';
 import type { Planrutenett } from '../solv/planrutenett.ts';
-import { sti, tegneflate } from '../solv/raster.ts';
+import { dekketM2, sti, tegneflate } from '../solv/raster.ts';
 import { naturMaske, type Kartlagt, type Maske, type Omrade } from '../solv/temaer.ts';
 import { andel } from './felles.ts';
 
@@ -67,12 +56,6 @@ export interface TemaData {
 /* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
 export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
 
-/* Omløpsretningen til en ring: true når den går mot klokka */
-const motKlokka = (ring: Ring) => {
-  let a = 0;
-  for (let i = 0; i < ring.length - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
-  return a > 0;
-};
 /* Verdsatt natur: mange små flater som overlapper. Arealet per verdikategori finnes ved å tegne flatene i et rutenett over kommunen
    og summere dekningen i rutene. Én tegning per kategori, der alle flater med minst den verdien tegnes som én sammenhengende form og
    klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori uten dobbelttelling: der lokaliteter overlapper,
@@ -112,10 +95,7 @@ export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMed
       sti(g, innenfor, u, 1 / res);
       g.fill('evenodd');
     }
-    const d = g.getImageData(0, 0, w, h).data;
-    let sum = 0;
-    for (let i = 3; i < d.length; i += 4) sum += d[i];
-    kum.push(((sum / 255) * res * res) / skala);
+    kum.push(dekketM2(g.getImageData(0, 0, w, h).data, res) / skala);
   }
   return {
     klasser: Array.from({ length: antall }, (_, v) => Math.max(0, (kum[v] || 0) - (v ? kum[v - 1] || 0 : 0))),
@@ -236,7 +216,7 @@ export function kryssNatur(
 
 /* Arealet av et tema som er summen av områdene: verneområder og villreinområder. Overlapper to områder, telles overlappet to
    ganger. */
-export const samletAreal = (omrader: Omrade[]) => omrader.reduce((s, o) => s + o.km2, 0);
+export const samletAreal = (omrader: Omrade[]) => summen(omrader.map(o => o.km2));
 
 /* Tallene en temaside og oversikten viser for et naturtema. D er temaets data, klasser verdikategoriene hvis temaet har det,
    medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Arealer er i
@@ -276,8 +256,8 @@ export function byggNaturTall(
       U = Math.max(0, L - K),
       inne = D.inne,
       ute = D.klasser.map((a, v) => Math.max(0, a - inne[v])),
-      si = inne.reduce((a, b) => a + b, 0),
-      su = ute.reduce((a, b) => a + b, 0);
+      si = summen(inne),
+      su = summen(ute);
     helhet = {
       L,
       K,
@@ -292,8 +272,8 @@ export function byggNaturTall(
       andelUte: andel(su, U)
     };
   }
-  const plan = P.reduce((s, x) => s + x, 0),
-    smal = (D.smal || new Int32Array(0)).reduce((s, x) => s + x, 0),
+  const plan = summen(P),
+    smal = summen(D.smal || []),
     G = D.gap;
   return {
     sum,

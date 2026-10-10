@@ -2,8 +2,10 @@
    av hele kommuner som er laget av samme tjeneste (verktoy/oversiktsbilde.py). Siden ber NIBIO tegne seks klasser i rene farger
    (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
-import type { Kommune, Utsnitt } from '../solv/felles.ts';
+import type { Utsnitt } from '../generelt/geometri.ts';
+import type { Kommune } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
+import { wmsBilde } from './wms.ts';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 /* Groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000. Zoomet lenger ut
@@ -27,18 +29,9 @@ const SLD = (() => {
 
 /* Adressen til et kartbilde på 512 x 512 piksler av utsnittet u i UTM33 */
 export const grunnkartUrl = (u: Utsnitt) =>
-  WMS +
-  '?' +
-  new URLSearchParams({
-    service: 'WMS',
-    version: '1.3.0',
-    request: 'GetMap',
+  wmsBilde(WMS, u, 512, 512, {
     layers: 'okosystemtype',
     styles: '',
-    crs: 'EPSG:25833',
-    bbox: u.map(v => v.toFixed(2)).join(','),
-    width: '512',
-    height: '512',
     format: 'image/png; mode=8bit',
     transparent: 'true',
     sld_body: SLD

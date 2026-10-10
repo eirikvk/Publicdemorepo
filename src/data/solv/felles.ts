@@ -3,25 +3,10 @@
    tersklene, målestokken i UTM og arealet av en flate. Filen bruker verken nettleseren, kartet eller sidens tilstand, så den kan
    kjøres i Node. METODE.md forklarer tersklene.
 
-   Flater er vanlige lister med koordinater, som i GeoJSON: en flerflate er [flate][ring][punkt], der første ring i hver flate er
-   ytterkanten og resten er hull. Et utsnitt er [xmin, ymin, xmaks, ymaks] i meter. En kommune er { koord, ext }: flerflaten og
-   utsnittet. */
+   Flatene og utsnittene er i meter i UTM33, i formen som er beskrevet i generelt/geometri.ts. En kommune er { koord, ext }:
+   flerflaten og utsnittet. */
+import { areal, utsnitt, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 
-/* Et punkt [x, y] i meter, eller [x, y, z] */
-export type Punkt = number[];
-/* En lukket ring av punkter */
-export type Ring = Punkt[];
-/* En flate: første ring er ytterkanten, resten er hull */
-export type Flate = Ring[];
-/* Flere flater, som MultiPolygon i GeoJSON */
-export type Flerflate = Flate[];
-/* [xmin, ymin, xmaks, ymaks] i meter, samme form som i OpenLayers */
-export type Utsnitt = number[];
-/* En flerflate med utsnittet sitt. Kommunen er en slik, og det samme er hvert område i et naturtema. */
-export interface FlateMedUtsnitt {
-  koord: Flerflate;
-  ext: Utsnitt;
-}
 /* En flis i flisnettet: [nivå, x, y] */
 export type Flis = [number, number, number];
 /* Et rutenett lagt over et utsnitt: utsnittet rutene dekker (u), meter per rute (res), og bredde og høyde i ruter */
@@ -33,12 +18,6 @@ export interface Rutebilde {
 }
 /* Piksler i et bilde: rød, grønn, blå og dekning (alfa) fra 0 til 255, fire tall per piksel */
 export type Piksler = ArrayLike<number>;
-/* En geometri fra GeoJSON med flater */
-export interface GeoJsonFlate {
-  type: string;
-  coordinates: Flate | Flerflate;
-}
-
 /* En kommune i listen over kommuner: nummer, navn, og avgrensningsboksen [vest, sør, øst, nord] i grader hvis den er kjent */
 export interface Kommune {
   nr: string;
@@ -120,71 +99,8 @@ export const m2PerKm2 = (e: Utsnitt) => {
   return k * k * 1e6;
 };
 
-/* Arealet av én ring, med fortegn etter omløpsretning. Punktene regnes fra siste punkt, så tallene holdes små. */
-const ringAreal = (ring: Ring) => {
-  const n = ring.length;
-  if (n < 3) return 0;
-  const x0 = ring[n - 1][0],
-    y0 = ring[n - 1][1];
-  let a = 0,
-    dx1 = 0,
-    dy1 = 0;
-  for (let i = 0; i < n; i++) {
-    const dx2 = ring[i][0] - x0,
-      dy2 = ring[i][1] - y0;
-    a += dy1 * dx2 - dx1 * dy2;
-    dx1 = dx2;
-    dy1 = dy2;
-  }
-  return a / 2;
-};
-/* Arealet av en flerflate i kvadratmeter i kartet: ytterkantene minus hullene. */
-export const areal = (koord: Flerflate) => {
-  let sum = 0;
-  for (const flate of koord) flate.forEach((ring, i) => (sum += (i ? -1 : 1) * Math.abs(ringAreal(ring))));
-  return sum;
-};
-
 /* Arealet av en flerflate i km² i terrenget. e er utsnittet målestokken regnes midt i, til vanlig flatens eget utsnitt. */
 export const arealKm2 = (koord: Flerflate, e: Utsnitt = utsnitt(koord)) => areal(koord) / m2PerKm2(e);
-
-/* Utsnitt: det minste utsnittet som rommer en flerflate (utsnitt tar med alle ringene, slik OpenLayers gjør, omriss bare
-   ytterkantene), snittet av to, og om to utsnitt overlapper. */
-export const utsnitt = (koord: Flerflate): Utsnitt => {
-  const e = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const flate of koord)
-    for (const ring of flate)
-      for (const [x, y] of ring) {
-        if (x < e[0]) e[0] = x;
-        if (y < e[1]) e[1] = y;
-        if (x > e[2]) e[2] = x;
-        if (y > e[3]) e[3] = y;
-      }
-  return e;
-};
-export const omriss = (koord: Flerflate): Utsnitt => {
-  const e = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const flate of koord)
-    for (const [x, y] of flate[0] || []) {
-      if (x < e[0]) e[0] = x;
-      if (y < e[1]) e[1] = y;
-      if (x > e[2]) e[2] = x;
-      if (y > e[3]) e[3] = y;
-    }
-  return e;
-};
-export const snitt = (a: Utsnitt, b: Utsnitt): Utsnitt => [
-  Math.max(a[0], b[0]),
-  Math.max(a[1], b[1]),
-  Math.min(a[2], b[2]),
-  Math.min(a[3], b[3])
-];
-export const tomt = (e: Utsnitt) => e[2] < e[0] || e[3] < e[1];
-export const overlapper = (a: Utsnitt, b: Utsnitt) => a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
-
-/* En flate fra GeoJSON som flerflate */
-export const flerflate = (g: GeoJsonFlate): Flerflate =>
-  g.type === 'MultiPolygon' ? (g.coordinates as Flerflate) : [g.coordinates as Flate];
 
 /* Plasseringen av et rutenett i flisnettet: nivå, første kolonne og rad, og bredden i ruter */
 export interface Plassering {

@@ -3,14 +3,9 @@
    Filen vet ingenting om resten av siden. Hva som skjer, står i henteStatus, og den som vil vite det, gir en funksjon til
    nårHentingEndres (datamotoren gjør det, se data/motor/tilstand.ts). */
 
-export const SAMTIDIG = 4; /* høyst fire kall om gangen mot hver kilde */
+import { husk } from '../generelt/minne.ts';
 
-/* Minne med fast plass: det eldste går ut når det blir fullt, og det som legges inn på nytt, regnes som nytt. */
-export const husk = <K, V>(minne: Map<K, V>, nokkel: K, verdi: V, plass: number) => {
-  minne.delete(nokkel);
-  minne.set(nokkel, verdi);
-  if (minne.size > plass) minne.delete(minne.keys().next().value as K);
-};
+export const SAMTIDIG = 4; /* høyst fire kall om gangen mot hver kilde */
 
 /* Ett kall i kall-loggen: kilden, hva som ble hentet, tiden i millisekunder, størrelsen i byte, og om det feilet */
 export interface Kall {
