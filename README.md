@@ -397,12 +397,12 @@ Ting å vite:
 
 1. Gjør endringen.
 2. `python3 verktoy/utgave.py` setter nytt utgavemerke, som vises under «Vis teknisk informasjon».
-3. `npm run sjekk` og `npm test` (se under).
+3. `npm run sjekk`, `npm test` og `npm run regresjon` (se under).
 4. Commit og push til `main`.
 
 Arbeidsflyten `.github/workflows/legg-ut.yml` («Bygg og legg ut») kjører ved hver push til `main`: den installerer pakkene fra
-`package-lock.json`, kjører `npm run sjekk`, bygger og legger ut `dist/` på GitHub Pages. Den kan også startes for hånd under
-Actions. Feiler sjekken eller bygget, blir ingenting lagt ut, og siden som ligger ute, står urørt.
+`package-lock.json`, kjører `npm run sjekk` og `npm test`, bygger og legger ut `dist/` på GitHub Pages. Den kan også startes for hånd under
+Actions. Feiler sjekken, testene eller bygget, blir ingenting lagt ut, og siden som ligger ute, står urørt.
 
 GitHub Pages må ha «GitHub Actions» som kilde (Settings → Pages → Build and deployment → Source). Står den på «Deploy from a
 branch», legger GitHub ut repoet slik det er, uten bygg, og siden blir blank.
@@ -410,14 +410,21 @@ branch», legger GitHub ut repoet slik det er, uten bygg, og siden blir blank.
 Hver action i arbeidsflyten er låst til en bestemt commit, med versjonen i en kommentar. Ved oppgradering byttes både
 commit og kommentar.
 
+## Tester
+
+Testene ligger i `test/`, én fil for hvert av generelt, sølv og gull. De prøver regnefunksjonene med små, faste eksempler, som
+arealet av et kvadrat med hull, tolking av fargene og avrunding til 10 dekar. De bruker Nodes egen testkjører, trenger verken nett
+eller nettleser, og tar under ett sekund: `npm test`. Funksjonene som tegner i et lerret (`solv/raster.ts` og arealet av verdsatt
+natur) trenger nettleseren og prøves av regresjonstesten.
+
 ## Verktøy
 
 Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 
 - `utgave.py` setter utgavemerke, se over.
 - `regresjon.ts` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
-  tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `node verktoy/regresjon.ts ut/ny --mot HEAD`
-  sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
+  tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `npm run regresjon` kjører den, og
+  `node verktoy/regresjon.ts ut/ny --mot HEAD` sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
   tas samme dag. Miljødirektoratet sender lokalitetene i tilfeldig rekkefølge, men sølv sorterer dem på en fast måte, så to
   kjøringer av samme kode gir nøyaktig like tall.
 - `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Med `?teknisk` gjør siden tilstanden, temaene og kartet

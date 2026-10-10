@@ -34,6 +34,8 @@ jobs:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Typesjekk og sjekk av lagene
         run: npm run sjekk
+      - name: Tester for generelt, sølv og gull
+        run: npm test
       - name: Bygg
         run: npm run bygg
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
