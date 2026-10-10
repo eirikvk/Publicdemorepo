@@ -129,7 +129,6 @@ export function byggDekning(features, kommune) {
     km2: u.length ? areal(u) / m2PerKm2(kommune.ext) : 0,
     fra: aar.length ? Math.min(...aar) : null,
     til: aar.length ? Math.max(...aar) : null,
-    flate: u,
-    maske: null
+    flate: u
   };
 }

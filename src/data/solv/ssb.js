@@ -6,13 +6,16 @@ import { KL } from './klasser.js';
 /* Rekkefølgen på kategoriene i en dimensjon. SSB gir indeksen enten som liste eller som objekt med plass. */
 const liste = x => (Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b]));
 
-/* Arealet per klasse i nyeste år: SSBs arealklasser summert til bebygd, jordbruk og natur (se KL), og innsjø og elv for seg. */
+/* Arealet per klasse i nyeste år: SSBs arealklasser summert til bebygd, jordbruk og natur (se KL), landarealet (summen av de tre),
+   og innsjø og elv for seg. */
 export function tolkAreal(j) {
   const ix = j.dimension.ArealKlasse.category.index,
     tid = j.dimension.Tid.category.index;
-  const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
+  const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix,
+    a = KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0));
   return {
-    a: KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)),
+    a,
+    land: a[0] + a[1] + a[2],
     aar: Array.isArray(tid) ? tid[0] : Object.keys(tid)[0],
     ferskvann: { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 }
   };

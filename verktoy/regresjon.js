@@ -176,7 +176,7 @@ export const SCENARIER = {
     await vent(p, R, 'trondheim', () => {
       const M = window.motor;
       if (!M || !M.app.valgt) return false;
-      const v = M.NATURLAG.find(t => t.id === 'verdi');
+      const v = (M.NATURTEMA || M.NATURLAG).find(t => t.id === 'verdi');
       return (
         M.app.planTall &&
         M.app.planTall.tilstand === 'ok' &&
@@ -301,7 +301,7 @@ export const SCENARIER = {
         M.app.planInfo.tilstand === 'ingen' &&
         M.app.graa &&
         M.app.graa.tilstand === 'ok' &&
-        M.NATURLAG.every(t => t.data)
+        (M.NATURTEMA || M.NATURLAG).every(t => t.data)
       );
     });
     await p.rolig();

@@ -2,21 +2,10 @@
    gull/egne.js: byggEgetOmrade for hvert område, og radene i tabellene fra byggEgneRader (som motor/egne.js henter fram). */
 import { useRef } from 'react';
 import { byggEgetOmrade } from '../../data/gull/egne.js';
-import { app, gjeldende } from '../../data/motor/felles.js';
-import {
-  angrePunkt,
-  egneRader,
-  ferdigTegning,
-  lastOppPlan,
-  mine,
-  settType,
-  slettEget,
-  sluttTegning,
-  startTegning,
-  tegner,
-  visEgetIKartet
-} from '../../data/motor/egne.js';
+import { egneRader, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.js';
 import { ingenPlan } from '../../data/motor/plan.js';
+import { app, gjeldende } from '../../data/motor/tilstand.js';
+import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.js';
 import { Talltabell } from './deler.jsx';
 import {
   MdAlertMessage,
@@ -27,8 +16,27 @@ import {
   MdIconUpload,
   MdRadioGroup
 } from './md.js';
-import { antallOrd, dekar, iTekst, medFortegn, pst, ramse } from './tekst.js';
+import { antallOrd, dekar, iTekst, medFortegn, nf, pst, ramse } from '../tekst.js';
 import './Egne.css';
+
+/* Meldingen om siste tegning eller opplasting, etter hva datamotoren melder (app.egneStatus): [tekst, type], der type er typen
+   melding i designsystemet. */
+const STATUS = {
+  forLite: () => ['Området ble for lite til å regnes ut. Tegn et større område.', 'warning'],
+  forStor: () => ['Filen er for stor til å leses i nettleseren (over 120 MB).', 'error'],
+  leser: s => [`Leser ${s.fil} …`, 'info'],
+  lest: s => [
+    `${s.fil}: ${nf(s.antall, 0)} flater lest${s.byttetTil ? `, og kommunen er byttet til ${s.byttetTil}` : ''}.`,
+    'success'
+  ],
+  ingenFlater: () => [
+    'Fant ingen flater i filen. Den må være GeoJSON med polygoner, som filen fra DiBKs nedlasting av plandata.',
+    'error'
+  ],
+  ingenKommune: () => ['Velg en kommune først.', 'error'],
+  ulesbareFlater: () => ['Flatene i filen kunne ikke leses.', 'error'],
+  ikkeGeoJSON: () => ['Filen kunne ikke leses som GeoJSON.', 'error']
+};
 
 /* Antall flater i tekst, med tall til og med tolv i ord */
 const flater = n => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
@@ -147,7 +155,8 @@ export default function Egne() {
     P = gjeldende(app.planRaster),
     R = P && P.eget && P.antallEgne === E.length ? P : null,
     t = tegner(),
-    s = app.egneStatus;
+    m = app.egneStatus && STATUS[app.egneStatus.hva](app.egneStatus),
+    s = m && { tekst: m[0], type: m[1] };
   return (
     <section className="egne" aria-labelledby="egne-tittel">
       <h2 className="md-typography-heading-s" id="egne-tittel">
@@ -161,7 +170,7 @@ export default function Egne() {
               theme="secondary"
               leftIcon={<MdIconEdit />}
               onClick={startTegning}
-              disabled={!app.klipp}
+              disabled={!app.grense}
             >
               Tegn eget område
             </MdButton>

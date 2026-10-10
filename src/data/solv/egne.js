@@ -1,6 +1,6 @@
 /* Sølv for egne områder og opplastet plan: hvilke flater som regnes som utbygging, og hvordan de legges inn i planrutenettet, så de
    kan brukes sammen med kommuneplanen. */
-import { HALV, ORIGO, overlapper } from './felles.js';
+import { HALV, ORIGO, arealKm2, overlapper } from './felles.js';
 import { sti, tegneflate } from './raster.js';
 
 /* Om en flate i en opplastet plan er utbygging ('bygg') eller ikke ('fri'). Bebyggelse og anlegg og samferdsel (arealformål i
@@ -9,6 +9,18 @@ import { sti, tegneflate } from './raster.js';
    sifrene i egenskapene, eller tom tekst. */
 export const planType = (formal, status, harFormal) =>
   !harFormal || (/^[12]/.test(formal) && (status === '' || status === '2')) ? 'bygg' : 'fri';
+
+/* Flatene i en opplastet plan, som de leses i bronse/planfil.js, gjort om til egne områder: hver flate får type etter planType.
+   Gir flatene, det samlede arealet i km², og hvor mange som er utbygging og ikke. */
+export function planflater(deler, harFormal) {
+  let km2 = 0;
+  const ut = deler.map(({ koord, ext, formal, status }) => {
+    km2 += arealKm2(koord, ext);
+    return { koord, type: planType(formal, status, harFormal), ext };
+  });
+  const bygg = ut.filter(d => d.type === 'bygg').length;
+  return { deler: ut, km2, bygg, annet: ut.length - bygg };
+}
 
 /* Et eget område eller en opplastet plan inn i planrutenettet. g har delene { koord, ext, type }, merke er områdets nummer, d er
    rutenettet for planlagt utbygging, kl dagens klasser og eget hvilket område hver rute hører til. G er rutenettets plassering

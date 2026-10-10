@@ -1,22 +1,30 @@
-/* Bronse, felles for alle kildene: hvordan det hentes. Svar huskes så lenge siden er åpen, hvert kall måles og vises i kall-loggen,
-   og kartbilder hentes gjennom en kø per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen. Den melder fra
-   til motoren om hva som skjer (kall-loggen i app.kall, og om kartet laster), men endrer ikke dataene. */
-import { SAMTIDIG, app, endret, husk, kb, nf } from '../motor/felles.js';
-import { kartflagg } from '../motor/grunnlag.js';
+/* Bronse, felles for alle kildene: hvordan det hentes. Svar huskes så lenge siden er åpen, hvert kall måles og føres i kall-loggen,
+   og kartbilder hentes gjennom en kø per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen.
+   Filen vet ingenting om resten av siden. Hva som skjer, står i henteStatus, og den som vil vite det, gir en funksjon til
+   nårHentingEndres (datamotoren gjør det, se data/motor/tilstand.js). */
+
+export const SAMTIDIG = 4; /* høyst fire kall om gangen mot hver kilde */
+
+/* Minne med fast plass: det eldste går ut når det blir fullt, og det som legges inn på nytt, regnes som nytt. */
+export const husk = (minne, nokkel, verdi, plass) => {
+  minne.delete(nokkel);
+  minne.set(nokkel, verdi);
+  if (minne.size > plass) minne.delete(minne.keys().next().value);
+};
+
+/* Status for hentingen. kall er de siste kallene, nyeste først: { kilde, hva, ms, bytes, feilet }. siste er siste runde med
+   kartbilder fra én kilde: { kilde, n, ms, bytes, feil }. laster sier om det hentes kartbilder nå. startet og feilet teller
+   kartbilder som er bedt om og som har feilet, til kartet. */
+export const henteStatus = { kall: [], siste: null, laster: false, startet: 0, feilet: 0 };
+let melding = () => {};
+export const nårHentingEndres = f => {
+  melding = f;
+};
 
 /* Kall-logg: hvert kall mot en åpen kilde måles i nettleseren. */
 function logg(kilde, hva, ms, bytes, feil) {
-  app.kall = [
-    [
-      kilde,
-      hva,
-      feil ? 'feilet' : ms >= 1000 ? nf(ms / 1000) + ' s' : Math.round(ms) + ' ms',
-      feil ? '' : kb(bytes),
-      !!feil
-    ],
-    ...app.kall
-  ].slice(0, 8);
-  endret();
+  henteStatus.kall = [{ kilde, hva, ms, bytes, feilet: !!feil }, ...henteStatus.kall].slice(0, 8);
+  melding();
 }
 /* Svarene huskes så lenge siden er åpen. Bytter man tilbake til en kommune, hentes verken grense, tall eller plansjekk på nytt.
    Ingenting lagres varig i nettleseren. */
@@ -58,16 +66,11 @@ export function lagHenter(kilde, hva) {
     if (aktive || ko.length) return;
     const fliser = n => `${n} ${n === 1 ? 'flis' : 'fliser'}`,
       ms = performance.now() - runde.t0;
-    if (runde.n) {
-      logg(kilde, `${hva}, ${fliser(runde.n)}`, ms, runde.bytes);
-      app.siste = `Siste kall mot ${kilde}: ${fliser(runde.n)}, ${nf(ms / 1000)} s, ${kb(runde.bytes)}`;
-    }
-    if (runde.feil) {
-      logg(kilde, `${hva}, ${fliser(runde.feil)}`, 0, 0, true);
-      if (!runde.n) app.siste = `Kallet mot ${kilde} feilet.`;
-    }
-    app.laster = opptatt();
-    endret();
+    if (runde.n) logg(kilde, `${hva}, ${fliser(runde.n)}`, ms, runde.bytes);
+    if (runde.feil) logg(kilde, `${hva}, ${fliser(runde.feil)}`, 0, 0, true);
+    if (runde.n || runde.feil) henteStatus.siste = { kilde, n: runde.n, ms, bytes: runde.bytes, feil: runde.feil };
+    henteStatus.laster = opptatt();
+    melding();
     runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   }
   /* Kartlaget og planlaget trenger samme flis fra NIBIO samtidig. Et kall som alt er underveis, deles i stedet for å sendes to ganger. */
@@ -93,10 +96,10 @@ export function lagHenter(kilde, hva) {
     });
     clearTimeout(timer);
     if (!runde.t0) runde.t0 = performance.now();
-    kartflagg.nyeKall = true;
-    if (!app.laster) {
-      app.laster = true;
-      endret();
+    henteStatus.startet++;
+    if (!henteStatus.laster) {
+      henteStatus.laster = true;
+      melding();
     }
     try {
       const r = await fetch(src);
@@ -109,7 +112,7 @@ export function lagHenter(kilde, hva) {
       return buf;
     } catch (e) {
       runde.feil++;
-      kartflagg.feilIVisning = true;
+      henteStatus.feilet++;
       throw e;
     } finally {
       aktive--;

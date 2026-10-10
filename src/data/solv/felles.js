@@ -7,9 +7,35 @@
    ytterkanten og resten er hull. Et utsnitt er [xmin, ymin, xmaks, ymaks] i meter. En kommune er { koord, ext }: flerflaten og
    utsnittet. */
 
+/* Koordinatsystemet alt gjøres om til: UTM sone 33 (EPSG:25833), som dataene er laget i. */
+export const UTM = 'EPSG:25833';
+
 /* Kartverkets flisnett for UTM33: origo og meter per piksel på hvert nivå. Kartet og analysene bruker det samme nettet. */
 export const ORIGO = [-2500000, 9045984],
   OPPLOSNINGER = Array.from({ length: 19 }, (_, z) => 21664 / 2 ** z);
+const FLIS = 256; /* piksler per flis i flisnettet */
+
+/* Utsnittet til flisen [z, x, y] i flisnettet. Regnes ut i samme rekkefølge som OpenLayers gjør (getTileCoordExtent), så
+   utsnittene, og dermed adressene til kartbildene, blir nøyaktig de samme som kartet ber om. */
+export const flisUtsnitt = ([z, x, y]) => {
+  const r = OPPLOSNINGER[z],
+    minX = ORIGO[0] + x * FLIS * r,
+    minY = ORIGO[1] - (y + 1) * FLIS * r;
+  return [minX, minY, minX + FLIS * r, minY + FLIS * r];
+};
+/* Flisene på nivå z som dekker utsnittet e, som [z, x, y], kolonne for kolonne. Samme regel som OpenLayers (forEachTileCoord):
+   et punkt på grensen mellom to fliser hører til flisen etter, og tallene rundes til fem desimaler først. */
+const fem = n => Math.round(n * 1e5) / 1e5;
+export const fliserI = (e, z) => {
+  const r = OPPLOSNINGER[z],
+    x0 = Math.floor(fem((e[0] - ORIGO[0]) / r / FLIS)),
+    y0 = Math.floor(fem((ORIGO[1] - e[3]) / r / FLIS)),
+    x1 = Math.ceil(fem((e[2] - ORIGO[0]) / r / FLIS)) - 1,
+    y1 = Math.ceil(fem((ORIGO[1] - e[1]) / r / FLIS)) - 1,
+    ut = [];
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) ut.push([z, x, y]);
+  return ut;
+};
 
 /* Planrutenettet: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. */
 export const PLANNIVA = 9,
@@ -72,7 +98,23 @@ export const areal = koord => {
   return sum;
 };
 
-/* Utsnitt: det minste utsnittet som rommer en flerflate, snittet av to, og om to utsnitt overlapper. */
+/* Arealet av en flerflate i km² i terrenget. e er utsnittet målestokken regnes midt i, til vanlig flatens eget utsnitt. */
+export const arealKm2 = (koord, e = utsnitt(koord)) => areal(koord) / m2PerKm2(e);
+
+/* Utsnitt: det minste utsnittet som rommer en flerflate (utsnitt tar med alle ringene, slik OpenLayers gjør, omriss bare
+   ytterkantene), snittet av to, og om to utsnitt overlapper. */
+export const utsnitt = koord => {
+  const e = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const flate of koord)
+    for (const ring of flate)
+      for (const [x, y] of ring) {
+        if (x < e[0]) e[0] = x;
+        if (y < e[1]) e[1] = y;
+        if (x > e[2]) e[2] = x;
+        if (y > e[3]) e[3] = y;
+      }
+  return e;
+};
 export const omriss = koord => {
   const e = [Infinity, Infinity, -Infinity, -Infinity];
   for (const flate of koord)

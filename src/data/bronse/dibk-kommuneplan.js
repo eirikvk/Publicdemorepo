@@ -53,8 +53,8 @@ export const hentPlandekning = (k, u, w, h) =>
     false,
     true
   );
-/* Opplysningene om planflatene i ruta (i, j) i det samme bildet: plan-id, kommunenummer, hvem som har levert planen og når den
-   ble kopiert til DiBK. */
+/* Opplysningene om kommuneplanen for kommunen k i ruta (i, j) i det samme bildet: { id, vert, kopiert }, der vert er hvem som har
+   levert planen og kopiert datoen den ble kopiert til DiBK, som [år, måned, dag]. null hvis ruta ikke har en plan fra kommunen. */
 export const hentPlaninfo = (k, u, w, h, i, j) =>
   hent(
     'DiBK',
@@ -71,4 +71,13 @@ export const hentPlaninfo = (k, u, w, h, i, j) =>
         j
       }),
     true
-  );
+  ).then(svar => {
+    const f = (svar.features || []).map(x => x.properties || {}).find(x => x['arealplanId.kommunenummer'] === k.nr);
+    if (!f) return null;
+    const d = /^(\d{4})-(\d\d)-(\d\d)/.exec(f['kopidata.kopidato'] || '');
+    return {
+      id: f['arealplanId.planidentifikasjon'],
+      vert: f['kopidata.originalDatavert'] || '',
+      kopiert: d ? [d[1], d[2], d[3]] : null
+    };
+  });

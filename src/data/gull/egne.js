@@ -21,6 +21,7 @@ export const byggEgetOmrade = T => ({
    klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er { navn, farge, gruppe, plan, ny, endring, andelPlan,
    andelNy }: planen alene (null uten kommuneplan), med egne områder og forskjellen i km², og andelen av det som finnes i dag i
    prosent der det er regnet ut. */
+const RADNAVN = { rein: 'Villreinområder' }; /* i tabellen står områdene, ikke temaet */
 export function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
   const ut = [];
   ut.push([
@@ -53,7 +54,7 @@ export function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
       t.klasser.forEach(([navn, id], v) =>
         verdi.push([navn, id, harPlan ? ruter(K.P, v) : null, ruter(K.S, v), 0, 'Av dette i verdsatt natur'])
       );
-    else ut.push([t.navn, t.id, harPlan ? ruter(K.P, 0) : null, ruter(K.S, 0), 0, 'Av dette i']);
+    else ut.push([RADNAVN[t.id] || t.navn, t.id, harPlan ? ruter(K.P, 0) : null, ruter(K.S, 0), 0, 'Av dette i']);
   }
   if (gap && gap.plan)
     ut.push([

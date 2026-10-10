@@ -1,11 +1,21 @@
-/* Hvordan tall og tekst skrives på siden. Alt her er rene funksjoner: samme inn gir samme ut, og ingenting leser tilstanden.
-   Reglene følger Miljødirektoratets språkprofil: tall til og med tolv med bokstaver i løpende tekst, desimalkomma, mellomrom
-   foran prosent, «dekar» i setninger og «daa» i tabeller og lister.
+/* Hvordan tall og tekst skrives på siden og i kartet. Alt her er rene funksjoner: samme inn gir samme ut, og ingenting leser
+   tilstanden. Reglene følger Miljødirektoratets språkprofil: tall til og med tolv med bokstaver i løpende tekst, desimalkomma,
+   mellomrom foran prosent, «dekar» i setninger og «daa» i tabeller og lister. */
 
-   Formateringen av tall og areal (nf, dekar, iTekst, andelTekst) ligger i motoren, fordi motoren også skriver noen tekster. Den
-   hentes videre herfra, så komponentene finner alt om tekst på ett sted. */
-import { nf } from '../../data/motor/felles.js';
-export { andelTekst, dekar, iTekst, nf } from '../../data/motor/felles.js';
+/* Et tall med d desimaler, norsk skrivemåte */
+export const nf = (v, d = 1) => v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
+/* Alle arealer vises i dekar. Internt regnes det i kvadratkilometer, som er enheten SSB oppgir. 1 km² er 1000 dekar.
+   I kolonner og lister står forkortelsen «daa», i setninger står «dekar» skrevet ut. */
+export const dekar = (km2, enhet = 'daa') => {
+  const v = km2 * 1000;
+  return (v > 0 && v < 0.05 ? 'under 0,1' : nf(v, v < 100 ? 1 : 0)) + ' ' + enhet;
+};
+export const iTekst = km2 => dekar(km2, 'dekar');
+export const andelTekst = p => (p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %');
+/* Størrelsen på et svar */
+export const kb = b => (b >= 1048576 ? nf(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB');
+/* Tiden et kall tok */
+export const tid = ms => (ms >= 1000 ? nf(ms / 1000) + ' s' : Math.round(ms) + ' ms');
 
 /* Tall til og med tolv med bokstaver. en er ordet for 1, som avhenger av kjønnet på det som telles (ett område, én lokalitet). */
 const ORD = ['null', 'én', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni', 'ti', 'elleve', 'tolv'];

@@ -2,7 +2,7 @@
    og tolkes i solv/ssb.js. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
 import { hentArealtall, hentTidsserie } from '../bronse/ssb.js';
 import { tolkAreal, tolkHistorie } from '../solv/ssb.js';
-import { app, endret, valgNr } from './felles.js';
+import { app, endret, valgNr } from './tilstand.js';
 
 export function nullstillTall(tilstand) {
   /* ingen tall å vise: de hentes, eller hentingen feilet */
@@ -19,7 +19,7 @@ export async function hentTall(k, mitt) {
     const T = tolkAreal(j);
     app.ferskvann = T.ferskvann;
     app.arealtall = { tilstand: 'ok', a: T.a, aar: T.aar };
-    app.ssbSum = T.a[0] + T.a[1] + T.a[2];
+    app.ssbSum = T.land;
     endret();
   } catch (e) {
     if (mitt === valgNr) nullstillTall('feil');

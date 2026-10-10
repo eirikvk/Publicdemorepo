@@ -5,6 +5,9 @@ import { ALLE, DATAFARGE } from '../solv/klasser.js';
 import { hent, lagHenter } from './henting.js';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
+/* Groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000. Zoomet lenger ut
+   brukes oversiktsbildet. */
+export const FLISNIVA = 10;
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
 const SLD = (() => {
   const hex = f => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');

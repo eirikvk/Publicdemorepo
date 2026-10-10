@@ -1,5 +1,6 @@
-/* Delene av OpenLayers som siden bruker, samlet i ett navnerom med samme navn som i OpenLayers' egen samlede utgave
-   (ol.layer.Tile, ol.extent.intersects og så videre). Bare det som er nevnt her, kommer med i det ferdige bygget. */
+/* Delene av OpenLayers som kartet bruker, samlet i ett navnerom med samme navn som i OpenLayers' egen samlede utgave
+   (ol.layer.Tile, ol.extent.intersects og så videre). Bare det som er nevnt her, kommer med i det ferdige bygget. Projeksjonene
+   er de samme som datadelen bruker (solv/projeksjoner.js). */
 import Map from 'ol/Map.js';
 import View from 'ol/View.js';
 import Feature from 'ol/Feature.js';
@@ -16,7 +17,6 @@ import TileGrid from 'ol/tilegrid/TileGrid.js';
 import MultiPolygon from 'ol/geom/MultiPolygon.js';
 import Point from 'ol/geom/Point.js';
 import Polygon from 'ol/geom/Polygon.js';
-import GeoJSON from 'ol/format/GeoJSON.js';
 import Style from 'ol/style/Style.js';
 import Stroke from 'ol/style/Stroke.js';
 import Fill from 'ol/style/Fill.js';
@@ -30,6 +30,7 @@ import * as extent from 'ol/extent.js';
 import * as proj from 'ol/proj.js';
 import { register } from 'ol/proj/proj4.js';
 import { getRenderPixel, getVectorContext } from 'ol/render.js';
+import { proj4 } from '../../data/solv/projeksjoner.js';
 
 export const ol = {
   Map,
@@ -41,11 +42,11 @@ export const ol = {
   source: { XYZ, Vector: VectorSource, ImageStatic, Image: ImageSource },
   tilegrid: { TileGrid },
   geom: { MultiPolygon, Point, Polygon },
-  format: { GeoJSON },
   style: { Style, Stroke, Fill, Circle, Text },
   interaction: { Draw },
   control: { Zoom, ScaleLine, Attribution },
   extent,
-  proj: { ...proj, proj4: { register } },
+  proj,
   render: { getRenderPixel, getVectorContext }
 };
+register(proj4);

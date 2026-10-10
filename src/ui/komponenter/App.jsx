@@ -1,9 +1,10 @@
-/* Hele siden. Kroken useApp gjør at siden tegnes på nytt når motoren melder at tilstanden er endret. */
+/* Hele siden. Kroken useApp gjør at siden tegnes på nytt når tilstanden er endret. */
 import { useEffect, useState } from 'react';
-import { app } from '../../data/motor/felles.js';
-import { startOpp } from '../../data/motor/handlinger.js';
-import { kart } from '../../data/motor/kart.js';
-import { NATURLAG } from '../../data/motor/naturtema.js';
+import { NATURTEMA } from '../../data/motor/naturtema.js';
+import { app } from '../../data/motor/tilstand.js';
+import { kart } from '../kart/kart.js';
+import { startOpp } from '../sider.js';
+import { ui } from '../tilstand.js';
 import { useApp } from './lager.js';
 import Topp from './Topp.jsx';
 import Sidevelger from './Sidevelger.jsx';
@@ -13,7 +14,7 @@ import './App.css';
 
 /* Teknisk informasjon til feilsøking: utgave, måling av hvor jevnt kartet går, siste kall under kartet og listen over kall.
    Skjult til vanlig. Valget lagres ikke i nettleseren, men står i adressen (?teknisk), så siden kan åpnes med det slått på.
-   Med teknisk visning er motoren også tilgjengelig som window.motor, til feilsøking og til regresjonstesten. */
+   Med teknisk visning er tilstanden, temaene og kartet også tilgjengelig som window.motor, til feilsøking og til regresjonstesten. */
 const tekniskIAdressen = () => new URLSearchParams(location.search).has('teknisk');
 
 export default function App() {
@@ -32,7 +33,8 @@ export default function App() {
     if (teknisk)
       window.motor = {
         app,
-        NATURLAG,
+        ui,
+        NATURTEMA,
         get kart() {
           return kart;
         }

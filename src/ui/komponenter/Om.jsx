@@ -1,6 +1,10 @@
 /* Om og metode: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
-import { app, VERSJON } from '../../data/motor/felles.js';
-import { finn, settSmale } from '../../data/motor/handlinger.js';
+import { finn } from '../../data/motor/kommune.js';
+import { app } from '../../data/motor/tilstand.js';
+import { settSmale } from '../kart/plan.js';
+import { kb, tid } from '../tekst.js';
+import { ui } from '../tilstand.js';
+import { VERSJON } from '../../utgave.js';
 import { MdCheckbox, MdLink, MdToggle } from './md.js';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
@@ -30,10 +34,10 @@ export default function Om({ teknisk, settTeknisk }) {
               <tbody>
                 {app.kall.map((r, i) => (
                   <tr key={i}>
-                    <td>{r[0]}</td>
-                    <td>{r[1]}</td>
-                    <td className={'tall' + (r[4] ? ' feil' : '')}>{r[2]}</td>
-                    <td className={'tall' + (r[4] ? ' feil' : '')}>{r[3]}</td>
+                    <td>{r.kilde}</td>
+                    <td>{r.hva}</td>
+                    <td className={'tall' + (r.feilet ? ' feil' : '')}>{r.feilet ? 'feilet' : tid(r.ms)}</td>
+                    <td className={'tall' + (r.feilet ? ' feil' : '')}>{r.feilet ? '' : kb(r.bytes)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -131,12 +135,12 @@ export default function Om({ teknisk, settTeknisk }) {
         {teknisk && <p className="hint">Utgave: {VERSJON}.</p>}
         {teknisk && (
           <p className="hint" role="status">
-            {app.maaling || 'Flytt kartet for å måle hvor jevnt det går.'}
+            {ui.maaling || 'Flytt kartet for å måle hvor jevnt det går.'}
           </p>
         )}
         <MdCheckbox
           label="Vis smale striper i planlagt utbygging"
-          checked={app.visSmale}
+          checked={ui.visSmale}
           onChange={e => settSmale(e.target.checked)}
         />
         <p className="hint">

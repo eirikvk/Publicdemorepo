@@ -1,18 +1,12 @@
-/* Farger: fargelegging av kartbildene i nettleseren. Stilen som sendes til NIBIO, ligger i bronse/nibio-grunnkart.js, og
-   tolkingen av fargene til klasser i solv/klasser.js. */
-import { ALLE, BLANDING, fargeNr } from '../solv/klasser.js';
-import { app, rgb, tidSlutt } from './felles.js';
-import { ingenPlan } from './plan.js';
-/* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve
-   bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se
-   BLANDING i solv/klasser.js, og får en tilsvarende blanding av visningsfargene. */
-/* Fargene som brukes nå. En skjult klasse er gjennomsiktig. Unntaket er når planlagt utbygging vises: da får skjulte klasser et lyst slør,
-   så bakgrunnskartet dempes der og de mørke planfeltene synes tydelig også når de står alene. Fjerde tall er hvor tett fargen er. */
-const SLOR = 0.82;
-export const klassefarger = () => {
-  const slor = app.planPaa && !ingenPlan() ? [...rgb('slor'), SLOR] : null;
-  return ALLE.map(([id]) => (app.vis[id] ? rgb(id) : slor));
-};
+/* Fargelegging av kartbildene fra NIBIO i nettleseren: fra de rene fargene NIBIO tegner klassene i, til fargene i kartet. Stilen
+   som sendes til NIBIO, ligger i data/bronse/nibio-grunnkart.js, og tolkingen av fargene til klasser i data/solv/klasser.js. */
+import { ALLE, BLANDING, fargeNr } from '../../data/solv/klasser.js';
+import { tidSlutt } from '../../data/motor/tilstand.js';
+import { rgb } from '../farger.js';
+/* Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve bildet være, så fargebytte
+   trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se BLANDING i solv/klasser.js, og får en tilsvarende
+   blanding av kartfargene. */
+export const klassefarger = () => ALLE.map(([id]) => rgb(id));
 export function tilFarge(r, g, b, a, F) {
   if (!a) return [0, 0, 0, 0];
   const q = fargeNr(r, g, b),

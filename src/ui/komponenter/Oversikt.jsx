@@ -6,13 +6,13 @@ import { byggGraa } from '../../data/gull/graa.js';
 import { byggInon } from '../../data/gull/inon.js';
 import { byggEndring, byggUtbredelse } from '../../data/gull/regnskap.js';
 import { byggNaturTall } from '../../data/gull/temaer.js';
-import { app, gjeldende } from '../../data/motor/felles.js';
 import { utenPlan } from '../../data/motor/egne.js';
-import { BLOKKER } from '../../data/motor/handlinger.js';
-import { NATURLAG } from '../../data/motor/naturtema.js';
-import { ETT } from './Temaer.jsx';
+import { NATURTEMA } from '../../data/motor/naturtema.js';
+import { app, gjeldende } from '../../data/motor/tilstand.js';
+import { BLOKKER } from '../sider.js';
+import { ETT, TEMAORD } from './Temaer.jsx';
 import { Sidelenke } from './deler.jsx';
-import { andelTekst, antallOrd, dekar, iTekst, stor } from './tekst.js';
+import { andelTekst, antallOrd, dekar, iTekst, stor } from '../tekst.js';
 import './Oversikt.css';
 
 const HENTER = { tall: '', tekst: 'Henter …' },
@@ -41,7 +41,7 @@ function regnskap() {
 
 /* Verneområder, villrein og verdsatt natur: antall, areal og planlagt utbygging innenfor */
 function naturtema(id) {
-  const t = NATURLAG.find(x => x.id === id),
+  const t = { ...NATURTEMA.find(x => x.id === id), ...TEMAORD[id] },
     D = t.data;
   if (!D || !app.valgt || D.nr !== app.valgt.nr) return HENTER;
   if (D.feil) return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);

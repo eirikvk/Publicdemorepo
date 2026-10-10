@@ -1,12 +1,18 @@
-/* Det de andre filene i motoren trenger allerede når de lastes: rutenettene for flisene, hva kartet holder på med, og hjelpere for
-   lag som tegnes i nettleseren. Filen importerer bare fra felles.js og solv/, så den er alltid ferdig lastet før filene som bruker den.
-   Resten av motoren kaller hverandre fram og tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
+/* Felles for kartlagene: flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren. Filen importerer bare
+   fra OpenLayers og datadelen, så den er alltid ferdig lastet før kartlagene som bruker den. Kartlagene kaller hverandre fram og
+   tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER, ORIGO } from '../solv/felles.js';
-import { sti } from '../solv/raster.js';
-import { FLISNIVA, UTM, flater } from './felles.js';
-/* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
-   så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
+import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.js';
+import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.js';
+import { sti } from '../../data/solv/raster.js';
+
+export const MAKSRES = 30; /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */
+export const SVAKEST = 0.35; /* svakeste farge for en piksel med bare litt planlagt utbygging i seg, så den ikke forsvinner helt */
+export const MAKSTETTHET = 2; /* telefoner har ofte tre piksler per punkt; to er nok og gir under halvparten så store bilder */
+
+/* Grunnkartet: fliser fra NIBIO i Kartverkets flisnett. Nettleseren beholder flisene den har hentet, så panorering og zoom tilbake
+   til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. Lagene som tegnes i nettleseren, bruker samme
+   nett fra nivå 5. */
 export const flisnett = new ol.tilegrid.TileGrid({
   origin: ORIGO,
   resolutions: OPPLOSNINGER,
@@ -19,32 +25,15 @@ export const plannett = new ol.tilegrid.TileGrid({
   tileSize: 256,
   minZoom: 5
 });
-/* Hva kartet holder på med. Settes når kartet flyttes og når det hentes fliser. */
+/* Hva kartet holder på med. Settes når kartet flyttes. */
 export const kartflagg = {
   iBevegelse: false /* kartet flyttes nå */,
-  nyeKall: false /* det er hentet nye fliser siden kartet sist begynte å flytte seg */,
-  feilIVisning: false /* en flis i utsnittet kunne ikke hentes */
-};
-export const lerret = () => {
-  const c = document.createElement('canvas');
-  c.width = c.height = 512;
-  return c;
+  startet: 0 /* antall kartbilder bronse hadde bedt om da kartet begynte å flytte seg */,
+  feilet: 0 /* antall kartbilder som hadde feilet da */
 };
 /* En flate fra OpenLayers som sti i et lerret der u er utsnittet og s er piksler per meter */
-export const kommuneSti = (g, geom, u, s) => sti(g, flater(geom), u, s);
-/* Tegner et utsnitt av et bilde over hele flisen. Utsnittet klippes til bildet her, og målet krympes tilsvarende. Standarden sier at
-   nettleseren skal gjøre det selv, men Safari har tegnet ingenting når utsnittet stikker utenfor bildet, og det gjør det for alle
-   fliser langs kanten av kommunen når kartet er zoomet ut. */
-export function tegnUtsnitt(g, bilde, sx, sy, sw, sh) {
-  const x0 = Math.max(0, sx),
-    y0 = Math.max(0, sy),
-    x1 = Math.min(bilde.width, sx + sw),
-    y1 = Math.min(bilde.height, sy + sh);
-  if (!(x1 > x0 && y1 > y0)) return;
-  const fx = 512 / sw,
-    fy = 512 / sh;
-  g.drawImage(bilde, x0, y0, x1 - x0, y1 - y0, (x0 - sx) * fx, (y0 - sy) * fy, (x1 - x0) * fx, (y1 - y0) * fy);
-}
+export const geomSti = (g, geom, u, s) =>
+  sti(g, geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()], u, s);
 /* Myker opp en maske litt, på stedet. Brukes for kommunebildene til inngrepsfri natur og grått areal. */
 export function jevn(P, w, h) {
   /* myker opp maskene litt (vekter 1-2-1 begge veier), så sonegrensene ikke får trappetrinn fra rutene når kartet er zoomet langt inn */
@@ -91,8 +80,18 @@ export const tegnetKilde = tegnFlis =>
 /* Tegner flisene i et lag på nytt. De gamle står til de nye er klare. */
 let friskNr = 0;
 export const utdaterte =
-  new Set(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle */
+  new Set(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle i grunnkart.js */
 export const friskOpp = lag => {
   utdaterte.delete(lag);
   lag.getSource().setKey(String(++friskNr));
+};
+/* Kartlagene følger tilstanden. Hvert lag sjekker ved hver endring om det det tegnes av, er nytt: ny(nokkel, verdi) gir true første
+   gang verdien er en annen enn sist. */
+export const nyttSiden = () => {
+  const sist = new Map();
+  return (nokkel, verdi) => {
+    if (sist.has(nokkel) && sist.get(nokkel) === verdi) return false;
+    sist.set(nokkel, verdi);
+    return true;
+  };
 };

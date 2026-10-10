@@ -13,7 +13,7 @@
     "formater": "prettier --write src verktoy/*.js",
     "sjekk-format": "prettier --check src verktoy/*.js",
     "test": "node verktoy/regresjon.js ut/ny",
-    "sjekk": "node verktoy/sjekk-navn.js && node verktoy/sjekk-regning.js"
+    "sjekk": "node verktoy/sjekk-navn.js && node verktoy/sjekk-lag.js"
   },
   "dependencies": {
     "@fontsource/open-sans": "5.2.7",

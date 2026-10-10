@@ -2,7 +2,7 @@
    ruter på 21 meter, med smale striper tatt bort. Planen og dagens klasser kommer som kartbilder på nivå 9, én flis (512 x 512
    ruter) om gangen. Gir klasse og plan per rute, og antall ruter av hvert slag. Én rute er RUTE km². Alle kryssinger i gull går
    gjennom dette rutenettet. */
-import { HALV, PLANNIVA, RUTE_M, SYNLIG } from './felles.js';
+import { HALV, PLANNIVA, PLAN_FINNES, RUTE_M, SYNLIG } from './felles.js';
 import { leggInnEget } from './egne.js';
 import { JOR, NAT, klasseAv } from './klasser.js';
 
@@ -181,8 +181,9 @@ export function byggPlanRaster(nr, nokler, blokker, delvis, E, rute) {
 }
 
 /* Har kommunen kommuneplan hos DiBK? P er et lite bilde av planlaget over kommunen og M kommunens flate, begge som piksler (RGBA) i
-   samme rutenett. Gir hvor stor del av kommunen planlaget dekker, og rutene med plan (til oppslag om hvilken plan det er).
-   Langs grensen stikker naboenes planer litt inn, så en liten dekning betyr at kommunen ikke har plan der (se PLAN_FINNES). */
+   samme rutenett. Gir hvor stor del av kommunen planlaget dekker, om det regnes som at kommunen har plan, og rutene med plan (til
+   oppslag om hvilken plan det er). Langs grensen stikker naboenes planer litt inn, så en liten dekning betyr at kommunen ikke har
+   plan der (se PLAN_FINNES). */
 export function planDekning(P, M) {
   const treff = [];
   let inne = 0;
@@ -191,5 +192,6 @@ export function planDekning(P, M) {
       inne++;
       if (P[4 * q + 3] >= SYNLIG) treff.push(q);
     }
-  return { dekning: inne ? treff.length / inne : 0, treff };
+  const dekning = inne ? treff.length / inne : 0;
+  return { dekning, finnes: dekning >= PLAN_FINNES, treff };
 }

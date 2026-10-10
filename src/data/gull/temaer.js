@@ -67,9 +67,10 @@ export function klasseAreal(omrader, antall, kommune, innenfor) {
    nK antall verdikategorier, medDekning om utbygging på natur skal deles i kartlagt og ikke kartlagt, og kommune flaten uklippede
    områder klippes mot.
    Gir ruter per område (plan, og smal for ruter i smale striper), per verdikategori for planen med egne områder (S) og planen alene
-   (P), og gap: ruter med planlagt utbygging på natur, og hvor mange av dem som ligger utenfor det kartlagte. Maskene lages første
-   gang de trengs og huskes på områdene (o.maske, D.ekstra.maske). */
-export function kryssNatur(D, R, nK, medDekning, kommune) {
+   (P), og gap: ruter med planlagt utbygging på natur, og hvor mange av dem som ligger utenfor det kartlagte. Maskene lages med
+   naturMaske i sølv. maske(nokkel, lag) gir masken: den som kaller, kan huske maskene per område (nokkel) og bare kalle lag() første
+   gang. */
+export function kryssNatur(D, R, nK, medDekning, kommune, maske) {
   const B = R.basis || null,
     nE = R.eget ? R.antallEgne : 0,
     O = D.omrader;
@@ -87,7 +88,7 @@ export function kryssNatur(D, R, nK, medDekning, kommune) {
       for (let a = 0; a < O.length; a++) {
         const o = O[a];
         if (x < o.ext[0] || x > o.ext[2] || y < o.ext[1] || y > o.ext[3]) continue;
-        const M = o.maske || (o.maske = naturMaske(o, o.uklippet ? kommune : null));
+        const M = maske(o, () => naturMaske(o, o.uklippet ? kommune : null));
         if (!M) continue;
         const px = Math.floor((x - M.u[0]) / M.res),
           py = Math.floor((M.u[3] - y) / M.res);
@@ -126,10 +127,7 @@ export function kryssNatur(D, R, nK, medDekning, kommune) {
   if (medDekning && D.ekstra) {
     /* ruter med planlagt utbygging på natur, uten smale striper, delt på kartlagt og ikke kartlagt */
     const E = D.ekstra,
-      M =
-        E.flate && E.flate.length
-          ? E.maske || (E.maske = naturMaske({ koord: E.flate, ext: omriss(E.flate) }, null))
-          : null;
+      M = E.flate && E.flate.length ? maske(E, () => naturMaske({ koord: E.flate, ext: omriss(E.flate) }, null)) : null;
     const ukjentRute = i => {
       if (!M) return true;
       const px = Math.floor((ruteX(R, i) - M.u[0]) / M.res),
@@ -162,6 +160,10 @@ export function kryssNatur(D, R, nK, medDekning, kommune) {
   return { kryss: { S, P: B ? P : null }, gap, plan, smal };
 }
 
+/* Arealet av et tema som er summen av områdene: verneområder og villreinområder. Overlapper to områder, telles overlappet to
+   ganger. */
+export const samletAreal = omrader => omrader.reduce((s, o) => s + o.km2, 0);
+
 /* Tallene en temaside og oversikten viser for et naturtema. D er temaets data, klasser verdikategoriene hvis temaet har det,
    medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Arealer er i
    km², andeler i prosent, og ruter med planlagt utbygging står både som antall og som km².
@@ -173,20 +175,26 @@ export function byggNaturTall(D, klasser, medDekning, samlet, land) {
   const o = D.omrader,
     E = D.ekstra,
     sum = D.sum || 0,
-    harKlasser = !!(klasser && D.klasser && o.length);
+    harKlasser = !!(klasser && D.klasser && o.length),
+    P = D.plan || new Int32Array(o.length); /* ruter med planlagt utbygging per område, fra kryssNatur */
   const perKlasse = harKlasser
     ? klasser.map((_, v) => {
-        const av = o.filter(x => x.v === v),
-          plan = av.reduce((s, x) => s + x.plan, 0);
-        return { antall: av.length, km2: D.klasser[v], plan, planKm2: plan * RUTE };
+        let antall = 0,
+          plan = 0;
+        o.forEach((x, i) => {
+          if (x.v !== v) return;
+          antall++;
+          plan += P[i];
+        });
+        return { antall, km2: D.klasser[v], plan, planKm2: plan * RUTE };
       })
     : null;
   let helhet = null;
-  if (medDekning && E && E.km2 > 0 && E.inne && D.klasser && land > 0 && o.length > 0) {
+  if (medDekning && E && E.km2 > 0 && D.inne && D.klasser && land > 0 && o.length > 0) {
     const L = land,
       K = Math.min(E.km2, L),
       U = Math.max(0, L - K),
-      inne = E.inne,
+      inne = D.inne,
       ute = D.klasser.map((a, v) => Math.max(0, a - inne[v])),
       si = inne.reduce((a, b) => a + b, 0),
       su = ute.reduce((a, b) => a + b, 0);
@@ -204,8 +212,8 @@ export function byggNaturTall(D, klasser, medDekning, samlet, land) {
       andelUte: andel(su, U)
     };
   }
-  const plan = o.reduce((s, x) => s + x.plan, 0),
-    smal = o.reduce((s, x) => s + x.smal, 0),
+  const plan = P.reduce((s, x) => s + x, 0),
+    smal = (D.smal || []).reduce((s, x) => s + x, 0),
     G = D.gap;
   return {
     sum,
@@ -219,12 +227,18 @@ export function byggNaturTall(D, klasser, medDekning, samlet, land) {
     planKm2: plan * RUTE,
     smal,
     smalKm2: smal * RUTE,
-    berort: o.filter(x => x.plan).length,
+    berort: o.filter((x, i) => P[i]).length,
     gap: G ? { nat: G.nat, natKm2: G.nat * RUTE, ukjentKm2: G.ukjent * RUTE, andel: andel(G.ukjent, G.nat) } : null,
-    vises: (samlet ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan) : o).map(x => ({
-      omr: x,
-      nr: o.indexOf(x),
-      planKm2: x.plan * RUTE
+    vises: (samlet
+      ? o
+          .map((x, i) => i)
+          .filter(i => P[i])
+          .sort((a, b) => P[b] - P[a])
+      : o.map((x, i) => i)
+    ).map(i => ({
+      omr: o[i],
+      nr: i,
+      planKm2: P[i] * RUTE
     }))
   };
 }

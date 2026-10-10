@@ -7,16 +7,38 @@ import { byggInon } from '../../data/gull/inon.js';
 import { byggNaturTall } from '../../data/gull/temaer.js';
 import { GRAATRINN } from '../../data/solv/graa.js';
 import { INONSONER } from '../../data/solv/inon.js';
-import { app, gjeldende } from '../../data/motor/felles.js';
 import { utenPlan } from '../../data/motor/egne.js';
-import { visIKartet } from '../../data/motor/naturtema.js';
-import { settSlor } from '../../data/motor/handlinger.js';
+import { app, gjeldende } from '../../data/motor/tilstand.js';
+import { settSlor, visIKartet } from '../kart/naturtema.js';
+import { ui } from '../tilstand.js';
 import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
-import { andelTekst, antallOrd, dekar, iTekst, nf, periode, pst, stor } from './tekst.js';
+import { andelTekst, antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.js';
 import './Temaer.css';
 
 export const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
+/* Ordene sidene bruker om hvert naturtema: entall, flertall og bestemt form, og kilden */
+export const TEMAORD = {
+  vern: {
+    en: 'verneområde',
+    fl: 'verneområder',
+    best: 'verneområdene',
+    vann: true,
+    kildetekst: 'Miljødirektoratet, naturvernområder'
+  },
+  rein: {
+    en: 'villreinområde',
+    fl: 'villreinområder',
+    best: 'villreinområdene',
+    kildetekst: 'Miljødirektoratet, leveområder for villrein'
+  },
+  verdi: {
+    en: 'verdsatt lokalitet',
+    fl: 'verdsatte lokaliteter',
+    best: 'lokalitetene',
+    kildetekst: 'Miljødirektoratet, naturtyper med KU-verdi og dekningskart for naturtypekartlegging'
+  }
+};
 
 /* Toppen av en temaside: navnet, arealet i kommunen og andelen av landarealet (null når landarealet mangler), og en linje om
    planlagt utbygging. status er henter, feil, ingen eller ok. Detaljene står under, med kilden nederst. Mens temaet hentes, står det
@@ -90,8 +112,9 @@ function Helhet({ t, H, E }) {
 }
 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
-export function Naturtema({ t }) {
-  const D = t.data,
+export function Naturtema({ t: tema }) {
+  const t = { ...tema, ...TEMAORD[tema.id] },
+    D = tema.data,
     ok = !!D && !!app.valgt && D.nr === app.valgt.nr;
   const kilde = (
     <p className="hint">
@@ -187,7 +210,7 @@ export function Naturtema({ t }) {
       {t.dekning && kartlagt && (
         <MdCheckbox
           label="Slør over det som ikke er kartlagt"
-          checked={app.slorPaa}
+          checked={ui.slorPaa}
           onChange={e => settSlor(e.target.checked)}
         />
       )}
@@ -219,7 +242,7 @@ export function Naturtema({ t }) {
                     mode="small"
                     leftIcon={<MdIconLocation />}
                     aria-label={`Vis ${x.navn} i kartet`}
-                    onClick={() => visIKartet(t, x, liId)}
+                    onClick={() => visIKartet(t.id, nr, liId)}
                   >
                     Vis i kartet
                   </MdButton>

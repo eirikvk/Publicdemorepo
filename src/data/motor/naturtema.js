@@ -1,244 +1,84 @@
-/* Naturtema fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Her ligger kartlagene, hentingen og samordningen.
-   Arealet, kartleggingsgraden og kryssingen med planen regnes ut i solv/temaer.js (sølv) og gull/temaer.js (gull). */
-import { ol } from './ol.js';
+/* Datamotoren, naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Hvert tema hentes når en kommune
+   velges, og krysses med planrutenettet når det er regnet ut. Hvordan temaene hentes, står i bronse/mdir-naturtema.js, hvordan
+   flatene gjøres om, i solv/temaer.js, og arealet og kryssingen regnes ut i gull/temaer.js. Kartlagene ligger i ui/kart/naturtema.js,
+   og ordene sidene bruker om hvert tema, i ui/komponenter/Temaer.jsx.
+   Et nytt tema av samme slag legges til i bronse, i EGENSKAPER i solv/temaer.js, som en ny linje i listen under, og med ord og
+   kartlag i ui/. */
 import { hentKartlagt, hentTemaflater } from '../bronse/mdir-naturtema.js';
-import { OPPLOSNINGER } from '../solv/felles.js';
-import { klasseAreal, kryssNatur } from '../gull/temaer.js';
+import { husk } from '../bronse/henting.js';
+import { utsnitt } from '../solv/felles.js';
 import { EGENSKAPER, byggDekning, klippNatur, lokaliteter } from '../solv/temaer.js';
+import { klasseAreal, kryssNatur, samletAreal } from '../gull/temaer.js';
 import { utenPlan } from './egne.js';
-import { app, endret, farge, flater, husk, rgb, rolig, tidSlutt, tilKartet, valgNr } from './felles.js';
-import { TOM, friskOpp, kommuneSti, lerret, plannett, tegnetKilde } from './grunnlag.js';
-import { view } from './kart.js';
-/* Naturlag fra Miljødirektoratet: verneområder, leveområder for villrein og verdsatt natur. Tjenestene gir selve flatene med navn og
-   opplysninger, ikke bare et bilde. Hvert tema blir et kartlag og en egen side, og krysses med planlagt utbygging. Hvordan temaet
-   hentes, står i bronse/mdir-naturtema.js, og hvordan egenskapene leses, i EGENSKAPER i solv/temaer.js. Et nytt tema av samme slag
-   legges til der og som en ny linje i listen under. */
-export const NATURLAG = [
-  {
-    id: 'vern',
-    navn: 'Verneområder',
-    en: 'verneområde',
-    fl: 'verneområder',
-    best: 'verneområdene',
-    vann: true,
-    kildetekst: 'Miljødirektoratet, naturvernområder'
-  },
-  {
-    id: 'rein',
-    navn: 'Villrein',
-    en: 'villreinområde',
-    fl: 'villreinområder',
-    best: 'villreinområdene',
-    kildetekst: 'Miljødirektoratet, leveområder for villrein'
-  },
-  /* Naturtyper med verdi etter Miljødirektoratets fire verdikategorier. Det er mange små lokaliteter, så de tegnes fylt og uten hvit
-     kant, i fire toner av samme farge: mørkere jo høyere verdi. I tallpanelet listes bare lokalitetene som berøres av planlagt utbygging.
-     Dekningskartet viser hvor det er kartlagt. Det som ikke er kartlagt, kan få et lyst slør i kartet. */
+import { app, endret, tidSlutt, valgNr } from './tilstand.js';
+
+/* Temaene. samlet: mange små lokaliteter, der arealet per verdikategori regnes samlet og bare de som berøres av planlagt utbygging,
+   listes. dekning: temaet har et kart over hvor det er kartlagt. klasser: verdikategoriene, [navn, farge], høyest verdi først.
+   data er det som er hentet og regnet ut for valgt kommune. */
+export const NATURTEMA = [
+  { id: 'vern', navn: 'Verneområder' },
+  { id: 'rein', navn: 'Villrein' },
   {
     id: 'verdi',
     navn: 'Verdsatt natur',
-    en: 'verdsatt lokalitet',
-    fl: 'verdsatte lokaliteter',
-    best: 'lokalitetene',
     samlet: true,
-    flate: true,
-    avLand: true,
     dekning: true,
     klasser: [
       ['Svært stor verdi', 'verdi1'],
       ['Stor verdi', 'verdi2'],
       ['Middels verdi', 'verdi3'],
       ['Noe verdi', 'verdi4']
-    ],
-    kildetekst: 'Miljødirektoratet, naturtyper med KU-verdi og dekningskart for naturtypekartlegging',
-    ekstra: hentDekning
+    ]
   }
-].map(t => {
-  t.kilde = new ol.source.Vector();
-  t.minne = new Map();
+].map(t => ({ ...t, data: null, minne: new Map() }));
+
+/* Kartleggingsgrad: hvor stor del av kommunen som er kartlagt etter Miljødirektoratets instruks. Uten den er «ingen registrert»
+   lett å misforstå. */
+async function hentDekning(k, grense) {
+  const j = await hentKartlagt(k, grense.ext);
+  return byggDekning(j.features || [], grense);
+}
+
+export async function hentNatur(t, k, grense, mitt) {
   t.data = null;
-  t.paa = false; /* naturlagene er av når siden åpnes, så kartet starter enkelt */
-  /* Bare omriss: en hvit kant og en farget strek. En fylling over hele området måtte tegnes på nytt i hvert bilde når kartet flyttes.
-     Laget deler lerret med planlaget, så de klippes samlet. Den store bufferen gjør at alle omrissene i kommunen tegnes i ett, også de
-     utenfor utsnittet, så de er på plass mens kartet flyttes. */
-  /* Fylte flater tegnes om til kartfliser i nettleseren, slik planlaget gjør. Tusen små flater som vektor måtte tegnes på nytt i hvert
-     bilde når kartet flyttes. Som fliser tegnes de én gang og flyttes som bilder. */
-  /* Et område som er mindre enn noen få piksler i kartet, for eksempel et fredet tre, tegnes som en liten ring med fast størrelse.
-     Som omriss ville det blinket når kartet flyttes: havner alle punktene i samme piksel, blir streken null lang og tegnes ikke. */
-  const midt = f => f.midt || (f.midt = new ol.geom.Point(ol.extent.getCenter(f.getGeometry().getExtent())));
-  t.strek = [
-    new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(255,255,255,.92)', width: 6 }) }),
-    new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge(t.id), width: 2.75 }) })
-  ];
-  t.merke = [
-    new ol.style.Style({
-      geometry: midt,
-      image: new ol.style.Circle({ radius: 7, fill: new ol.style.Fill({ color: 'rgba(255,255,255,.92)' }) })
-    }),
-    new ol.style.Style({
-      geometry: midt,
-      image: new ol.style.Circle({ radius: 4, stroke: new ol.style.Stroke({ color: farge(t.id), width: 2.75 }) })
-    })
-  ];
-  t.lag = t.flate
-    ? new ol.layer.Tile({ className: 'plan', visible: false, source: tegnetKilde(tile => tegnFlateflis(t, tile)) })
-    : new ol.layer.Vector({
-        className: 'plan',
-        source: t.kilde,
-        visible: false,
-        renderBuffer: 4000,
-        style: (f, res) => {
-          const u = f.getGeometry().getExtent();
-          return Math.max(u[2] - u[0], u[3] - u[1]) < 8 * res ? t.merke : t.strek;
-        }
-      });
-  return t;
-});
-/* Slør over det som ikke er kartlagt: flisene fylles med en lys farge, og de kartlagte flatene stanses ut. Fliser uten noe kartlagt
-   deler ett og samme bilde, så laget koster lite der hele flisen er ukjent. Laget ligger under naturflatene og planlaget. */
-const dekKilde = new ol.source.Vector();
-let heltSlor = null;
-const slorFarge = () => `rgba(${rgb('slor').join(',')},.55)`;
-function tegnSlorflis(tile) {
-  const u = plannett.getTileCoordExtent(tile.getTileCoord()),
-    fl = dekKilde.getFeaturesInExtent(u);
-  if (!fl.length) {
-    if (!heltSlor) {
-      heltSlor = lerret();
-      const g = heltSlor.getContext('2d');
-      g.fillStyle = slorFarge();
-      g.fillRect(0, 0, 512, 512);
-    }
-    tile.setImage(heltSlor);
-    return;
-  }
-  const t0 = performance.now(),
-    c = lerret(),
-    g = c.getContext('2d'),
-    s = 512 / (u[2] - u[0]);
-  g.fillStyle = slorFarge();
-  g.fillRect(0, 0, 512, 512);
-  g.globalCompositeOperation = 'destination-out';
-  g.fillStyle = '#000';
-  for (const f of fl) {
-    kommuneSti(g, f.getGeometry(), u, s);
-    g.fill('evenodd');
-  }
-  tile.setImage(c);
-  tidSlutt('slør, fliser', t0);
-}
-export const dekLag = new ol.layer.Tile({ className: 'plan', visible: false, source: tegnetKilde(tegnSlorflis) });
-function settDekning(t) {
-  /* de kartlagte flatene for valgt kommune inn i sløret */
-  const E = t.data && t.data.ekstra;
-  dekKilde.clear();
-  if (E && E.f) dekKilde.addFeatures(E.f);
-  friskOpp(dekLag);
-}
-/* Rekkefølge i kartet: fylte flater ligger under planlaget, så planlagt utbygging oppå verdifull natur synes. Omriss ligger øverst. */
-export const flateLag = NATURLAG.filter(t => t.flate).map(t => t.lag),
-  omrissLag = NATURLAG.filter(t => !t.flate).map(t => t.lag);
-/* Kommunen som flate med utsnitt, slik analysene tar den */
-const kommunen = geom => ({ koord: flater(geom), ext: geom.getExtent() });
-function tegnFlateflis(t, tile) {
-  /* enkeltflatene som berører flisen, tegnet tett og så gjort litt gjennomsiktige samlet, så overlapp ikke blir mørkere */
-  const t0 = performance.now(),
-    u = plannett.getTileCoordExtent(tile.getTileCoord()),
-    fl = t.kilde.getFeaturesInExtent(u);
-  if (!fl.length) {
-    tile.setState(TOM);
-    return;
-  }
-  const c = lerret(),
-    g = c.getContext('2d'),
-    s = 512 / (u[2] - u[0]);
-  g.fillStyle = g.strokeStyle = farge(t.id);
-  g.lineWidth = 1;
-  g.lineJoin = 'round';
-  if (t.klasser)
-    fl.sort(
-      (a, b) => b.get('v') - a.get('v')
-    ); /* lavest verdi først, så den høyeste ligger øverst der lokaliteter overlapper */
-  for (const f of fl) {
-    if (t.klasser) {
-      const v = f.get('v');
-      g.fillStyle = farge(t.klasser[v][1]);
-      g.strokeStyle = farge(t.klasser[Math.max(0, v - 1)][1]);
-    }
-    kommuneSti(g, f.getGeometry(), u, s);
-    g.fill('evenodd');
-    g.stroke();
-  }
-  g.globalCompositeOperation = 'destination-in';
-  g.fillStyle = 'rgba(0,0,0,.82)';
-  g.fillRect(0, 0, 512, 512);
-  tile.setImage(c);
-  tidSlutt(t.navn.toLowerCase() + ', fliser', t0);
-}
-/* Kartleggingsgrad: hvor stor del av kommunen som er kartlagt etter Miljødirektoratets instruks. Uten den er «ingen registrert» lett å misforstå. */
-async function hentDekning(k, geom) {
-  const j = await hentKartlagt(k, geom.getExtent());
-  const D = byggDekning(j.features || [], kommunen(geom));
-  if (D.flate) D.f = D.flate.map(p => new ol.Feature(new ol.geom.Polygon(p))); /* til sløret i kartet */
-  return D;
-}
-export async function hentNatur(t, k, geom, mitt) {
-  t.data = null;
-  t.kilde.clear();
-  if (t.flate) friskOpp(t.lag);
-  if (t.dekning) settDekning(t);
-  visNatur(t);
+  endret();
   try {
     let pakke = t.minne.get(k.nr);
     if (!pakke) {
       const j = await hentTemaflater(t.id, t.navn, k);
       if (mitt !== valgNr) return;
       if (!j || !Array.isArray(j.features)) throw new Error('uventet svar');
-      const med = o => {
-        const g = new ol.geom.MultiPolygon(o.koord);
-        return {
-          ...o,
-          f: new ol.Feature({ geometry: g, navn: o.navn, v: o.v || 0 }),
-          ext: g.getExtent(),
-          maske: null,
-          plan: 0,
-          smal: 0
-        };
-      };
+      const med = o => ({ ...o, ext: utsnitt(o.koord) });
       if (t.samlet) {
-        const kom = kommunen(geom),
-          alle = lokaliteter(j.features, kom, EGENSKAPER[t.id]),
-          r = klasseAreal(alle, t.klasser ? t.klasser.length : 1, kom),
+        const alle = lokaliteter(j.features, grense, EGENSKAPER[t.id]),
+          r = klasseAreal(alle, t.klasser ? t.klasser.length : 1, grense),
           omrader = alle.map(med);
         pakke = {
           omrader,
           sum: r.sum,
           klasser: t.klasser ? r.klasser : null,
-          vis: omrader.map(o => o.f),
           ufullstendig: !!j.exceededTransferLimit
         };
       } else {
-        const omrader = klippNatur(j.features, kommunen(geom), EGENSKAPER[t.id]).map(med);
-        pakke = { omrader, sum: omrader.reduce((s, o) => s + o.km2, 0), vis: omrader.map(o => o.f) };
+        const omrader = klippNatur(j.features, grense, EGENSKAPER[t.id]).map(med);
+        pakke = { omrader, sum: samletAreal(omrader) };
       }
       husk(t.minne, k.nr, pakke, 30);
     }
     t.data = { nr: k.nr, ...pakke, pakke };
-    t.kilde.addFeatures(pakke.vis);
-    if (t.flate) friskOpp(t.lag);
-    if (t.dekning) settDekning(t);
-    if (t.ekstra && pakke.ekstra === undefined) {
+    endret();
+    if (t.dekning && pakke.ekstra === undefined) {
       pakke.ekstra = null;
-      t.ekstra(k, geom)
+      hentDekning(k, grense)
         .then(v => {
           if (t.klasser && v && v.flate && v.flate.length)
             try {
-              v.inne = klasseAreal(pakke.omrader, t.klasser.length, kommunen(geom), v.flate).klasser;
+              pakke.inne = klasseAreal(pakke.omrader, t.klasser.length, grense, v.flate).klasser;
             } catch (e) {}
           pakke.ekstra = v;
           if (t.data && t.data.pakke === pakke) {
             t.data.ekstra = v;
-            if (t.dekning) settDekning(t);
+            t.data.inne = pakke.inne;
             regnNatur(t);
           }
         })
@@ -250,79 +90,24 @@ export async function hentNatur(t, k, geom, mitt) {
   }
   regnNatur(t);
 }
+
+/* Maskene til områdene og det kartlagte, til kryssingen. De lages første gang de trengs, og huskes så lenge området finnes. */
+const masker = new WeakMap();
+const maske = (nokkel, lag) => masker.get(nokkel) || (masker.set(nokkel, lag()), masker.get(nokkel));
+
+/* Krysser temaet med planrutenettet hvis det er regnet ut, legger tallene i temaets data og sier fra. plan og smal er ruter med
+   planlagt utbygging per område, i samme rekkefølge som områdene. */
 export function regnNatur(t) {
-  /* samordner: krysser temaet med planen hvis den er regnet ut, legger tallene i temaets data og ber om ny tegning */
   const D = t.data;
-  if (!D || !app.valgt || D.nr !== app.valgt.nr) return visNatur(t);
+  if (!D || !app.valgt || D.nr !== app.valgt.nr) return endret();
   const R = app.planRaster && app.planRaster.nr === app.valgt.nr && !utenPlan() ? app.planRaster : null,
     t0 = performance.now();
-  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, kommunen(app.klipp)) : null;
-  D.omrader.forEach((o, a) => {
-    o.plan = r ? r.plan[a] : 0;
-    o.smal = r ? r.smal[a] : 0;
-  });
+  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, app.grense, maske) : null;
+  D.plan = r ? r.plan : new Int32Array(D.omrader.length);
+  D.smal = r ? r.smal : new Int32Array(D.omrader.length);
   D.regnet = !!R;
   D.kryss = r ? r.kryss : null;
   D.gap = r ? r.gap : null;
-  visNatur(t);
+  endret();
   tidSlutt(t.navn.toLowerCase(), t0);
-}
-/* Kartlagene for temaet følger tilstanden. Tekst, tall og lister for temaet tegnes av siden, se visning/Tema.jsx. */
-export function visNatur(t) {
-  const D = t.data,
-    ok = !!D && !!app.valgt && D.nr === app.valgt.nr,
-    o = ok ? D.omrader : [];
-  t.lag.setVisible(t.paa && !!app.klipp && ok && o.length > 0);
-  if (t.dekning) {
-    const kartlagt = ok && !!D.ekstra && D.ekstra.km2 > 0;
-    dekLag.setVisible(t.paa && app.slorPaa && !!app.klipp && kartlagt);
-  }
-  endret();
-}
-/* Ett område valgt fra en liste: kartet flyttes dit, området får en tydelig ramme, og en liten merkelapp i kartet sier hva som vises
-   og gir veien tilbake til listen. Markeringen står til et annet område velges, temaet slås av eller kommunen byttes. */
-const markKilde = new ol.source.Vector();
-
-const markStrek = [
-  new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 8 }) }),
-  new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#171C1A', width: 3.5 }) })
-];
-const markMidt = f => new ol.geom.Point(ol.extent.getCenter(f.getGeometry().getExtent()));
-const markRing = [
-  new ol.style.Style({
-    geometry: markMidt,
-    image: new ol.style.Circle({ radius: 13, stroke: new ol.style.Stroke({ color: '#fff', width: 8 }) })
-  }),
-  new ol.style.Style({
-    geometry: markMidt,
-    image: new ol.style.Circle({ radius: 13, stroke: new ol.style.Stroke({ color: '#171C1A', width: 3.5 }) })
-  })
-];
-export const markLag = new ol.layer.Vector({
-  className: 'merket',
-  source: markKilde,
-  style: (f, res) => {
-    const u = f.getGeometry().getExtent();
-    return Math.max(u[2] - u[0], u[3] - u[1]) < 16 * res ? markRing : markStrek;
-  }
-});
-export function fjernMerket() {
-  markKilde.clear();
-  if (app.vist) {
-    app.vist = null;
-    endret();
-  }
-}
-/* t er temaet, o området og liId id-en til området i listen, så man kan finne veien tilbake dit. */
-export function visIKartet(t, o, liId) {
-  if (!t.paa) {
-    t.paa = true;
-    visNatur(t);
-  }
-  markKilde.clear();
-  markKilde.addFeature(new ol.Feature(o.f.getGeometry()));
-  app.vist = { id: t.id, navn: o.navn, liId };
-  endret();
-  view.fit(o.ext, { padding: [56, 56, 96, 56], minResolution: OPPLOSNINGER[13], duration: rolig() ? 0 : 400 });
-  tilKartet(true);
 }

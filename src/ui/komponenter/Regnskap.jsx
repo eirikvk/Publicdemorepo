@@ -3,10 +3,10 @@
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
    Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.js. Her blir de tekst, stolper og tabell. */
 import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann } from '../../data/gull/regnskap.js';
-import { app, gjeldende } from '../../data/motor/felles.js';
 import { utenPlan } from '../../data/motor/egne.js';
+import { app, gjeldende } from '../../data/motor/tilstand.js';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.jsx';
-import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from './tekst.js';
+import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.js';
 import './Regnskap.css';
 
 /* Hele dekar fra km², og en endring i hele dekar med fortegn */

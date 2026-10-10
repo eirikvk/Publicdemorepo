@@ -1,11 +1,12 @@
-/* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages av
-   motoren (motor/kart.js) og settes inn her. */
+/* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages i
+   ui/kart/kart.js og settes inn her. */
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { app, rolig } from '../../data/motor/felles.js';
-import { velgSide } from '../../data/motor/handlinger.js';
-import { byttTilValgt, lagKart, plasserBytt, settByttKnapp } from '../../data/motor/kart.js';
 import { lastOppPlan } from '../../data/motor/egne.js';
-import { fjernMerket } from '../../data/motor/naturtema.js';
+import { app } from '../../data/motor/tilstand.js';
+import { byttTilValgt, lagKart, plasserBytt, rolig, settByttKnapp } from '../kart/kart.js';
+import { fjernMerket } from '../kart/naturtema.js';
+import { velgSide } from '../sider.js';
+import { ui } from '../tilstand.js';
 import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.js';
 import './Kartpanel.css';
 
@@ -19,24 +20,24 @@ function Kart() {
   return <div className="kartflate" ref={ref} />;
 }
 
-/* Knappen som bytter til kommunen man trykket på utenfor valgt kommune. Motoren plasserer den over punktet. */
+/* Knappen som bytter til kommunen man trykket på utenfor valgt kommune. Kartet plasserer den over punktet. */
 function Bytt() {
   const ref = useRef(null);
   useLayoutEffect(() => {
     settByttKnapp(ref.current);
     plasserBytt();
   });
-  if (!app.bytt) return null;
+  if (!ui.bytt) return null;
   return (
     <div className="bytt" ref={ref}>
-      <MdButton onClick={byttTilValgt}>Bytt til {app.bytt.navn}</MdButton>
+      <MdButton onClick={byttTilValgt}>Bytt til {ui.bytt.navn}</MdButton>
     </div>
   );
 }
 
 /* Fra merkelappen i kartet tilbake til området i listen på temaets side. */
 function tilListen() {
-  const v = app.vist;
+  const v = ui.vist;
   if (!v) return;
   velgSide(v.id);
   /* Siden som nettopp er valgt, kan ikke få fokus før nettleseren har tegnet den */
@@ -60,7 +61,7 @@ export default function Kartpanel({ teknisk }) {
       lastOppPlan(f);
     }
   };
-  const p = app.probe;
+  const p = ui.probe;
   return (
     <section className="kartpanel" aria-label="Kart">
       <div
@@ -81,14 +82,14 @@ export default function Kartpanel({ teknisk }) {
           </div>
         )}
         <Bytt />
-        {app.sidezoom && (
+        {ui.sidezoom && (
           <div className="merkelapp midt" role="status">
             Siden er forstørret. Knip sammen for å zoome ut, så virker kartet igjen.
           </div>
         )}
-        {app.vist && (
+        {ui.vist && (
           <div className="vistmerke">
-            <b>{app.vist.navn}</b>
+            <b>{ui.vist.navn}</b>
             <MdButton theme="tertiary" mode="small" onClick={tilListen}>
               Til listen
             </MdButton>
@@ -97,7 +98,7 @@ export default function Kartpanel({ teknisk }) {
             </MdIconButton>
           </div>
         )}
-        {app.ute && (
+        {ui.ute && (
           <div className="merkelapp nede">
             Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.
           </div>
@@ -115,7 +116,7 @@ export default function Kartpanel({ teknisk }) {
             p.tekst
           )}
         </p>
-        {teknisk && <p className="hint">{app.siste}</p>}
+        {teknisk && <p className="hint">{ui.siste}</p>}
       </div>
     </section>
   );

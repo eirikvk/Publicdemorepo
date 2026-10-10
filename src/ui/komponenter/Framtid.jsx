@@ -1,13 +1,19 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
    planen. Tallene kommer ferdig regnet ut fra gull/planlagt.js. */
 import { byggPlanlagt } from '../../data/gull/planlagt.js';
-import { app, gjeldende } from '../../data/motor/felles.js';
 import { utenPlan } from '../../data/motor/egne.js';
 import { ingenPlan } from '../../data/motor/plan.js';
+import { app, gjeldende } from '../../data/motor/tilstand.js';
 import Egne from './Egne.jsx';
 import { Rute } from './deler.jsx';
-import { antallOrd, iTekst, pst } from './tekst.js';
+import { antallOrd, iTekst, pst } from '../tekst.js';
 import { MdAlertMessage } from './md.js';
+
+/* Hvilken plan DiBK har, i tekst: plan-id, hvem som har levert den, og når den ble kopiert til DiBK */
+export const planKilde = p =>
+  p
+    ? `plan ${p.id}${p.vert ? ' fra ' + p.vert : ''}${p.kopiert ? `, kopiert til DiBK ${p.kopiert[2]}.${p.kopiert[1]}.${p.kopiert[0]}` : ''}`
+    : '';
 
 /* Planlagt utbygging: status for kommuneplanen og arealet natur og jordbruk som settes av. */
 function Planlagt() {
@@ -22,7 +28,7 @@ function Planlagt() {
         ? 'Fikk ikke sjekket om Direktoratet for byggkvalitet (DiBK) har en kommuneplan for kommunen.'
         : ingen
           ? `Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for ${navn}, så planlagt utbygging kan ikke vises eller regnes ut.`
-          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.kilde ? ': ' + i.kilde : ''}.${i.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
+          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.plan ? ': ' + planKilde(i.plan) : ''}.${i.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
   const tilstand = app.planTall ? app.planTall.tilstand : 'tom',
     R = gjeldende(app.planRaster);
   let natur = '',

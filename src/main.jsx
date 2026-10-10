@@ -1,5 +1,5 @@
 /* Inngangen til siden: stilen fra designsystemet, skriften, kartets stil og sidens felles stil, så selve siden. Hver komponent
-   henter sin egen stil selv. Stilene lastes før motoren, så de er på plass når kartet lages. */
+   henter sin egen stil selv. Stilene lastes før kartet, så de er på plass når det lages. */
 import '@fontsource/open-sans/400.css';
 import '@fontsource/open-sans/600.css';
 import '@miljodirektoratet/md-css/src/tokens/index.css';
@@ -22,7 +22,7 @@ import 'ol/ol.css';
 import './grunnlag.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { FARGER } from './data/motor/felles.js';
+import { FARGER } from './ui/farger.js';
 import App from './ui/komponenter/App.jsx';
 
 /* Kartets farger som CSS-variabler, så tegnforklaringene bruker de samme fargene som kartet. */
