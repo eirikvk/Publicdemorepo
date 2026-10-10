@@ -1,11 +1,13 @@
 /* Temasidene: verneområder, villrein og verdsatt natur fra Miljødirektoratet, inngrepsfri natur og grått areal. Hvert tema er en
    egen side. Toppen svarer på det samme for alle temaene: hvor mye som finnes i kommunen, hvor stor del av landarealet det er,
    og hvor mye planlagt utbygging som ligger innenfor. Under står detaljene. */
-import { app, gjeldende, RUTE } from '../motor/felles.js';
+import { RUTE } from '../analyse/felles.js';
+import { GRAATRINN } from '../analyse/graa.js';
+import { INONSONER } from '../analyse/inon.js';
+import { byggNaturTall } from '../analyse/temaer.js';
+import { app, gjeldende } from '../motor/felles.js';
 import { utenPlan } from '../motor/egne.js';
-import { GRAATRINN } from '../motor/graa.js';
-import { INONSONER } from '../motor/inon.js';
-import { byggNaturTall, visIKartet } from '../motor/naturtema.js';
+import { visIKartet } from '../motor/naturtema.js';
 import { settSlor } from '../motor/handlinger.js';
 import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';

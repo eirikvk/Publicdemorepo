@@ -1,7 +1,8 @@
 /* Det brukeren kan gjøre: velge kommune, velge side, og oppstarten. Sidens komponenter kaller funksjonene her. */
 import { ol } from './ol.js';
 import { sluttTegning, visEgneLag } from './egne.js';
-import { KV, UTM, app, endret, hent, nyttValg, utm33, valgNr } from './felles.js';
+import { areal, m2PerKm2 } from '../analyse/felles.js';
+import { KV, UTM, app, endret, flater, hent, nyttValg, valgNr } from './felles.js';
 import { tema } from './fliser.js';
 import { graaLag, sjekkGraa, visGraa } from './graa.js';
 import { friskOpp } from './grunnlag.js';
@@ -81,7 +82,7 @@ async function hentGrense(k, mitt, behold) {
     const geom = new ol.format.GeoJSON().readGeometry(j.omrade, { dataProjection: UTM, featureProjection: UTM });
     grenseKilde.clear();
     grenseKilde.addFeature(new ol.Feature(geom));
-    app.flate = geom.getArea() / utm33(geom); /* flaten i km², rettet for målestokken i kartprojeksjonen */
+    app.flate = areal(flater(geom)) / m2PerKm2(geom.getExtent()); /* flaten i km², rettet for målestokken i UTM */
     app.klipp = geom;
     endret();
     tema.setExtent(geom.getExtent());

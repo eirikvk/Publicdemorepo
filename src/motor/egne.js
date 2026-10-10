@@ -1,6 +1,9 @@
-/* Egne områder: tegning i kartet, opplasting av plan, og tabellene som sammenligner med kommuneplanen. */
+/* Egne områder: tegning i kartet, opplasting av plan, og radene som sammenligner med kommuneplanen. Hvilke flater som er
+   utbygging, hvordan de legges inn i planrutenettet og hvordan radene bygges, ligger i analyse/egne.js. */
 import { ol } from './ol.js';
-import { OPPLOSNINGER, ORIGO, UTM, app, endret, farge, nf, tilKartet, utm33 } from './felles.js';
+import { EGET_MIN_M2, OPPLOSNINGER, areal, m2PerKm2 } from '../analyse/felles.js';
+import { byggEgneRader, planType } from '../analyse/egne.js';
+import { UTM, app, endret, farge, flater, nf, tilKartet } from './felles.js';
 import { kommuneSti, lerret } from './grunnlag.js';
 import { finn, velg } from './handlinger.js';
 import { kart, lukkBytt, view } from './kart.js';
@@ -93,7 +96,7 @@ function egneEndret() {
 }
 function nyttEget(geom) {
   if (!app.valgt) return;
-  if (!(geom.getArea() > 400)) {
+  if (!(geom.getArea() > EGET_MIN_M2)) {
     app.egneStatus = { tekst: 'Området ble for lite til å regnes ut. Tegn et større område.', type: 'warning' };
     endret();
     return;
@@ -106,19 +109,18 @@ function nyttEget(geom) {
     lopenr,
     navn: `Eget område ${lopenr}`,
     kilde: 'tegnet',
-    deler: [{ geom, type: 'bygg', ext: geom.getExtent() }],
+    deler: [{ geom, koord: flater(geom), type: 'bygg', ext: geom.getExtent() }],
     ext: geom.getExtent(),
-    km2: geom.getArea() / utm33(geom),
+    km2: areal(flater(geom)) / m2PerKm2(geom.getExtent()),
     tall: null
   };
   g.f = new ol.Feature({ geometry: geom, lopenr, type: 'bygg' });
   app.egne.push(g);
   egneEndret();
 }
-/* Opplastet plan i samme GeoJSON-format som DiBKs nedlasting av plandata: flater med arealformål og arealbruksstatus.
-   Bebyggelse, anlegg og samferdsel (arealformål i 1000- og 2000-serien) med status framtidig regnes som utbygging, slik som for
-   kommuneplanen fra DiBK. Alle andre flater med arealformål regnes som ikke utbygging. Innenfor flatene erstatter filen kommuneplanen.
-   Filen leses i nettleseren og sendes ingen steder. */
+/* Opplastet plan i samme GeoJSON-format som DiBKs nedlasting av plandata: flater med arealformål og arealbruksstatus. Hvilke
+   flater som regnes som utbygging, står i planType i analyse/egne.js. Innenfor flatene erstatter filen kommuneplanen. Filen leses i
+   nettleseren og sendes ingen steder. */
 const siffer = v => {
   const m = /\d+/.exec(v === undefined || v === null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
   return m ? m[0] : '';
@@ -151,7 +153,7 @@ function finnProjeksjon(j, punkt, mot) {
 }
 /* Tolker innholdet i en planfil. valgtNr er kommunen som er valgt nå, erKommune sier om et nummer er en kommune, og midtAv gir et
    punkt midt i en kommune, brukt til å gjette projeksjonen. Gir { feil } med en melding, eller flatene og opplysningene om planen.
-   Ren regning: endrer ingenting. */
+   Endrer ingenting. */
 function lesPlanfil(j, valgtNr, erKommune, midtAv) {
   const alle = (j.type === 'FeatureCollection' ? j.features : j.type === 'Feature' ? [j] : j.features) || [];
   const polygoner = alle.filter(
@@ -196,12 +198,13 @@ function lesPlanfil(j, valgtNr, erKommune, midtAv) {
     const p = f.properties || {},
       formal = siffer(egenskap(p, 'arealformål', 'arealformal', 'arealformaal', 'Arealformål')),
       status = siffer(egenskap(p, 'arealbruksstatus', 'arealbrukstatus', 'Arealbruksstatus'));
-    const type = !medFormal.length || (/^[12]/.test(formal) && (status === '' || status === '2')) ? 'bygg' : 'fri';
+    const type = planType(formal, status, medFormal.length > 0);
     if (type === 'bygg') bygg++;
-    const e = geom.getExtent();
+    const e = geom.getExtent(),
+      koord = flater(geom);
     ol.extent.extend(ext, e);
-    km2 += geom.getArea() / utm33(geom);
-    deler.push({ geom, type, ext: e });
+    km2 += areal(koord) / m2PerKm2(e);
+    deler.push({ geom, koord, type, ext: e });
   }
   if (!deler.length) return { feil: 'Flatene i filen kunne ikke leses.' };
   const planid = String(
@@ -252,58 +255,9 @@ export async function lastOppPlan(fil) {
     melding('Filen kunne ikke leses som GeoJSON.');
   }
 }
-/* Resultatet for egne områder, etter samme mal som for kommuneplanen: natur og jordbruk som går med, og hvor mye av det som ligger
-   i verneområder, villreinområder, verdsatt natur per verdi og natur som ikke er kartlagt. Hver rad viser kommuneplanen alene,
-   tallet med egne områder og endringen mellom dem. Natur og jordbruk vises også som andel av det som finnes i kommunen i dag. */
-/* Radene i sammenligningen mellom kommuneplanen og egne områder. e er null for hele kommunen, ellers nummeret til området, og T er
-   tallene for det området. R er rutenettet, GK kryssingen med grått areal, tema temaene som er krysset med planen ({ navn, id,
-   klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er navn, farge, planen alene, med egne områder,
-   hva andelen regnes av, og gruppe. Ren regning. */
-function byggEgneRader(e, T, R, harPlan, GK, tema, gap) {
-  const ut = [];
-  ut.push([
-    'Natur',
-    'pnat',
-    harPlan ? (T ? T.fnat : R.basis.rn) : null,
-    T ? T.nnat : R.sum.rn,
-    e === null ? R.iDag.nat : 0,
-    ''
-  ]);
-  ut.push([
-    'Jordbruk',
-    'pjor',
-    harPlan ? (T ? T.fjor : R.basis.rj) : null,
-    T ? T.njor : R.sum.rj,
-    e === null ? R.iDag.jor : 0,
-    ''
-  ]);
-  if (GK) {
-    const x = X => (e === null ? X : X.eg[e] || { graa: 0, gron: 0, gront: 0 });
-    ut.push(['Grått areal', 'graa2', harPlan ? x(GK.P).graa : null, x(GK.S).graa, 0, '']);
-    ut.push(['– minst halvt grønt', '', harPlan ? x(GK.P).gron : null, x(GK.S).gron, 0, '']);
-    ut.push(['Grønt i bebygd', 'gront', harPlan ? x(GK.P).gront : null, x(GK.S).gront, 0, '']);
-  }
-  const verdi = [],
-    ruter = (X, v) => (e === null ? X.alt[v] : X.eg[e] ? X.eg[e][v] : 0);
-  for (const t of tema) {
-    const K = t.kryss;
-    if (t.klasser)
-      t.klasser.forEach(([navn, id], v) =>
-        verdi.push([navn, id, harPlan ? ruter(K.P, v) : null, ruter(K.S, v), 0, 'Av dette i verdsatt natur'])
-      );
-    else ut.push([t.navn, t.id, harPlan ? ruter(K.P, 0) : null, ruter(K.S, 0), 0, 'Av dette i']);
-  }
-  if (gap && gap.plan)
-    ut.push([
-      'Ikke kartlagt natur',
-      '',
-      harPlan ? (e === null ? gap.plan.ukjent : gap.plan.eg[e] ? gap.plan.eg[e].ukjent : 0) : null,
-      e === null ? gap.ukjent : gap.eg[e] ? gap.eg[e].ukjent : 0,
-      0,
-      'Av dette i'
-    ]);
-  return ut.concat(verdi);
-}
+/* Radene i sammenligningen mellom kommuneplanen og egne områder, for hele kommunen eller ett område. Radene bygges av byggEgneRader i
+   analyse/egne.js: natur og jordbruk som går med, og hvor mye av det som ligger i grått areal, verneområder, villreinområder,
+   verdsatt natur per verdi og natur som ikke er kartlagt. Hver rad viser kommuneplanen alene, tallet med egne områder og endringen. */
 export function egneRader(e) {
   /* finner det radene bygges av i tilstanden. e: null for hele kommunen, ellers nummeret i listen over egne områder */
   const R = app.planRaster,
@@ -365,51 +319,4 @@ export function egenMaske(u) {
     ut = new Uint8Array(262144);
   for (let i = 0, q = 0; i < a.length; i += 4, q++) if (a[i + 3] >= 128) ut[q] = a[i] > a[i + 1] ? 1 : 2;
   return ut;
-}
-export function leggInnEget(g, merke, d, kl, eget, G) {
-  /* et eget område eller en opplastet plan inn i rutenettet: rutene med midtpunkt i flatene */
-  const u = g.ext,
-    m = G.m,
-    X0 = Math.max(0, Math.floor((u[0] - ORIGO[0]) / m) - G.cx0),
-    X1 = Math.min(G.w - 1, Math.floor((u[2] - ORIGO[0]) / m) - G.cx0),
-    Y0 = Math.max(0, Math.floor((ORIGO[1] - u[3]) / m) - G.cy0),
-    Y1 = Math.min(G.h - 1, Math.floor((ORIGO[1] - u[1]) / m) - G.cy0);
-  if (X1 < X0 || Y1 < Y0) return;
-  const B = 1024,
-    c = document.createElement('canvas'),
-    k = c.getContext('2d', { willReadFrequently: true });
-  for (let y0 = Y0; y0 <= Y1; y0 += B)
-    for (let x0 = X0; x0 <= X1; x0 += B) {
-      const cw = Math.min(B, X1 - x0 + 1),
-        ch = Math.min(B, Y1 - y0 + 1),
-        vx = ORIGO[0] + (G.cx0 + x0) * m,
-        oy = ORIGO[1] - (G.cy0 + y0) * m,
-        bit = [vx, oy - ch * m, vx + cw * m, oy];
-      const deler = g.deler.filter(del => ol.extent.intersects(del.ext, bit));
-      if (!deler.length) continue;
-      c.width = cw;
-      c.height = ch;
-      for (const type of ['fri', 'bygg']) {
-        k.fillStyle = type === 'bygg' ? '#f00' : '#0f0';
-        for (const del of deler)
-          if (del.type === type) {
-            kommuneSti(k, del.geom, bit, 1 / m);
-            k.fill('evenodd');
-          }
-      } /* utbygging tegnes sist og vinner der flater overlapper */
-      const a = k.getImageData(0, 0, cw, ch).data;
-      for (let y = 0; y < ch; y++)
-        for (let x = 0; x < cw; x++) {
-          const q = 4 * (y * cw + x);
-          if (a[q + 3] < 128) continue;
-          const i = (y0 + y) * G.w + x0 + x,
-            kls = kl[i];
-          eget[i] = merke;
-          G.type[i] = a[q] > a[q + 1] ? 1 : 2;
-          if (a[q] > a[q + 1]) {
-            if (kls === 3) d[i] = 1;
-            else if (kls === 2) d[i] = 2;
-          } else if (d[i] === 1 || d[i] === 2) d[i] = 0;
-        }
-    }
 }

@@ -1,8 +1,10 @@
 /* Det de andre filene i motoren trenger allerede når de lastes: rutenettene for flisene, køen for kall mot kartkildene og hjelpere
-   for lag som tegnes i nettleseren. Filen importerer bare fra felles.js, så den er alltid ferdig lastet før filene som bruker den.
+   for lag som tegnes i nettleseren. Filen importerer bare fra felles.js og analyse/, så den er alltid ferdig lastet før filene som bruker den.
    Resten av motoren kaller hverandre fram og tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import { ol } from './ol.js';
-import { FLISNIVA, OPPLOSNINGER, ORIGO, SAMTIDIG, UTM, app, endret, flater, husk, kb, logg, nf } from './felles.js';
+import { OPPLOSNINGER, ORIGO } from '../analyse/felles.js';
+import { sti } from '../analyse/raster.js';
+import { FLISNIVA, SAMTIDIG, UTM, app, endret, flater, husk, kb, logg, nf } from './felles.js';
 /* Kartlaget: fliser fra NIBIO i et fast rutenett. Nettleseren beholder flisene den har hentet,
    så panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
 export const flisnett = new ol.tilegrid.TileGrid({
@@ -112,17 +114,8 @@ export const lerret = () => {
   c.width = c.height = 512;
   return c;
 };
-export function kommuneSti(g, geom, u, s) {
-  /* kommuneflaten som sti i et lerret der u er utsnittet og s er piksler per meter */
-  g.beginPath();
-  for (const flate of flater(geom))
-    for (const ring of flate) {
-      ring.forEach(([x, y], i) =>
-        i ? g.lineTo((x - u[0]) * s, (u[3] - y) * s) : g.moveTo((x - u[0]) * s, (u[3] - y) * s)
-      );
-      g.closePath();
-    }
-}
+/* En flate fra OpenLayers som sti i et lerret der u er utsnittet og s er piksler per meter */
+export const kommuneSti = (g, geom, u, s) => sti(g, flater(geom), u, s);
 /* Tegner et utsnitt av et bilde over hele flisen. Utsnittet klippes til bildet her, og målet krympes tilsvarende. Standarden sier at
    nettleseren skal gjøre det selv, men Safari har tegnet ingenting når utsnittet stikker utenfor bildet, og det gjør det for alle
    fliser langs kanten av kommunen når kartet er zoomet ut. */

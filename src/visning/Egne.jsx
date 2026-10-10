@@ -1,7 +1,8 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene regnes ut i motor/plan.js og
    motor/egne.js, radene i tabellene i byggEgneRader. */
 import { useRef } from 'react';
-import { app, gjeldende, RUTE } from '../motor/felles.js';
+import { RUTE } from '../analyse/felles.js';
+import { app, gjeldende } from '../motor/felles.js';
 import {
   angrePunkt,
   egneRader,

@@ -1,26 +1,10 @@
-/* Naturtema fra Miljødirektoratet: verneområder, villrein og verdsatt natur, med kartlag, utregning og kryssing mot planen. */
+/* Naturtema fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Her ligger kartlagene, hentingen og samordningen.
+   Arealet, kartleggingsgraden og kryssingen med planen regnes ut i analyse/temaer.js. */
 import { ol } from './ol.js';
-import polygonClipping from 'polygon-clipping';
+import { OPPLOSNINGER } from '../analyse/felles.js';
+import { byggDekning, klasseAreal, klippNatur, kryssNatur, samleNatur } from '../analyse/temaer.js';
 import { utenPlan } from './egne.js';
-import {
-  OPPLOSNINGER,
-  ORIGO,
-  app,
-  endret,
-  farge,
-  flater,
-  flerflate,
-  hent,
-  husk,
-  rgb,
-  rolig,
-  rutenett,
-  tegneflate,
-  tidSlutt,
-  tilKartet,
-  utm33,
-  valgNr
-} from './felles.js';
+import { app, endret, farge, flater, hent, husk, rgb, rolig, tidSlutt, tilKartet, valgNr } from './felles.js';
 import { TOM, friskOpp, kommuneSti, lerret, plannett, tegnetKilde } from './grunnlag.js';
 import { view } from './kart.js';
 /* Naturlag fra Miljødirektoratet: verneområder og leveområder for villrein. Tjenestene gir selve flatene med navn og opplysninger,
@@ -195,64 +179,8 @@ function settDekning(t) {
 /* Rekkefølge i kartet: fylte flater ligger under planlaget, så planlagt utbygging oppå verdifull natur synes. Omriss ligger øverst. */
 export const flateLag = NATURLAG.filter(t => t.flate).map(t => t.lag),
   omrissLag = NATURLAG.filter(t => !t.flate).map(t => t.lag);
-function naturMaske(g, kommune) {
-  /* området som et lite rutenett med dekning per rute. kommune oppgis bare hvis flaten ikke alt er klippet. */
-  const e = kommune ? ol.extent.getIntersection(g.getExtent(), kommune.getExtent()) : g.getExtent();
-  if (ol.extent.isEmpty(e)) return null;
-  const res = Math.max(10, Math.max(e[2] - e[0], e[3] - e[1]) / 1500),
-    w = Math.ceil((e[2] - e[0]) / res) + 1,
-    h = Math.ceil((e[3] - e[1]) / res) + 1,
-    u = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
-  const k = tegneflate(w, h);
-  kommuneSti(k, g, u, 1 / res);
-  k.fill('evenodd');
-  if (kommune) {
-    k.globalCompositeOperation = 'destination-in';
-    kommuneSti(k, kommune, u, 1 / res);
-    k.fill('evenodd');
-  }
-  const d = k.getImageData(0, 0, w, h).data,
-    a = new Uint8Array(w * h);
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) {
-    a[i] = d[4 * i + 3];
-    sum += a[i];
-  }
-  return { u, res, w, h, a, km2: ((sum / 255) * res * res) / 1e6 };
-}
-/* Hver flate klippes mot kommunegrensen én gang, og resultatet huskes så lenge siden er åpen: navn, opplysninger, areal i kommunen,
-   den klippede flaten og maskene. Velges kommunen igjen, trengs verken kall mot Miljødirektoratet eller ny utregning. */
-function klippNatur(t, j, geom) {
-  const kom = flater(geom),
-    m2 = utm33(geom);
-  return j.features
-    .map(f => {
-      const g = f.geometry;
-      if (!g || !g.coordinates) return null;
-      const hele = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
-      let koord = null,
-        uklippet = false,
-        km2;
-      try {
-        koord = polygonClipping.intersection(hele, kom);
-      } catch (e) {
-        koord = null;
-      }
-      if (koord) {
-        if (!koord.length) return null;
-        km2 = new ol.geom.MultiPolygon(koord).getArea() / m2;
-      } else {
-        koord = hele;
-        uklippet = true;
-        const m = naturMaske(new ol.geom.MultiPolygon(hele), geom);
-        if (!m || !(m.km2 > 0)) return null;
-        km2 = m.km2;
-      } /* klippingen feilet: flaten klippes i kartet i stedet */
-      return km2 > 0 ? { koord, uklippet, km2, ...t.les(f.properties || {}) } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.km2 - a.km2);
-}
+/* Kommunen som flate med utsnitt, slik analysene tar den */
+const kommunen = geom => ({ koord: flater(geom), ext: geom.getExtent() });
 function tegnFlateflis(t, tile) {
   /* enkeltflatene som berører flisen, tegnet tett og så gjort litt gjennomsiktige samlet, så overlapp ikke blir mørkere */
   const t0 = performance.now(),
@@ -288,76 +216,6 @@ function tegnFlateflis(t, tile) {
   tile.setImage(c);
   tidSlutt(t.navn.toLowerCase() + ', fliser', t0);
 }
-/* Mange små flater som overlapper: arealet finnes ved å tegne dem i et rutenett over kommunen og summere dekningen i rutene.
-   Én tegning per verdikategori, der alle flater med minst den verdien tegnes som én sammenhengende form og klippes mot kommunen.
-   Forskjellen mellom tegningene gir arealet per kategori uten dobbeltelling: der lokaliteter overlapper, teller den høyeste verdien,
-   slik kartet også viser det. Dette er mye raskere enn å slå sammen tusen flater geometrisk, som låste siden i opptil et sekund.
-   Enkeltflatene beholdes for navn, liste og kryssing med planlagt utbygging. */
-function klasseAreal(omrader, antall, geom, innenfor) {
-  /* innenfor: en flate arealet også skal klippes mot, for eksempel det kartlagte */
-  const m2 = utm33(geom),
-    { res, w, h, u } = rutenett(geom.getExtent(), 1536, 10);
-  const g = tegneflate(w, h),
-    kum = [];
-  const med = ring => {
-    let a = 0;
-    for (let i = 0; i < ring.length - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
-    return a > 0;
-  }; /* omløpsretning */
-  for (let v = 0; v < antall && omrader.length; v++) {
-    g.globalCompositeOperation = 'source-over';
-    g.clearRect(0, 0, w, h);
-    g.beginPath();
-    for (const o of omrader) {
-      if ((o.v || 0) > v) continue;
-      for (const flate of o.koord)
-        flate.forEach((ring, nr) => {
-          /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
-          const snu = med(ring) !== (nr === 0),
-            n = ring.length;
-          for (let i = 0; i < n; i++) {
-            const q = ring[snu ? n - 1 - i : i],
-              x = (q[0] - u[0]) / res,
-              y = (u[3] - q[1]) / res;
-            if (i) g.lineTo(x, y);
-            else g.moveTo(x, y);
-          }
-          g.closePath();
-        });
-    }
-    g.fill('nonzero');
-    g.globalCompositeOperation = 'destination-in';
-    kommuneSti(g, geom, u, 1 / res);
-    g.fill('evenodd');
-    if (innenfor) {
-      kommuneSti(g, innenfor, u, 1 / res);
-      g.fill('evenodd');
-    }
-    const d = g.getImageData(0, 0, w, h).data;
-    let sum = 0;
-    for (let i = 3; i < d.length; i += 4) sum += d[i];
-    kum.push(((sum / 255) * res * res) / m2);
-  }
-  return {
-    klasser: Array.from({ length: antall }, (_, v) => Math.max(0, (kum[v] || 0) - (v ? kum[v - 1] || 0 : 0))),
-    sum: kum.length ? kum[kum.length - 1] : 0
-  };
-}
-function samleNatur(t, j, geom) {
-  const m2 = utm33(geom),
-    areal = k => (k && k.length ? new ol.geom.MultiPolygon(k).getArea() / m2 : 0);
-  const omrader = j.features
-    .filter(f => f.geometry && f.geometry.coordinates)
-    .map(f => {
-      const koord = flerflate(f.geometry);
-      return { koord, uklippet: false, km2: areal(koord), ...t.les(f.properties || {}) };
-    })
-    .sort(
-      (a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2
-    ); /* høyest verdi først, så en planrute der lokaliteter overlapper regnes til den høyeste */
-  const r = klasseAreal(omrader, t.klasser ? t.klasser.length : 1, geom);
-  return { omrader, klasser: t.klasser ? r.klasser : null, sum: r.sum };
-}
 /* Kartleggingsgrad: hvor stor del av kommunen som er kartlagt etter Miljødirektoratets instruks. Uten den er «ingen registrert» lett å misforstå. */
 async function hentDekning(k, geom) {
   const j = await hent(
@@ -381,19 +239,9 @@ async function hentDekning(k, geom) {
         f: 'geojson'
       })
   );
-  const fl = (j.features || []).filter(f => f.geometry && f.geometry.coordinates);
-  if (!fl.length) return { km2: 0 };
-  const kom = flater(geom),
-    u = polygonClipping.intersection(polygonClipping.union(...fl.map(f => flerflate(f.geometry))), kom);
-  const aar = fl.map(f => parseInt((f.properties || {})['Årstall'], 10)).filter(v => v > 1900);
-  return {
-    km2: u.length ? new ol.geom.MultiPolygon(u).getArea() / utm33(geom) : 0,
-    fra: aar.length ? Math.min(...aar) : null,
-    til: aar.length ? Math.max(...aar) : null,
-    flate: u,
-    f: u.map(p => new ol.Feature(new ol.geom.Polygon(p))),
-    maske: null
-  };
+  const D = byggDekning(j.features || [], kommunen(geom));
+  if (D.flate) D.f = D.flate.map(p => new ol.Feature(new ol.geom.Polygon(p))); /* til sløret i kartet */
+  return D;
 }
 export async function hentNatur(t, k, geom, mitt) {
   t.data = null;
@@ -432,7 +280,7 @@ export async function hentNatur(t, k, geom, mitt) {
         };
       };
       if (t.samlet) {
-        const r = samleNatur(t, j, geom),
+        const r = samleNatur(j.features, kommunen(geom), t.les, t.klasser ? t.klasser.length : null),
           omrader = r.omrader.map(med);
         pakke = {
           omrader,
@@ -442,7 +290,7 @@ export async function hentNatur(t, k, geom, mitt) {
           ufullstendig: !!j.exceededTransferLimit
         };
       } else {
-        const omrader = klippNatur(t, j, geom).map(med);
+        const omrader = klippNatur(j.features, kommunen(geom), t.les).map(med);
         pakke = { omrader, sum: omrader.reduce((s, o) => s + o.km2, 0), vis: omrader.map(o => o.f) };
       }
       husk(t.minne, k.nr, pakke, 30);
@@ -457,7 +305,7 @@ export async function hentNatur(t, k, geom, mitt) {
         .then(v => {
           if (t.klasser && v && v.flate && v.flate.length)
             try {
-              v.inne = klasseAreal(pakke.omrader, t.klasser.length, geom, new ol.geom.MultiPolygon(v.flate)).klasser;
+              v.inne = klasseAreal(pakke.omrader, t.klasser.length, kommunen(geom), v.flate).klasser;
             } catch (e) {}
           pakke.ekstra = v;
           if (t.data && t.data.pakke === pakke) {
@@ -474,108 +322,13 @@ export async function hentNatur(t, k, geom, mitt) {
   }
   regnNatur(t);
 }
-/* Påvirkning: hver rute med planlagt utbygging (21 meter) slås opp i maskene. Ruter i smale striper telles for seg. */
-function kryssNatur(D, R, nK, medDekning, kommune) {
-  /* D: områdene i temaet. R: rutenettet for planen. nK: antall verdiklasser. kommune: flaten uklippede områder klippes mot.
-     Ren regning: gir tallene tilbake. Det eneste den endrer, er maskene, som lages første gang de trengs og huskes. */
-  const B = R.basis || null,
-    nE = R.eget ? R.antallEgne : 0,
-    O = D.omrader;
-  const tom = () => ({ alt: new Int32Array(nK), eg: Array.from({ length: nE }, () => new Int32Array(nK)) }),
-    S = tom(),
-    P = tom(); /* S: med egne områder. P: kommuneplanen alene. */
-  const plan = new Int32Array(O.length),
-    smal = new Int32Array(O.length);
-  const m = OPPLOSNINGER[R.z] / 2,
-    X = i => ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * m,
-    Y = i => ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + 0.5) * m,
-    fjernet = i => B.ryddet[i] && R.alle[i] !== 1 && R.alle[i] !== 2; /* i planen, tatt ut av et eget område */
-  if (O.length) {
-    const treff = i => {
-      /* nummeret til området ruta ligger i, eller -1 */
-      const x = X(i),
-        y = Y(i);
-      for (let a = 0; a < O.length; a++) {
-        const o = O[a];
-        if (x < o.ext[0] || x > o.ext[2] || y < o.ext[1] || y > o.ext[3]) continue;
-        const M = o.maske || (o.maske = naturMaske(o.f.getGeometry(), o.uklippet ? kommune : null));
-        if (!M) continue; /* masken lages først når en planrute ligger i nærheten */
-        const px = Math.floor((x - M.u[0]) / M.res),
-          py = Math.floor((M.u[3] - y) / M.res);
-        if (px < 0 || py < 0 || px >= M.w || py >= M.h || M.a[py * M.w + px] < 128) continue;
-        return a;
-      }
-      return -1;
-    };
-    for (const i of R.celler) {
-      const a = treff(i);
-      if (a < 0) continue;
-      const v = O[a].v || 0,
-        e = nE ? R.eget[i] : 0;
-      if (R.ryddet[i]) {
-        plan[a]++;
-        S.alt[v]++;
-        if (e) S.eg[e - 1][v]++;
-      } else smal[a]++;
-      if (B && B.ryddet[i]) {
-        P.alt[v]++;
-        if (e) P.eg[e - 1][v]++;
-      }
-    }
-    if (B)
-      for (const i of B.celler) {
-        if (!fjernet(i)) continue;
-        const a = treff(i);
-        if (a < 0) continue;
-        const v = O[a].v || 0,
-          e = R.eget[i];
-        P.alt[v]++;
-        if (e) P.eg[e - 1][v]++;
-      }
-  }
-  let gap = null;
-  if (medDekning && D.ekstra) {
-    /* ruter med planlagt utbygging på natur, uten smale striper, delt på kartlagt og ikke kartlagt */
-    const E = D.ekstra,
-      M = E.flate && E.flate.length ? E.maske || (E.maske = naturMaske(new ol.geom.MultiPolygon(E.flate), null)) : null;
-    const ukjentRute = i => {
-      if (!M) return true;
-      const px = Math.floor((X(i) - M.u[0]) / M.res),
-        py = Math.floor((M.u[3] - Y(i)) / M.res);
-      return px < 0 || py < 0 || px >= M.w || py >= M.h || M.a[py * M.w + px] < 128;
-    };
-    const ny = () => ({ nat: 0, ukjent: 0, eg: Array.from({ length: nE }, () => ({ nat: 0, ukjent: 0 })) }),
-      G = ny(),
-      GP = ny();
-    const tell = (T, i, uk) => {
-      const e = nE ? R.eget[i] : 0;
-      T.nat++;
-      if (uk) T.ukjent++;
-      if (e) {
-        T.eg[e - 1].nat++;
-        if (uk) T.eg[e - 1].ukjent++;
-      }
-    };
-    for (const i of R.celler) {
-      const s = R.ryddet[i] === 1,
-        b = !!B && B.ryddet[i] === 1;
-      if (!s && !b) continue;
-      const uk = ukjentRute(i);
-      if (s) tell(G, i, uk);
-      if (b) tell(GP, i, uk);
-    }
-    if (B) for (const i of B.celler) if (B.ryddet[i] === 1 && fjernet(i)) tell(GP, i, ukjentRute(i));
-    gap = { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
-  }
-  return { kryss: { S, P: B ? P : null }, gap, plan, smal };
-}
 export function regnNatur(t) {
   /* samordner: krysser temaet med planen hvis den er regnet ut, legger tallene i temaets data og ber om ny tegning */
   const D = t.data;
   if (!D || !app.valgt || D.nr !== app.valgt.nr) return visNatur(t);
   const R = app.planRaster && app.planRaster.nr === app.valgt.nr && !utenPlan() ? app.planRaster : null,
     t0 = performance.now();
-  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, app.klipp) : null;
+  const r = R ? kryssNatur(D, R, t.klasser ? t.klasser.length : 1, !!t.dekning, kommunen(app.klipp)) : null;
   D.omrader.forEach((o, a) => {
     o.plan = r ? r.plan[a] : 0;
     o.smal = r ? r.smal[a] : 0;
@@ -585,41 +338,6 @@ export function regnNatur(t) {
   D.gap = r ? r.gap : null;
   visNatur(t);
   tidSlutt(t.navn.toLowerCase(), t0);
-}
-/* Tallene som vises for et naturtema, regnet ut fra områdene. D er temaets data, klasser verdiklassene hvis temaet har det,
-   medDekning om temaet har kartleggingsgrad, samlet om bare berørte områder skal listes, og land landarealet i km². Ren regning. */
-export function byggNaturTall(D, klasser, medDekning, samlet, land) {
-  const o = D.omrader,
-    E = D.ekstra;
-  /* per verdiklasse: antall lokaliteter og ruter med planlagt utbygging */
-  const perKlasse =
-    klasser && D.klasser && o.length
-      ? klasser.map((_, v) => {
-          const av = o.filter(x => x.v === v);
-          return { antall: av.length, plan: av.reduce((s, x) => s + x.plan, 0) };
-        })
-      : null;
-  /* Helhetsbildet: landarealet L delt i kartlagt K og ikke kartlagt U, og verdsatt natur per verdi innenfor og utenfor det kartlagte. */
-  let helhet = null;
-  if (medDekning && E && E.km2 > 0 && E.inne && D.klasser && land > 0 && o.length > 0) {
-    const L = land,
-      K = Math.min(E.km2, L),
-      U = Math.max(0, L - K),
-      inne = E.inne,
-      ute = D.klasser.map((a, v) => Math.max(0, a - inne[v]));
-    helhet = { L, K, U, inne, ute, si: inne.reduce((a, b) => a + b, 0), su: ute.reduce((a, b) => a + b, 0) };
-  }
-  return {
-    klasser: perKlasse,
-    helhet,
-    plan: o.reduce((s, x) => s + x.plan, 0),
-    smal: o.reduce((s, x) => s + x.smal, 0),
-    berort: o.filter(x => x.plan)
-      .length /* ruter med planlagt utbygging, ruter i smale striper og antall områder som berøres */,
-    vises: samlet
-      ? o.filter(x => x.plan).sort((a, b) => b.plan - a.plan)
-      : o /* av mange små lokaliteter listes bare de som berøres */
-  };
 }
 /* Kartlagene for temaet følger tilstanden. Tekst, tall og lister for temaet tegnes av siden, se visning/Tema.jsx. */
 export function visNatur(t) {

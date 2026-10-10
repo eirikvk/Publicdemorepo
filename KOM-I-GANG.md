@@ -51,7 +51,7 @@ GitHub Pages. `dist/` kan legges på en hvilken som helst webserver, også i en 
 
 | Kommando | Hva den gjør | Tid |
 |---|---|---|
-| `npm run sjekk` | Sjekker at alle navn er definert eller importert, og skillet mellom regning og tegning | Sekunder |
+| `npm run sjekk` | Sjekker at alle navn er definert eller importert, og at analysene holder seg for seg selv | Sekunder |
 | `npm run sjekk-format` | Sjekker formateringen. `npm run formater` retter den. | Sekunder |
 | `npm test` | Regresjonstesten: bygger siden og kjører Trondheim, Surnadal og Oslo i Chromium | Noen minutter |
 

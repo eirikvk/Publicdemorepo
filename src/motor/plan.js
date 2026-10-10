@@ -1,24 +1,12 @@
-/* Planlagt utbygging: kommuneplanen fra DiBK som kartlag, rutenettet for hele kommunen og arealtallene. */
+/* Planlagt utbygging: kommuneplanen fra DiBK som kartlag, hentingen til planrutenettet og samordningen av utregningen. Selve
+   utregningen ligger i analyse/plan.js. */
 import { ol } from './ol.js';
-import { egenMaske, leggInnEget, mine, utenPlan } from './egne.js';
-import { klasseAv } from './farger.js';
-import {
-  JOR,
-  KL,
-  NAT,
-  OPPLOSNINGER,
-  SVAKEST,
-  UTM,
-  app,
-  endret,
-  gjeldende,
-  hent,
-  rgb,
-  rutenett,
-  tegneflate,
-  tidSlutt,
-  valgNr
-} from './felles.js';
+import { BILDE_PLANDEKNING, PLANNIVA, PLAN_FINNES, RUTE, RUTE_M, rutenett } from '../analyse/felles.js';
+import { JOR, KL, NAT, klasseAv } from '../analyse/klasser.js';
+import { byggPlanRaster, planDekning, tellBlokk } from '../analyse/plan.js';
+import { tegneflate } from '../analyse/raster.js';
+import { egenMaske, mine, utenPlan } from './egne.js';
+import { SVAKEST, UTM, app, endret, gjeldende, hent, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, fargeleggFliser, hentPlan } from './fliser.js';
 import { regnGraa } from './graa.js';
 import { TOM, friskOpp, kommuneSti, lerret, plannett } from './grunnlag.js';
@@ -203,52 +191,6 @@ export const tegnPlan = () => planLag.setSource(nyPlanKilde());
    Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 let regnNr = 0;
 
-/* Én flis på nivå 9: dagens klasser lagt oppå planen. K er dagens klasser og P planen, begge som piksler. fliser er de hentede
-   kartflisene innenfor, eller null når hele kommunen er kjent. Ren regning. */
-function tellBlokk(K, P, tc, fliser) {
-  const d = new Uint8Array(262144),
-    kl = new Uint8Array(262144),
-    pl = new Uint8Array(262144),
-    n = {
-      beb: 0,
-      nat: 0,
-      jor: 0,
-      pnat: 0,
-      pjor: 0
-    }; /* kl: dagens klasse per rute, 0 ukjent, 1 bebygd, 2 jordbruk, 3 natur, 4–6 vann */
-  if (fliser) {
-    d.fill(3);
-    for (const [z, x, y] of fliser) {
-      const sh = z - tc[0],
-        s = 512 >> sh,
-        cx = ((x * 512) >> sh) - tc[1] * 512,
-        cy = ((y * 512) >> sh) - tc[2] * 512;
-      for (let j = 0; j < s; j++) d.fill(0, (cy + j) * 512 + cx, (cy + j) * 512 + cx + s);
-    }
-  }
-  for (let i = 0, q = 0; i < K.length; i += 4, q++) {
-    if (K[i + 3] < 100) continue;
-    const k = klasseAv(K[i], K[i + 1], K[i + 2]),
-      plan = P[i + 3] >= 128; /* minst halve ruta ligger i en planflate */
-    kl[q] = k + 1;
-    if (plan && k <= NAT) pl[q] = 1; /* pl: planlagt utbygging på land, også der det alt er bebygd */
-    if (!k) {
-      n.beb++;
-      continue;
-    }
-    if (k !== JOR && k !== NAT) continue; /* vann telles ikke */
-    const jor = k === JOR;
-    if (jor) {
-      n.jor++;
-      if (plan) n.pjor++;
-    } else {
-      n.nat++;
-      if (plan) n.pnat++;
-    }
-    if (plan) d[q] = jor ? 2 : 1;
-  }
-  return { sig: fliser ? fliser.length : -1, d, kl, pl, n };
-}
 async function hentBlokk(tc, fliser) {
   const [K, buf] = await Promise.all([dagensKlasser(tc), ingenPlan() ? null : hentPlan(planUrl(tc))]);
   if (!K) throw new Error('mangler dagens klasser');
@@ -256,137 +198,10 @@ async function hentBlokk(tc, fliser) {
   if (buf) g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
   return { ...tellBlokk(K, g.getImageData(0, 0, 512, 512).data, tc, fliser), utenPlan: !buf };
 }
-function ryddStriper(d, w) {
-  /* fjerner smale striper fra rutenettet, se forklaringen i byggPlanRaster. Ren regning. */
-  const celler = [];
-  for (let i = 0; i < d.length; i++) {
-    const v = d[i];
-    if (v === 1 || v === 2) celler.push(i);
-  }
-  const ryddet = new Uint8Array(d.length);
-  let front = [];
-  for (const i of celler) {
-    const x = i % w;
-    if (x > 0 && x < w - 1 && i >= w && i < d.length - w && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) {
-      ryddet[i] = d[i];
-      front.push(i);
-    }
-  }
-  while (front.length) {
-    const ny = [];
-    for (const i of front)
-      for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) {
-        const v = d[j];
-        if ((v === 1 || v === 2) && !ryddet[j]) {
-          ryddet[j] = v;
-          ny.push(j);
-        }
-      }
-    front = ny;
-  }
-  let rn = 0,
-    rj = 0;
-  for (const i of celler) {
-    if (ryddet[i] === 1) rn++;
-    else if (ryddet[i] === 2) rj++;
-  }
-  return { celler, ryddet, rn, rj };
-}
-/* Setter blokkene sammen til ett rutenett for kommunen, legger inn egne områder og rydder bort smale striper. nokler er [x, y]
-   for flisene på nivå 9, delvis sier at bare en del av kommunen er hentet, og rute er rutestørrelsen i meter slik den skal oppgis.
-   Ren regning: leser ingenting fra siden og gir alt tilbake i ett objekt. */
-function byggPlanRaster(nr, nokler, blokker, delvis, E, rute) {
-  const Z = 9,
-    kant = delvis ? 1 : 0,
-    tx0 = Math.min(...nokler.map(t => t[0])),
-    ty0 = Math.min(...nokler.map(t => t[1]));
-  const cx0 = tx0 * 512 - kant,
-    cy0 = ty0 * 512 - kant,
-    w = (Math.max(...nokler.map(t => t[0])) - tx0 + 1) * 512 + 2 * kant,
-    h = (Math.max(...nokler.map(t => t[1])) - ty0 + 1) * 512 + 2 * kant;
-  /* Verdier per rute: 0 ingenting, 1 natur og 2 jordbruk satt av til utbygging, 3 ukjent fordi kartet ikke er hentet der.
-     Ukjente ruter teller som naboer, så et felt ikke skrelles av langs kanten av det hentede. */
-  let d = new Uint8Array(w * h);
-  const kl = new Uint8Array(w * h),
-    pl = new Uint8Array(w * h),
-    n = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
-  if (delvis) d.fill(3);
-  for (const [x, y] of nokler) {
-    const b = blokker.get(`${x}/${y}`),
-      start = ((y - ty0) * 512 + kant) * w + (x - tx0) * 512 + kant;
-    for (let r = 0; r < 512; r++) {
-      d.set(b.d.subarray(r * 512, r * 512 + 512), start + r * w);
-      kl.set(b.kl.subarray(r * 512, r * 512 + 512), start + r * w);
-      pl.set(b.pl.subarray(r * 512, r * 512 + 512), start + r * w);
-    }
-    for (const k in n) n[k] += b.n[k];
-  }
-  /* Egne områder: innenfor hvert tegnet område erstatter tegningen kommuneplanen. Som utbygging går all natur og alt jordbruk
-     i området med. Som ikke utbygging fjernes det planen setter av der. Planen alene regnes også ut, så forskjellen kan vises. */
-  let basis = null,
-    eget = null,
-    egetType = null;
-  if (E.length) {
-    basis = ryddStriper(d, w);
-    d = d.slice();
-    eget = new Uint8Array(w * h);
-    egetType = new Uint8Array(w * h);
-    E.forEach((g, i) => leggInnEget(g, i + 1, d, kl, eget, { cx0, cy0, w, h, m: OPPLOSNINGER[Z] / 2, type: egetType }));
-  }
-  /* Smale striper: et felt som ikke er bredere enn to ruter (rundt 40 meter) noe sted. De oppstår der plangrensen og grunnkartet ikke
-     treffer hverandre, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle fire sider.
-     Så beholdes alt som henger sammen med en kjerne. Et større felt beholdes dermed helt, også der det smalner av, og bare
-     felt uten kjerne faller bort. */
-  const { celler, ryddet, rn, rj } = ryddStriper(d, w);
-  /* Per eget område: hva som ligger der i dag, hva planen alene tar (f) og hva som går med nå (n). */
-  const egneTall = E.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0, fnat: 0, fjor: 0, nnat: 0, njor: 0 }));
-  if (E.length)
-    for (let i = 0; i < eget.length; i++) {
-      const e = eget[i];
-      if (!e) continue;
-      const T = egneTall[e - 1],
-        c = kl[i],
-        b = basis.ryddet[i],
-        ny = ryddet[i];
-      if (c === 3) T.nat++;
-      else if (c === 2) T.jor++;
-      else if (c === 1) T.beb++;
-      else if (c >= 4) T.vann++;
-      else T.ukjent++;
-      if (b === 1) T.fnat++;
-      else if (b === 2) T.fjor++;
-      if (ny === 1) T.nnat++;
-      else if (ny === 2) T.njor++;
-    }
-  return {
-    nr,
-    z: Z,
-    cx0,
-    cy0,
-    w,
-    h,
-    alle: d,
-    ryddet,
-    celler: Int32Array.from(celler),
-    eget,
-    egetType,
-    kl,
-    pl,
-    antallEgne: E.length,
-    basis,
-    sum: { rn, rj },
-    iDag: { nat: n.nat, jor: n.jor },
-    n,
-    delvis,
-    fliser: nokler.length,
-    rute,
-    egneTall
-  };
-}
 /* Samordner utregningen: finner ut hva som kan regnes ut nå, henter blokkene som mangler, bygger rutenettet og ber om ny tegning. */
 async function regnPlan() {
   const mitt = ++regnNr,
-    Z = 9;
+    Z = PLANNIVA;
   const sett = tilstand => {
     app.planTall = { tilstand };
     endret();
@@ -431,8 +246,8 @@ async function regnPlan() {
   }
   if (mitt !== regnNr || nr !== (app.valgt && app.valgt.nr)) return;
   const tStart = performance.now(),
-    m = OPPLOSNINGER[Z] / 2,
-    km2 = v => (v * m * m) / 1e6;
+    m = RUTE_M,
+    km2 = v => v * RUTE;
   app.planRaster = byggPlanRaster(
     nr,
     [...under.keys()].map(k => k.split('/').map(Number)),
@@ -449,9 +264,8 @@ async function regnPlan() {
   app.planSum = { nr, nat: km2(app.planRaster.sum.rn), jor: km2(app.planRaster.sum.rj), delvis: dyn, egne: E.length };
   sett('ok');
 }
-/* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker.
-   Langs grensen stikker naboenes planer litt inn, så under 15 prosent regnes som at kommunen ikke har plan der.
-   Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
+/* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker, se
+   planDekning i analyse/plan.js. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
 
 export const ingenPlan = () =>
   !!app.planInfo && !!app.valgt && app.planInfo.nr === app.valgt.nr && app.planInfo.tilstand === 'ingen';
@@ -459,7 +273,7 @@ export async function sjekkPlan(k, geom, mitt) {
   app.planInfo = { nr: k.nr, tilstand: 'sjekker' };
   endret();
   try {
-    const { res, w, h, u } = rutenett(geom.getExtent(), 256);
+    const { res, w, h, u } = rutenett(geom.getExtent(), ...BILDE_PLANDEKNING);
     const felles = {
       service: 'WMS',
       version: '1.3.0',
@@ -483,18 +297,9 @@ export async function sjekkPlan(k, geom, mitt) {
     a.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h);
     kommuneSti(b, geom, u, 1 / res);
     b.fill('evenodd');
-    const P = a.getImageData(0, 0, w, h).data,
-      M = b.getImageData(0, 0, w, h).data,
-      treff = [];
-    let inne = 0;
-    for (let q = 0; q < w * h; q++)
-      if (M[4 * q + 3] >= 128) {
-        inne++;
-        if (P[4 * q + 3] >= 100) treff.push(q);
-      }
-    const dekning = inne ? treff.length / inne : 0;
+    const { dekning, treff } = planDekning(a.getImageData(0, 0, w, h).data, b.getImageData(0, 0, w, h).data);
     let kilde = '';
-    if (dekning >= 0.15)
+    if (dekning >= PLAN_FINNES)
       try {
         const q = treff[treff.length >> 1];
         const j = await hent(
@@ -521,7 +326,7 @@ export async function sjekkPlan(k, geom, mitt) {
         }
       } catch (e) {}
     if (mitt !== valgNr) return;
-    app.planInfo = { nr: k.nr, tilstand: dekning < 0.15 ? 'ingen' : 'ok', dekning, kilde };
+    app.planInfo = { nr: k.nr, tilstand: dekning < PLAN_FINNES ? 'ingen' : 'ok', dekning, kilde };
   } catch (e) {
     if (mitt !== valgNr) return;
     app.planInfo = { nr: k.nr, tilstand: 'feil' };

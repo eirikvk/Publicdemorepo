@@ -1,5 +1,7 @@
-/* Farger: stilen som sendes til NIBIO, tolking av fargene i svaret, og fargelegging i nettleseren. */
-import { ALLE, DATAFARGE, app, rgb, tidSlutt } from './felles.js';
+/* Farger: stilen som sendes til NIBIO, og fargelegging av kartbildene i nettleseren. Tolkingen av fargene til klasser ligger i
+   analyse/klasser.js. */
+import { ALLE, BLANDING, DATAFARGE, fargeNr } from '../analyse/klasser.js';
+import { app, rgb, tidSlutt } from './felles.js';
 import { ingenPlan } from './plan.js';
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
 export const SLD = (() => {
@@ -17,47 +19,9 @@ export const SLD = (() => {
   return `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;
 })();
 
-/* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger.
-   Siden bytter ut tabellen og lar selve bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. */
-/* Hver farge i bildet tolkes som en blanding av de to klassene den ligger nærmest linjen mellom.
-   Oppslaget regnes ut én gang, for 32 nivåer per fargekanal: klasse A, klasse B og hvor mye av A. */
-const LA = new Uint8Array(32768),
-  LB = new Uint8Array(32768),
-  LT = new Uint8Array(32768);
-{
-  const P = ALLE.map(([id]) => DATAFARGE[id]);
-  for (let q = 0; q < 32768; q++) {
-    const p = [((q >> 10) * 255) / 31, (((q >> 5) & 31) * 255) / 31, ((q & 31) * 255) / 31];
-    let best = Infinity;
-    for (let a = 0; a < P.length; a++)
-      for (let b = a + 1; b < P.length; b++) {
-        let dd = 0,
-          pd = 0;
-        for (let k = 0; k < 3; k++) {
-          const d = P[a][k] - P[b][k];
-          dd += d * d;
-          pd += (p[k] - P[b][k]) * d;
-        }
-        const t = Math.max(0, Math.min(1, pd / dd));
-        let e = 0;
-        for (let k = 0; k < 3; k++) {
-          const d = p[k] - P[b][k] - t * (P[a][k] - P[b][k]);
-          e += d * d;
-        }
-        if (e < best) {
-          best = e;
-          LA[q] = a;
-          LB[q] = b;
-          LT[q] = Math.round(t * 255);
-        }
-      }
-  }
-}
-const oppslag = (r, g, b) => ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
-export const klasseAv = (r, g, b) => {
-  const q = oppslag(r, g, b);
-  return LT[q] >= 128 ? LA[q] : LB[q];
-}; /* klassen det er mest av i pikselen */
+/* Fargelegging i nettleseren. Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve
+   bildet være, så skjuling av klasser og fargebytte trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se
+   BLANDING i analyse/klasser.js, og får en tilsvarende blanding av visningsfargene. */
 /* Fargene som brukes nå. En skjult klasse er gjennomsiktig. Unntaket er når planlagt utbygging vises: da får skjulte klasser et lyst slør,
    så bakgrunnskartet dempes der og de mørke planfeltene synes tydelig også når de står alene. Fjerde tall er hvor tett fargen er. */
 const SLOR = 0.82;
@@ -67,10 +31,10 @@ export const klassefarger = () => {
 };
 export function tilFarge(r, g, b, a, F) {
   if (!a) return [0, 0, 0, 0];
-  const q = oppslag(r, g, b),
-    A = F[LA[q]],
-    B = F[LB[q]],
-    t = LT[q] / 255,
+  const q = fargeNr(r, g, b),
+    A = F[BLANDING.A[q]],
+    B = F[BLANDING.B[q]],
+    t = BLANDING.T[q] / 255,
     va = A ? t * (A[3] || 1) : 0,
     vb = B ? (1 - t) * (B[3] || 1) : 0,
     syn = va + vb;

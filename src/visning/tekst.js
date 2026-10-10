@@ -4,7 +4,8 @@
 
    Formateringen av tall og areal (nf, dekar, iTekst, andelTekst) ligger i motoren, fordi motoren også skriver noen tekster. Den
    hentes videre herfra, så komponentene finner alt om tekst på ett sted. */
-import { iTekst, nf, RUTE } from '../motor/felles.js';
+import { RUTE } from '../analyse/felles.js';
+import { iTekst, nf } from '../motor/felles.js';
 export { andelTekst, dekar, iTekst, nf } from '../motor/felles.js';
 
 /* Tall til og med tolv med bokstaver. en er ordet for 1, som avhenger av kjønnet på det som telles (ett område, én lokalitet). */

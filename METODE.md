@@ -3,7 +3,8 @@
 Dette dokumentet beskriver hvert tall siden viser: hva som hentes ferdig fra en kilde, hva som regnes ut i nettleseren, og
 hvor sikkert resultatet er. Det følger koden slik den var 8. oktober 2026, da siden ble lagt over på React og Miljødirektoratets
 designsystem. Metodene er de samme som i utgaven fra 7. oktober, og overgangen er kontrollert mot den, se under. Funksjonsnavnene i
-parentes viser hvor i motoren (`src/motor`) metoden ligger.
+parentes viser hvor metoden ligger. De ligger i `src/analyse` når ikke noe annet står, én fil per analyse, og alle terskler står
+samlet i `src/analyse/felles.js`.
 
 Siden er en prototype. Tall fra SSB er offisiell statistikk. Alt som er regnet ut i nettleseren, er anslag til illustrasjon.
 
@@ -33,8 +34,13 @@ sonens midtlinje. Hvert areal deles derfor på k², der k = 0,9996 · (1 + (x �
 **Rutenettet.** Planlagt utbygging og alt som krysses med den, regnes i et rutenett med ruter på 21,16 meter. Det er
 Kartverkets flisnett for UTM33 på nivå 9, med 512 ruter per flis. Én rute er 0,448 dekar.
 
-**Halvregelen.** Når en flate legges i et rutenett, teller en rute med hvis flaten dekker minst halve ruta. Det samme gjelder
-bildene fra tjenestene, der en piksel teller hvis den er minst halvveis dekket.
+**Halvregelen.** Når en flate legges i et rutenett, teller en rute med hvis flaten dekker minst halve ruta (`HALV`). Det samme
+gjelder bildene fra tjenestene, der en piksel teller hvis den er minst halvveis dekket. Det er tre unntak:
+
+- I bildene av grunnkartet brukes alle piksler som er minst 100/255 dekket (`SYNLIG`). Klassen er den det er mest av i pikselen.
+- Sjekken av om kommunen har kommuneplan bruker også 100/255.
+- Arealet av verdsatt natur regnes av hvor mye av hver rute som er dekket, ikke av hele ruter. Arealet av verneområder,
+  villreinområder og egne områder er arealet av selve flatene.
 
 **Enhet og avrunding.** Internt regnes det i km². Siden viser dekar (1 km² = 1000 dekar): hele dekar fra 100 og oppover, én
 desimal under 100, og «under 0,1» for det minste (`dekar`). Tall som er regnet ut i nettleseren, står med «ca.» i setninger.
@@ -46,7 +52,7 @@ seg fra dag til dag når kildene oppdateres.
 
 - **Kilde:** SSB tabell 09594, «Arealbruk og arealressurser», nyeste år.
 - **Hentes:** arealet i km² per arealklasse for kommunen. SSBs nye API (PxWebApi v2) brukes først, og det eldre (v0) hvis det
-  nye ikke svarer. De to gir samme tall (`hentSSB`).
+  nye ikke svarer. De to gir samme tall (`hentSSB` i `src/motor/tall.js`).
 - **Regnes:** klassene summeres til tre (`tolkAreal`):
   - Bebygd: 01 til 14. Det er blant annet bolig, fritidsbebyggelse, næring og tjenesteyting, transport og teknisk
     infrastruktur, grønne områder og idrettsområder, og uklassifisert bebyggelse og anlegg.
@@ -115,7 +121,7 @@ Kartet er ikke et tall i seg selv, men alle kryssinger bygger på det.
 - **Hele kommunen eller en del:** Med lagret oversiktsbilde regnes hele kommunen ut når den velges. Uten regnes bare den delen
   nettleseren har hentet kart for, og siden sier det.
 - **Finnes det en plan?** Ett lite bilde av kommunen viser hvor stor del av flaten planlaget dekker. Under 15 % regnes som at
-  DiBK ikke har kommuneplanen. Navnet på planen hentes med ett oppslag i et punkt (`sjekkPlan`).
+  DiBK ikke har kommuneplanen (`planDekning`). Navnet på planen hentes med ett oppslag i et punkt (`sjekkPlan` i motoren).
 - **Forbehold:**
   - Kommuneplanens arealdel viser hva som er satt av, ikke hva som blir bygd, og ikke reguleringsplaner.
   - Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.
@@ -199,7 +205,7 @@ siden bruker.
 ### Kartleggingsgrad og helhetsbildet
 
 - **Kilde:** Miljødirektoratets dekningskart for naturtypekartlegging etter Miljødirektoratets instruks (`naturtyper_nin`).
-- **Regnes** (`hentDekning`, `byggNaturTall`):
+- **Regnes** (`byggDekning`, `klasseAreal`, `kryssNatur`, `byggNaturTall`):
   - Kartlagt areal er dekningsflatene slått sammen og klippet mot kommunen. Kartleggingsgraden er dette delt på landarealet
     fra SSB, og vises som høyst 100 %.
   - Verdsatt natur deles i det som ligger innenfor og utenfor det kartlagte, med samme rutenettmetode.
@@ -243,7 +249,7 @@ siden bruker.
 ## Egne områder og opplastet plan
 
 - **Kilde:** flater brukeren tegner i kartet, eller en GeoJSON-fil i samme format som DiBKs nedlasting av plandata.
-- **Regnes** (`lesPlanfil`, `leggInnEget`, `byggPlanRaster`, `byggEgneRader`):
+- **Regnes** (`planType`, `leggInnEget`, `byggPlanRaster`, `byggEgneRader`). Filen leses av `lesPlanfil` i `src/motor/egne.js`:
   - Flatene legges i rutenettet på 21 meter etter halvregelen. Innenfor flatene erstatter de kommuneplanen.
   - Et område satt til utbygging tar all natur og alt jordbruk i området. Et område satt til ikke utbygging fjerner det planen
     setter av der.
@@ -270,6 +276,17 @@ Testen henter tallene direkte fra motoren, ikke fra teksten på siden.
   ved å tegne flatene i et lerret i nettleseren, og det varierer like mye mellom to kjøringer av samme utgave.
 - Kartbildene var like piksel for piksel når de ble forskjøvet ett skjermpunkt, fordi kartet ligger litt annerledes på siden. Bare
   merkelappene oppå kartet og knappene for zoom var forskjellige.
+
+## Kontroll av omleggingen til egne analysefiler
+
+10. oktober 2026 ble beregningene flyttet fra motoren til `src/analyse`, og koden som regner, skilt fra koden som henter og tegner.
+Regresjonstesten ble kjørt mot forrige utgave samme dag, med de tre scenariene. Alle tall fra motoren var like, bortsett fra
+arealet av verdsatt natur per verdikategori, som skilte med under én dekar, slik det også gjør mellom to kjøringer av samme utgave.
+Kartbildene var like.
+
+Én ting ble rettet: når klippingen av et verneområde eller villreinområde mot kommunen feiler, regnes arealet fra flaten tegnet i et
+rutenett. Det arealet ble ikke rettet for målestokken i UTM, slik alle andre arealer blir. Det gjør det nå. Ingen av områdene i
+testen traff dette.
 
 ## Kjente svakheter samlet
 

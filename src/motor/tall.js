@@ -1,56 +1,9 @@
-/* Tallene fra SSB: arealklasser, land og vann, og arealet i 2017 til utbredelsesregnskapet. */
-import { KL, SSB, VANN, app, endret, hent, valgNr } from './felles.js';
-/* Land og vann: land, innsjø og elv er SSBs tall. Hav har SSB ikke tall for per kommune, så det regnes ut som
-   kommunens flate (grensen fra Kartverket) minus land og ferskvann. Tilstanden ligger i app: arealtall, ssbSum, ferskvann,
-   flate, historie og planSum. */
+/* Henting av tallene fra SSB, tabell 09594: arealklasser, land og vann, og arealet fra 2017 til utbredelsesregnskapet. Svarene
+   tolkes i analyse/ssb.js. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
+import { KL, VANN } from '../analyse/klasser.js';
+import { tolkAreal, tolkHistorie } from '../analyse/ssb.js';
+import { SSB, app, endret, hent, valgNr } from './felles.js';
 
-/* Regning: funksjonene under tolker svar og regner ut tall. De leser ikke fra siden og skriver ikke til den. Tabellene og stripene
-   tegnes av siden, se visning/Regnskap.jsx. */
-function tolkAreal(j) {
-  const ix = j.dimension.ArealKlasse.category.index,
-    tid = j.dimension.Tid.category.index;
-  const pos = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix;
-  return {
-    a: KL.map(x => x[3].reduce((s, c) => s + (j.value[pos[c]] || 0), 0)),
-    aar: Array.isArray(tid) ? tid[0] : Object.keys(tid)[0],
-    ferskvann: { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 }
-  };
-}
-function tolkHistorie(j, nr) {
-  /* arealet per klasse i 2017 og i siste år, eller ingenting hvis serien ikke rekker tilbake til 2017 */
-  const liste = x => (Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b])),
-    kl = liste(j.dimension.ArealKlasse.category.index),
-    aar = liste(j.dimension.Tid.category.index),
-    nT = aar.length;
-  const v = (c, t) => j.value[kl.indexOf(c) * nT + t] || 0,
-    sum = t => KL.map(x => x[3].reduce((s, c) => s + v(c, t), 0)),
-    alt = t => sum(t).reduce((s, x) => s + x, 0) + v('22.01', t) + v('22.02', t);
-  const f = aar.indexOf('2017');
-  if (f < 0 || nT - f < 2 || !alt(f) || !alt(nT - 1)) return null;
-  return {
-    nr,
-    fra: aar[f],
-    til: aar[nT - 1],
-    a0: sum(f),
-    a1: sum(nT - 1),
-    endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > 0.005
-  };
-}
-export function tolkVann(flate, land, ferskvann) {
-  /* delene av kommunens flate, i km². Hav er det som blir igjen. */
-  if (!land || !ferskvann || !flate) return null;
-  let hav = flate - land - ferskvann.inn - ferskvann.elv;
-  if (hav < Math.max(0.5, flate * 0.005)) hav = 0; /* små avvik mellom grense og statistikk er ikke hav */
-  return {
-    hav,
-    deler: [
-      ['land', 'Land', land],
-      ['inn', 'Innsjø', ferskvann.inn],
-      ['elv', 'Elv', ferskvann.elv],
-      ['hav', 'Hav', hav]
-    ].filter(d => d[2] > 0)
-  };
-}
 export function nullstillTall(tilstand) {
   /* ingen tall å vise: de hentes, eller hentingen feilet */
   app.ssbSum = 0;

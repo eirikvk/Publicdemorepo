@@ -29,15 +29,20 @@ hvilken som helst webserver, også i en undermappe, fordi alle adresser er relat
 
 ## Slik henger koden sammen
 
-Koden har to lag, og stilen ligger ved siden av sidens deler:
+Koden har tre lag, og stilen ligger ved siden av sidens deler:
 
 ```
 Åpne tjenester: SSB, Kartverket, NIBIO, DiBK, Miljødirektoratet
       │  hentes av
       ▼
-src/motor/     Motoren henter data, regner ut tallene og tegner kartet.
+src/motor/     Motoren henter data, tegner kartet og bestemmer hva som regnes når.
                Vanlig JavaScript. Vet ingenting om React eller hvordan siden ser ut.
-      │  legger alt i tilstanden (app) og sier fra (endret)
+      │  gir dataene til              ▲ får tallene tilbake
+      ▼                               │
+src/analyse/   Beregningene: hvordan tallene regnes ut. Får alt som argumenter og
+               gir svaret tilbake. Bruker verken kartet, siden eller nettet.
+      
+      motoren legger alt i tilstanden (app) og sier fra (endret)
       ▼
 src/visning/   Siden: React-komponenter som leser tilstanden og viser den som
                tekst, lister, tabeller og knapper. Hver komponent har sin CSS-fil.
@@ -46,7 +51,8 @@ src/visning/   Siden: React-komponenter som leser tilstanden og viser den som
 Slik går en runde, for eksempel når brukeren velger kommune:
 
 1. Brukeren velger Trondheim i `Topp.jsx`. Komponenten kaller `velg` i `motor/handlinger.js`.
-2. Motoren henter grensen, tallene fra SSB, kommuneplanen og temaene, regner, og legger svarene i `app`.
+2. Motoren henter grensen, tallene fra SSB, kommuneplanen og temaene, får dem regnet ut i `src/analyse/`, og legger svarene i
+   `app`.
 3. Hver gang noe er klart, kaller motoren `endret()`. React tegner da siden på nytt ut fra det som ligger i `app`.
 
 Velger brukeren en side, kaller `Sidevelger.jsx` funksjonen `velgSide` i motoren. Den husker siden i `app.side`, slår på
@@ -93,29 +99,47 @@ Stilen kommer i tre lag, der hvert lag kan bygge på det forrige: designsystemet
 | `index.html` | Inngangen. Bare et tomt element som React fyller. |
 | `src/main.jsx` | Stilene fra designsystemet, skriften, kartets stil og den felles stilen, og oppstarten av React |
 | `src/grunnlag.css` | Stilen som gjelder hele siden. Bruker designsystemets variabler. |
-| `src/motor/` | Motoren: henting, utregning og kartet. Vanlig JavaScript uten React. |
+| `src/analyse/` | Beregningene, én fil per analyse. Kan kjøres i Node. |
+| `src/motor/` | Motoren: henting, kartet og samordningen av utregningen. Vanlig JavaScript uten React. |
 | `src/visning/` | Sidens komponenter i React |
 | `public/` | Filer som legges ut som de er: listen over kommuner og de lagrede oversiktsbildene |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
+
+Analysene, i `src/analyse/`. METODE.md forklarer metoden bak hver av dem.
+
+| Fil | Innhold |
+|---|---|
+| `felles.js` | Rutenettet, alle terskler, målestokken i UTM og arealet av en flate |
+| `raster.js` | Fra flater til ruter: flatene tegnes i et lerret. Den eneste filen som bruker nettleseren. |
+| `klasser.js` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, og tolking av fargene i kartbildene |
+| `ssb.js` | Arealet per klasse, arealet i 2017 og nyeste år til utbredelsesregnskapet, og land og vann |
+| `plan.js` | Planlagt utbygging: planrutenettet på 21 meter, regelen om smale striper, og om kommunen har plan |
+| `egne.js` | Egne områder: hvilke flater som er utbygging, hvordan de legges inn i planrutenettet, og sammenligningen med planen |
+| `temaer.js` | Verneområder, villrein og verdsatt natur: arealet, kartleggingsgraden og kryssingen med planen |
+| `inon.js` | Inngrepsfri natur: arealet per sone |
+| `graa.js` | Grått areal: arealet per trinn og kryssingen med planen |
+
+Reglene for analysene sjekkes av `verktoy/sjekk-regning.js`: de importerer bare fra hverandre, bruker ikke nettleseren eller
+tilstanden (bortsett fra lerretet i `raster.js`), og har ingen variabler på toppnivå som kan endres.
 
 Motoren:
 
 | Fil | Innhold |
 |---|---|
 | `ol.js` | Delene av OpenLayers som brukes, samlet som `ol` |
-| `felles.js` | Adresser, rutenett, klasser og farger, tilstanden (`app`) og lageret, formatering av tall, kall-logg og henting med minne |
+| `felles.js` | Adresser, projeksjoner, kartfargene, tilstanden (`app`) og lageret, formatering av tall, kall-logg og henting med minne |
 | `grunnlag.js` | Det de andre filene trenger når de lastes: rutenettene for flisene, køen for kall og hjelpere for lag som tegnes i nettleseren |
-| `farger.js` | Stilen som sendes til NIBIO, tolking av fargene i svaret og fargelegging i nettleseren |
+| `farger.js` | Stilen som sendes til NIBIO, og fargelegging av kartbildene i nettleseren |
 | `fliser.js` | Grunnkartet som kartfliser, og dagens klasser i en flis |
 | `oversikt.js` | Oversiktsbildet zoomet ut: det lagrede, eller det nettleseren setter sammen selv |
-| `plan.js` | Kommuneplanen fra DiBK som kartlag, rutenettet for hele kommunen og arealtallene |
-| `naturtema.js` | Verneområder, villrein og verdsatt natur fra Miljødirektoratet, og markering av ett område i kartet |
-| `inon.js` | Inngrepsfri natur |
-| `graa.js` | Grått areal |
-| `egne.js` | Egne områder: tegning i kartet, opplasting av plan og sammenligning med kommuneplanen |
+| `plan.js` | Kommuneplanen fra DiBK som kartlag, hentingen til planrutenettet og samordningen av utregningen |
+| `naturtema.js` | Verneområder, villrein og verdsatt natur: kartlagene, hentingen, og markering av ett område i kartet |
+| `inon.js` | Inngrepsfri natur: kartlaget og hentingen |
+| `graa.js` | Grått areal: kartlaget og hentingen |
+| `egne.js` | Egne områder: tegning i kartet, lesing av planfil, og radene i sammenligningen med kommuneplanen |
 | `kart.js` | Selve kartet: bakgrunn, grense, klipping mot kommunen, status, måling og trykk i kartet |
-| `tall.js` | Tallene fra SSB: arealklasser, land og vann, og arealet i 2017 til utbredelsesregnskapet |
+| `tall.js` | Henting av tallene fra SSB |
 | `handlinger.js` | Det brukeren kan gjøre: velge kommune, velge side (og dermed hva kartet viser), og oppstarten |
 
 Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.css` ved siden av `Temaer.jsx`.
@@ -149,7 +173,8 @@ Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
 
 ## Motoren og siden
 
-Motoren henter, regner og tegner kartet. Siden viser tallene og tar imot det brukeren gjør. De er skilt slik:
+Motoren henter, får tallene regnet ut i analysene, og tegner kartet. Siden viser tallene og tar imot det brukeren gjør. De er skilt
+slik:
 
 - All delt tilstand ligger i ett objekt, `app`, i `src/motor/felles.js`: valgt kommune, grensen, tallene fra SSB, rutenettet for
   planlagt utbygging, egne områder, valgt side, hva som er slått på i kartet, og det som vises over og under kartet. Temaene fra
@@ -158,7 +183,7 @@ Motoren henter, regner og tegner kartet. Siden viser tallene og tar imot det bru
   tegning av siden.
 - `App.jsx` abonnerer med kroken `useApp` og tegnes på nytt ved hvert varsel. Komponentene leser tilstanden direkte fra `app` og
   temaene, og gjør tallene om til tekst, tabeller og stolper.
-- Komponentene endrer ikke tilstanden selv. De kaller funksjoner i motoren, for eksempel `velg`, `byttKlasse` og `lastOppPlan`.
+- Komponentene endrer ikke tilstanden selv. De kaller funksjoner i motoren, for eksempel `velg`, `velgSide` og `lastOppPlan`.
 - Kartet lages av motoren (`lagKart`) og settes inn på siden av `Kartpanel.jsx`. Knappen for å bytte kommune er en del av siden,
   men motoren plasserer den over punktet man trykket på.
 
@@ -172,18 +197,19 @@ mens filene lastes (rutenettene, køen for kall og kildene for lag som tegnes i 
 bare bruker `felles.js`. Selve kartet lages først når alt er lastet. Bryter man regelen, stopper siden med en `ReferenceError` når
 den åpnes.
 
-### Regning og tegning
+### Regning, tegning og samordning
 
-Koden holder tre ting fra hverandre, og navnet på en funksjon sier hvilken den er:
+Koden holder tre ting fra hverandre, og både mappen og navnet på en funksjon sier hvilken den er:
 
-| Navn begynner med | Hva funksjonen gjør |
-|---|---|
-| `tolk`, `kryss`, `bygg`, `tell`, `les` | Regner. Får alt som argumenter og gir svaret tilbake. Leser ikke fra siden, skriver ikke til den, henter ikke fra nettet og bruker ikke delt tilstand. |
-| `vis` | Tegner kartet: slår lag av og på og ber om ny tegning av siden. Regner ikke ut nye tall. |
-| `hent`, `sjekk`, `regn`, `velg` | Samordner. Henter data, kaller regnefunksjonene, legger svaret i tilstanden og ber om ny tegning. |
+| Hvor | Navn begynner med | Hva funksjonen gjør |
+|---|---|---|
+| `src/analyse/` | `tolk`, `kryss`, `bygg`, `tell` og andre | Regner. Får alt som argumenter og gir svaret tilbake. Leser ikke fra siden, skriver ikke til den, henter ikke fra nettet og bruker ikke delt tilstand. |
+| `src/motor/` | `vis` | Tegner kartet: slår lag av og på og ber om ny tegning av siden. Regner ikke ut nye tall. |
+| `src/motor/` | `hent`, `sjekk`, `regn`, `velg` | Samordner. Henter data, kaller analysene, legger svaret i tilstanden og ber om ny tegning. |
 
-Regnefunksjonene er den delen som kan tas med uendret til en annen løsning. `node verktoy/sjekk-regning.js` kontrollerer at de
-holder seg rene. Noen bruker et lerret til å telle piksler, men ingen av dem rører siden.
+Analysene er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
+tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.js`). `node verktoy/sjekk-regning.js`
+kontrollerer reglene, og at det ikke er havnet regnefunksjoner i motoren.
 
 Teksten på siden lages i komponentene. Enkelte tall der regnes også ut der, som prosenter av tall som alt ligger i tilstanden.
 
@@ -293,8 +319,8 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   dekar mellom kjøringer.
 - `motortall.js` henter tallene fra motoren til regresjonstesten. Siden gjør motoren tilgjengelig som `window.motor` med
   `?teknisk`.
-- `sjekk-regning.js` kontrollerer skillet mellom regning og tegning, og `sjekk-navn.js` at alle navn som brukes, er definert eller
-  importert. `npm run sjekk` kjører begge.
+- `sjekk-regning.js` kontrollerer at analysene i `src/analyse/` holder seg for seg selv, og `sjekk-navn.js` at alle navn som
+  brukes, er definert eller importert. `npm run sjekk` kjører begge.
 - `oversiktsbilde.py` lager de lagrede oversiktsbildene, for eksempel `python3 verktoy/oversiktsbilde.py --fylke 50`.
   Én kommune koster 4 til 16 kall mot NIBIO.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.

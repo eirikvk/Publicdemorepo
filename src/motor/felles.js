@@ -1,5 +1,6 @@
-/* Felles for hele motoren: adresser, rutenett, klasser, farger, formatering av tall, tilstanden og lageret, kall-logg og henting med
-   minne. Filen importerer ingenting fra de andre filene i motoren, så den er alltid ferdig lastet før dem. */
+/* Felles for hele motoren: adresser, projeksjoner, farger, formatering av tall, tilstanden og lageret, kall-logg og henting med
+   minne. Filen importerer ingenting fra de andre filene i motoren, så den er alltid ferdig lastet før dem. Rutenettet, klassene og
+   tersklene ligger i analyse/. */
 import proj4 from 'proj4';
 import { ol } from './ol.js';
 
@@ -13,24 +14,12 @@ proj4.defs('EPSG:25832', '+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0
 proj4.defs('EPSG:25835', '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:4258', '+proj=longlat +ellps=GRS80 +no_defs +type=crs');
 ol.proj.proj4.register(proj4);
-export const UTM = 'EPSG:25833',
-  ORIGO = [-2500000, 9045984],
-  OPPLOSNINGER = Array.from({ length: 19 }, (_, z) => 21664 / 2 ** z);
+export const UTM = 'EPSG:25833';
 export const FLISNIVA = 10; /* groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000 */
 export const MAKSRES = 30; /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */
 export const SAMTIDIG = 4; /* høyst fire kall mot NIBIO om gangen */
 export const SVAKEST = 0.35; /* svakeste farge for en piksel med bare litt planlagt utbygging i seg, så den ikke forsvinner helt */
 export const MAKSTETTHET = 2; /* telefoner har ofte tre piksler per punkt; to er nok og gir under halvparten så store bilder */
-/* Rene farger fra NIBIO, byttes til visningsfarger i nettleseren. De seks er valgt slik at en blanding av to klasser
-   (kantpikslene) ikke kan forveksles med en blanding av to andre. */
-export const DATAFARGE = {
-  beb: [255, 0, 0],
-  jor: [0, 255, 0],
-  nat: [0, 0, 255],
-  hav: [255, 128, 255],
-  inn: [0, 128, 255],
-  elv: [255, 128, 128]
-};
 /* Fargene i kartet og i tegnforklaringene. Klassefargene er hentet fra grunnkartets egen tegnforklaring: bebygd og opparbeidet
    areal, dyrket mark og skog, og for vann hav, innsjøer og elver. Planlagt utbygging har to mørke farger som ikke finnes i
    grunnkartet: koksgrå for natur og brun for jordbruk. De er kontrollert mot alle kartfargene, også vannfargene, for vanlig
@@ -73,30 +62,6 @@ export const FARGER = {
 export const farge = id => FARGER[id];
 const rgbMinne = {};
 export const rgb = id => rgbMinne[id] || (rgbMinne[id] = [1, 3, 5].map(i => parseInt(FARGER[id].substr(i, 2), 16)));
-export const KL = [
-  [
-    'beb',
-    'Bebygd',
-    ['bebygdOpparbeidetAreal'],
-    ['01', '02', '03', '04', '05', '06', '07', '08-09', '10-11', '12-13', '14']
-  ],
-  ['jor', 'Jordbruk', ['dyrketmark', 'grasmark'], ['15-16']],
-  [
-    'nat',
-    'Natur',
-    ['skog', 'heiBuskmark', 'liteVegetertMark', 'vatmark', 'kyststrenderSvabergDyner'],
-    ['17', '18', '19', '20', '21', '24']
-  ]
-];
-/* Vann fargelegges i kartet slik grunnkartet gjør, men er ikke egne kartlag og telles ikke som natur. */
-export const VANN = [
-  ['hav', 'Hav', ['hav']],
-  ['inn', 'Innsjø', ['innsjoerVannmagasiner'], '22.01'],
-  ['elv', 'Elv', ['elverBekkerKanaler'], '22.02']
-];
-export const ALLE = [...KL, ...VANN],
-  JOR = 1,
-  NAT = 2; /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter vann */
 /* Settes av verktoy/utgave.py ved hver endring, så man ser hvilken utgave en fane kjører */
 export const VERSJON = '8. oktober kl. 22.43';
 /* All delt tilstand for siden, samlet på ett sted. Sidens komponenter og kartet leser herfra, og samordningen skriver hit. Regnefunksjonene
@@ -224,31 +189,8 @@ export async function hent(kilde, hva, url, stille, bytes, glem, kropp) {
     throw e;
   }
 }
-export const RUTE = (OPPLOSNINGER[9] / 2) ** 2 / 1e6; /* km² per rute i rutenettet */
-
-/* Flatene i en geometri som liste, enten den er én flate eller flere: fra GeoJSON, og fra OpenLayers. */
-export const flerflate = g => (g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates]);
+/* Flatene i en geometri fra OpenLayers, som flerflate med vanlige koordinater, slik analysene tar dem. */
 export const flater = geom => (geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()]);
-/* Arealet i kartet er litt større enn i terrenget, og mer jo lenger fra midtlinjen i UTM-sonen. */
-export const utm33 = geom => {
-  const u = geom.getExtent(),
-    k = 0.9996 * (1 + ((u[0] + u[2]) / 2 - 500000) ** 2 / (2 * 6.38e6 ** 2));
-  return k * k * 1e6;
-}; /* m² i kartet per km² i terrenget */
-/* Rutenett over et utsnitt e: høyst maks ruter på lengste side, og ruter på minst `minst` meter. u er utsnittet rutene dekker. */
-export const rutenett = (e, maks, minst = 0) => {
-  const res = Math.max(minst, Math.max(e[2] - e[0], e[3] - e[1]) / maks),
-    w = Math.ceil((e[2] - e[0]) / res),
-    h = Math.ceil((e[3] - e[1]) / res);
-  return { res, w, h, u: [e[0], e[3] - h * res, e[0] + w * res, e[3]] };
-};
-/* Et lerret som pikslene skal leses fra. */
-export const tegneflate = (w, h) => {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return c.getContext('2d', { willReadFrequently: true });
-};
 /* Minne med fast plass: det eldste går ut når det blir fullt, og det som legges inn på nytt, regnes som nytt. */
 export const husk = (minne, nokkel, verdi, plass) => {
   minne.delete(nokkel);

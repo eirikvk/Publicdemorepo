@@ -2,46 +2,17 @@
    etter avstand. Sonene hentes som ett bilde av hele kommunen når kommunen velges, og huskes så lenge siden er åpen. Kartflisene
    lages av det bildet i nettleseren, så laget gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå
    dagens klasser og fargelegger bare det som er natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen.
-   Laget deler lerret med klassene, så det får samme gjennomsiktighet og ser ut som en del av naturfargen. */
+   Laget deler lerret med klassene, så det får samme gjennomsiktighet og ser ut som en del av naturfargen. Arealet per sone regnes ut
+   i analyse/inon.js. */
 import { ol } from './ol.js';
-import { klasseAv } from './farger.js';
-import {
-  NAT,
-  UTM,
-  app,
-  endret,
-  gjeldende,
-  hent,
-  husk,
-  rgb,
-  rutenett,
-  tegneflate,
-  tidSlutt,
-  utm33,
-  valgNr
-} from './felles.js';
+import { BILDE_TEMA, m2PerKm2, rutenett } from '../analyse/felles.js';
+import { UTENFOR, tolkInon } from '../analyse/inon.js';
+import { NAT, klasseAv } from '../analyse/klasser.js';
+import { tegneflate } from '../analyse/raster.js';
+import { UTM, app, endret, gjeldende, hent, husk, rgb, tidSlutt, valgNr } from './felles.js';
 import { dagensKlasser, friskOppGamle } from './fliser.js';
 import { TOM, friskOpp, jevn, kommuneSti, lerret, plannett, tegnUtsnitt, tegnetKilde } from './grunnlag.js';
 const INON = 'https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms';
-export const INONSONER = [
-  /* kode i tjenesten, farge her, farge i tjenestens bilder, avstand, navn */
-  ['v', 'inonv', [76, 171, 38], '5 km eller mer fra inngrep', 'Villmarkspreget natur'],
-  ['1', 'inon1', [153, 207, 22], '3–5 km fra inngrep', 'Sone 1'],
-  ['2', 'inon2', [204, 234, 127], '1–3 km fra inngrep', 'Sone 2']
-];
-const inonSone = (r, g, b) => {
-  let best = 0,
-    min = 1e9;
-  for (let i = 0; i < 3; i++) {
-    const f = INONSONER[i][2],
-      d = (r - f[0]) ** 2 + (g - f[1]) ** 2 + (b - f[2]) ** 2;
-    if (d < min) {
-      min = d;
-      best = i;
-    }
-  }
-  return best;
-};
 const inonBilde = (u, w, h) =>
   INON +
   '?' +
@@ -125,33 +96,18 @@ export const inonLag = new ol.layer.Tile({ className: 'tema', visible: false, so
    sone. Det ferdige resultatet huskes for de siste kommunene så lenge siden er åpen, så et nytt valg av samme kommune koster ingenting. */
 const inonMinne = new Map();
 
-/* Tolker bildet av sonene. P er bildet fra tjenesten og M kommunens flate, som piksler i samme rutenett. Gir arealet per sone i km²,
-   og gjør samtidig P om til tre utjevnede masker i hver sin fargekanal, som kartlaget tegnes fra. Ren regning. */
-function tolkInon(P, M, w, h, res, m2) {
-  const n = [0, 0, 0];
-  let forrige = -1,
-    sone = 0;
-  for (let i = 0; i < P.length; i += 4) {
-    if (P[i + 3] < 128) {
-      P[i] = P[i + 1] = P[i + 2] = 0;
-      P[i + 3] = 255;
-      continue;
-    }
-    const kode = (P[i] << 16) | (P[i + 1] << 8) | P[i + 2];
-    if (kode !== forrige) {
-      forrige = kode;
-      sone = inonSone(P[i], P[i + 1], P[i + 2]);
-    } /* 0 villmarkspreget, 1 sone 1, 2 sone 2 */
-    if (M[i + 3] >= 128) n[sone]++;
-    P[i] = 255;
-    P[i + 1] = sone <= 1 ? 255 : 0;
-    P[i + 2] = sone === 0 ? 255 : 0;
+/* Sonene som tre masker i hver sin fargekanal, til kartlaget: rød er minst 1 km, grønn minst 3 km og blå minst 5 km fra inngrep.
+   Maskene jevnes ut to ganger, så sonegrensene blir glatte når kartet er zoomet langt inn. */
+function soneMaske(sone, P, w, h) {
+  for (let q = 0, i = 0; q < sone.length; q++, i += 4) {
+    const s = sone[q];
+    P[i] = s === UTENFOR ? 0 : 255;
+    P[i + 1] = s <= 1 ? 255 : 0;
+    P[i + 2] = s === 0 ? 255 : 0;
     P[i + 3] = 255;
   }
   jevn(P, w, h);
   jevn(P, w, h);
-  const soner = n.map(v => Math.round(((v * res * res) / m2) * 100) / 100); /* nærmeste 10 dekar, som SSBs tall */
-  return { soner, sum: Math.round((soner[0] + soner[1] + soner[2]) * 100) / 100 };
 }
 export async function sjekkInon(k, geom, mitt) {
   const har = inonMinne.get(k.nr);
@@ -165,7 +121,7 @@ export async function sjekkInon(k, geom, mitt) {
   app.inon = { nr: k.nr, tilstand: 'henter' };
   visInon();
   try {
-    const { res, w, h, u } = rutenett(geom.getExtent(), 2048, 20);
+    const { res, w, h, u } = rutenett(geom.getExtent(), ...BILDE_TEMA);
     const buf = await hent('Miljødirektoratet', `Inngrepsfri natur i ${k.navn}`, inonBilde(u, w, h), false, true);
     if (mitt !== valgNr) return;
     const t0 = performance.now(),
@@ -174,10 +130,16 @@ export async function sjekkInon(k, geom, mitt) {
     a.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h);
     kommuneSti(b, geom, u, 1 / res);
     b.fill('evenodd');
-    const bilde = a.getImageData(0, 0, w, h),
-      tall = tolkInon(bilde.data, b.getImageData(0, 0, w, h).data, w, h, res, utm33(geom));
+    const T = tolkInon(
+        a.getImageData(0, 0, w, h).data,
+        b.getImageData(0, 0, w, h).data,
+        res,
+        m2PerKm2(geom.getExtent())
+      ),
+      bilde = a.createImageData(w, h);
+    soneMaske(T.sone, bilde.data, w, h);
     a.putImageData(bilde, 0, 0);
-    app.inon = { nr: k.nr, tilstand: 'ok', ...tall, c: a.canvas, u, res };
+    app.inon = { nr: k.nr, tilstand: 'ok', soner: T.soner, sum: T.sum, c: a.canvas, u, res };
     husk(inonMinne, k.nr, app.inon, 3);
     tidSlutt('inngrepsfri natur, kommunebilde', t0);
   } catch (e) {
