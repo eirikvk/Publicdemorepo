@@ -191,8 +191,9 @@ Datamotoren, i `src/data/motor/`.
 | `grunnkart.ts` | Dagens klasser: det lagrede oversiktsbildet, det sammensatte kartet av flisene som er hentet, og klassene i én flis |
 | `plan.ts` | Om DiBK har kommuneplanen, og samordningen av planrutenettet |
 | `naturtema.ts` | Verneområder, villrein og verdsatt natur: hvilke temaer som finnes, hentingen og kryssingen med planen |
-| `inon.ts` | Inngrepsfri natur |
-| `graa.ts` | Grått areal og kryssingen med planen |
+| `kommunebilde.ts` | Flyten for temaene som hentes som ett bilde av kommunen: minnet, hentingen, tolkingen og arealet |
+| `inon.ts` | Inngrepsfri natur: oppsettet for kommunebildet |
+| `graa.ts` | Grått areal: oppsettet for kommunebildet, og kryssingen med planen |
 | `egne.ts` | Egne områder: tegnede og opplastede, og det radene i sammenligningen bygges av |
 
 ### Brukergrensesnittet

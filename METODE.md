@@ -468,7 +468,8 @@ kommunen i kommunebildenes rutenett, uten glatting av kantene.
 - I kartet får bare klassen natur sonefarge.
 
 **Kode.** Bronse: `hentInonBilde` i `src/data/bronse/mdir-inon.ts`. Sølv: `src/data/solv/inon.ts`. Gull: `src/data/gull/inon.ts`. Samordningen:
-`sjekkInon` i `src/data/motor/inon.ts`. Kartlaget: `src/ui/kart/inon.ts`.
+`sjekkInon` i `src/data/motor/inon.ts`, med flyten i `src/data/motor/kommunebilde.ts`, som er felles med grått areal. Kartlaget:
+`src/ui/kart/inon.ts`.
 
 ## Grått areal
 
@@ -507,7 +508,8 @@ areal i Trondheim. I en gjennomgang av Trondheim på 10 meters ruter var 98,9 % 
 grunnkartet kaller grønne arealer.
 
 **Kode.** Bronse: `hentGraaBilde` i `src/data/bronse/nibio-graa.ts`. Sølv: `src/data/solv/graa.ts`. Gull: `src/data/gull/graa.ts`. Samordningen:
-`sjekkGraa` og `regnGraa` i `src/data/motor/graa.ts`. Kartlaget: `src/ui/kart/graa.ts`.
+`sjekkGraa` og `regnGraa` i `src/data/motor/graa.ts`, med flyten i `src/data/motor/kommunebilde.ts`, som er felles med inngrepsfri
+natur. Kartlaget: `src/ui/kart/graa.ts`.
 
 ## Utenfor analysene: trykk i kartet
 
