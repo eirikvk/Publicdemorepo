@@ -1,5 +1,6 @@
 /* Fargelegging av kartbildene fra NIBIO i nettleseren: fra de rene fargene NIBIO tegner klassene i, til fargene i kartet. Stilen
    som sendes til NIBIO, ligger i data/bronse/nibio-grunnkart.ts, og tolkingen av fargene til klasser i data/solv/klasser.ts. */
+import { pngBit, pngBiter } from '../../data/generelt/png.ts';
 import { ALLE, BLANDING, fargeNr } from '../../data/solv/klasser.ts';
 import { tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
@@ -21,45 +22,17 @@ export function tilFarge(r: number, g: number, b: number, a: number, F: number[]
   for (let k = 0; k < 3; k++) f[k] = Math.round(((A ? A[k] * va : 0) + (B ? B[k] * vb : 0)) / syn);
   return f;
 }
-const CRC = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-function pngDel(type: string, data: Uint8Array) {
-  const o = new Uint8Array(data.length + 12),
-    dv = new DataView(o.buffer);
-  dv.setUint32(0, data.length);
-  for (let i = 0; i < 4; i++) o[4 + i] = type.charCodeAt(i);
-  o.set(data, 8);
-  let c = 0xffffffff;
-  for (let i = 4; i < 8 + data.length; i++) c = CRC[(c ^ o[i]) & 255] ^ (c >>> 8);
-  dv.setUint32(8 + data.length, (c ^ 0xffffffff) >>> 0);
-  return o;
-}
 export async function fargeleggBlob(buf: ArrayBuffer): Promise<Blob | null> {
   const t0 = performance.now(),
     F = klassefarger(),
     u = new Uint8Array(buf),
-    dv = new DataView(buf);
-  let p = 8,
-    plte: [start: number, lengde: number] | null = null,
-    trns: [start: number, lengde: number] | null = null,
-    type3 = false;
-  const deler: [type: string, start: number, lengde: number][] = [];
-  while (p + 12 <= u.length) {
-    const len = dv.getUint32(p),
-      type = String.fromCharCode(u[p + 4], u[p + 5], u[p + 6], u[p + 7]);
-    if (type === 'IHDR') type3 = u[p + 17] === 3;
-    if (type === 'PLTE') plte = [p + 8, len];
-    else if (type === 'tRNS') trns = [p + 8, len];
-    deler.push([type, p, len + 12]);
-    p += len + 12;
-  }
+    deler = pngBiter(u),
+    ihdr = deler.find(d => d.type === 'IHDR'),
+    pl = deler.find(d => d.type === 'PLTE'),
+    tr = deler.find(d => d.type === 'tRNS'),
+    type3 = !!ihdr && u[ihdr.start + 17] === 3 /* fargetabell */,
+    plte = pl ? [pl.start + 8, pl.lengde - 12] : null,
+    trns = tr ? [tr.start + 8, tr.lengde - 12] : null;
   if (!type3 || !plte) {
     /* uventet bildeformat: gå gjennom pikslene i stedet */
     const bm = await createImageBitmap(new Blob([buf])),
@@ -97,9 +70,9 @@ export async function fargeleggBlob(buf: ArrayBuffer): Promise<Blob | null> {
     nyT[i] = f[3];
   }
   const ut = [u.subarray(0, 8)];
-  deler.forEach(([type, pos, len]) => {
-    if (type === 'PLTE') ut.push(pngDel('PLTE', nyP), pngDel('tRNS', nyT));
-    else if (type !== 'tRNS') ut.push(u.subarray(pos, pos + len));
+  deler.forEach(({ type, start, lengde }) => {
+    if (type === 'PLTE') ut.push(pngBit('PLTE', nyP), pngBit('tRNS', nyT));
+    else if (type !== 'tRNS') ut.push(u.subarray(start, start + lengde));
   });
   const blob = new Blob(ut, { type: 'image/png' });
   tidSlutt('kartfliser', t0);

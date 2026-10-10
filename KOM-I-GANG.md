@@ -9,7 +9,6 @@ Slik får du siden til å kjøre på din egen maskin etter å ha klonet repoet. 
   LTS-utgaven fra <https://nodejs.org>. Bruker du nvm, velger `nvm use` riktig versjon fra filen `.nvmrc`.
 - **Nettilgang** til SSB, Kartverket, NIBIO, DiBK og Miljødirektoratet. Siden henter alle data direkte fra dem mens den kjører. Er
   noen av dem stengt i nettet du sitter på, mangler de delene av siden.
-- **Python 3** trengs bare for verktøyene som lager oversiktsbilder og setter utgavemerke, ikke for å kjøre siden.
 
 ## Hent koden og start siden
 
@@ -66,20 +65,20 @@ node verktoy/regresjon.ts ut/ny --mot HEAD
 Tallene kommer fra de åpne tjenestene og endrer seg over tid, så sammenligningen kjører begge utgavene samme dag. To kjøringer av
 samme kode gir nøyaktig like tall.
 
-## Python-verktøyene
+## Utgavemerke og oversiktsbilder
 
 ```
-python3 verktoy/utgave.py
+npm run utgave
 ```
 
-setter utgavemerket som vises med `?teknisk`. For å lage oversiktsbilder trengs tre pakker:
+setter utgavemerket som vises med `?teknisk`. Oversiktsbildene lages med
 
 ```
-python3 -m pip install numpy pillow shapely
-python3 verktoy/oversiktsbilde.py --fylke 50
+npm run oversiktsbilde -- --fylke 50
 ```
 
-På Windows heter kommandoen ofte `py` i stedet for `python3`.
+eller med kommunenumre i stedet for `--fylke`. Verktøyet kjører koden i `src` i Chromium, som regresjonstesten, så bildene lages på
+samme måte som siden henter og leser kartet. Én kommune koster 4 til 16 kall mot NIBIO.
 
 ## Legge ut
 

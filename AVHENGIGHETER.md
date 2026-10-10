@@ -102,13 +102,12 @@ Ingen av disse følger med siden til brukeren.
 
 | Verktøy | Versjon | Lisens | Brukes til |
 |---|---|---|---|
-| Vite | 8.3.0 | MIT | Utviklingsserver og bygg |
+| Vite | 8.3.0 | MIT | Utviklingsserver og bygg, og koden til verktøyet for oversiktsbilder |
 | `@vitejs/plugin-react` | 6.1.1 | MIT | JSX og oppdatering av komponenter under utvikling |
 | TypeScript | 7.0.2 | Apache 2.0 | Typesjekken (`tsc`) |
 | `@types/node`, `@types/react`, `@types/react-dom` | 22.20.4, 19.3.0, 19.3.0 | MIT | Typene for Node og React |
 | oxc-parser | 0.151.0 | MIT | Sjekken av lagene: leser koden og finner importene |
-| Playwright | 1.56.0 | Apache 2.0 | Regresjonstesten, som kjører siden i Chromium |
+| Playwright | 1.56.0 | Apache 2.0 | Regresjonstesten og verktøyet for oversiktsbilder, som kjører i Chromium |
 | Prettier | 3.9.9 | MIT | Formatering av koden |
-| Python med NumPy, Pillow og Shapely | | BSD og lignende | Bygging av oversiktsbildene |
 
 Node-versjonen står i `.nvmrc` (22), og kravet i `package.json` (22.18 eller nyere): fra den versjonen kjører Node verktøyene i TypeScript direkte.

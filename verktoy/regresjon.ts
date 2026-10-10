@@ -40,7 +40,7 @@ export function bygg(rot: string) {
   return ut;
 }
 
-async function startNettleser() {
+export async function startNettleser() {
   const valg: LaunchOptions = {};
   if (process.env.CHROMIUM) valg.executablePath = process.env.CHROMIUM;
   else if (fs.existsSync('/opt/pw-browsers/chromium')) valg.executablePath = '/opt/pw-browsers/chromium';

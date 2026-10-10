@@ -192,7 +192,7 @@ dag til dag når kildene oppdateres.
   arealklasser. Tallene på siden blander derfor offisielle tall fra SSB med tall regnet ut fra grunnkartet.
 - Grønne områder og idrettsområder er bebygd i begge inndelingene.
 - NIBIO tegner grunnkartet først fra 1:50 000. Zoomet ut brukes et ferdig bilde av hele kommunen. For 39 kommuner i Trøndelag og
-  Bergen ligger det lagret sammen med siden (`verktoy/oversiktsbilde.py`), med høyst 2048 piksler på lengste side. Det gir fra 11
+  Bergen ligger det lagret sammen med siden (`verktoy/oversiktsbilde.ts`), med høyst 2048 piksler på lengste side. Det gir fra 11
   til rundt 45 meter per piksel, og opptil 65 meter i kystkommuner med mye sjø innenfor grensen. For andre kommuner setter
   nettleseren sammen et bilde av flisene den har hentet.
 
@@ -558,6 +558,14 @@ kommunemasken, og sjekken av om et resultat gjelder valgt kommune. Omløpsretnin
 natur enn arealet. Nå brukes arealet med fortegn begge steder. De to gir samme svar for alle 6 818 ringene i verneområder, villrein
 og verdsatt natur i Trondheim, Oslo og Surnadal. Tallene fra motoren var ellers like, kartbildene var like, og teksten var lik
 bortsett fra rekkefølgen fra Miljødirektoratet.
+
+**Oversiktsbildene, 10. oktober 2026.** Verktøyet som lager de lagrede oversiktsbildene, var skrevet i Python og hadde sin egen kopi
+av klassefargene, koblingen fra økosystemtyper til klasser, stilen som sendes til NIBIO og tolkingen av fargene. Det er skrevet om
+til TypeScript og bruker nå koden i `src`: grunnkartet hentes som kartflisene (`grunnkartUrl`), fargene tolkes med `BLANDING`, og
+kommunemasken tegnes med `flatePiksler`. Den gamle tolkingen var den samme modellen (hver farge er en blanding av de to klassene den
+ligger nærmest), men regnet uten oppslagstabell. Bildet for Trondheim ble laget med begge samme dag: klassen var lik i 99,86 % av
+pikslene, synligheten i 99,94 %, og arealene per klasse skilte med høyst 0,3 km². De lagrede bildene er laget med Python-utgaven og
+er ikke laget på nytt.
 
 **Omleggingen til bronse, sølv og gull, 10. oktober 2026.** Koden ble delt i tre lag: henting (bronse), felles standard (sølv) og
 svarene sidene viser (gull). Metoden ble ikke endret. Hvert steg som flyttet kode, ble sammenlignet med steget før:

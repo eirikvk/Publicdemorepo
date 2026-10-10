@@ -14,6 +14,8 @@
     "sjekk-format": "prettier --check src verktoy/*.ts test vite.config.ts",
     "test": "node --test test/*.test.ts",
     "regresjon": "node verktoy/regresjon.ts ut/ny",
+    "utgave": "node verktoy/utgave.ts",
+    "oversiktsbilde": "node verktoy/oversiktsbilde.ts",
     "sjekk": "tsc -p . && tsc -p verktoy && node verktoy/sjekk-lag.ts"
   },
   "dependencies": {

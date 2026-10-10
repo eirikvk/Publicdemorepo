@@ -1,5 +1,5 @@
 /* Bronse for NIBIO, Nasjonalt grunnkart for arealanalyse (WMS): kartbilder av dagens arealklasser, og de lagrede oversiktsbildene
-   av hele kommuner som er laget av samme tjeneste (verktoy/oversiktsbilde.py). Siden ber NIBIO tegne seks klasser i rene farger
+   av hele kommuner som er laget av samme tjeneste (verktoy/oversiktsbilde.ts). Siden ber NIBIO tegne seks klasser i rene farger
    (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
@@ -11,6 +11,8 @@ const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 /* Groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000. Zoomet lenger ut
    brukes oversiktsbildet. */
 export const FLISNIVA = 10;
+/* Groveste oppløsning NIBIO tegner grunnkartet i (1:50 000), i meter per piksel. Oversiktsbildene hentes minst så tett. */
+export const GROVESTE_M = 17;
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
 const SLD = (() => {
   const hex = (f: number[]) => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
@@ -27,9 +29,9 @@ const SLD = (() => {
   return `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;
 })();
 
-/* Adressen til et kartbilde på 512 x 512 piksler av utsnittet u i UTM33 */
-export const grunnkartUrl = (u: Utsnitt) =>
-  wmsBilde(WMS, u, 512, 512, {
+/* Adressen til et kartbilde på w x h piksler av utsnittet u i UTM33. Kartflisene er 512 x 512. */
+export const grunnkartUrl = (u: Utsnitt, w = 512, h = 512) =>
+  wmsBilde(WMS, u, w, h, {
     layers: 'okosystemtype',
     styles: '',
     format: 'image/png; mode=8bit',

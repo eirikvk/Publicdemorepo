@@ -22,7 +22,7 @@ npm run dev        siden på http://localhost:5173, som lastes på nytt ved endr
 npm run bygg       bygger siden til dist/
 ```
 
-[KOM-I-GANG.md](KOM-I-GANG.md) har hele veien: krav, prøving på mobil, bygg, tester, Python-verktøyene og feilsøking.
+[KOM-I-GANG.md](KOM-I-GANG.md) har hele veien: krav, prøving på mobil, bygg, tester, verktøyene og feilsøking.
 
 Innholdet i `dist/` er hele siden: én HTML-fil, ett skript, ett stilark, skriftfilene og de lagrede dataene. Det kan legges på en
 hvilken som helst webserver, også i en undermappe, fordi alle adresser er relative.
@@ -396,7 +396,7 @@ Ting å vite:
 ## Legge ut en endring
 
 1. Gjør endringen.
-2. `python3 verktoy/utgave.py` setter nytt utgavemerke, som vises under «Vis teknisk informasjon».
+2. `npm run utgave` setter nytt utgavemerke, som vises under «Vis teknisk informasjon».
 3. `npm run sjekk`, `npm test` og `npm run regresjon` (se under).
 4. Commit og push til `main`.
 
@@ -421,7 +421,7 @@ natur) trenger nettleseren og prøves av regresjonstesten.
 
 Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 
-- `utgave.py` setter utgavemerke, se over.
+- `utgave.ts` setter utgavemerke, se over.
 - `regresjon.ts` bygger siden, kjører et fast sett handlinger i en mobilnettleser for Trondheim, Surnadal og Oslo, og lagrer
   tallene datamotoren har regnet ut, teksten siden viser og skjermbilder av kartet. `npm run regresjon` kjører den, og
   `node verktoy/regresjon.ts ut/ny --mot HEAD` sammenligner arbeidskopien med siste commit. Tallene kommer fra åpne tjenester og endrer seg over tid, så de to kjøringene må
@@ -431,8 +431,9 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
 - `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
   (`tsc`) for `src` og `verktoy`, og så denne.
-- `oversiktsbilde.py` lager de lagrede oversiktsbildene, for eksempel `python3 verktoy/oversiktsbilde.py --fylke 50`.
-  Én kommune koster 4 til 16 kall mot NIBIO.
+- `oversiktsbilde.ts` lager de lagrede oversiktsbildene, for eksempel `npm run oversiktsbilde -- --fylke 50`. Arbeidet gjøres i
+  Chromium med koden i `src` (`oversiktsbilde-side.ts`): grunnkartet hentes med bronse, bildene og kommunemasken leses med sølv, og
+  fargene tolkes med `BLANDING`, slik kartet gjør. Én kommune koster 4 til 16 kall mot NIBIO.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.
 
 `npm run formater` formaterer koden etter `.prettierrc.json`.

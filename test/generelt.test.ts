@@ -14,6 +14,8 @@ import {
 import { husk } from '../src/data/generelt/minne.ts';
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
+import { palettPng, pngBit, pngBiter } from '../src/data/generelt/png.ts';
+import { deflateSync } from 'node:zlib';
 
 const kvadrat = (x: number, y: number, s: number) => [
   [x, y],
@@ -68,4 +70,23 @@ test('summen og nærmeste farge', () => {
     ]),
     0
   ); /* likt: den første vinner */
+});
+
+test('PNG: biter med kontrollsum, og bilde med fargetabell', () => {
+  assert.deepEqual([...pngBit('IEND', new Uint8Array(0)).subarray(8)], [0xae, 0x42, 0x60, 0x82]);
+  const png = palettPng(
+    2,
+    1,
+    new Uint8Array([0, 1]),
+    [
+      [0, 0, 0],
+      [255, 0, 0]
+    ],
+    [0, 255],
+    d => deflateSync(d)
+  );
+  assert.deepEqual(
+    pngBiter(png).map(b => b.type),
+    ['IHDR', 'PLTE', 'tRNS', 'IDAT', 'IEND']
+  );
 });
