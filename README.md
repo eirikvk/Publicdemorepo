@@ -165,7 +165,8 @@ Komponentene. Hver av dem har en CSS-fil med samme navn, for eksempel `Temaer.cs
 ## Dokumentasjon
 
 - [KOM-I-GANG.md](KOM-I-GANG.md) viser hvordan man kjører, bygger og tester siden lokalt.
-- [METODE.md](METODE.md) beskriver hvert tall siden viser: hva som hentes, hva som regnes ut, og hvor sikkert det er.
+- [METODE.md](METODE.md) forklarer hver analyse med samme oppsett (spørsmål, data inn, steg, resultat, usikkerhet, kontroll og
+  kode), i samme inndeling som `src/analyse/`.
 - [AVHENGIGHETER.md](AVHENGIGHETER.md) lister biblioteker, tjenester og verktøy, med lisenser og det som gjelder sikkerhet og
   personvern.
 
