@@ -1,24 +1,26 @@
 /* Små byggeklosser som designsystemet ikke har: fargeruter, stolper som viser en fordeling, tegnforklaringer, linjer i en liste
    med tall, lenker mellom sidene og tabeller med tall. Fargene er kartets egne og ligger som CSS-variabler, se FARGER i
    ui/farger.js. */
-import { adresse, velgSide } from '../sider.js';
-import { dekar, prosent } from '../tekst.js';
+import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import { adresse, velgSide } from '../sider.ts';
+import { dekar, prosent } from '../tekst.ts';
 import './deler.css';
 
 /* Fargerute for et kartlag eller en klasse. id er navnet på fargen, for eksempel beb eller verdi2. Lag med flere farger (plan,
    inon, graa, verdi) og lag som tegnes som omriss (vern, rein) får egen utforming i deler.css, ut fra data-lag. */
-export const Rute = ({ id, className = '' }) => (
+export const Rute = ({ id, className = '' }: { id?: string; className?: string }) => (
   <i
     className={'rute ' + className}
     data-lag={id || undefined}
-    style={id ? { '--c': `var(--${id})` } : undefined}
+    style={id ? ({ '--c': `var(--${id})` } as CSSProperties) : undefined}
     aria-hidden="true"
   />
 );
 
 /* En stolpe delt etter verdiene i deler: [navn, farge, verdi]. Farge er en CSS-variabel (--beb) eller en klasse (kjent, tom).
-   hva er navnet på det hele, til skjermlesere. */
-export function Stripe({ deler, hva, className = '' }) {
+   hva er navnet på det hele, til skjermlesere. tittel er teksten som vises når man holder over en del. */
+export type Stripedel = [navn: string, farge: string, verdi: number, tittel?: string];
+export function Stripe({ deler, hva, className = '' }: { deler: Stripedel[]; hva?: string; className?: string }) {
   const sum = deler.reduce((s, d) => s + d[2], 0),
     synlige = deler.filter(d => d[2] > 0);
   return (
@@ -40,7 +42,7 @@ export function Stripe({ deler, hva, className = '' }) {
 }
 
 /* Tegnforklaring på én linje under en stolpe: [navn, farge, tall]. */
-export const Forklaring = ({ deler }) => (
+export const Forklaring = ({ deler }: { deler: [navn: string, farge: string, tall: ReactNode][] }) => (
   <div className="forklaring">
     {deler.map(([navn, farge, tall]) => (
       <span key={navn}>
@@ -52,7 +54,19 @@ export const Forklaring = ({ deler }) => (
 );
 
 /* En linje i en tegnforklaring: fargerute og navn, tall til høyre, og en forklaring under hvis det er oppgitt. */
-export const Fargelinje = ({ id, navn, tall, under, children }) => (
+export const Fargelinje = ({
+  id,
+  navn,
+  tall,
+  under,
+  children
+}: {
+  id: string;
+  navn: ReactNode;
+  tall: ReactNode;
+  under?: ReactNode;
+  children?: ReactNode;
+}) => (
   <li>
     <b className="navn">
       <Rute id={id} />
@@ -70,8 +84,8 @@ export const Fargelinje = ({ id, navn, tall, under, children }) => (
 
 /* Lenke til en annen side i sidevelgeren. Lenken har sidens adresse, så den kan også åpnes i ny fane. Et vanlig trykk bytter side
    her, og flytter fokus og visningen til toppen av den nye siden. */
-export function Sidelenke({ id, children }) {
-  const gaa = e => {
+export function Sidelenke({ id, children }: { id: string; children: ReactNode }) {
+  const gaa = (e: MouseEvent) => {
     e.preventDefault();
     velgSide(id);
     /* Siden som nettopp er valgt, kan ikke få fokus før nettleseren har tegnet den */
@@ -92,7 +106,10 @@ export function Sidelenke({ id, children }) {
 /* Tabell med navn i første kolonne og tall i resten. kolonner er overskriftene. Hver rad er { navn, farge, tall, klasse }, der
    tall er cellene som [tekst, mindre tall under] og klasse kan være sum, eller { gruppe } for en mellomoverskrift. tittel står over
    tabellen. */
-export function Talltabell({ tittel, kolonner, rader }) {
+export type Tabellrad =
+  | { gruppe: string }
+  | { navn: ReactNode; farge?: string | null; tall: [tekst: ReactNode, under?: ReactNode][]; klasse?: string };
+export function Talltabell({ tittel, kolonner, rader }: { tittel?: string; kolonner: string[]; rader: Tabellrad[] }) {
   return (
     <div className="tabellramme">
       <table className="talltabell">

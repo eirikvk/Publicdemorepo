@@ -1,11 +1,14 @@
 /* Egne områder i kartet: tegning av et område, og omrisset med nummer for hvert eget område. Fargen inni kommer fra planlaget, som
    viser hva som går med. Datamotoren tar imot det tegnede området og regner det ut, se data/motor/egne.js. */
-import { ol } from './ol.js';
-import { OPPLOSNINGER } from '../../data/solv/felles.ts';
+import type Feature from 'ol/Feature.js';
+import type Polygon from 'ol/geom/Polygon.js';
+import type Draw from 'ol/interaction/Draw.js';
+import { ol } from './ol.ts';
+import { OPPLOSNINGER, type Kommune } from '../../data/solv/felles.ts';
 import { leggTilEget, mine } from '../../data/motor/egne.ts';
-import { abonner, app, endret } from '../../data/motor/tilstand.ts';
-import { farge } from '../farger.js';
-import { kart, lukkBytt, tilKartet, view } from './kart.js';
+import { abonner, app, endret, type EgetOmrade } from '../../data/motor/tilstand.ts';
+import { farge } from '../farger.ts';
+import { kart, lukkBytt, tilKartet, view } from './kart.ts';
 
 const egneKilde = new ol.source.Vector();
 export const egneLag = new ol.layer.Vector({
@@ -32,7 +35,7 @@ export const egneLag = new ol.layer.Vector({
 });
 
 /* Tegning: ett område om gangen. Trykk i kartet blir hjørner, og området sendes til datamotoren når det er ferdig. */
-let tegn = null;
+let tegn: Draw | null = null;
 export const tegner = () => !!tegn;
 const tegnStil = [
   new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#fff', width: 6 }) }),
@@ -47,7 +50,7 @@ const tegnStil = [
   })
 ];
 export function sluttTegning() {
-  if (tegn) kart.removeInteraction(tegn);
+  if (tegn) kart!.removeInteraction(tegn);
   tegn = null;
   endret();
 }
@@ -63,17 +66,17 @@ export function startTegning() {
   lukkBytt();
   tegn = new ol.interaction.Draw({ type: 'Polygon', stopClick: true, minPoints: 3, style: tegnStil });
   tegn.on('drawend', e => {
-    const koord = [e.feature.getGeometry().getCoordinates()];
+    const koord = [(e.feature.getGeometry() as Polygon).getCoordinates()];
     setTimeout(() => {
       sluttTegning();
       leggTilEget(koord);
     }, 0);
   });
-  kart.addInteraction(tegn);
+  kart!.addInteraction(tegn);
   endret();
   tilKartet();
 }
-export function visEgetIKartet(g) {
+export function visEgetIKartet(g: EgetOmrade) {
   view.fit(app.grense ? ol.extent.getIntersection(g.ext, app.grense.ext) : g.ext, {
     padding: [56, 56, 56, 56],
     minResolution: OPPLOSNINGER[13],
@@ -84,8 +87,8 @@ export function visEgetIKartet(g) {
 
 /* Omrissene følger egne områder for valgt kommune: ett omriss per tegnet område, med løpenummer og strek etter om det er utbygging.
    Opplastede planer har ikke omriss. Ved bytte av kommune avsluttes en tegning som er i gang. */
-const flater = new Map(); /* tegnet område (id) → flaten i kartet */
-let sistValgt,
+const flater = new Map<number, Feature>(); /* tegnet område (id) → flaten i kartet */
+let sistValgt: Kommune | null | undefined,
   vist = '';
 abonner(() => {
   if (app.valgt !== sistValgt) {
@@ -109,6 +112,6 @@ abonner(() => {
   if (ider !== vist) {
     vist = ider;
     egneKilde.clear();
-    egneKilde.addFeatures(vis.map(g => flater.get(g.id)));
+    egneKilde.addFeatures(vis.map(g => flater.get(g.id)!));
   }
 });

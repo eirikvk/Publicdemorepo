@@ -12,7 +12,8 @@ export { MdToggle } from '@miljodirektoratet/md-react/dist/toggle/MdToggle';
 import * as kombo from '@miljodirektoratet/md-react/dist/formElements/MdComboBox';
 /* MdComboBox finnes bare som standardeksport i CommonJS. Avhengig av byggeverktøyet kommer den som selve komponenten eller pakket inn
    i et objekt med default. */
-export const MdComboBox = kombo.default && kombo.default.default ? kombo.default.default : kombo.default;
+const standard = kombo.default as typeof kombo.default & { default?: typeof kombo.default };
+export const MdComboBox = standard && standard.default ? standard.default : standard;
 export { MdIconClose } from '@miljodirektoratet/md-react/dist/icons-material/MdIconClose';
 export { MdIconDelete } from '@miljodirektoratet/md-react/dist/icons-material/MdIconDelete';
 export { MdIconEdit } from '@miljodirektoratet/md-react/dist/icons-material/MdIconEdit';

@@ -7,7 +7,7 @@
    områder. Verneområder og verdsatt natur har egne farger, fordi profilens lilla er så mørk at den kan forveksles med planlagt
    utbygging, og profilens rosa ligger for nær bebygd. Siden legger fargene også ut som CSS-variabler (--beb og så videre), så
    tegnforklaringene bruker de samme (main.jsx). */
-export const FARGER = {
+export const FARGER: Record<string, string> = {
   ink: '#17201c',
   beb: '#e86474',
   jor: '#ffd16e',
@@ -38,6 +38,7 @@ export const FARGER = {
   inonv: '#1f6130',
   egne: '#0072ce' /* Blå mørk, omrisset av egne områder */
 };
-export const farge = id => FARGER[id];
-const rgbMinne = {};
-export const rgb = id => rgbMinne[id] || (rgbMinne[id] = [1, 3, 5].map(i => parseInt(FARGER[id].substr(i, 2), 16)));
+export const farge = (id: string) => FARGER[id];
+const rgbMinne: Record<string, number[]> = {};
+export const rgb = (id: string) =>
+  rgbMinne[id] || (rgbMinne[id] = [1, 3, 5].map(i => parseInt(FARGER[id].substr(i, 2), 16)));

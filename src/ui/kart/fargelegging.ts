@@ -2,12 +2,12 @@
    som sendes til NIBIO, ligger i data/bronse/nibio-grunnkart.js, og tolkingen av fargene til klasser i data/solv/klasser.js. */
 import { ALLE, BLANDING, fargeNr } from '../../data/solv/klasser.ts';
 import { tidSlutt } from '../../data/motor/tilstand.ts';
-import { rgb } from '../farger.js';
+import { rgb } from '../farger.ts';
 /* Bildet fra NIBIO har en fargetabell med opptil 256 farger. Siden bytter ut tabellen og lar selve bildet være, så fargebytte
    trenger ikke nytt kall. Hver farge tolkes som en blanding av to klasser, se BLANDING i solv/klasser.js, og får en tilsvarende
    blanding av kartfargene. */
 export const klassefarger = () => ALLE.map(([id]) => rgb(id));
-export function tilFarge(r, g, b, a, F) {
+export function tilFarge(r: number, g: number, b: number, a: number, F: number[][]): number[] {
   if (!a) return [0, 0, 0, 0];
   const q = fargeNr(r, g, b),
     A = F[BLANDING.A[q]],
@@ -30,7 +30,7 @@ const CRC = (() => {
   }
   return t;
 })();
-function pngDel(type, data) {
+function pngDel(type: string, data: Uint8Array) {
   const o = new Uint8Array(data.length + 12),
     dv = new DataView(o.buffer);
   dv.setUint32(0, data.length);
@@ -41,16 +41,16 @@ function pngDel(type, data) {
   dv.setUint32(8 + data.length, (c ^ 0xffffffff) >>> 0);
   return o;
 }
-export async function fargeleggBlob(buf) {
+export async function fargeleggBlob(buf: ArrayBuffer): Promise<Blob | null> {
   const t0 = performance.now(),
     F = klassefarger(),
     u = new Uint8Array(buf),
     dv = new DataView(buf);
   let p = 8,
-    plte = null,
-    trns = null,
+    plte: [start: number, lengde: number] | null = null,
+    trns: [start: number, lengde: number] | null = null,
     type3 = false;
-  const deler = [];
+  const deler: [type: string, start: number, lengde: number][] = [];
   while (p + 12 <= u.length) {
     const len = dv.getUint32(p),
       type = String.fromCharCode(u[p + 4], u[p + 5], u[p + 6], u[p + 7]);
@@ -66,7 +66,7 @@ export async function fargeleggBlob(buf) {
       c = document.createElement('canvas');
     c.width = bm.width;
     c.height = bm.height;
-    const g = c.getContext('2d');
+    const g = c.getContext('2d')!;
     g.drawImage(bm, 0, 0);
     const d = g.getImageData(0, 0, c.width, c.height),
       o = d.data;
@@ -78,7 +78,7 @@ export async function fargeleggBlob(buf) {
       o[i + 3] = f[3];
     }
     g.putImageData(d, 0, 0);
-    return new Promise(ok => c.toBlob(ok));
+    return new Promise<Blob | null>(ok => c.toBlob(ok));
   }
   const n = plte[1] / 3,
     nyP = new Uint8Array(plte[1]),

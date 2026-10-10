@@ -2,30 +2,34 @@
    gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå dagens klasser og fargelegger bare det som er
    natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen. Laget deler lerret med klassene, så det får
    samme gjennomsiktighet og ser ut som en del av naturfargen. */
-import { ol } from './ol.js';
-import { HALV, SYNLIG } from '../../data/solv/felles.ts';
+import type ImageTile from 'ol/ImageTile.js';
+import { ol } from './ol.ts';
+import { HALV, SYNLIG, type Flis, type Rutebilde } from '../../data/solv/felles.ts';
 import { UTENFOR } from '../../data/solv/inon.ts';
 import { NAT, klasseAv } from '../../data/solv/klasser.ts';
 import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
+import type { Inon } from '../../data/gull/inon.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
-import { rgb } from '../farger.js';
-import { ui } from '../tilstand.js';
-import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.js';
-import { friskOppGamle, tegnesOppaa } from './grunnkart.js';
+import { rgb } from '../farger.ts';
+import { ui } from '../tilstand.ts';
+import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.ts';
+import { friskOppGamle, tegnesOppaa } from './grunnkart.ts';
 
 /* Sonene som tre masker i hver sin fargekanal: rød er minst 1 km, grønn minst 3 km og blå minst 5 km fra inngrep. Når en flis
    forstørres fra masken, jevner nettleseren ut hver maske for seg, og grensen settes der masken er halvveis. Maskene jevnes også ut
    to ganger på forhånd. Sonegrensene blir dermed glatte kurver også når kartet er zoomet langt inn, selv om rutene er på 20 meter
    eller mer. Masken lages én gang per kommune. */
-const masker = new WeakMap();
-function maske(D) {
+/* Sonene når de er hentet (tilstand ok): da har de rutebildet og sonen per rute */
+type Soner = Inon & Rutebilde & { sone: Uint8Array };
+const masker = new WeakMap<Soner, HTMLCanvasElement>();
+function maske(D: Soner) {
   let c = masker.get(D);
   if (c) return c;
   c = document.createElement('canvas');
   c.width = D.w;
   c.height = D.h;
-  const g = c.getContext('2d'),
+  const g = c.getContext('2d')!,
     bilde = g.createImageData(D.w, D.h),
     P = bilde.data;
   for (let q = 0, i = 0; q < D.sone.length; q++, i += 4) {
@@ -42,20 +46,21 @@ function maske(D) {
   return c;
 }
 
-async function lastInonFlis(tile) {
+async function lastInonFlis(tile: ImageTile) {
   try {
-    const D =
+    const D = (
         app.inon && app.valgt && app.inon.nr === app.valgt.nr && app.inon.tilstand === 'ok' && app.inon.sone
           ? app.inon
-          : null,
-      tc = tile.getTileCoord(),
+          : null
+      ) as Soner | null,
+      tc = tile.getTileCoord() as Flis,
       u = plannett.getTileCoordExtent(tc);
     if (!D || !ol.extent.intersects(u, D.u)) {
       tile.setState(TOM);
       return;
     }
     const c = flislerret(),
-      g = c.getContext('2d', { willReadFrequently: true }),
+      g = c.getContext('2d', { willReadFrequently: true })!,
       t0 = performance.now();
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
@@ -116,7 +121,7 @@ abonner(() => {
   if (ny('grense', app.grense) && app.grense) inonLag.setExtent(app.grense.ext);
   if (ny('data', app.inon)) friskOpp(inonLag);
   const D = gjeldende(app.inon),
-    synlig = ui.side === 'inon' && !!app.grense && !!D && D.tilstand === 'ok' && D.sum > 0;
+    synlig = ui.side === 'inon' && !!app.grense && !!D && D.tilstand === 'ok' && D.sum! > 0;
   if (ny('synlig', synlig)) {
     inonLag.setVisible(synlig);
     friskOppGamle();

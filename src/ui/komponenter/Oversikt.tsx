@@ -9,16 +9,21 @@ import { byggNaturTall } from '../../data/gull/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { NATURTEMA } from '../../data/motor/naturtema.ts';
 import { app, gjeldende } from '../../data/motor/tilstand.ts';
-import { BLOKKER } from '../sider.js';
-import { ETT, TEMAORD } from './Temaer.jsx';
-import { Sidelenke } from './deler.jsx';
-import { andelTekst, antallOrd, dekar, iTekst, stor } from '../tekst.js';
+import { BLOKKER } from '../sider.ts';
+import { ETT, TEMAORD } from './Temaer.tsx';
+import { Sidelenke } from './deler.tsx';
+import { andelTekst, antallOrd, dekar, iTekst, stor } from '../tekst.ts';
 import './Oversikt.css';
 
-const HENTER = { tall: '', tekst: 'Henter …' },
-  ingenTall = tekst => ({ tall: '', tekst });
+/* Én linje: tallet til høyre og teksten under */
+interface Linje {
+  tall: string;
+  tekst: string;
+}
+const HENTER: Linje = { tall: '', tekst: 'Henter …' },
+  ingenTall = (tekst: string): Linje => ({ tall: '', tekst });
 /* Andelen av landarealet fra gull, som tillegg til en setning. Tomt når landarealet mangler (null). */
-const avLand = a => (a !== null ? `, ${andelTekst(a)} av landarealet` : '');
+const avLand = (a: number | null) => (a !== null ? `, ${andelTekst(a)} av landarealet` : '');
 
 /* Utbredelsesregnskapet: natur nå, og forskjellen fra 2017 */
 function regnskap() {
@@ -26,21 +31,21 @@ function regnskap() {
   if (!T || T.tilstand === 'henter') return HENTER;
   if (T.tilstand !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
   const U = byggUtbredelse(T),
-    natur = U.klasser[0],
+    natur = U!.klasser[0],
     E = byggEndring(gjeldende(app.historie)),
     d = E && !E.endret ? E.klasser[0].km2 : 0;
   return {
     tall: dekar(natur.km2),
     tekst:
-      `Natur i ${U.aar}${avLand(natur.andel)}.` +
+      `Natur i ${U!.aar}${avLand(natur.andel)}.` +
       (Math.round(d * 1000)
-        ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E.fra}, men forskjellen mellom årgangene er ikke målt endring.`
+        ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E!.fra}, men forskjellen mellom årgangene er ikke målt endring.`
         : '')
   };
 }
 
 /* Verneområder, villrein og verdsatt natur: antall, areal og planlagt utbygging innenfor */
-function naturtema(id) {
+function naturtema(id: string) {
   const t = { ...NATURTEMA.find(x => x.id === id), ...TEMAORD[id] },
     D = t.data;
   if (!D || !app.valgt || D.nr !== app.valgt.nr) return HENTER;
@@ -67,7 +72,7 @@ function inon() {
   if (s === 'henter') return HENTER;
   if (s === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
   if (s === 'ingen') return ingenTall('Ingen. Alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep.');
-  return { tall: dekar(I.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
+  return { tall: dekar(I.sum!), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
 }
 function graa() {
   const G = byggGraa(gjeldende(app.graa), null, app.ssbSum),
@@ -76,7 +81,7 @@ function graa() {
   if (s === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
   if (s === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
   return {
-    tall: dekar(G.sum),
+    tall: dekar(G.sum!),
     tekst: `Tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet${avLand(G.andelLand)}.`
   };
 }
@@ -98,7 +103,7 @@ function framtid() {
       : HENTER;
 }
 
-const LINJE = {
+const LINJE: Record<string, () => Linje> = {
   regnskap,
   graa,
   rein: () => naturtema('rein'),

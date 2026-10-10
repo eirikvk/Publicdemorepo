@@ -1,9 +1,15 @@
 /* Felles for kartlagene: flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren. Filen importerer bare
    fra OpenLayers og datadelen, så den er alltid ferdig lastet før kartlagene som bruker den. Kartlagene kaller hverandre fram og
    tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
-import { ol } from './ol.js';
+import type ImageTile from 'ol/ImageTile.js';
+import type { LoadFunction } from 'ol/Tile.js';
+import type MultiPolygon from 'ol/geom/MultiPolygon.js';
+import type Polygon from 'ol/geom/Polygon.js';
+import type TileLayer from 'ol/layer/Tile.js';
+import type XYZ from 'ol/source/XYZ.js';
+import { ol } from './ol.ts';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
-import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
+import { OPPLOSNINGER, ORIGO, UTM, type Flerflate, type Utsnitt } from '../../data/solv/felles.ts';
 import { sti } from '../../data/solv/raster.ts';
 
 export const MAKSRES = 30; /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */
@@ -32,10 +38,10 @@ export const kartflagg = {
   feilet: 0 /* antall kartbilder som hadde feilet da */
 };
 /* En flate fra OpenLayers som sti i et lerret der u er utsnittet og s er piksler per meter */
-export const geomSti = (g, geom, u, s) =>
-  sti(g, geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()], u, s);
+export const geomSti = (g: CanvasRenderingContext2D, geom: MultiPolygon | Polygon, u: Utsnitt, s: number) =>
+  sti(g, (geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()]) as Flerflate, u, s);
 /* Myker opp en maske litt, på stedet. Brukes for kommunebildene til inngrepsfri natur og grått areal. */
-export function jevn(P, w, h) {
+export function jevn(P: Uint8ClampedArray, w: number, h: number) {
   /* myker opp maskene litt (vekter 1-2-1 begge veier), så sonegrensene ikke får trappetrinn fra rutene når kartet er zoomet langt inn */
   const n = 4 * w,
     over = new Uint8Array(n),
@@ -67,29 +73,36 @@ export function jevn(P, w, h) {
   }
 }
 export const TOM = 4; /* OpenLayers' tilstand for en flis uten innhold */
+/* Et kartlag som tegnes i nettleseren eller fargelegges her */
+export type Flislag = TileLayer<XYZ>;
+/* Tegner én flis: setter bildet eller tilstanden til tile. src er adressen, for lagene som har en. OpenLayers beskriver flisen bare
+   som Tile, men i disse lagene er den alltid et ImageTile. */
+export type Flistegner = (tile: ImageTile, src: string) => void | Promise<void>;
 /* Kilde for et lag som tegnes i nettleseren. Flisene har ingen adresse, bare plass i rutenettet. */
-export const tegnetKilde = tegnFlis =>
+export const tegnetKilde = (tegnFlis: Flistegner) =>
   new ol.source.XYZ({
     tileUrlFunction: tc => tc.join('/'),
     tileGrid: plannett,
     tilePixelRatio: 2,
-    tileLoadFunction: tegnFlis,
+    tileLoadFunction: tegnFlis as LoadFunction,
     transition: 0,
     projection: UTM
   });
 /* Tegner flisene i et lag på nytt. De gamle står til de nye er klare. */
 let friskNr = 0;
 export const utdaterte =
-  new Set(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle i grunnkart.js */
-export const friskOpp = lag => {
+  new Set<Flislag>(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle i grunnkart.js */
+/* OpenLayers merker setKey som intern, men det er den som gir nye fliser uten å kaste de gamle først */
+type MedNokkel = { setKey(nokkel: string): void };
+export const friskOpp = (lag: Flislag) => {
   utdaterte.delete(lag);
-  lag.getSource().setKey(String(++friskNr));
+  (lag.getSource() as unknown as MedNokkel).setKey(String(++friskNr));
 };
 /* Kartlagene følger tilstanden. Hvert lag sjekker ved hver endring om det det tegnes av, er nytt: ny(nokkel, verdi) gir true første
    gang verdien er en annen enn sist. */
 export const nyttSiden = () => {
-  const sist = new Map();
-  return (nokkel, verdi) => {
+  const sist = new Map<string, unknown>();
+  return (nokkel: string, verdi: unknown) => {
     if (sist.has(nokkel) && sist.get(nokkel) === verdi) return false;
     sist.set(nokkel, verdi);
     return true;

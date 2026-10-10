@@ -1,28 +1,33 @@
 /* Kartlaget med dagens arealklasser: flisene fra NIBIO når kartet er zoomet inn, og oversiktsbildet når det er zoomet ut, i
    kartfargene. Bildene hentes i data/bronse/nibio-grunnkart.js. Oversiktsbildet er det lagrede, eller det sammensatte kartet
    datamotoren lager av flisene som er hentet (data/motor/grunnkart.js). Kartet har sin egen kopi av det i kartfargene. */
-import { ol } from './ol.js';
+import type ImageWrapper from 'ol/Image.js';
+import type ImageTile from 'ol/ImageTile.js';
+import type { LoadFunction } from 'ol/Tile.js';
+import type { Extent } from 'ol/extent.js';
+import type { TileCoord } from 'ol/tilecoord.js';
+import { ol } from './ol.ts';
 import { grunnkartUrl, hentGrunnkartFlis } from '../../data/bronse/nibio-grunnkart.ts';
-import { UTM } from '../../data/solv/felles.ts';
+import { UTM, type Flis, type Utsnitt } from '../../data/solv/felles.ts';
 import { leggISamling } from '../../data/motor/grunnkart.ts';
-import { abonner, app, lytt, tidSlutt } from '../../data/motor/tilstand.ts';
-import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.js';
-import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte } from './felles.js';
-import { kartStatus, view } from './kart.js';
-import { tegnPlan } from './plan.js';
+import { abonner, app, lytt, tidSlutt, type Oversikt, type Sted } from '../../data/motor/tilstand.ts';
+import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
+import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte, type Flislag } from './felles.ts';
+import { kartStatus, view } from './kart.ts';
+import { tegnPlan } from './plan.ts';
 
 /* Flisene fra NIBIO. Den rå flisen legges også inn i det sammensatte kartet i datamotoren. */
-export const klare = new Set(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
-const flisUrl = tc => grunnkartUrl(flisnett.getTileCoordExtent(tc));
-function lastFlis(tile, src) {
+export const klare = new Set<string>(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
+const flisUrl = (tc: TileCoord) => grunnkartUrl(flisnett.getTileCoordExtent(tc));
+function lastFlis(tile: ImageTile, src: string) {
   hentGrunnkartFlis(src)
     .then(buf => {
-      leggISamling(tile.getTileCoord(), buf);
+      leggISamling(tile.getTileCoord() as Flis, buf);
       return fargeleggBlob(buf);
     })
     .then(blob => {
-      const img = tile.getImage(),
-        url = URL.createObjectURL(blob);
+      const img = tile.getImage() as HTMLImageElement,
+        url = URL.createObjectURL(blob!);
       img.addEventListener(
         'load',
         () => {
@@ -41,7 +46,7 @@ export const tema = new ol.layer.Tile({
     tileUrlFunction: flisUrl,
     tileGrid: flisnett,
     tilePixelRatio: 2,
-    tileLoadFunction: lastFlis,
+    tileLoadFunction: lastFlis as LoadFunction,
     transition: 0,
     projection: UTM
   }),
@@ -52,13 +57,13 @@ export const tema = new ol.layer.Tile({
    kartet fikk mer innhold, er derfor utdaterte. Lagene merkes når en ny flis legges inn, og tegnes på nytt neste gang kartet står
    stille zoomet ut med laget på. Uten dette ble de stående tomme når man zoomet inn, så seg rundt og zoomet ut igjen. */
 export function friskOppGamle() {
-  if (kartflagg.iBevegelse || view.getResolution() < MAKSRES) return;
+  if (kartflagg.iBevegelse || view.getResolution()! < MAKSRES) return;
   for (const lag of [...utdaterte]) if (lag.getVisible()) friskOpp(lag);
 }
 /* Lagene som tegnes oppå dagens klasser zoomet ut, og som må tegnes på nytt når det sammensatte kartet får nye fliser.
    Kartlagene melder seg på her. */
-const oppaa = [];
-export const tegnesOppaa = lag => oppaa.push(lag);
+const oppaa: Flislag[] = [];
+export const tegnesOppaa = (lag: Flislag) => oppaa.push(lag);
 
 /* Oversiktsbildet. Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når
    det forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
@@ -66,21 +71,21 @@ export const tegnesOppaa = lag => oppaa.push(lag);
 export const oversiktLag = new ol.layer.Image({ className: 'tema' });
 const ovRes = () => (app.ov ? app.ov.res : 0);
 oversiktLag.on('prerender', e => {
-  e.context.imageSmoothingEnabled = e.frameState.viewState.resolution >= ovRes();
+  (e.context as CanvasRenderingContext2D).imageSmoothingEnabled = e.frameState!.viewState.resolution >= ovRes();
 });
 oversiktLag.on('postrender', e => {
-  e.context.imageSmoothingEnabled = true;
+  (e.context as CanvasRenderingContext2D).imageSmoothingEnabled = true;
 });
 /* Uten bilde holdes laget skjult. Et synlig lag uten kilde får OpenLayers til å feile midt i en kartbevegelse,
    for eksempel når man bytter fra en kommune med oversiktsbilde til en uten. */
-export const oversiktSynlig = v => oversiktLag.setVisible(v && !!oversiktLag.getSource());
+export const oversiktSynlig = (v: boolean) => oversiktLag.setVisible(v && !!oversiktLag.getSource());
 
 /* Det lagrede oversiktsbildet, fargelagt */
-let ovUrl = null;
-async function visLagret(denne) {
-  const blob = await fargeleggBlob(denne.buf);
+let ovUrl: string | null = null;
+async function visLagret(denne: Oversikt) {
+  const blob = await fargeleggBlob(denne.buf!);
   if (denne !== app.ov) return;
-  const url = URL.createObjectURL(blob),
+  const url = URL.createObjectURL(blob!),
     gammel = ovUrl;
   ovUrl = url;
   const forste = !oversiktLag.getSource();
@@ -92,21 +97,24 @@ async function visLagret(denne) {
 /* Det sammensatte kartet i kartfargene. Kilden er et lerret som fylles på flis for flis, og kartlaget får en kopi av det som bilde.
    Det sparer å pakke hele lerretet som PNG og lese det inn igjen hver gang det kommer nye fliser. */
 class LerretKilde extends ol.source.Image {
-  constructor(lerret, ext) {
+  declare bilde_: ImageWrapper;
+  declare nr_: number;
+  constructor(lerret: HTMLCanvasElement, ext: Utsnitt) {
     super({ projection: UTM });
     this.bilde_ = new ol.Image(ext, (ext[3] - ext[1]) / lerret.height, 1, 2 /* ferdig lastet */);
     this.bilde_.setImage(lerret);
     this.nr_ = 0;
   }
-  getImageInternal(extent) {
-    return ol.extent.intersects(extent, this.bilde_.getExtent()) ? this.bilde_ : null;
+  /* null når bildet er utenfor utsnittet. OpenLayers tåler det, selv om typene ikke sier det. */
+  getImageInternal(extent: Extent) {
+    return (ol.extent.intersects(extent, this.bilde_.getExtent()) ? this.bilde_ : null) as ImageWrapper;
   }
-  oppdater(lerret) {
+  oppdater(lerret: HTMLCanvasElement) {
     const mitt = ++this.nr_,
-      bytt = ny => {
-        const gml = this.bilde_.getImage();
+      bytt = (ny: HTMLCanvasElement | ImageBitmap) => {
+        const gml = this.bilde_.getImage() as HTMLCanvasElement | ImageBitmap | null;
         this.bilde_.setImage(ny);
-        if (gml && gml !== ny && gml.close) gml.close();
+        if (gml && gml !== ny && (gml as ImageBitmap).close) (gml as ImageBitmap).close();
         this.changed();
       };
     bytt(lerret); /* lerretet vises med en gang, og byttes med en kopi som tegnes raskere når den er klar */
@@ -123,8 +131,16 @@ class LerretKilde extends ol.source.Image {
   }
 }
 /* Kartets kopi av hvert sammensatt kart: lerretet i kartfargene (vis), kilden, og stedene som venter på å bli fargelagt */
-const kopier = new Map();
-const kopi = c => {
+interface Kopi {
+  c: HTMLCanvasElement;
+  g: CanvasRenderingContext2D;
+  vis: HTMLCanvasElement;
+  vg: CanvasRenderingContext2D;
+  kilde: LerretKilde | null;
+  venter: Sted[];
+}
+const kopier = new Map<HTMLCanvasElement, Kopi>();
+const kopi = (c: HTMLCanvasElement) => {
   let k = kopier.get(c);
   if (!k) {
     const vis = document.createElement('canvas');
@@ -132,9 +148,9 @@ const kopi = c => {
     vis.height = c.height;
     k = {
       c,
-      g: c.getContext('2d', { willReadFrequently: true }),
+      g: c.getContext('2d', { willReadFrequently: true })!,
       vis,
-      vg: vis.getContext('2d'),
+      vg: vis.getContext('2d')!,
       kilde: null,
       venter: []
     };
@@ -147,7 +163,7 @@ lytt('samlingFjernet', c => {
   if (k) k.vis.width = 0;
   kopier.delete(c);
 });
-function fargeleggSamling(k, x = 0, y = 0, w = k.c.width, h = k.c.height) {
+function fargeleggSamling(k: Kopi, x = 0, y = 0, w = k.c.width, h = k.c.height) {
   /* fra rå klassefarger til kartfarger, for hele lerretet eller bare en flis */
   if (x < 0) {
     w += x;
@@ -165,7 +181,7 @@ function fargeleggSamling(k, x = 0, y = 0, w = k.c.width, h = k.c.height) {
     d = k.g.getImageData(x, y, w, h),
     o = d.data;
   let sist = -1,
-    f = null;
+    f: number[] = [];
   for (let i = 0; i < o.length; i += 4) {
     if (!o[i + 3]) continue;
     const n = ((o[i] << 24) | (o[i + 1] << 16) | (o[i + 2] << 8) | o[i + 3]) >>> 0;
@@ -181,22 +197,22 @@ function fargeleggSamling(k, x = 0, y = 0, w = k.c.width, h = k.c.height) {
   k.vg.putImageData(d, x, y);
   tidSlutt('fargelegging', t0);
 }
-function visSamling(k, ext) {
+function visSamling(k: Kopi, ext: Utsnitt) {
   k.kilde = k.kilde || new LerretKilde(k.vis, ext);
   const forste = !oversiktLag.getSource();
   if (oversiktLag.getSource() !== k.kilde) oversiktLag.setSource(k.kilde);
   if (forste) oversiktSynlig(true);
   k.kilde.oppdater(k.vis);
 }
-const fargeleggVentende = k => {
+const fargeleggVentende = (k: Kopi | null | undefined) => {
   if (!k || !k.venter.length) return;
-  while (k.venter.length) fargeleggSamling(k, ...k.venter.shift());
+  while (k.venter.length) fargeleggSamling(k, ...k.venter.shift()!);
   if (k.kilde) k.kilde.oppdater(k.vis);
 };
 /* Nye fliser i det sammensatte kartet fargelegges når kartet har stått stille litt, så det ikke hakker mens man flytter det: én om
    gangen med pust imellom. Unntaket er når man zoomer ut til det sammensatte kartet er det eneste som vises. Da fargelegges alt som
    venter med en gang, ellers ville det man nettopp så på mangle. */
-let etterTimer = null;
+let etterTimer: number | undefined;
 export let etterVenter = false;
 export const pauseEtterarbeid = () => clearTimeout(etterTimer);
 export const maalEtterarbeid = ['']; /* til målingen under Tekniske valg, se kart.js */
@@ -210,7 +226,7 @@ export function planleggEtterarbeid() {
       antall = k ? k.venter.length : 0;
     if (k && k.venter.length) {
       while (k.venter.length && !kartflagg.iBevegelse && app.ov && k.c === app.ov.lerret) {
-        fargeleggSamling(k, ...k.venter.shift());
+        fargeleggSamling(k, ...k.venter.shift()!);
         await new Promise(ok => setTimeout(ok, 0));
       }
       if (k.kilde) k.kilde.oppdater(k.vis); /* også når det ble avbrutt, så det som er gjort vises */
@@ -227,7 +243,7 @@ lytt('nyFlis', (c, r) => {
   const k = kopi(c);
   oppaa.forEach(lag => utdaterte.add(lag));
   k.venter.push(r); /* fargelegges når kartet står stille */
-  if (view.getResolution() >= MAKSRES)
+  if (view.getResolution()! >= MAKSRES)
     fargeleggVentende(k); /* zoomet ut vises det sammensatte kartet, så flisen må inn med en gang */
   planleggEtterarbeid();
 });
@@ -247,7 +263,7 @@ abonner(() => {
     visLagret(denne);
     tegnPlan(); /* planlaget tegnes oppå dagens klasser, som nå finnes for hele kommunen */
   } else {
-    const k = kopi(denne.lerret);
+    const k = kopi(denne.lerret!);
     k.venter.length = 0;
     fargeleggSamling(k);
     visSamling(k, denne.ext);

@@ -1,15 +1,21 @@
 /* Om og metode: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
 import { finn } from '../../data/motor/kommune.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { settSmale } from '../kart/plan.js';
-import { kb, tid } from '../tekst.js';
-import { ui } from '../tilstand.js';
-import { VERSJON } from '../../utgave.js';
-import { MdCheckbox, MdLink, MdToggle } from './md.js';
+import { settSmale } from '../kart/plan.ts';
+import { kb, tid } from '../tekst.ts';
+import { ui } from '../tilstand.ts';
+import { VERSJON } from '../../utgave.ts';
+import { MdCheckbox, MdLink, MdToggle } from './md.ts';
 
 const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 
-export default function Om({ teknisk, settTeknisk }) {
+/* Teknisk visning: om den er slått på, og hvordan den slås av og på. Valget står i adressen, se App.tsx. */
+export interface Tekniskvalg {
+  teknisk: boolean;
+  settTeknisk: (paa: boolean) => void;
+}
+
+export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
   const medBilde = Object.keys(app.oversikter).filter(nr => finn(nr)),
     reg = app.oversiktInfo;
   return (
@@ -107,7 +113,7 @@ export default function Om({ teknisk, settTeknisk }) {
         </p>
         {medBilde.length > 0 && reg && (
           <p>
-            For {medBilde.length === 1 ? finn(medBilde[0])[1].navn : medBilde.length + ' kommuner'} ligger også et
+            For {medBilde.length === 1 ? finn(medBilde[0])![1].navn : medBilde.length + ' kommuner'} ligger også et
             ferdig oversiktsbilde lagret ({reg.versjon}, hentet {reg.hentet}). Det vises når kartet er zoomet ut, og
             fliser fra NIBIO tar over når du zoomer inn.
           </p>

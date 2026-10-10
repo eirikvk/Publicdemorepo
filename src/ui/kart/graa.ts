@@ -1,19 +1,21 @@
 /* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i datamotoren (data/motor/graa.js). Zoomet inn hentes
    laget som fliser fra NIBIO, så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
    område: areal som er bebygd i grunnkartet, men ikke grått. */
-import { ol } from './ol.js';
+import type ImageTile from 'ol/ImageTile.js';
+import { ol } from './ol.ts';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { graaFlisUrl, hentGraaFlis } from '../../data/bronse/nibio-graa.ts';
-import { HALV, SYNLIG } from '../../data/solv/felles.ts';
+import { HALV, SYNLIG, type Flis, type Rutebilde } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
 import { klasseAv } from '../../data/solv/klasser.ts';
 import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
+import type { Graa } from '../../data/gull/graa.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
-import { rgb } from '../farger.js';
-import { ui } from '../tilstand.js';
-import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.js';
-import { friskOppGamle, tegnesOppaa } from './grunnkart.js';
+import { rgb } from '../farger.ts';
+import { ui } from '../tilstand.ts';
+import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.ts';
+import { friskOppGamle, tegnesOppaa } from './grunnkart.ts';
 
 /* Kartets egne terskler for grått areal. Arealet regnes med halvregelen (HALV). I flisene fra NIBIO er en piksel grå fra en
    fjerdedel dekning, så kantene på små flater ikke forsvinner når kartet er zoomet langt inn. Langs kanten av den utjevnede masken
@@ -22,14 +24,16 @@ const KART_GRAA = 64,
   KART_KANT = 64;
 
 /* Det grå som maske: hvitt der det er grått, jevnet ut så kanten blir glatt når kartet er zoomet inn. Lages én gang per kommune. */
-const masker = new WeakMap();
-function maske(D) {
+/* Grått areal når det er hentet (tilstand ok): da har det rutebildet og trinnet per rute */
+type Trinn = Graa & Rutebilde & { kl: Uint8Array };
+const masker = new WeakMap<Trinn, HTMLCanvasElement>();
+function maske(D: Trinn) {
   let c = masker.get(D);
   if (c) return c;
   c = document.createElement('canvas');
   c.width = D.w;
   c.height = D.h;
-  const g = c.getContext('2d'),
+  const g = c.getContext('2d')!,
     bilde = g.createImageData(D.w, D.h),
     P = bilde.data;
   for (let q = 0, i = 0; q < D.kl.length; q++, i += 4) {
@@ -42,17 +46,19 @@ function maske(D) {
   return c;
 }
 
-async function lastGraaFlis(tile) {
+async function lastGraaFlis(tile: ImageTile) {
   try {
-    const D = app.graa && app.valgt && app.graa.nr === app.valgt.nr && app.graa.tilstand === 'ok' ? app.graa : null,
-      tc = tile.getTileCoord(),
+    const D = (
+        app.graa && app.valgt && app.graa.nr === app.valgt.nr && app.graa.tilstand === 'ok' ? app.graa : null
+      ) as Trinn | null,
+      tc = tile.getTileCoord() as Flis,
       u = plannett.getTileCoordExtent(tc);
     if (!D || !ol.extent.intersects(u, D.u)) {
       tile.setState(TOM);
       return;
     }
     const c = flislerret(),
-      g = c.getContext('2d', { willReadFrequently: true });
+      g = c.getContext('2d', { willReadFrequently: true })!;
     g.imageSmoothingEnabled = true;
     if (tc[0] >= FLISNIVA) {
       /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
@@ -158,7 +164,7 @@ abonner(() => {
   if (ny('grense', app.grense) && app.grense) graaLag.setExtent(app.grense.ext);
   if (ny('data', app.graa)) friskOpp(graaLag);
   const D = gjeldende(app.graa),
-    synlig = ui.side === 'graa' && !!app.grense && !!D && D.tilstand === 'ok' && D.sum > 0,
+    synlig = ui.side === 'graa' && !!app.grense && !!D && D.tilstand === 'ok' && D.sum! > 0,
     nyKryssing = ny('kryssing', app.graaKryss);
   if (ny('synlig', synlig) || nyKryssing) {
     graaLag.setVisible(synlig);

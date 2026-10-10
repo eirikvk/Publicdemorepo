@@ -2,7 +2,17 @@
    når alle filene er lastet, og settes inn på siden av ui/komponenter/Kartpanel.jsx. Hvert kartlag ligger i sin egen fil her, og
    følger tilstanden i datamotoren på samme måte som React-komponentene: ved hver endring sjekker laget om det det tegnes av, er nytt.
    Kartet kaller datamotoren når brukeren gjør noe (velger en annen kommune), men datamotoren kaller aldri kartet. */
-import { ol } from './ol.js';
+import type OlMap from 'ol/Map.js';
+import type { FrameState } from 'ol/Map.js';
+import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
+import type Overlay from 'ol/Overlay.js';
+import type { Coordinate } from 'ol/coordinate.js';
+import type MultiPolygon from 'ol/geom/MultiPolygon.js';
+import type BaseLayer from 'ol/layer/Base.js';
+import type Layer from 'ol/layer/Layer.js';
+import type RenderEvent from 'ol/render/Event.js';
+import type { TileCoord } from 'ol/tilecoord.js';
+import { ol } from './ol.ts';
 import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { bakgrunnUrl, hentKommuneIPunkt } from '../../data/bronse/kartverket.ts';
@@ -11,12 +21,12 @@ import { ALLE } from '../../data/solv/klasser.ts';
 import { kartetFlyttes } from '../../data/motor/grunnkart.ts';
 import { finn, velgKommune } from '../../data/motor/kommune.ts';
 import { abonner, app, bruk, endret, nullstillBruk, tidSlutt } from '../../data/motor/tilstand.ts';
-import { farge, rgb } from '../farger.js';
-import { kb, nf } from '../tekst.js';
-import { ui } from '../tilstand.js';
-import { egneLag, sluttTegning, tegner } from './egne.js';
-import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden } from './felles.js';
-import { graaLag } from './graa.js';
+import { farge, rgb } from '../farger.ts';
+import { kb, nf } from '../tekst.ts';
+import { ui, type Probe } from '../tilstand.ts';
+import { egneLag, sluttTegning, tegner } from './egne.ts';
+import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden } from './felles.ts';
+import { graaLag } from './graa.ts';
 import {
   etterVenter,
   fargeleggAltSomVenter,
@@ -28,10 +38,10 @@ import {
   pauseEtterarbeid,
   planleggEtterarbeid,
   tema
-} from './grunnkart.js';
-import { inonLag } from './inon.js';
-import { dekLag, flateLag, markLag, navnVed, omrissLag } from './naturtema.js';
-import { planLag } from './plan.js';
+} from './grunnkart.ts';
+import { inonLag } from './inon.ts';
+import { dekLag, flateLag, markLag, navnVed, omrissLag } from './naturtema.ts';
+import { planLag } from './plan.ts';
 
 const bakgrunn = new ol.layer.Tile({
   className: 'bakgrunn',
@@ -40,7 +50,7 @@ const bakgrunn = new ol.layer.Tile({
     crossOrigin: 'anonymous',
     attributions: '© Kartverket, NIBIO, DiBK',
     tileGrid: new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256 }),
-    tileUrlFunction: bakgrunnUrl
+    tileUrlFunction: bakgrunnUrl as (tc: TileCoord) => string
   })
 });
 const grenseKilde = new ol.source.Vector();
@@ -56,47 +66,48 @@ export const view = new ol.View({
   resolution: OPPLOSNINGER[4],
   enableRotation: false
 });
-export let kart = null;
+export let kart: OlMap | null = null;
 /* Brukeren har bedt om mindre bevegelse: da flyttes ikke kart og side mykt. */
 export const rolig = () => !!window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* Ruller siden så kartet er synlig. Kartet ligger i elementet med klassen kartscene, se Kartpanel.jsx. */
-export const tilKartet = mykt => {
+export const tilKartet = (mykt?: boolean) => {
   const k = document.querySelector('.kartscene');
   if (k) k.scrollIntoView({ behavior: mykt && !rolig() ? 'smooth' : 'auto', block: 'nearest' });
 };
 /* Kommunegrensen som geometri i OpenLayers, til klipping og til å se om et trykk er innenfor */
-let klipp = null;
+let klipp: MultiPolygon | null = null;
 
 /* Utenfor valgt kommune vises bare bakgrunnskartet: flisene klippes mot kommunens flate,
    hentes bare innenfor kommunens utstrekning, og slås først på når grensen er lastet. */
 /* Der en flis er ferdig lastet, fjernes oversiktsbildet under den før flisen tegnes. Ellers ville det grove
    bildet stikke fram som en uskarp kant rundt alt som er gjennomsiktig i flisen, for eksempel langs sjøen. */
-const dekket = ([z, x, y]) => {
+const dekket = ([z, x, y]: TileCoord) => {
   for (let d = 0; z - d >= FLISNIVA; d++) if (klare.has(`${z - d}/${x >> d}/${y >> d}`)) return true;
   return false;
 };
 const klippStil = new ol.style.Style({ fill: new ol.style.Fill({ color: '#000' }) });
 /* Klippingen er det dyreste i hvert bilde når kartet flyttes, så den gjøres så sjelden som mulig:
    ikke i det hele tatt når kommunegrensen er utenfor utsnittet, og ellers én gang per lerret i stedet for én gang per lag. */
-let klippBilde = null,
+let klippBilde: FrameState | null = null,
   klippTrengs = true,
-  klippRinger = null,
-  klippFor = null;
-function grenseISyne(fs) {
+  klippRinger: Float64Array[] = [],
+  klippFor: MultiPolygon | null = null;
+function grenseISyne(fs: FrameState) {
   if (klippBilde === fs) return klippTrengs;
   klippBilde = fs;
   if (klippFor !== klipp) {
     klippFor = klipp;
-    klippRinger = klipp
+    klippRinger = klipp!
       .getCoordinates()
       .flat()
       .map(r => Float64Array.from(r.flat()));
   }
   const m = 4 * fs.viewState.resolution,
-    x0 = fs.extent[0] - m,
-    y0 = fs.extent[1] - m,
-    x1 = fs.extent[2] + m,
-    y1 = fs.extent[3] + m;
+    u = fs.extent!,
+    x0 = u[0] - m,
+    y0 = u[1] - m,
+    x1 = u[2] + m,
+    y1 = u[3] + m;
   for (const r of klippRinger)
     for (let i = 0; i + 3 < r.length; i += 2) {
       const ax = r[i],
@@ -106,14 +117,14 @@ function grenseISyne(fs) {
       if ((ax < x0 && bx < x0) || (ax > x1 && bx > x1) || (ay < y0 && by < y0) || (ay > y1 && by > y1)) continue;
       return (klippTrengs = true); /* en del av grensen kan ligge i utsnittet */
     }
-  return (klippTrengs = !klipp.intersectsCoordinate(
+  return (klippTrengs = !klipp!.intersectsCoordinate(
     fs.viewState.center
   )); /* helt innenfor: ingenting å klippe. Helt utenfor: alt skal bort. */
 }
-const klippTilKommunen = e => {
-  if (!klipp || !grenseISyne(e.frameState)) return;
+const klippTilKommunen = (e: RenderEvent) => {
+  if (!klipp || !grenseISyne(e.frameState!)) return;
   const t0 = performance.now(),
-    c = e.context,
+    c = e.context as CanvasRenderingContext2D,
     vc = ol.render.getVectorContext(e);
   c.save();
   c.globalCompositeOperation = 'destination-in';
@@ -122,10 +133,11 @@ const klippTilKommunen = e => {
   c.restore();
   tidSlutt('klipping', t0);
 };
-const tegnes = (lag, res) => lag.getVisible() && res < lag.getMaxResolution() && res >= lag.getMinResolution();
-const klippSist = (lag, over) =>
+const tegnes = (lag: BaseLayer, res: number) =>
+  lag.getVisible() && res < lag.getMaxResolution() && res >= lag.getMinResolution();
+const klippSist = (lag: Layer, over: BaseLayer[]) =>
   lag.on('postrender', e => {
-    const res = e.frameState.viewState.resolution;
+    const res = e.frameState!.viewState.resolution;
     if (!over.some(l => tegnes(l, res))) klippTilKommunen(e);
   }); /* det øverste laget i lerretet klipper for alle */
 /* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
@@ -133,7 +145,7 @@ const klippSist = (lag, over) =>
 export function kartStatus() {
   const varUte = ui.ute,
     varSiste = ui.siste;
-  if (view.getResolution() < MAKSRES) ui.ute = false;
+  if (view.getResolution()! < MAKSRES) ui.ute = false;
   else {
     const o = (app.ov && app.ov.ext) || (app.valgt && app.oversikter[app.valgt.nr]),
       treff = !!o && !!kart && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
@@ -150,7 +162,7 @@ export function kartStatus() {
 /* Måling til feilsøking: hvor jevnt kartet tegnes mens det flyttes, og hvor lang tid etterarbeidet tar. Vises under Tekniske valg. */
 let maalRaf = 0,
   maalSist = 0,
-  maalT = [],
+  maalT: number[] = [],
   tegnT0 = 0,
   maalTekst = '';
 export const visMaaling = () => {
@@ -166,7 +178,7 @@ export const visMaaling = () => {
   ui.maaling = tekst;
   endret();
 };
-const maalBilde = t => {
+const maalBilde = (t: number) => {
   if (maalSist) maalT.push(t - maalSist);
   maalSist = t;
   maalRaf = requestAnimationFrame(maalBilde);
@@ -183,12 +195,12 @@ function maalFerdig() {
    rett over punktet, med en prikk der man trykket. Byttet skjer først når man trykker på knappen, så et bomtrykk ved grensen ikke bytter kommune.
    Knappen holdes innenfor kartflaten og unna zoomknappene, og følger punktet når kartet flyttes. Knappen er en del av siden
    (Kartpanel.jsx), som gir kartet elementet med settByttKnapp. */
-let byttLag = null,
-  byttEl = null,
+let byttLag: Overlay | null = null,
+  byttEl: HTMLElement | null = null,
   byttSok = 0,
-  byttKoord = null,
-  beholdFor = null; /* kommunen som ble valgt i kartet: kartet blir stående der det er */
-export const settByttKnapp = el => {
+  byttKoord: Coordinate | null = null,
+  beholdFor: string | null = null; /* kommunen som ble valgt i kartet: kartet blir stående der det er */
+export const settByttKnapp = (el: HTMLElement | null) => {
   byttEl = el;
 };
 export const lukkBytt = () => {
@@ -203,7 +215,7 @@ export const lukkBytt = () => {
 export function plasserBytt() {
   if (!ui.bytt || !byttKoord || !byttEl || !kart) return;
   const px = kart.getPixelFromCoordinate(byttKoord),
-    [w, h] = kart.getSize(),
+    [w, h] = kart.getSize()!,
     bw = byttEl.offsetWidth,
     bh = byttEl.offsetHeight;
   if (!px || px[0] < -20 || px[1] < -20 || px[0] > w + 20 || px[1] > h + 20) {
@@ -225,11 +237,11 @@ export function byttTilValgt() {
     velgKommune(nr);
   }
 }
-const settProbe = probe => {
+const settProbe = (probe: Probe) => {
   ui.probe = probe;
   endret();
 };
-async function finnKommune(koord) {
+async function finnKommune(koord: Coordinate) {
   lukkBytt();
   const mitt = byttSok;
   settProbe({ tekst: 'Slår opp kommunen …' });
@@ -239,7 +251,7 @@ async function finnKommune(koord) {
     const t = finn(j.kommunenummer);
     if (!t || (app.valgt && t[1].nr === app.valgt.nr)) throw new Error('ingen annen kommune');
     byttKoord = koord;
-    byttLag.setPosition(koord);
+    byttLag!.setPosition(koord);
     ui.bytt = { nr: t[1].nr, navn: t[1].navn };
     settProbe({ punkt: `${t[1].navn} kommune` }); /* knappen plasseres når siden har tegnet den, se Kartpanel.jsx */
   } catch (e) {
@@ -247,7 +259,7 @@ async function finnKommune(koord) {
   }
 }
 /* Trykk på kartet: les fargen i punktet og finn klassen. */
-function trykkIKartet(e) {
+function trykkIKartet(e: MapBrowserEvent) {
   if (tegner()) return; /* under tegning er trykk i kartet hjørner i området */
   if (klipp && !klipp.intersectsCoordinate(e.coordinate)) {
     finnKommune(e.coordinate);
@@ -255,23 +267,24 @@ function trykkIKartet(e) {
   }
   lukkBytt();
   const iTema = navnVed(e.coordinate);
-  const pl = planLag.getVisible() ? planLag.getData(e.pixel) : null;
+  const pl = (planLag.getVisible() ? planLag.getData(e.pixel) : null) as Uint8ClampedArray | null;
   if (pl && pl[3] > 40) {
-    const av = c => (pl[0] - c[0]) ** 2 + (pl[1] - c[1]) ** 2 + (pl[2] - c[2]) ** 2;
+    const av = (c: number[]) => (pl[0] - c[0]) ** 2 + (pl[1] - c[1]) ** 2 + (pl[2] - c[2]) ** 2;
     settProbe({
       punkt: (av(rgb('pjor')) < av(rgb('pnat')) ? 'Jordbruk' : 'Natur') + ', satt av til framtidig utbygging' + iTema
     });
     return;
   }
-  let d = tema.getVisible() ? tema.getData(e.pixel) : null;
-  if ((!d || d[3] < 40) && app.ov && oversiktLag.getVisible()) d = oversiktLag.getData(e.pixel);
+  let d = (tema.getVisible() ? tema.getData(e.pixel) : null) as Uint8ClampedArray | null;
+  if ((!d || d[3] < 40) && app.ov && oversiktLag.getVisible())
+    d = oversiktLag.getData(e.pixel) as Uint8ClampedArray | null;
   if (!d || d[3] < 40) {
     settProbe({ tekst: 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).' });
     return;
   }
-  let best = null,
+  let best: string | null = null,
     min = 1e9;
-  [...ALLE, ['slor', null]].forEach(([id, navn]) => {
+  [...ALLE, ['slor', null] as const].forEach(([id, navn]) => {
     const c = rgb(id),
       a = (d[0] - c[0]) ** 2 + (d[1] - c[1]) ** 2 + (d[2] - c[2]) ** 2;
     if (a < min) {
@@ -323,7 +336,7 @@ abonner(() => {
   if (ny('oversikt', app.valgt && app.oversikter[app.valgt.nr])) kartStatus();
   if (ny('sisteKall', app.sisteKall) && app.sisteKall) {
     const s = app.sisteKall,
-      fliser = n => `${n} ${n === 1 ? 'flis' : 'fliser'}`;
+      fliser = (n: number) => `${n} ${n === 1 ? 'flis' : 'fliser'}`;
     ui.siste = s.n
       ? `Siste kall mot ${s.kilde}: ${fliser(s.n)}, ${nf(s.ms / 1000)} s, ${kb(s.bytes)}`
       : `Kallet mot ${s.kilde} feilet.`;
@@ -367,8 +380,8 @@ export function lagKart() {
       if (stor === ui.sidezoom) return;
       ui.sidezoom = stor;
       document.documentElement.classList.toggle('sidezoom', stor);
-      kart.getViewport().style.touchAction = stor ? 'auto' : 'none';
-      kart.getInteractions().forEach(i => i.setActive(!stor));
+      kart!.getViewport().style.touchAction = stor ? 'auto' : 'none';
+      kart!.getInteractions().forEach(i => i.setActive(!stor));
       endret();
     };
     vv.addEventListener('resize', sjekk);
@@ -376,15 +389,15 @@ export function lagKart() {
     sjekk();
   }
   tema.on('prerender', e => {
-    const fs = e.frameState,
+    const fs = e.frameState!,
       res = fs.viewState.resolution;
     if (!app.ov || !oversiktLag.getVisible() || res >= MAKSRES) return;
-    const c = e.context;
-    flisnett.forEachTileCoord(fs.extent, flisnett.getZForResolution(res), tc => {
+    const c = e.context as CanvasRenderingContext2D;
+    flisnett.forEachTileCoord(fs.extent!, flisnett.getZForResolution(res), tc => {
       if (!dekket(tc)) return;
       const u = flisnett.getTileCoordExtent(tc);
-      const a = ol.render.getRenderPixel(e, kart.getPixelFromCoordinate([u[0], u[3]])),
-        b = ol.render.getRenderPixel(e, kart.getPixelFromCoordinate([u[2], u[1]]));
+      const a = ol.render.getRenderPixel(e, kart!.getPixelFromCoordinate([u[0], u[3]])),
+        b = ol.render.getRenderPixel(e, kart!.getPixelFromCoordinate([u[2], u[1]]));
       const x0 = Math.floor(a[0]),
         y0 = Math.floor(a[1]);
       c.clearRect(x0, y0, Math.ceil(b[0]) - x0, Math.ceil(b[1]) - y0);
@@ -423,19 +436,19 @@ export function lagKart() {
     kartflagg.iBevegelse = false;
     maalFerdig();
     kartStatus();
-    kart.render();
+    kart!.render();
     friskOppGamle();
     if (etterVenter) planleggEtterarbeid();
     kartetFlyttes(false);
   });
   view.on('change:resolution', () => {
-    if (view.getResolution() >= MAKSRES) {
+    if (view.getResolution()! >= MAKSRES) {
       oversiktSynlig(true);
       fargeleggAltSomVenter();
     }
   });
   kart.on('rendercomplete', () => {
-    if (kartflagg.iBevegelse || view.getResolution() >= MAKSRES || !app.valgt || !tema.getVisible() || opptatt())
+    if (kartflagg.iBevegelse || view.getResolution()! >= MAKSRES || !app.valgt || !tema.getVisible() || opptatt())
       return; /* aldri skjul oversikten midt i en bevegelse */
     if (henteStatus.feilet === kartflagg.feilet) oversiktSynlig(false);
     const ingen = 'Ingen nye kall. Flisene lå allerede i nettleseren.';

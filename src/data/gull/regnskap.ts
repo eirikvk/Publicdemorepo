@@ -31,10 +31,19 @@ export function byggUtbredelse(T: SsbTall | null) {
    maks er den største forskjellen, til stolpene. */
 export function byggEndring(H: Historie | null) {
   if (!H) return null;
-  if (H.endret) return { fra: H.fra, til: H.til, endret: true };
+  if (H.endret) return { fra: H.fra, til: H.til, endret: true as const };
   const klasser = KLASSER.map(([id, navn, i]) => ({ id, navn, km2: H.a1[i] - H.a0[i] }));
-  return { fra: H.fra, til: H.til, endret: false, klasser, maks: Math.max(...klasser.map(x => Math.abs(x.km2))) || 1 };
+  return {
+    fra: H.fra,
+    til: H.til,
+    endret: false as const,
+    klasser,
+    maks: Math.max(...klasser.map(x => Math.abs(x.km2))) || 1
+  };
 }
+
+/* Forskjellen fra 2017, slik byggEndring gir den: endret er true når tallene ikke kan sammenlignes */
+export type Endring = NonNullable<ReturnType<typeof byggEndring>>;
 
 /* Regnskapsoppstillingen: én kolonne per klasse og en sum, og radene inngående areal, netto endring og utgående areal. avvik er
    hvor mye landarealet er endret mellom årgangene, i hele dekar. */

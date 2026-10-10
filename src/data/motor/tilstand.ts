@@ -145,10 +145,12 @@ export function endret() {
 }
 
 /* Hendelser som ikke er tilstand: for eksempel at det er lagt en ny flis inn i det sammensatte kartet, og hvor. Kartet lytter. */
+/* Et sted i et lerret: [x, y, bredde, høyde] i piksler */
+export type Sted = [x: number, y: number, b: number, h: number];
 interface Hendelser {
   nyFlis: [
     lerret: HTMLCanvasElement,
-    sted: number[]
+    sted: Sted
   ] /* en flis er lagt inn i det sammensatte kartet, på stedet [x, y, b, h] */;
   samlingFjernet: [lerret: HTMLCanvasElement] /* et sammensatt kart er fjernet fra minnet */;
 }

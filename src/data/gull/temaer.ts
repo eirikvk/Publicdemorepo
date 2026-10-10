@@ -322,3 +322,5 @@ export function byggNaturTall(
     }))
   };
 }
+/* Det temasiden viser, fra byggNaturTall */
+export type NaturTall = ReturnType<typeof byggNaturTall>;

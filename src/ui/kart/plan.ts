@@ -1,29 +1,34 @@
 /* Kartlaget for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av. Planen hentes fra DiBK som
    fliser i samme rutenett (data/bronse/dibk-kommuneplan.js). For hver flis legges planen oppå dagens klasser i nettleseren, og bare
    natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut tegnes laget fra planrutenettet i datamotoren. */
-import { ol } from './ol.js';
+import type ImageTile from 'ol/ImageTile.js';
+import type { LoadFunction } from 'ol/Tile.js';
+import type { TileCoord } from 'ol/tilecoord.js';
+import { ol } from './ol.ts';
 import { hentKommuneplanFlis, kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
-import { HALV, SYNLIG, UTM } from '../../data/solv/felles.ts';
+import { HALV, SYNLIG, UTM, type Flis, type Utsnitt } from '../../data/solv/felles.ts';
 import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
+import type { Del } from '../../data/solv/egne.ts';
+import type { Planrutenett } from '../../data/solv/planrutenett.ts';
 import { flislerret, sti } from '../../data/solv/raster.ts';
 import { mine, utenPlan } from '../../data/motor/egne.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { abonner, app, endret, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
-import { rgb } from '../farger.js';
-import { ui } from '../tilstand.js';
-import { SVAKEST, TOM, friskOpp, nyttSiden, plannett } from './felles.js';
+import { rgb } from '../farger.ts';
+import { ui } from '../tilstand.ts';
+import { SVAKEST, TOM, friskOpp, nyttSiden, plannett, type Flistegner } from './felles.ts';
 
-const planUrl = tc => kommuneplanUrl(plannett.getTileCoordExtent(tc));
+const planUrl = (tc: TileCoord) => kommuneplanUrl(plannett.getTileCoordExtent(tc));
 
 /* Egne områder i flisen med utsnittet u, som én verdi per piksel: 1 utbygging, 2 ikke utbygging. null hvis ingen ligger der. */
-function egenMaske(u) {
-  const deler = [];
+function egenMaske(u: Utsnitt) {
+  const deler: Del[] = [];
   for (const x of mine())
     if (ol.extent.intersects(x.ext, u))
       for (const del of x.deler) if (ol.extent.intersects(del.ext, u)) deler.push(del);
   if (!deler.length) return null;
   const c = flislerret(),
-    g = c.getContext('2d', { willReadFrequently: true }),
+    g = c.getContext('2d', { willReadFrequently: true })!,
     s = 512 / (u[2] - u[0]);
   for (const type of ['fri', 'bygg']) {
     g.fillStyle = type === 'bygg' ? '#f00' : '#0f0';
@@ -42,16 +47,17 @@ function egenMaske(u) {
 /* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra planrutenettet for hele
    kommunen (21 meter per rute). En flispiksel får farge bare hvis det faktisk ligger planlagt utbygging innenfor den, og styrken
    følger hvor stor del av pikselen det gjelder. Feltene blir dermed aldri større enn de er, og de forsvinner heller ikke: små felt
-   vises som svake enkeltpiksler. */
-function grovPlanFlis(tc) {
+   vises som svake enkeltpiksler. tom sier at ingenting er tegnet. */
+type Planbilde = HTMLCanvasElement & { tom?: boolean };
+function grovPlanFlis(tc: TileCoord): Planbilde | null {
   const R = app.planRaster;
   if (!R) return null;
   const [z, x, y] = tc,
     f = 2 ** (R.z - z),
     D = ui.visSmale ? R.alle : R.ryddet,
     F = [rgb('pnat'), rgb('pjor')];
-  const c = flislerret(),
-    g = c.getContext('2d'),
+  const c: Planbilde = flislerret(),
+    g = c.getContext('2d')!,
     ut = g.createImageData(512, 512),
     o = ut.data;
   let tegnet = false;
@@ -86,7 +92,7 @@ function grovPlanFlis(tc) {
 }
 /* Kartets egen regel for smale striper zoomet inn: en piksel vises når ruta den ligger i, eller en av de fire nabo­rutene, er
    et felt som ble beholdt i planrutenettet. Tallene bruker selve rutenettet (ryddStriper i solv/planrutenett.js). */
-function iEllerInntil(R, x, y) {
+function iEllerInntil(R: Planrutenett, x: number, y: number) {
   if (x < 0 || y < 0 || x >= R.w || y >= R.h) return false;
   const i = y * R.w + x,
     r = R.ryddet;
@@ -98,7 +104,7 @@ function iEllerInntil(R, x, y) {
     (y < R.h - 1 && r[i + R.w])
   );
 }
-async function lastPlanFlis(tile, src) {
+async function lastPlanFlis(tile: ImageTile, src: string) {
   try {
     if (tile.getTileCoord()[0] <= 9) {
       const t0 = performance.now(),
@@ -112,10 +118,10 @@ async function lastPlanFlis(tile, src) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord()), hentKommuneplanFlis(src)]);
+    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord() as Flis), hentKommuneplanFlis(src)]);
     if (!K) throw new Error('mangler dagens klasser');
     const c = flislerret(),
-      g = c.getContext('2d', { willReadFrequently: true }),
+      g = c.getContext('2d', { willReadFrequently: true })!,
       bm = await createImageBitmap(new Blob([planBuf])),
       t0 = performance.now();
     g.drawImage(bm, 0, 0, 512, 512);
@@ -173,7 +179,7 @@ const nyPlanKilde = () =>
     tileUrlFunction: planUrl,
     tileGrid: plannett,
     tilePixelRatio: 2,
-    tileLoadFunction: lastPlanFlis,
+    tileLoadFunction: lastPlanFlis as Flistegner as LoadFunction,
     transition: 0,
     projection: UTM
   });
@@ -182,7 +188,7 @@ export const planLag = new ol.layer.Tile({ className: 'plan', source: nyPlanKild
 export const tegnPlan = () => planLag.setSource(nyPlanKilde());
 
 /* Smale striper i kartet, under Tekniske valg */
-export function settSmale(paa) {
+export function settSmale(paa: boolean) {
   ui.visSmale = paa;
   endret();
 }

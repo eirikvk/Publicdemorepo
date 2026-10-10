@@ -3,14 +3,14 @@
 import { byggPlanlagt } from '../../data/gull/planlagt.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { ingenPlan } from '../../data/motor/plan.ts';
-import { app, gjeldende } from '../../data/motor/tilstand.ts';
-import Egne from './Egne.jsx';
-import { Rute } from './deler.jsx';
-import { antallOrd, iTekst, pst } from '../tekst.js';
-import { MdAlertMessage } from './md.js';
+import { app, gjeldende, type Planinfo } from '../../data/motor/tilstand.ts';
+import Egne from './Egne.tsx';
+import { Rute } from './deler.tsx';
+import { antallOrd, iTekst, pst } from '../tekst.ts';
+import { MdAlertMessage } from './md.ts';
 
 /* Hvilken plan DiBK har, i tekst: plan-id, hvem som har levert den, og når den ble kopiert til DiBK */
-export const planKilde = p =>
+export const planKilde = (p: Planinfo['plan']) =>
   p
     ? `plan ${p.id}${p.vert ? ' fra ' + p.vert : ''}${p.kopiert ? `, kopiert til DiBK ${p.kopiert[2]}.${p.kopiert[1]}.${p.kopiert[0]}` : ''}`
     : '';
@@ -28,7 +28,7 @@ function Planlagt() {
         ? 'Fikk ikke sjekket om Direktoratet for byggkvalitet (DiBK) har en kommuneplan for kommunen.'
         : ingen
           ? `Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for ${navn}, så planlagt utbygging kan ikke vises eller regnes ut.`
-          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.plan ? ': ' + planKilde(i.plan) : ''}.${i.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
+          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.plan ? ': ' + planKilde(i.plan) : ''}.${i.dekning! < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning! * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
   const tilstand = app.planTall ? app.planTall.tilstand : 'tom',
     R = gjeldende(app.planRaster);
   let natur = '',
@@ -49,7 +49,7 @@ function Planlagt() {
       antall = P.antallEgne;
     egnemerk = !antall
       ? ''
-      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !P.basis.tom ? `Kommuneplanen alene setter av ca. ${iTekst(P.basis.natur)} natur og ca. ${iTekst(P.basis.jordbruk)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
+      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !P.basis!.tom ? `Kommuneplanen alene setter av ca. ${iTekst(P.basis!.natur)} natur og ca. ${iTekst(P.basis!.jordbruk)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
     natur = `ca. ${iTekst(P.natur.km2)}, ${pst(P.natur.andel)} % av naturen${der}${antall ? '' : ` (${iTekst(P.natur.medStriper)} med smale striper)`}`;
     jordbruk = `ca. ${iTekst(P.jordbruk.km2)}, ${pst(P.jordbruk.andel)} % av jordbruket${der}${antall ? '' : ` (${iTekst(P.jordbruk.medStriper)} med smale striper)`}`;
     const felles =

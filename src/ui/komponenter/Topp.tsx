@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { finn, velgKommune as velg, velgFylke } from '../../data/motor/kommune.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { MdComboBox, MdSelect } from './md.js';
+import { MdComboBox, MdSelect } from './md.ts';
 import './Topp.css';
 
 export default function Topp() {
@@ -11,7 +11,7 @@ export default function Topp() {
   /* Kommunevelgeren søker i alle kommuner. Uten søketekst viser den kommunene i valgt fylke. Navn som finnes i flere fylker, får
      fylket i parentes. */
   const alle = useMemo(() => {
-    const antall = {};
+    const antall: Record<string, number> = {};
     app.fylker.forEach(f => f.kommuner.forEach(k => (antall[k.navn] = (antall[k.navn] || 0) + 1)));
     return app.fylker.flatMap(f =>
       f.kommuner.map(k => ({ value: k.nr, text: antall[k.navn] > 1 ? `${k.navn} (${f.navn})` : k.navn, fylke: f.nr }))
@@ -32,7 +32,7 @@ export default function Topp() {
             value={fylke ? fylke.nr : ''}
             placeholder={app.fylker.length ? 'Velg fylke' : 'Henter …'}
             disabled={!app.fylker.length}
-            onSelectOption={v => v && v !== (fylke && fylke.nr) && velgFylke(v)}
+            onSelectOption={v => v && v !== (fylke && fylke.nr) && velgFylke(v as string)}
           />
           <MdComboBox
             label="Kommune"
@@ -42,7 +42,7 @@ export default function Topp() {
             placeholder={app.fylker.length ? 'Søk etter kommune' : 'Henter …'}
             noResultsText="Ingen kommune med det navnet"
             disabled={!app.fylker.length}
-            onSelectOption={v => v && v !== (app.valgt && app.valgt.nr) && velg(v)}
+            onSelectOption={v => v && v !== (app.valgt && app.valgt.nr) && velg(v as string)}
           />
         </div>
       </header>

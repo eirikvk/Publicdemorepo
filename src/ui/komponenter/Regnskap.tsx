@@ -2,20 +2,21 @@
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
    Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.js. Her blir de tekst, stolper og tabell. */
-import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann } from '../../data/gull/regnskap.ts';
+import type { CSSProperties } from 'react';
+import { byggEndring, byggOppstilling, byggUtbredelse, landOgVann, type Endring } from '../../data/gull/regnskap.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { app, gjeldende } from '../../data/motor/tilstand.ts';
-import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.jsx';
-import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.js';
+import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
+import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.ts';
 import './Regnskap.css';
 
 /* Hele dekar fra km², og en endring i hele dekar med fortegn */
-const hele = km2 => nf(Math.round(km2 * 1000), 0),
-  endring = km2 => medFortegn(Math.round(km2 * 1000), v => nf(v, 0));
+const hele = (km2: number) => nf(Math.round(km2 * 1000), 0),
+  endring = (km2: number) => medFortegn(Math.round(km2 * 1000), v => nf(v, 0));
 
 /* Forskjellen fra 2017 for hver klasse, som stolper ut fra en midtlinje: til venstre er mindre, til høyre er mer. Den lengste
    stolpen fyller halve bredden. */
-function Endring({ E }) {
+function Endring({ E }: { E: Endring }) {
   if (E.endret)
     return (
       <div className="utvikling">
@@ -49,7 +50,7 @@ function Endring({ E }) {
             <span className="akse" aria-hidden="true">
               <i
                 className={v < 0 ? 'ned' : 'opp'}
-                style={{ '--c': `var(--${id})`, '--b': (Math.abs(v) / E.maks) * 50 + '%' }}
+                style={{ '--c': `var(--${id})`, '--b': (Math.abs(v) / E.maks) * 50 + '%' } as CSSProperties}
               />
             </span>
             <span className="tall">{endring(v)} daa</span>
@@ -77,7 +78,7 @@ function Utbredelse() {
       ) : (
         <div className="fordeling">
           <p className="total">
-            <b>{dekar(natur.km2)}</b> natur i {U.aar}, {andelTekst(natur.andel)} av landarealet
+            <b>{dekar(natur!.km2)}</b> natur i {U.aar}, {andelTekst(natur!.andel)} av landarealet
           </p>
           <Stripe
             hva={`Landarealet i ${U.aar}`}

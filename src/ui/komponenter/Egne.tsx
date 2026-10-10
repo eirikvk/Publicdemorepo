@@ -1,12 +1,14 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene kommer ferdig regnet ut fra
    gull/egne.js: byggEgetOmrade for hvert område, og radene i tabellene fra byggEgneRader (som motor/egne.js henter fram). */
-import { useRef } from 'react';
-import { byggEgetOmrade } from '../../data/gull/egne.ts';
+import { useRef, type ReactNode } from 'react';
+import { byggEgetOmrade, type EgenRad } from '../../data/gull/egne.ts';
+import type { Type } from '../../data/solv/egne.ts';
+import type { Planrutenett } from '../../data/solv/planrutenett.ts';
 import { egneRader, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
 import { ingenPlan } from '../../data/motor/plan.ts';
-import { app, gjeldende } from '../../data/motor/tilstand.ts';
-import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.js';
-import { Talltabell } from './deler.jsx';
+import { app, gjeldende, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
+import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
+import { Talltabell, type Tabellrad } from './deler.tsx';
 import {
   MdAlertMessage,
   MdButton,
@@ -15,18 +17,19 @@ import {
   MdIconLocation,
   MdIconUpload,
   MdRadioGroup
-} from './md.js';
-import { antallOrd, dekar, iTekst, medFortegn, nf, pst, ramse } from '../tekst.js';
+} from './md.ts';
+import { antallOrd, dekar, iTekst, medFortegn, nf, pst, ramse } from '../tekst.ts';
 import './Egne.css';
 
 /* Meldingen om siste tegning eller opplasting, etter hva datamotoren melder (app.egneStatus): [tekst, type], der type er typen
    melding i designsystemet. */
-const STATUS = {
+type Melding = [tekst: string, type: 'info' | 'success' | 'warning' | 'error'];
+const STATUS: Record<EgneStatus['hva'], (s: EgneStatus) => Melding> = {
   forLite: () => ['Området ble for lite til å regnes ut. Tegn et større område.', 'warning'],
   forStor: () => ['Filen er for stor til å leses i nettleseren (over 120 MB).', 'error'],
   leser: s => [`Leser ${s.fil} …`, 'info'],
   lest: s => [
-    `${s.fil}: ${nf(s.antall, 0)} flater lest${s.byttetTil ? `, og kommunen er byttet til ${s.byttetTil}` : ''}.`,
+    `${s.fil}: ${nf(s.antall!, 0)} flater lest${s.byttetTil ? `, og kommunen er byttet til ${s.byttetTil}` : ''}.`,
     'success'
   ],
   ingenFlater: () => [
@@ -39,15 +42,15 @@ const STATUS = {
 };
 
 /* Antall flater i tekst, med tall til og med tolv i ord */
-const flater = n => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
+const flater = (n: number) => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
 
 /* Tabellen som sammenligner planen alene med egne områder. Radene kommer fra byggEgneRader: { navn, farge, gruppe, plan, ny,
    endring, andelPlan, andelNy }, med arealer i km² og andeler i prosent (null der andelen ikke regnes ut). plan er null uten
    kommuneplan. */
-function EgenTabell({ rader, navnPlan, navnNy }) {
-  const tall = km2 => (km2 ? dekar(km2).replace(' daa', '') : '0'),
-    andel = a => (a !== null ? pst(a) + ' %' : '');
-  const ut = [];
+function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: string; navnNy: string }) {
+  const tall = (km2: number) => (km2 ? dekar(km2).replace(' daa', '') : '0'),
+    andel = (a: number | null) => (a !== null ? pst(a) + ' %' : '');
+  const ut: Tabellrad[] = [];
   let gruppe = '';
   for (const r of rader) {
     if (r.gruppe !== gruppe) ut.push({ gruppe: (gruppe = r.gruppe) });
@@ -64,21 +67,23 @@ function EgenTabell({ rader, navnPlan, navnNy }) {
   return <Talltabell tittel="Planlagt utbygging, daa" kolonner={['På', navnPlan, navnNy, 'Endring']} rader={ut} />;
 }
 
-function EgetOmrade({ g, nr, R }) {
+function EgetOmrade({ g, nr, R }: { g: Eget; nr: number; R: Planrutenett | null }) {
   const O = R && g.tall ? byggEgetOmrade(g.tall) : null,
-    tekster = [];
-  let tabell = null;
+    tekster: string[] = [];
+  let tabell: ReactNode = null;
   if (!O) tekster.push(ingenPlan() || app.ov ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
   else {
     tekster.push(
       O.kjent
         ? `I dag ligger det ${ramse(
-            [
-              [O.natur, 'natur'],
-              [O.jordbruk, 'jordbruk'],
-              [O.bebygd, 'bebygd'],
-              [O.vann, 'vann']
-            ].map(([v, hva]) => (v ? iTekst(v) + ' ' + hva : ''))
+            (
+              [
+                [O.natur, 'natur'],
+                [O.jordbruk, 'jordbruk'],
+                [O.bebygd, 'bebygd'],
+                [O.vann, 'vann']
+              ] satisfies [km2: number, hva: string][]
+            ).map(([v, hva]) => (v ? iTekst(v) + ' ' + hva : ''))
           )} her.`
         : 'Kartet er ikke hentet for dette området ennå.'
     );
@@ -114,7 +119,7 @@ function EgetOmrade({ g, nr, R }) {
             { value: 'bygg', text: 'Utbygging' },
             { value: 'fri', text: 'Ikke utbygging' }
           ]}
-          onChange={e => settType(g, e.target.value)}
+          onChange={e => settType(g, e.target.value as Type)}
         />
       ) : (
         <p>
@@ -150,7 +155,7 @@ function EgetOmrade({ g, nr, R }) {
 }
 
 export default function Egne() {
-  const fil = useRef(null),
+  const fil = useRef<HTMLInputElement>(null),
     E = mine(),
     P = gjeldende(app.planRaster),
     R = P && P.eget && P.antallEgne === E.length ? P : null,
@@ -174,7 +179,7 @@ export default function Egne() {
             >
               Tegn eget område
             </MdButton>
-            <MdButton theme="secondary" leftIcon={<MdIconUpload />} onClick={() => fil.current.click()}>
+            <MdButton theme="secondary" leftIcon={<MdIconUpload />} onClick={() => fil.current!.click()}>
               Last opp plan
             </MdButton>
           </>
@@ -202,7 +207,7 @@ export default function Egne() {
           accept=".geojson,.json,application/geo+json,application/json"
           hidden
           onChange={e => {
-            const f = e.target.files[0];
+            const f = e.target.files![0];
             e.target.value = '';
             lastOppPlan(f);
           }}

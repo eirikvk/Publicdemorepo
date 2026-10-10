@@ -22,13 +22,13 @@ import 'ol/ol.css';
 import './grunnlag.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { FARGER } from './ui/farger.js';
-import App from './ui/komponenter/App.jsx';
+import { FARGER } from './ui/farger.ts';
+import App from './ui/komponenter/App.tsx';
 
 /* Kartets farger som CSS-variabler, så tegnforklaringene bruker de samme fargene som kartet. */
 for (const [id, verdi] of Object.entries(FARGER)) document.documentElement.style.setProperty('--' + id, verdi);
 
-createRoot(document.getElementById('rot')).render(
+createRoot(document.getElementById('rot')!).render(
   <StrictMode>
     <App />
   </StrictMode>

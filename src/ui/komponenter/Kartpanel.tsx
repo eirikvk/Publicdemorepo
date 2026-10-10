@@ -1,20 +1,20 @@
 /* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages i
    ui/kart/kart.js og settes inn her. */
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, type DragEvent } from 'react';
 import { lastOppPlan } from '../../data/motor/egne.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { byttTilValgt, lagKart, plasserBytt, rolig, settByttKnapp } from '../kart/kart.js';
-import { fjernMerket } from '../kart/naturtema.js';
-import { velgSide } from '../sider.js';
-import { ui } from '../tilstand.js';
-import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.js';
+import { byttTilValgt, lagKart, plasserBytt, rolig, settByttKnapp } from '../kart/kart.ts';
+import { fjernMerket } from '../kart/naturtema.ts';
+import { velgSide } from '../sider.ts';
+import { ui } from '../tilstand.ts';
+import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.ts';
 import './Kartpanel.css';
 
 function Kart() {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const kart = lagKart();
-    kart.setTarget(ref.current);
+    kart.setTarget(ref.current!);
     return () => kart.setTarget(undefined);
   }, []);
   return <div className="kartflate" ref={ref} />;
@@ -22,7 +22,7 @@ function Kart() {
 
 /* Knappen som bytter til kommunen man trykket på utenfor valgt kommune. Kartet plasserer den over punktet. */
 function Bytt() {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     settByttKnapp(ref.current);
     plasserBytt();
@@ -50,11 +50,11 @@ function tilListen() {
   }, 50);
 }
 
-export default function Kartpanel({ teknisk }) {
-  const scene = useRef(null);
-  const slipp = e => {
+export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
+  const scene = useRef<HTMLDivElement>(null);
+  const slipp = (e: DragEvent) => {
     e.preventDefault();
-    scene.current.classList.remove('slipp');
+    scene.current!.classList.remove('slipp');
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (f) {
       velgSide('framtid');
@@ -69,9 +69,9 @@ export default function Kartpanel({ teknisk }) {
         ref={scene}
         onDragOver={e => {
           e.preventDefault();
-          scene.current.classList.add('slipp');
+          scene.current!.classList.add('slipp');
         }}
-        onDragLeave={() => scene.current.classList.remove('slipp')}
+        onDragLeave={() => scene.current!.classList.remove('slipp')}
         onDrop={slipp}
       >
         <Kart />

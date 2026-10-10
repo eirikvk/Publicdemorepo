@@ -4,21 +4,34 @@
    byggInon og byggGraa). Her blir de tekst og lister. */
 import { byggGraa } from '../../data/gull/graa.ts';
 import { byggInon } from '../../data/gull/inon.ts';
-import { byggNaturTall } from '../../data/gull/temaer.ts';
+import type { ReactNode } from 'react';
+import { byggNaturTall, type NaturTall } from '../../data/gull/temaer.ts';
 import { GRAATRINN } from '../../data/solv/graa.ts';
 import { INONSONER } from '../../data/solv/inon.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
+import type { Naturtema as Tema } from '../../data/motor/naturtema.ts';
 import { app, gjeldende } from '../../data/motor/tilstand.ts';
-import { settSlor, visIKartet } from '../kart/naturtema.js';
-import { ui } from '../tilstand.js';
-import { Fargelinje, Forklaring, Rute, Stripe } from './deler.jsx';
-import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.js';
-import { andelTekst, antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.js';
+import { settSlor, visIKartet } from '../kart/naturtema.ts';
+import { ui } from '../tilstand.ts';
+import { Fargelinje, Forklaring, Rute, Stripe, type Stripedel } from './deler.tsx';
+import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.ts';
+import { andelTekst, antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.ts';
 import './Temaer.css';
 
-export const ETT = { vern: 'ett', rein: 'ett', verdi: 'én' }; /* ett verneområde, én lokalitet */
-/* Ordene sidene bruker om hvert naturtema: entall, flertall og bestemt form, og kilden */
-export const TEMAORD = {
+export const ETT: Record<string, string> = {
+  vern: 'ett',
+  rein: 'ett',
+  verdi: 'én'
+}; /* ett verneområde, én lokalitet */
+/* Ordene sidene bruker om hvert naturtema: entall, flertall og bestemt form, og kilden. vann: temaet kan ligge i vann. */
+interface Temaord {
+  en: string;
+  fl: string;
+  best: string;
+  vann?: boolean;
+  kildetekst: string;
+}
+export const TEMAORD: Record<string, Temaord> = {
   vern: {
     en: 'verneområde',
     fl: 'verneområder',
@@ -43,7 +56,25 @@ export const TEMAORD = {
 /* Toppen av en temaside: navnet, arealet i kommunen og andelen av landarealet (null når landarealet mangler), og en linje om
    planlagt utbygging. status er henter, feil, ingen eller ok. Detaljene står under, med kilden nederst. Mens temaet hentes, står det
    bare det. */
-function Temaside({ id, navn, status, sum, andel, under, kilde, children }) {
+function Temaside({
+  id,
+  navn,
+  status,
+  sum,
+  andel,
+  under,
+  kilde,
+  children
+}: {
+  id: string;
+  navn: string;
+  status: 'henter' | 'feil' | 'ingen' | 'ok';
+  sum?: number;
+  andel?: number | null;
+  under?: ReactNode;
+  kilde: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className="temaside prosa" id={'tema-' + id}>
       <h2 className="md-typography-heading-s">
@@ -53,7 +84,7 @@ function Temaside({ id, navn, status, sum, andel, under, kilde, children }) {
       {status === 'ok' && (
         <div>
           <p>
-            <b>{dekar(sum)}</b> i kommunen{andel !== null ? `, ${andelTekst(andel)} av landarealet` : ''}
+            <b>{dekar(sum!)}</b> i kommunen{andel !== null ? `, ${andelTekst(andel!)} av landarealet` : ''}
           </p>
           {under && <p className="hint temaunder">{under}</p>}
         </div>
@@ -67,9 +98,9 @@ function Temaside({ id, navn, status, sum, andel, under, kilde, children }) {
 /* Helhetsbildet for verdsatt natur: landarealet delt i kartlagt og ikke kartlagt, og så hver del for seg med verdsatt natur etter
    verdi. Det vi ikke vet noe om, tegnes som en tom ramme. Slik skilles «ingenting funnet» fra «ikke lett». H er helhetsbildet og E
    kartleggingen, fra byggNaturTall. */
-function Helhet({ t, H, E }) {
+function Helhet({ t, H, E }: { t: Tema; H: NonNullable<NaturTall['helhet']>; E: NonNullable<NaturTall['kartlagt']> }) {
   const { K, U, inne, ute, si, su } = H;
-  const verdier = a => t.klasser.map(([navn, id], v) => [navn, '--' + id, a[v]]);
+  const verdier = (a: number[]) => t.klasser!.map(([navn, id], v): Stripedel => [navn, '--' + id, a[v]]);
   return (
     <>
       <h3 className="md-typography-heading-xs">Helhetsbildet: verdsatt natur og kartlegging</h3>
@@ -105,14 +136,14 @@ function Helhet({ t, H, E }) {
         Fargene er de samme som i listen over. Lave tall der det ikke er kartlagt, kan bety at det ikke er lett, ikke at
         naturen mangler verdi. Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen derfra kan ikke
         overføres direkte til resten.
-        {E.fra ? ` Kartlagt etter Miljødirektoratets instruks ${periode(E.fra, E.til)}.` : ''}
+        {E.fra ? ` Kartlagt etter Miljødirektoratets instruks ${periode(E.fra, E.til!)}.` : ''}
       </p>
     </>
   );
 }
 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
-export function Naturtema({ t: tema }) {
+export function Naturtema({ t: tema }: { t: Tema }) {
   const t = { ...tema, ...TEMAORD[tema.id] },
     D = tema.data,
     ok = !!D && !!app.valgt && D.nr === app.valgt.nr;
@@ -151,7 +182,7 @@ export function Naturtema({ t: tema }) {
       ? ''
       : !(E.km2 > 0)
         ? 'Kommunen er ikke kartlagt etter Miljødirektoratets instruks. Laget viser da bare eldre registreringer og utvalgte naturtyper.'
-        : `Ca. ${E.andelLand !== null ? pst(E.andelLand) + ' % av landarealet' : iTekst(E.km2)} er kartlagt etter Miljødirektoratets instruks${E.fra ? ` (${periode(E.fra, E.til)})` : ''}. Utenfor det kartlagte kan det finnes verdifull natur som ikke er registrert.`;
+        : `Ca. ${E.andelLand !== null ? pst(E.andelLand) + ' % av landarealet' : iTekst(E.km2)} er kartlagt etter Miljødirektoratets instruks${E.fra ? ` (${periode(E.fra, E.til!)})` : ''}. Utenfor det kartlagte kan det finnes verdifull natur som ikke er registrert.`;
   let paavirkning = null;
   if (N.antall) {
     if (utenPlan())
@@ -189,8 +220,8 @@ export function Naturtema({ t: tema }) {
       <p>{sumTekst}</p>
       {N.klasser && (
         <ul className="talliste">
-          {t.klasser.map(([navn, id], v) => {
-            const { antall, km2, plan: pl, planKm2 } = N.klasser[v];
+          {t.klasser!.map(([navn, id], v) => {
+            const { antall, km2, plan: pl, planKm2 } = N.klasser![v];
             return (
               <Fargelinje
                 key={id}
@@ -205,7 +236,7 @@ export function Naturtema({ t: tema }) {
           })}
         </ul>
       )}
-      {helhet && <Helhet t={t} H={N.helhet} E={E} />}
+      {helhet && <Helhet t={t} H={N.helhet!} E={E!} />}
       {merk && <p>{merk}</p>}
       {t.dekning && kartlagt && (
         <MdCheckbox
@@ -280,7 +311,7 @@ export function Inon() {
       ? 'Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.'
       : !har
         ? 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'
-        : `Ca. ${iTekst(I.sum)} av kommunen${I.andelLand !== null ? `, ${pst(I.andelLand)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
+        : `Ca. ${iTekst(I.sum!)} av kommunen${I.andelLand !== null ? `, ${pst(I.andelLand)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
   const kilde = (
     <p className="hint">
       Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele
@@ -310,7 +341,7 @@ export function Inon() {
                 key={i}
                 id={INONSONER[i][1]}
                 navn={INONSONER[i][4]}
-                tall={dekar(I.soner[i])}
+                tall={dekar(I.soner![i])}
                 under={INONSONER[i][3]}
               />
             ))}
@@ -338,7 +369,7 @@ export function Graa() {
       ? 'Grått areal kunne ikke hentes fra NIBIO.'
       : !har
         ? 'Kartet over grå arealer har ingen flater i kommunen.'
-        : `Ca. ${iTekst(G.sum)} av kommunen${G.andelLand !== null ? `, ${pst(G.andelLand)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Listen under viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
+        : `Ca. ${iTekst(G.sum!)} av kommunen${G.andelLand !== null ? `, ${pst(G.andelLand)} % av landarealet,` : ''} er grått areal: tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. Mye av det grå er likevel grønt. Listen under viser arealet etter hvor stor del av hver flate som er vegetasjon.`;
   let plan = null;
   if (har) {
     if (P) {
@@ -384,9 +415,9 @@ export function Graa() {
       {har && (
         <ul className="talliste">
           {GRAATRINN.map(([id, navn], i) => (
-            <Fargelinje key={id} id={id} navn={navn} tall={dekar(G.trinn[i + 1])} />
+            <Fargelinje key={id} id={id} navn={navn} tall={dekar(G.trinn![i + 1])} />
           ))}
-          {G.trinn[6] > 0 && <Fargelinje id="graa0" navn="Uten oppgitt andel, som veier" tall={dekar(G.trinn[6])} />}
+          {G.trinn![6] > 0 && <Fargelinje id="graa0" navn="Uten oppgitt andel, som veier" tall={dekar(G.trinn![6])} />}
           <Fargelinje
             id="gront"
             navn="Grønt i bebygd område"
