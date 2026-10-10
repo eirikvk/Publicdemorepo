@@ -1,6 +1,6 @@
 /* Innholdet: én side for hvert valg i sidevelgeren. Alle sidene ligger i siden hele tiden, men bare den valgte vises. Da beholder
    hver side det som er åpnet i den, og «Til listen» fra kartet finner området uansett hvilken side som var valgt. */
-import { NATURTEMA } from '../../data/motor/naturtema.js';
+import { NATURTEMA } from '../../data/motor/naturtema.ts';
 import { SIDER } from '../sider.js';
 import { ui } from '../tilstand.js';
 import Oversikt from './Oversikt.jsx';

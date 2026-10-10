@@ -2,16 +2,17 @@
    i tre soner etter avstand. Sonene hentes som ett bilde av hele kommunen når kommunen velges (bronse/mdir-inon.js), gjøres om til
    sone per rute (solv/inon.js) og areal per sone (gull/inon.js). Resultatet huskes for de siste kommunene så lenge siden er åpen,
    så et nytt valg av samme kommune koster ingenting. Kartlaget tegnes av sonene per rute, se ui/kart/inon.js. */
-import { hentInonBilde } from '../bronse/mdir-inon.js';
-import { husk } from '../bronse/henting.js';
+import { hentInonBilde } from '../bronse/mdir-inon.ts';
+import { husk } from '../bronse/henting.ts';
 import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.ts';
 import { sti, tegneflate } from '../solv/raster.ts';
 import { tolkInon } from '../solv/inon.ts';
 import { inonAreal } from '../gull/inon.ts';
-import { app, endret, tidSlutt, valgNr } from './tilstand.js';
+import type { Kommune } from '../solv/felles.ts';
+import { app, endret, tidSlutt, valgNr, type Grense } from './tilstand.ts';
 
 const inonMinne = new Map();
-export async function sjekkInon(k, grense, mitt) {
+export async function sjekkInon(k: Kommune, grense: Grense, mitt: number) {
   const har = inonMinne.get(k.nr);
   if (har) {
     husk(inonMinne, k.nr, har, 3);

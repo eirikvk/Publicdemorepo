@@ -3,9 +3,97 @@
    tegnes på nytt når noe er endret. Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i
    ui/tilstand.js. Regnefunksjonene i sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter.
    Filen bruker verken React eller OpenLayers. */
-import { henteStatus, nårHentingEndres } from '../bronse/henting.js';
+import type { Planopplysninger } from '../bronse/dibk-kommuneplan.ts';
+import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse/henting.ts';
+import type { Planfeil } from '../bronse/planfil.ts';
+import type { Del } from '../solv/egne.ts';
+import type { Flerflate, Fylke, Kommune, Utsnitt } from '../solv/felles.ts';
+import type { Blokk, EgetTall, Planrutenett } from '../solv/planrutenett.ts';
+import type { Historie } from '../solv/ssb.ts';
+import type { Graa, Graakryss } from '../gull/graa.ts';
+import type { Inon } from '../gull/inon.ts';
+import type { PlanSum } from '../gull/planlagt.ts';
+import type { SsbTall } from '../gull/regnskap.ts';
 
-export const app = {
+/* Kommunegrensen: flerflaten i UTM33 og utsnittet */
+export interface Grense {
+  nr: string;
+  koord: Flerflate;
+  ext: Utsnitt;
+}
+/* Dagens klasser zoomet ut for valgt kommune: det lagrede oversiktsbildet (buf, som PNG), eller det sammensatte kartet (lerret,
+   dynamisk). ext er utsnittet bildet dekker, og res meter per piksel. blokker er planrutenettet per flis, se plan.ts. */
+export interface Oversikt {
+  ext: Utsnitt;
+  res: number;
+  buf?: ArrayBuffer;
+  lerret?: HTMLCanvasElement;
+  dynamisk?: boolean;
+  blokker?: Map<string, Blokk>;
+}
+/* Om DiBK har kommuneplanen: hvor stor del av kommunen planlaget dekker, og hvilken plan det er */
+export interface Planinfo {
+  nr: string;
+  tilstand: 'sjekker' | 'feil' | 'ok' | 'ingen';
+  dekning?: number;
+  plan?: Planopplysninger | null;
+}
+/* Et eget område, tegnet i kartet eller lastet opp som fil. tall er hva som ligger i det, fra planrutenettet. En opplastet plan har
+   også antall flater som er utbygging (bygg) og ikke (annet), plan-id, om den mangler arealformål, og projeksjonen den var i. */
+export interface EgetOmrade {
+  id: number;
+  nr: string;
+  lopenr?: number;
+  navn: string;
+  kilde: 'tegnet' | 'fil';
+  deler: Del[];
+  ext: Utsnitt;
+  km2: number;
+  tall: EgetTall | null;
+  bygg?: number;
+  annet?: number;
+  planid?: string;
+  utenFormal?: boolean;
+  proj?: string;
+}
+/* Hvordan siste tegning eller opplasting gikk. Siden skriver meldingen, se Egne.tsx. */
+export interface EgneStatus {
+  hva: 'forLite' | 'forStor' | 'leser' | 'lest' | 'ikkeGeoJSON' | Planfeil;
+  fil?: string | null;
+  antall?: number;
+  byttetTil?: string | null;
+}
+
+export interface Tilstand {
+  fylker: Fylke[];
+  listeFeil: boolean;
+  valgt: Kommune | null;
+  grense: Grense | null;
+  grenseFeil: boolean;
+  flate: number;
+  oversikter: Record<string, Utsnitt>;
+  oversiktInfo: { versjon?: string; hentet?: string } | null;
+  ov: Oversikt | null;
+  arealtall: SsbTall | null;
+  ssbSum: number;
+  ferskvann: { inn: number; elv: number } | null;
+  historie: Historie | null;
+  planInfo: Planinfo | null;
+  planRaster: Planrutenett | null;
+  planSum: PlanSum | null;
+  planTall: { tilstand: 'tom' | 'zoom' | 'regner' | 'feil' | 'ok' } | null;
+  egne: EgetOmrade[];
+  egneStatus: EgneStatus | null;
+  inon: Inon | null;
+  graa: Graa | null;
+  graaKryss: Graakryss | null;
+  kartFlyttes: boolean;
+  laster: boolean;
+  kall: Kall[];
+  sisteKall: Runde | null;
+}
+
+export const app: Tilstand = {
   fylker: [] /* fylkene med kommunene sine, fra Kartverket */,
   listeFeil: false /* kommunelisten kunne ikke hentes */,
   valgt: null /* kommunen som er valgt: { nr, navn, boks } */,
@@ -40,8 +128,8 @@ export const app = {
    nettleseren er ferdig med det den holder på med, så mange endringer etter hverandre gir én ny tegning. */
 let utgave = 0,
   planlagt = false;
-const lyttere = new Set();
-export const abonner = f => {
+const lyttere = new Set<() => void>();
+export const abonner = (f: () => void) => {
   lyttere.add(f);
   return () => lyttere.delete(f);
 };
@@ -57,12 +145,21 @@ export function endret() {
 }
 
 /* Hendelser som ikke er tilstand: for eksempel at det er lagt en ny flis inn i det sammensatte kartet, og hvor. Kartet lytter. */
-const hendelser = new Map();
-export const lytt = (navn, f) => {
+interface Hendelser {
+  nyFlis: [
+    lerret: HTMLCanvasElement,
+    sted: number[]
+  ] /* en flis er lagt inn i det sammensatte kartet, på stedet [x, y, b, h] */;
+  samlingFjernet: [lerret: HTMLCanvasElement] /* et sammensatt kart er fjernet fra minnet */;
+}
+type Lytter = (...verdier: any[]) => void;
+const hendelser = new Map<keyof Hendelser, Set<Lytter>>();
+export const lytt = <N extends keyof Hendelser>(navn: N, f: (...verdier: Hendelser[N]) => void) => {
   if (!hendelser.has(navn)) hendelser.set(navn, new Set());
-  hendelser.get(navn).add(f);
+  hendelser.get(navn)!.add(f as Lytter);
 };
-export const varsle = (navn, ...verdier) => (hendelser.get(navn) || []).forEach(f => f(...verdier));
+export const varsle = <N extends keyof Hendelser>(navn: N, ...verdier: Hendelser[N]) =>
+  (hendelser.get(navn) || []).forEach(f => f(...verdier));
 
 /* Bronse sier fra når hentingen endrer seg. Det som vises, legges i app. */
 nårHentingEndres(() => {
@@ -76,15 +173,16 @@ nårHentingEndres(() => {
 export let valgNr = 0;
 export const nyttValg = () => ++valgNr;
 /* Resultater merkes med kommunenummeret de gjelder. Dette gir resultatet hvis det gjelder kommunen som er valgt nå, ellers ingenting. */
-export const gjeldende = x => (x && app.valgt && x.nr === app.valgt.nr ? x : null);
+export const gjeldende = <T extends { nr: string }>(x: T | null | undefined): T | null =>
+  x && app.valgt && x.nr === app.valgt.nr ? x : null;
 
 /* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. Vises under
    Tekniske valg. */
-export let bruk = {};
+export let bruk: Record<string, { sum: number; n: number; maks: number }> = {};
 export const nullstillBruk = () => {
   bruk = {};
 };
-export const tidSlutt = (navn, t0) => {
+export const tidSlutt = (navn: string, t0: number) => {
   const d = performance.now() - t0,
     b = bruk[navn] || (bruk[navn] = { sum: 0, n: 0, maks: 0 });
   b.sum += d;

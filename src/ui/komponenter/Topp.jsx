@@ -1,7 +1,7 @@
 /* Toppen av siden: navnet på løsningen, valg av fylke og kommune, og overskriften med kommunen som er valgt. */
 import { useMemo } from 'react';
-import { finn, velgKommune as velg, velgFylke } from '../../data/motor/kommune.js';
-import { app } from '../../data/motor/tilstand.js';
+import { finn, velgKommune as velg, velgFylke } from '../../data/motor/kommune.ts';
+import { app } from '../../data/motor/tilstand.ts';
 import { MdComboBox, MdSelect } from './md.js';
 import './Topp.css';
 

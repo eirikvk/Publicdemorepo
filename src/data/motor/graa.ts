@@ -2,17 +2,19 @@
    kommunen hentes når kommunen velges (bronse/nibio-graa.js), gjøres om til trinn per rute (solv/graa.js), og arealet og
    kryssingen med planen regnes ut i gull/graa.js. Grått betyr ikke ledig: et boligområde i bruk er like grått som en nedlagt
    fabrikktomt. Kartlaget tegnes av trinnene per rute, se ui/kart/graa.js. */
-import { hentGraaBilde } from '../bronse/nibio-graa.js';
-import { husk } from '../bronse/henting.js';
+import { hentGraaBilde } from '../bronse/nibio-graa.ts';
+import { husk } from '../bronse/henting.ts';
 import { BILDE_TEMA, m2PerKm2, rutenett } from '../solv/felles.ts';
 import { sti, tegneflate } from '../solv/raster.ts';
 import { tolkGraa } from '../solv/graa.ts';
 import { graaAreal, kryssGraa } from '../gull/graa.ts';
-import { utenPlan } from './egne.js';
-import { app, endret, tidSlutt, valgNr } from './tilstand.js';
+import { utenPlan } from './egne.ts';
+import type { Kommune } from '../solv/felles.ts';
+import type { Graatrinn } from '../solv/graa.ts';
+import { app, endret, tidSlutt, valgNr, type Grense } from './tilstand.ts';
 
 const graaMinne = new Map();
-export async function sjekkGraa(k, grense, mitt) {
+export async function sjekkGraa(k: Kommune, grense: Grense, mitt: number) {
   const har = graaMinne.get(k.nr);
   if (har) {
     husk(graaMinne, k.nr, har, 3);
@@ -54,7 +56,7 @@ export function regnGraa() {
         : null,
     D = app.graa && app.valgt && app.graa.nr === app.valgt.nr && app.graa.tilstand === 'ok' ? app.graa : null,
     t0 = performance.now();
-  app.graaKryss = R && D ? kryssGraa(R, D, !!(app.ov && app.ov.dynamisk)) : null;
+  app.graaKryss = R && D ? kryssGraa(R, D as Graatrinn, !!(app.ov && app.ov.dynamisk)) : null;
   if (app.graaKryss) tidSlutt('grått areal, kryssing', t0);
   endret();
 }

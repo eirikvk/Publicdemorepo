@@ -2,9 +2,9 @@
    gull/egne.js: byggEgetOmrade for hvert område, og radene i tabellene fra byggEgneRader (som motor/egne.js henter fram). */
 import { useRef } from 'react';
 import { byggEgetOmrade } from '../../data/gull/egne.ts';
-import { egneRader, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.js';
-import { ingenPlan } from '../../data/motor/plan.js';
-import { app, gjeldende } from '../../data/motor/tilstand.js';
+import { egneRader, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
+import { ingenPlan } from '../../data/motor/plan.ts';
+import { app, gjeldende } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.js';
 import { Talltabell } from './deler.jsx';
 import {

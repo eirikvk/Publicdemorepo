@@ -3,14 +3,14 @@
    følger tilstanden i datamotoren på samme måte som React-komponentene: ved hver endring sjekker laget om det det tegnes av, er nytt.
    Kartet kaller datamotoren når brukeren gjør noe (velger en annen kommune), men datamotoren kaller aldri kartet. */
 import { ol } from './ol.js';
-import { henteStatus, opptatt } from '../../data/bronse/henting.js';
-import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.js';
-import { bakgrunnUrl, hentKommuneIPunkt } from '../../data/bronse/kartverket.js';
+import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
+import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
+import { bakgrunnUrl, hentKommuneIPunkt } from '../../data/bronse/kartverket.ts';
 import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
-import { kartetFlyttes } from '../../data/motor/grunnkart.js';
-import { finn, velgKommune } from '../../data/motor/kommune.js';
-import { abonner, app, bruk, endret, nullstillBruk, tidSlutt } from '../../data/motor/tilstand.js';
+import { kartetFlyttes } from '../../data/motor/grunnkart.ts';
+import { finn, velgKommune } from '../../data/motor/kommune.ts';
+import { abonner, app, bruk, endret, nullstillBruk, tidSlutt } from '../../data/motor/tilstand.ts';
 import { farge, rgb } from '../farger.js';
 import { kb, nf } from '../tekst.js';
 import { ui } from '../tilstand.js';

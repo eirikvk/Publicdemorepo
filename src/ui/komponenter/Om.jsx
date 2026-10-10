@@ -1,6 +1,6 @@
 /* Om og metode: kall-loggen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
-import { finn } from '../../data/motor/kommune.js';
-import { app } from '../../data/motor/tilstand.js';
+import { finn } from '../../data/motor/kommune.ts';
+import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.js';
 import { kb, tid } from '../tekst.js';
 import { ui } from '../tilstand.js';

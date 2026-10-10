@@ -1,16 +1,26 @@
 /* Datamotoren, planlagt utbygging: om DiBK har kommuneplanen, og samordningen av planrutenettet. Kommuneplanen hentes i
    bronse/dibk-kommuneplan.js, planrutenettet bygges i solv/planrutenett.js, og tallene sidene viser, lages i gull/planlagt.js.
    Kartlaget for planen ligger i ui/kart/plan.js. */
-import { hentKommuneplanFlis, hentPlandekning, hentPlaninfo, kommuneplanUrl } from '../bronse/dibk-kommuneplan.js';
-import { BILDE_PLANDEKNING, PLANNIVA, RUTE_M, flisUtsnitt, fliserI, rutenett } from '../solv/felles.ts';
+import { hentKommuneplanFlis, hentPlandekning, hentPlaninfo, kommuneplanUrl } from '../bronse/dibk-kommuneplan.ts';
+import {
+  BILDE_PLANDEKNING,
+  PLANNIVA,
+  RUTE_M,
+  flisUtsnitt,
+  fliserI,
+  rutenett,
+  type Flis,
+  type Kommune
+} from '../solv/felles.ts';
+import type { Blokk } from '../solv/planrutenett.ts';
 import { byggPlanRaster, planDekning, tellBlokk } from '../solv/planrutenett.ts';
 import { flislerret, sti, tegneflate } from '../solv/raster.ts';
 import { byggPlanSum } from '../gull/planlagt.ts';
-import { mine, utenPlan } from './egne.js';
-import { regnGraa } from './graa.js';
-import { dagensKlasser, samle } from './grunnkart.js';
-import { NATURTEMA, regnNatur } from './naturtema.js';
-import { app, endret, tidSlutt, valgNr } from './tilstand.js';
+import { mine, utenPlan } from './egne.ts';
+import { regnGraa } from './graa.ts';
+import { dagensKlasser, samle } from './grunnkart.ts';
+import { NATURTEMA, regnNatur } from './naturtema.ts';
+import { app, endret, tidSlutt, valgNr, type Grense, type Tilstand } from './tilstand.ts';
 
 /* Kommunen har ingen kommuneplan hos DiBK */
 export const ingenPlan = () =>
@@ -18,7 +28,7 @@ export const ingenPlan = () =>
 
 /* Ikke alle kommuner har kommuneplanen sin hos DiBK. Ett lite bilde av hele kommunen viser hvor mye av flaten planlaget dekker, se
    planDekning i solv/planrutenett.js. Finnes det en plan, hentes navnet på den med ett oppslag i et punkt midt i det dekkede området. */
-export async function sjekkPlan(k, grense, mitt) {
+export async function sjekkPlan(k: Kommune, grense: Grense, mitt: number) {
   app.planInfo = { nr: k.nr, tilstand: 'sjekker' };
   endret();
   try {
@@ -51,13 +61,13 @@ export async function sjekkPlan(k, grense, mitt) {
    Med lagret oversiktsbilde gjelder det hele kommunen. Uten gjelder det den delen av kommunen nettleseren har hentet kart for, og
    tallene regnes ut på nytt hver gang det kommer mer kart. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 let regnNr = 0;
-async function hentBlokk(tc, fliser) {
+async function hentBlokk(tc: Flis, fliser: Flis[] | null): Promise<Blokk> {
   const [K, buf] = await Promise.all([
     dagensKlasser(tc),
     ingenPlan() ? null : hentKommuneplanFlis(kommuneplanUrl(flisUtsnitt(tc)))
   ]);
   if (!K) throw new Error('mangler dagens klasser');
-  const g = flislerret().getContext('2d', { willReadFrequently: true });
+  const g = flislerret().getContext('2d', { willReadFrequently: true })!;
   if (buf) g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, 512, 512);
   return { ...tellBlokk(K, g.getImageData(0, 0, 512, 512).data, tc, fliser), utenPlan: !buf };
 }
@@ -65,30 +75,30 @@ async function hentBlokk(tc, fliser) {
 async function regnPlan() {
   const mitt = ++regnNr,
     Z = PLANNIVA;
-  const sett = tilstand => {
+  const sett = (tilstand: NonNullable<Tilstand['planTall']>['tilstand']) => {
     app.planTall = { tilstand };
     endret();
   };
   if (!app.grense || utenPlan()) return sett('tom');
   const E = mine();
-  if (app.planRaster && app.planRaster.nr !== app.valgt.nr) app.planRaster = null;
-  if (!app.ov) return sett(app.oversikter[app.valgt.nr] ? 'tom' : 'zoom');
+  if (app.planRaster && app.planRaster.nr !== app.valgt!.nr) app.planRaster = null;
+  if (!app.ov) return sett(app.oversikter[app.valgt!.nr] ? 'tom' : 'zoom');
   const dyn = !!app.ov.dynamisk,
     sm = dyn ? samle : null,
-    nr = app.valgt.nr,
+    nr = app.valgt!.nr,
     denne = app.ov;
   if (dyn && !sm) return;
   if (!(dyn && app.planRaster)) sett('regner'); /* nye tall erstatter de gamle uten at teksten blinker */
   /* Rutenettet bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
      fliser innenfor den, så et nytt utsnitt koster én eller to blokker og ikke hele det hentede området. */
-  const blokker = dyn ? sm.blokker : denne.blokker || (denne.blokker = new Map()),
-    under = new Map();
+  const blokker = dyn ? sm!.blokker : denne.blokker || (denne.blokker = new Map()),
+    under = new Map<string, Flis[] | null>();
   if (dyn)
-    for (const v of sm.har) {
+    for (const v of sm!.har) {
       const [z, x, y] = v.split('/').map(Number),
         k = `${x >> (z - Z)}/${y >> (z - Z)}`;
       if (!under.has(k)) under.set(k, []);
-      under.get(k).push([z, x, y]);
+      under.get(k)!.push([z, x, y]);
     }
   else fliserI(denne.ext, Z).forEach(tc => under.set(`${tc[1]}/${tc[2]}`, null));
   try {
@@ -115,10 +125,11 @@ async function regnPlan() {
     blokker,
     dyn,
     E,
-    Math.round(dyn ? Math.max(m, sm.res) : m)
+    Math.round(dyn ? Math.max(m, sm!.res) : m)
   );
+  const R = app.planRaster;
   E.forEach((g, i) => {
-    g.tall = app.planRaster.egneTall[i];
+    g.tall = R.egneTall[i];
   });
   tidSlutt('plantall', tStart);
   app.planSum = byggPlanSum(app.planRaster);

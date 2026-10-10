@@ -2,7 +2,7 @@
    fra OpenLayers og datadelen, så den er alltid ferdig lastet før kartlagene som bruker den. Kartlagene kaller hverandre fram og
    tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import { ol } from './ol.js';
-import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.js';
+import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
 import { sti } from '../../data/solv/raster.ts';
 

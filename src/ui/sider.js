@@ -1,7 +1,7 @@
 /* Sidene og navigeringen: hvilke sider som finnes, valg av side, adressen i nettleseren, og oppstarten. Sidevelgeren og lenkene
    mellom sidene bruker dette, og kartet viser temaet til siden som er valgt. */
-import { finn, hentKommuner, velgKommune } from '../data/motor/kommune.js';
-import { abonner, app, endret } from '../data/motor/tilstand.js';
+import { finn, hentKommuner, velgKommune } from '../data/motor/kommune.ts';
+import { abonner, app, endret } from '../data/motor/tilstand.ts';
 import { ui } from './tilstand.js';
 
 /* Sidene i sidevelgeren, i rekkefølgen de vises: [id, navn, gruppe]. Sider med samme gruppe står samlet under gruppens navn. Hver

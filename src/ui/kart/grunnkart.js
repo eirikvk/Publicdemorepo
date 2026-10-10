@@ -2,10 +2,10 @@
    kartfargene. Bildene hentes i data/bronse/nibio-grunnkart.js. Oversiktsbildet er det lagrede, eller det sammensatte kartet
    datamotoren lager av flisene som er hentet (data/motor/grunnkart.js). Kartet har sin egen kopi av det i kartfargene. */
 import { ol } from './ol.js';
-import { grunnkartUrl, hentGrunnkartFlis } from '../../data/bronse/nibio-grunnkart.js';
+import { grunnkartUrl, hentGrunnkartFlis } from '../../data/bronse/nibio-grunnkart.ts';
 import { UTM } from '../../data/solv/felles.ts';
-import { leggISamling } from '../../data/motor/grunnkart.js';
-import { abonner, app, lytt, tidSlutt } from '../../data/motor/tilstand.js';
+import { leggISamling } from '../../data/motor/grunnkart.ts';
+import { abonner, app, lytt, tidSlutt } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.js';
 import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte } from './felles.js';
 import { kartStatus, view } from './kart.js';

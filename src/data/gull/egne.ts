@@ -53,7 +53,7 @@ export function byggEgneRader(
   harPlan: boolean,
   GK: Graakryss | null,
   tema: TemaKryss[],
-  gap: Gap | null
+  gap: Gap | null | undefined
 ): EgenRad[] {
   const ut: Rad[] = [];
   ut.push([

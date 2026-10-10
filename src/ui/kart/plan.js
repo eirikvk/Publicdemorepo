@@ -2,13 +2,13 @@
    fliser i samme rutenett (data/bronse/dibk-kommuneplan.js). For hver flis legges planen oppå dagens klasser i nettleseren, og bare
    natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut tegnes laget fra planrutenettet i datamotoren. */
 import { ol } from './ol.js';
-import { hentKommuneplanFlis, kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.js';
+import { hentKommuneplanFlis, kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
 import { HALV, SYNLIG, UTM } from '../../data/solv/felles.ts';
 import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
 import { flislerret, sti } from '../../data/solv/raster.ts';
-import { mine, utenPlan } from '../../data/motor/egne.js';
-import { dagensKlasser } from '../../data/motor/grunnkart.js';
-import { abonner, app, endret, gjeldende, tidSlutt } from '../../data/motor/tilstand.js';
+import { mine, utenPlan } from '../../data/motor/egne.ts';
+import { dagensKlasser } from '../../data/motor/grunnkart.ts';
+import { abonner, app, endret, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.js';
 import { ui } from '../tilstand.js';
 import { SVAKEST, TOM, friskOpp, nyttSiden, plannett } from './felles.js';

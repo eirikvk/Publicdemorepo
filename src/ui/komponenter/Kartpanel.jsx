@@ -1,8 +1,8 @@
 /* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages i
    ui/kart/kart.js og settes inn her. */
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { lastOppPlan } from '../../data/motor/egne.js';
-import { app } from '../../data/motor/tilstand.js';
+import { lastOppPlan } from '../../data/motor/egne.ts';
+import { app } from '../../data/motor/tilstand.ts';
 import { byttTilValgt, lagKart, plasserBytt, rolig, settByttKnapp } from '../kart/kart.js';
 import { fjernMerket } from '../kart/naturtema.js';
 import { velgSide } from '../sider.js';

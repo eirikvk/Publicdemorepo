@@ -2,8 +2,8 @@
    viser hva som går med. Datamotoren tar imot det tegnede området og regner det ut, se data/motor/egne.js. */
 import { ol } from './ol.js';
 import { OPPLOSNINGER } from '../../data/solv/felles.ts';
-import { leggTilEget, mine } from '../../data/motor/egne.js';
-import { abonner, app, endret } from '../../data/motor/tilstand.js';
+import { leggTilEget, mine } from '../../data/motor/egne.ts';
+import { abonner, app, endret } from '../../data/motor/tilstand.ts';
 import { farge } from '../farger.js';
 import { kart, lukkBytt, tilKartet, view } from './kart.js';
 

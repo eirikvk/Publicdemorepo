@@ -2,14 +2,14 @@
    laget som fliser fra NIBIO, så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
    område: areal som er bebygd i grunnkartet, men ikke grått. */
 import { ol } from './ol.js';
-import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.js';
-import { graaFlisUrl, hentGraaFlis } from '../../data/bronse/nibio-graa.js';
+import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
+import { graaFlisUrl, hentGraaFlis } from '../../data/bronse/nibio-graa.ts';
 import { HALV, SYNLIG } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
 import { klasseAv } from '../../data/solv/klasser.ts';
 import { flislerret, tegnUtsnitt } from '../../data/solv/raster.ts';
-import { dagensKlasser } from '../../data/motor/grunnkart.js';
-import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.js';
+import { dagensKlasser } from '../../data/motor/grunnkart.ts';
+import { abonner, app, gjeldende, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.js';
 import { ui } from '../tilstand.js';
 import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde } from './felles.js';

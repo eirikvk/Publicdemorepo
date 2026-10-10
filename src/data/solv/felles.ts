@@ -39,6 +39,19 @@ export interface GeoJsonFlate {
   coordinates: Flate | Flerflate;
 }
 
+/* En kommune i listen over kommuner: nummer, navn, og avgrensningsboksen [vest, sør, øst, nord] i grader hvis den er kjent */
+export interface Kommune {
+  nr: string;
+  navn: string;
+  boks: number[] | null;
+}
+/* Et fylke med kommunene sine */
+export interface Fylke {
+  nr: string;
+  navn: string;
+  kommuner: Kommune[];
+}
+
 /* Koordinatsystemet alt gjøres om til: UTM sone 33 (EPSG:25833), som dataene er laget i. */
 export const UTM = 'EPSG:25833';
 

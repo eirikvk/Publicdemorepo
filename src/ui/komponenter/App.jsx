@@ -1,7 +1,7 @@
 /* Hele siden. Kroken useApp gjør at siden tegnes på nytt når tilstanden er endret. */
 import { useEffect, useState } from 'react';
-import { NATURTEMA } from '../../data/motor/naturtema.js';
-import { app } from '../../data/motor/tilstand.js';
+import { NATURTEMA } from '../../data/motor/naturtema.ts';
+import { app } from '../../data/motor/tilstand.ts';
 import { kart } from '../kart/kart.js';
 import { startOpp } from '../sider.js';
 import { ui } from '../tilstand.js';

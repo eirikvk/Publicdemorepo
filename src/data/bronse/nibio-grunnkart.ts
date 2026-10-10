@@ -2,7 +2,8 @@
    av hele kommuner som er laget av samme tjeneste (verktoy/oversiktsbilde.py). Siden ber NIBIO tegne seks klasser i rene farger
    (DATAFARGE i solv/klasser.js), så klassen kan leses av fargen. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
-import { hent, lagHenter } from './henting.js';
+import type { Kommune, Utsnitt } from '../solv/felles.ts';
+import { hent, lagHenter } from './henting.ts';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 /* Groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000. Zoomet lenger ut
@@ -10,7 +11,7 @@ const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 export const FLISNIVA = 10;
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
 const SLD = (() => {
-  const hex = f => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
+  const hex = (f: number[]) => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
   const regler = ALLE.map(([id, , verdier]) => {
     let f = verdier
       .map(
@@ -25,7 +26,7 @@ const SLD = (() => {
 })();
 
 /* Adressen til et kartbilde på 512 x 512 piksler av utsnittet u i UTM33 */
-export const grunnkartUrl = u =>
+export const grunnkartUrl = (u: Utsnitt) =>
   WMS +
   '?' +
   new URLSearchParams({
@@ -36,8 +37,8 @@ export const grunnkartUrl = u =>
     styles: '',
     crs: 'EPSG:25833',
     bbox: u.map(v => v.toFixed(2)).join(','),
-    width: 512,
-    height: 512,
+    width: '512',
+    height: '512',
     format: 'image/png; mode=8bit',
     transparent: 'true',
     sld_body: SLD
@@ -46,7 +47,14 @@ export const grunnkartUrl = u =>
 export const hentGrunnkartFlis = lagHenter('NIBIO', 'Kart');
 
 /* Registeret over lagrede oversiktsbilder: hvilke kommuner som har et, og utsnittet bildet dekker */
-export const hentOversiktsregister = () => hent('Egen fil', 'Register over oversiktsbilder', 'oversikt.json', true);
+/* Registeret: årsversjonen av grunnkartet, når bildene er laget, og utsnittet hvert bilde dekker, per kommunenummer */
+export interface Oversiktsregister {
+  versjon?: string;
+  hentet?: string;
+  kommuner?: Record<string, Utsnitt>;
+}
+export const hentOversiktsregister = () =>
+  hent('Egen fil', 'Register over oversiktsbilder', 'oversikt.json', true) as Promise<Oversiktsregister>;
 /* Det lagrede oversiktsbildet for kommunen k, som PNG */
-export const hentOversiktsbilde = k =>
+export const hentOversiktsbilde = (k: Kommune) =>
   hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);

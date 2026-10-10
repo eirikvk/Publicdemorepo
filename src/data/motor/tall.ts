@@ -1,10 +1,12 @@
 /* Tallene fra SSB, tabell 09594: arealklasser, land og vann, og arealet fra 2017 til utbredelsesregnskapet. Hentes i bronse/ssb.js
    og tolkes i solv/ssb.js. Tilstanden ligger i app: arealtall, ssbSum, ferskvann og historie. */
-import { hentArealtall, hentTidsserie } from '../bronse/ssb.js';
+import { hentArealtall, hentTidsserie } from '../bronse/ssb.ts';
 import { tolkAreal, tolkHistorie } from '../solv/ssb.ts';
-import { app, endret, valgNr } from './tilstand.js';
+import type { Kommune } from '../solv/felles.ts';
+import type { SsbTall } from '../gull/regnskap.ts';
+import { app, endret, valgNr } from './tilstand.ts';
 
-export function nullstillTall(tilstand) {
+export function nullstillTall(tilstand: SsbTall['tilstand']) {
   /* ingen tall å vise: de hentes, eller hentingen feilet */
   app.ssbSum = 0;
   app.ferskvann = null;
@@ -12,7 +14,7 @@ export function nullstillTall(tilstand) {
   endret();
 }
 
-export async function hentTall(k, mitt) {
+export async function hentTall(k: Kommune, mitt: number) {
   try {
     const j = await hentArealtall(k);
     if (mitt !== valgNr) return;
@@ -28,7 +30,7 @@ export async function hentTall(k, mitt) {
 /* Arealet i 2017 og i SSBs nyeste tall, til utbredelsesregnskapet. SSB advarer mot å lese forskjeller mellom årganger som
    endring, så siden sier at det er en forskjell og ikke målt endring. Er kommunens samlede flate en annen i 2017, er grensen
    flyttet, og da vises ingen sammenligning. */
-export async function hentHistorie(k, mitt) {
+export async function hentHistorie(k: Kommune, mitt: number) {
   try {
     const j = await hentTidsserie(k);
     if (mitt !== valgNr) return;
