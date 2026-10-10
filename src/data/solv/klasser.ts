@@ -1,5 +1,6 @@
 /* Sølv, felles standard: arealklassene. Inndelingen i bebygd, jordbruk og natur, med koblingen til SSBs arealklasser og
    grunnkartets økosystemtyper, og tolkingen av fargene i kartbildene fra NIBIO. */
+import { SYNLIG, type Piksler } from './felles.ts';
 
 /* Klassene, med id: bebygd, jordbruk og natur på land, og hav, innsjø og elv */
 export type KlasseId = 'beb' | 'jor' | 'nat' | 'hav' | 'inn' | 'elv';
@@ -89,3 +90,11 @@ export const klasseAv = (r: number, g: number, b: number) => {
   const q = fargeNr(r, g, b);
   return BLANDING.T[q] >= 128 ? BLANDING.A[q] : BLANDING.B[q];
 };
+/* Dagens klasse per rute i en flis, fra kartbildet K fra NIBIO (piksler i de rene fargene): 0 der bildet er tomt (mindre dekket enn
+   SYNLIG), ellers plassen i ALLE pluss én: 1 bebygd, 2 jordbruk, 3 natur, 4–6 vann */
+export function klasserIFlis(K: Piksler): Uint8Array {
+  const kl = new Uint8Array(K.length / 4);
+  for (let i = 0, q = 0; i < K.length; i += 4, q++)
+    if (K[i + 3] >= SYNLIG) kl[q] = klasseAv(K[i], K[i + 1], K[i + 2]) + 1;
+  return kl;
+}

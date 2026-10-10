@@ -7,20 +7,20 @@
    den bygger på, og så videre ned til kilden. Et kall som alt er underveis, deles. Det som feilet, står som feilet til noen kaller
    tabellen på nytt.
 
-   Det meste kommer fra kildene og endres ikke mens siden er åpen. Gull bygger også på planrutenettet, som kan bli nytt: det regnes ut
-   på nytt når det kommer mer kart eller egne områder endres. Tabeller merket endrerGull sier fra når de får en ny verdi, og da er
-   gull for den kommunen utdatert. Siden får det gamle svaret til det nye er regnet ut, så tallene
-   ikke blinker. En ETL-funksjon som kaller gull, venter på det nye.
+   Det meste kommer fra kildene og endres ikke mens siden er åpen. Noe bygger på det brukeren gjør: kartet som er hentet, og egne
+   områder. Tabellene som gjør det, er merket brukerstyrt. Når datamotoren sier fra om at brukeren har endret noe i en kommune
+   (brukerEndret), er de utdatert for den kommunen. Siden får det gamle svaret til det nye er regnet ut, så tallene ikke blinker. En
+   ETL-funksjon som kaller en brukerstyrt tabell, venter på det nye.
 
    Verdiene lagres som de er, uten å kopieres eller gjøres om til tekst. Det som ligger i cachen, endres derfor ikke etterpå: et nytt
-   svar erstatter det gamle. Unntaket er tabeller merket voksende (det sammensatte kartet og planrutenettets blokker), som fylles på
+   svar erstatter det gamle. Unntaket er tabeller merket voksende (det sammensatte kartet og utbyggingens blokker), som fylles på
    etter hvert. Ingenting lagres varig i nettleseren: cachen finnes så lenge siden er åpen. Filen importerer ingenting. */
 
 export type Lag = 'bronse' | 'solv' | 'gull';
 export type Status = 'henter' | 'feil' | 'ok';
 /* Én rad: status, verdien (den siste som ble ferdig), utgaven (et løpenummer som er nytt hver gang en verdi legges inn, så det aldri
    brukes to ganger), når den ble laget, hvor lenge ETL-funksjonen brukte, om svaret gjelder bare en del av kommunen (delvis, fra
-   svaret selv), og kallet som er underveis. gull er utgaven av gull for kommunen da raden ble regnet ut. */
+   svaret selv), og kallet som er underveis. bruker er hvor mange ganger brukeren hadde endret noe i kommunen da raden ble regnet ut. */
 export interface Rad<V> {
   status: Status;
   verdi: V | undefined;
@@ -28,9 +28,9 @@ export interface Rad<V> {
   tid: number;
   ms: number;
   delvis: boolean;
-  gull: number;
+  bruker: number;
   underveis: Promise<V> | null;
-  underveisGull: number;
+  underveisBruker: number;
 }
 /* En tabell: laget (bronse, sølv eller gull), navnet, hva den er, hvor mange nøkler som huskes, og ETL-funksjonen som lager verdien.
    N er det nøkkelen lages av, og V verdien. */
@@ -40,14 +40,15 @@ export interface Tabelldef<N, V> {
   om: string /* til oversikten under Tekniske valg */;
   husk: number /* hvor mange nøkler som huskes. Det som er brukt lengst siden, går ut først. */;
   nokkel?: (n: N) => string /* nøkkelen som tekst. Uten: n selv, eller tom tekst. */;
-  etl?: (n: N) => Promise<V> /* lager verdien. Uten: motoren legger verdiene inn selv (legg). */;
+  etl?: (
+    n: N
+  ) => Promise<V> /* lager verdien. Uten: motoren legger verdiene inn selv (legg), eller en ETL-funksjon (straks). */;
   voksende?: boolean /* verdien fylles på etter at den er lagt inn */;
-  endrerGull?: boolean /* en ny verdi gjør gull for kommunen (nøkkelen) utdatert */;
+  brukerstyrt?: boolean /* bygger på det brukeren gjør, og er utdatert når brukeren har endret noe i kommunen (nøkkelen) */;
   glemt?: (v: V, nokkel: string) => void /* kalles når en verdi går ut av cachen */;
 }
 /* En tabell man kaller med nøkkelen: katalog.solv.inon('5001') gir sonene for Trondheim, fra cachen eller fra ETL-funksjonen.
-   For tabeller motoren fyller, venter kallet til motoren er ferdig hvis den holder på, og gir ellers verdien som den er, eller null.
-   naa gir verdien som den er nå, eller null, og starter hentingen hvis den mangler. straks gir verdien med en gang, og lager den
+   For tabeller uten ETL-funksjon gir kallet verdien som den er, eller null. naa gir verdien som den er nå, eller null, og starter hentingen hvis den mangler. straks gir verdien med en gang, og lager den
    med lag hvis den mangler (til maskene, som lages midt i en utregning). */
 export type Tabell<N, V> = Tabelldef<N, V> & {
   (n: N): Promise<V>;
@@ -59,12 +60,12 @@ const ALLE: Tabell<any, any>[] = [];
 const innholdet = new Map<Tabelldef<any, any>, Map<string, Rad<any>>>();
 const lyttere = new Map<Tabelldef<any, any>, ((v: any, nokkel: string) => void)[]>(),
   glemtLyttere = new Map<Tabelldef<any, any>, ((v: any, nokkel: string) => void)[]>();
-const gullUtgave = new Map<string, number>(); /* per kommune */
+const brukerUtgave = new Map<string, number>(); /* hvor mange ganger brukeren har endret noe, per kommune */
 let lopenr = 0; /* siste utgave som er gitt */
 const kroker = {
   endret: () => {},
   kjort: (_navn: string, _ms: number) => {},
-  gullUtdatert: (_nr: string) => {}
+  brukerEndret: (_nr: string) => {}
 };
 /* Den som vil vite når noe er endret (datamotoren), gir en funksjon her */
 export const nårEndret = (f: () => void) => {
@@ -74,16 +75,17 @@ export const nårEndret = (f: () => void) => {
 export const nårKjort = (f: (navn: string, ms: number) => void) => {
   kroker.kjort = f;
 };
-/* Gull for kommunen nr er utdatert. Datamotoren kan da be om det sidene viser, så det er klart. */
-export const nårGullUtdatert = (f: (nr: string) => void) => {
-  kroker.gullUtdatert = f;
+/* Brukeren har endret noe i kommunen nr, og de brukerstyrte tabellene er utdatert. Datamotoren kan da be om det sidene viser, så
+   det er klart. */
+export const nårBrukerEndret = (f: (nr: string) => void) => {
+  kroker.brukerEndret = f;
 };
 
 const rom = <N, V>(t: Tabelldef<N, V>) => innholdet.get(t) as Map<string, Rad<V>>;
 const nokkelAv = <N, V>(t: Tabelldef<N, V>, n: N) => (t.nokkel ? t.nokkel(n) : n === undefined ? '' : String(n));
 export const fulltNavn = (t: Tabelldef<any, any>) => `${t.lag}.${t.navn}`;
 const gyldig = <V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) =>
-  r.status === 'ok' && (t.lag !== 'gull' || r.gull === (gullUtgave.get(k) || 0));
+  r.status === 'ok' && (!t.brukerstyrt || r.bruker === (brukerUtgave.get(k) || 0));
 
 /* Lager en tabell og tar den med i cachen */
 export function tabell<N, V>(d: Tabelldef<N, V>): Tabell<N, V> {
@@ -103,7 +105,6 @@ function brukt<V>(m: Map<string, Rad<V>>, k: string, r: Rad<V>) {
 }
 /* Raden for nøkkelen k er tatt ut av tabellen */
 function tattUt<V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) {
-  svar(r, null);
   if (r.verdi === undefined) return;
   if (t.glemt) t.glemt(r.verdi, k);
   (glemtLyttere.get(t) || []).forEach(f => f(r.verdi, k));
@@ -123,33 +124,22 @@ const ny = <V>(fra?: Rad<V>): Rad<V> => ({
   tid: Date.now(),
   ms: 0,
   delvis: false,
-  gull: 0,
+  bruker: 0,
   underveis: null,
-  underveisGull: 0
+  underveisBruker: 0
 });
-/* Rader motoren holder på med, og funksjonen som gir verdien til dem som venter, når motoren er ferdig */
-const venter = new WeakMap<Rad<any>, (v: any) => void>();
-/* De som venter på en verdi motoren lager, får den (eller null når det ikke ble noen) */
-function svar<V>(r: Rad<V>, v: V | null) {
-  const f = venter.get(r);
-  if (!f) return;
-  venter.delete(r);
-  f(v);
-}
-function settInn<N, V>(t: Tabelldef<N, V>, k: string, r: Rad<V>, v: V, gull: number) {
+function settInn<N, V>(t: Tabelldef<N, V>, k: string, r: Rad<V>, v: V, bruker: number) {
   const m = rom(t);
   r.status = 'ok';
   r.verdi = v;
   r.utgave = ++lopenr;
   r.tid = Date.now();
-  r.gull = gull;
+  r.bruker = bruker;
   r.delvis = !!v && typeof v === 'object' && (v as { delvis?: unknown }).delvis === true;
   r.underveis = null;
-  svar(r, v);
   brukt(m, k, r);
   rydd(t, m);
   (lyttere.get(t) || []).forEach(f => f(v, k));
-  if (t.endrerGull) utdaterGull(k);
   kroker.endret();
 }
 
@@ -163,11 +153,11 @@ export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
     brukt(m, k, har);
     return Promise.resolve(har.verdi as V);
   }
-  const gull = gullUtgave.get(k) || 0;
-  /* Et kall som er underveis, deles, så sant gull ikke er blitt utdatert siden det startet */
-  if (har && har.underveis && (t.lag !== 'gull' || har.underveisGull === gull)) return har.underveis;
+  const bruker = brukerUtgave.get(k) || 0;
+  /* Et kall som er underveis, deles, så sant brukeren ikke har endret noe siden det startet */
+  if (har && har.underveis && (!t.brukerstyrt || har.underveisBruker === bruker)) return har.underveis;
   if (!t.etl)
-    /* tabeller motoren fyller, når motoren ikke holder på: verdien som den er, eller null */
+    /* tabeller uten ETL-funksjon: verdien som den er, eller null */
     return Promise.resolve((har && har.status === 'ok' ? har.verdi : null) as V);
   const etl = t.etl,
     r = har && (har.status === 'ok' || har.underveis) ? har : ny(har) /* et utdatert svar vises til det nye er klart */,
@@ -182,7 +172,7 @@ export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
       })
       .then(
         v => {
-          if (m.get(k) === r && r.underveis === p) settInn(t, k, r, v, gull);
+          if (m.get(k) === r && r.underveis === p) settInn(t, k, r, v, bruker);
           return v;
         },
         feil => {
@@ -195,7 +185,7 @@ export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
         }
       );
   r.underveis = p;
-  r.underveisGull = gull;
+  r.underveisBruker = bruker;
   if (r !== har) {
     m.set(k, r);
     rydd(t, m);
@@ -232,36 +222,7 @@ export const se = <N, V>(t: Tabelldef<N, V>, n: N): Rad<V> | null => rom(t).get(
 export function legg<N, V>(t: Tabelldef<N, V>, n: N, v: V) {
   const m = rom(t),
     k = nokkelAv(t, n);
-  settInn(t, k, m.get(k) || ny<V>(), v, gullUtgave.get(k) || 0);
-}
-/* Motoren har begynt å lage verdien for n. Raden sier henter, men beholder verdien fra før, så den som vil, kan vise den til den nye
-   er klar. Den som kaller tabellen i mellomtiden, venter til motoren er ferdig (legg), og får null hvis det ikke blir noen verdi
-   (feilet, eller raden glemmes). Med beholdStatus står en ferdig rad som ferdig til den nye er lagt inn, og den som kaller, får
-   den ferdige verdien med en gang. */
-export function begynt<N, V>(t: Tabelldef<N, V>, n: N, beholdStatus = false) {
-  const m = rom(t),
-    k = nokkelAv(t, n),
-    har = m.get(k);
-  if (har && har.status === 'ok' && beholdStatus) return;
-  if (har && har.status === 'henter' && venter.has(har))
-    return; /* motoren holder alt på, og de som venter, venter videre */
-  const r = ny(har);
-  r.underveis = new Promise<V | null>(ok => venter.set(r, ok)) as Promise<V>;
-  m.set(k, r);
-  rydd(t, m);
-  kroker.endret();
-}
-/* Det motoren holdt på med for n, feilet */
-export function feilet<N, V>(t: Tabelldef<N, V>, n: N) {
-  const m = rom(t),
-    k = nokkelAv(t, n),
-    r = m.get(k) || ny<V>();
-  r.status = 'feil';
-  r.underveis = null;
-  svar(r, null);
-  m.set(k, r);
-  rydd(t, m);
-  kroker.endret();
+  settInn(t, k, m.get(k) || ny<V>(), v, brukerUtgave.get(k) || 0);
 }
 /* Synkron les-gjennom for verdier som lages med en gang: gir verdien for n, eller lager den med lag og legger den inn. Sier ikke fra
    om endringen, for den som spør, bruker verdien med en gang. */
@@ -293,10 +254,11 @@ export function glem<N, V>(t: Tabelldef<N, V>, hvis: (nokkel: string) => boolean
     }
   kroker.endret();
 }
-/* Gull for kommunen nr er utdatert: planrutenettet er nytt */
-export function utdaterGull(nr: string) {
-  gullUtgave.set(nr, (gullUtgave.get(nr) || 0) + 1);
-  kroker.gullUtdatert(nr);
+/* Brukeren har endret noe i kommunen nr: egne områder, eller kartet som er hentet. De brukerstyrte tabellene er utdatert for
+   kommunen, og regnes ut på nytt neste gang noen spør. Datamotoren kaller denne. */
+export function brukerEndret(nr: string) {
+  brukerUtgave.set(nr, (brukerUtgave.get(nr) || 0) + 1);
+  kroker.brukerEndret(nr);
 }
 /* Alle ferdige verdier i tabellen, som [nøkkel, verdi], eldst først */
 export const alle = <N, V>(t: Tabelldef<N, V>): [string, V][] =>
@@ -344,7 +306,7 @@ export function innhold() {
     husk: t.husk,
     etl: !!t.etl,
     voksende: !!t.voksende,
-    endrerGull: !!t.endrerGull,
+    brukerstyrt: !!t.brukerstyrt,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,
       status: r.status,

@@ -61,7 +61,7 @@ export const fliserI = (e: Utsnitt, z: number): Flis[] => {
   return ut;
 };
 
-/* Planrutenettet: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. */
+/* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. */
 export const PLANNIVA = 9,
   RUTE_M = OPPLOSNINGER[PLANNIVA] / 2 /* 21,16 meter */,
   RUTE = RUTE_M ** 2 / 1e6; /* km² per rute, 0,448 dekar */
@@ -79,9 +79,7 @@ export const EGET_MIN_M2 = 400; /* minste tegnede område som regnes ut */
 export const BILDE_TEMA: [number, number] = [2048, 20]; /* inngrepsfri natur og grått areal */
 export const BILDE_PLANDEKNING: [number, number] = [256, 0]; /* sjekken av om kommunen har kommuneplan */
 export const RUTENETT_VERDI: [number, number] = [1536, 10]; /* arealet av verdsatt natur per verdikategori */
-export const RUTENETT_MASKE: [number, number] = [
-  1500, 10
-]; /* ett område i et naturtema, til oppslag fra planrutenettet */
+export const RUTENETT_MASKE: [number, number] = [1500, 10]; /* ett område i et naturtema, til oppslag fra utbyggingen */
 
 /* Rutenett over et utsnitt e: høyst maks ruter på lengste side, og ruter på minst `minst` meter. u er utsnittet rutene dekker,
    som kan være litt større enn e. */
@@ -109,7 +107,7 @@ export interface Plassering {
   cy0: number;
   w: number;
 }
-/* Midtpunktet av rute i i planrutenettet R, i meter */
+/* Midtpunktet av rute i i utbyggingen R, i meter */
 export const ruteX = (R: Plassering, i: number) => ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * (OPPLOSNINGER[R.z] / 2);
 export const ruteY = (R: Plassering, i: number) =>
   ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + 0.5) * (OPPLOSNINGER[R.z] / 2);

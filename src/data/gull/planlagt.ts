@@ -1,9 +1,10 @@
-/* Gull for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av, regnet ut fra planrutenettet i
-   sølv. Arealer er i km², andeler i prosent. */
+/* Gull for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av, summert over utbyggingen
+   (gull/utbygging.ts). Arealer er i km², andeler i prosent. */
 import { katalog } from '../katalog.ts';
 import { OPPLOSNINGER, RUTE } from '../solv/felles.ts';
-import type { Planinfo, Planrutenett } from '../solv/planrutenett.ts';
+import type { Planinfo } from '../solv/kommuneplan.ts';
 import { andel, landareal } from './felles.ts';
+import type { Utbygging } from './utbygging.ts';
 
 /* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av i km², om bare en del av kommunen er hentet, og hvor mange
    egne områder som er med */
@@ -15,10 +16,10 @@ export interface PlanSum {
   egne: number;
 }
 
-/* Det siden viser om planlagt utbygging. R er planrutenettet, og land landarealet fra SSB. For natur og jordbruk: arealet uten smale
+/* Det siden viser om planlagt utbygging. R er utbyggingen, og land landarealet fra SSB. For natur og jordbruk: arealet uten smale
    striper, andelen av det som er natur eller jordbruk i dag i samme rutenett, og arealet med smale striper. Med egne områder også
    planen alene (basis). Er bare en del av kommunen hentet (delvis), også hvor mye land som er hentet. */
-export function byggPlanlagt(R: Planrutenett, land: number) {
+export function byggPlanlagt(R: Utbygging, land: number) {
   const m = OPPLOSNINGER[R.z] / 2,
     km2 = (v: number) => (v * m * m) / 1e6,
     n = R.n,
@@ -36,7 +37,7 @@ export function byggPlanlagt(R: Planrutenett, land: number) {
 }
 
 /* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av, i km² */
-export const byggPlanSum = (R: Planrutenett): PlanSum => ({
+export const byggPlanSum = (R: Utbygging): PlanSum => ({
   nr: R.nr,
   nat: R.sum.rn * RUTE,
   jor: R.sum.rj * RUTE,
@@ -48,13 +49,13 @@ export const byggPlanSum = (R: Planrutenett): PlanSum => ({
 export async function kommuneplan(nr: string): Promise<Planinfo> {
   return katalog.solv.planinfo(nr);
 }
-/* Tabellene gull.planlagt og gull.plansum for kommunen nr, når planrutenettet finnes */
+/* Tabellene gull.planlagt og gull.plansum for kommunen nr. null uten utbygging. */
 export type Planlagt = ReturnType<typeof byggPlanlagt>;
 export async function planlagt(nr: string): Promise<Planlagt | null> {
-  const R = katalog.solv.planrutenett.naa(nr);
-  return R ? byggPlanlagt(R, await landareal(nr)) : null;
+  const [R, land] = await Promise.all([katalog.gull.utbygging(nr), landareal(nr)]);
+  return R ? byggPlanlagt(R, land) : null;
 }
 export async function plansum(nr: string): Promise<PlanSum | null> {
-  const R = katalog.solv.planrutenett.naa(nr);
+  const R = await katalog.gull.utbygging(nr);
   return R ? byggPlanSum(R) : null;
 }

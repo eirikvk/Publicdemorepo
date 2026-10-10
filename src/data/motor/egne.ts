@@ -1,16 +1,17 @@
-/* Datamotoren, egne områder: tegnede områder og opplastede planer. Hvilke flater som er utbygging og hvordan de legges inn i
-   planrutenettet, står i solv/egne.ts, og radene i sammenligningen med kommuneplanen bygges i gull/egne.ts (tabellen
+/* Datamotoren, egne områder: tegnede områder og opplastede planer. Hvilke flater som er utbygging, står i solv/egne.ts, hvordan de
+   legges inn i utbyggingen i gull/utbygging.ts, og radene i sammenligningen med kommuneplanen i gull/egne.ts (tabellen
    gull.egneRader). Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder er valg brukeren har gjort, og ligger i app.egne.
-   De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. */
+   De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. De er også en kilde for utbyggingen: datamotoren
+   legger dem i solv.egne (oppdaterEgne). */
 import { lesPlanfil } from '../bronse/planfil.ts';
 import { areal, utsnitt, type Flerflate } from '../generelt/geometri.ts';
 import { EGET_MIN_M2, arealKm2 } from '../solv/felles.ts';
-import { planflater, type Type } from '../solv/egne.ts';
+import { planflater, type Egne, type Type } from '../solv/egne.ts';
 import { tilUTM } from '../solv/projeksjoner.ts';
-import { se } from '../cache.ts';
+import { brukerEndret, legg, se } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import { finn, velgKommune } from './kommune.ts';
-import { ingenPlan, planrutenett, regnAlt } from './plan.ts';
+import { ingenPlan, utbyggingen } from './plan.ts';
 import { app, endret, type EgetOmrade, type EgneStatus } from './tilstand.ts';
 
 let egenTeller = 0;
@@ -19,9 +20,22 @@ export const mine = () => app.egne.filter(g => !!app.valgt && g.nr === app.valgt
 /* Uten kommuneplan og uten egne områder finnes det ingen planlagt utbygging å regne på */
 export const utenPlan = () => ingenPlan() && !mine().length;
 
+/* Egne områder er en kilde fra brukeren: de legges i solv.egne for kommunen nr. Har de endret seg, sier datamotoren fra
+   (brukerEndret), så utbyggingen og alt som bygger på den, regnes ut på nytt. Flatene kopieres, så det som ligger i cachen, ikke
+   endres etterpå. */
+const merke = (E: Egne) => E.ider.join() + '|' + E.flater.map(f => f.deler.map(d => d.type).join()).join(';');
+export function oppdaterEgne(nr: string) {
+  const G = app.egne.filter(g => g.nr === nr),
+    ny: Egne = { ider: G.map(g => g.id), flater: G.map(g => ({ ext: g.ext, deler: g.deler.map(d => ({ ...d })) })) },
+    har = se(katalog.solv.egne, nr),
+    fra = har && har.status === 'ok' ? har.verdi! : { ider: [], flater: [] };
+  if (har && merke(fra) === merke(ny)) return;
+  legg(katalog.solv.egne, nr, ny);
+  if (merke(fra) !== merke(ny)) brukerEndret(nr);
+}
 function egneEndret() {
+  if (app.valgt) oppdaterEgne(app.valgt.nr);
   endret();
-  regnAlt();
 }
 
 /* Et område tegnet i kartet. koord er flerflaten i UTM33. */
@@ -105,15 +119,15 @@ export function slettEget(g: EgetOmrade) {
   egneEndret();
 }
 
-/* Planrutenettet når det er regnet ut med de egne områdene som finnes nå, ellers null */
+/* Utbyggingen når den er regnet ut med de egne områdene som finnes nå, ellers null */
 export function egneRutenett() {
-  const R = planrutenett(),
+  const R = utbyggingen(),
     E = mine();
   return R && R.eget && R.egneIder.join() === E.map(g => g.id).join() ? R : null;
 }
-/* Hva som ligger i et eget område, i ruter fra planrutenettet. null til området er regnet med. */
+/* Hva som ligger i et eget område, i ruter fra utbyggingen. null til området er regnet med. */
 export function egetTall(g: EgetOmrade) {
-  const R = planrutenett(),
+  const R = utbyggingen(),
     i = R ? R.egneIder.indexOf(g.id) : -1;
   return i < 0 ? null : R!.egneTall[i];
 }

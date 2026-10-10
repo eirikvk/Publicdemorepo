@@ -12,7 +12,7 @@ import type { Kommune } from '../solv/felles.ts';
 
 /* Et eget område, tegnet i kartet eller lastet opp som fil, i kommunen nr. En opplastet plan har også antall flater som er
    utbygging (bygg) og ikke (annet), plan-id, om den mangler arealformål, og projeksjonen den var i. Hva som ligger i området, står i
-   planrutenettet, se egetTall i motor/egne.ts. */
+   utbyggingen, se egetTall i motor/egne.ts. */
 export interface EgetOmrade {
   id: number;
   nr: string;

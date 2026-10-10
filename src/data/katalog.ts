@@ -6,8 +6,10 @@
    gull.verneomrader, ser man at den kaller solv.verneomrader, og der at den kaller bronse.verneomrader, og så videre ned til kilden.
 
    Svarene huskes i cachen (cache.ts). Her står bare hvor mange nøkler som huskes for hver tabell (husk), og hva den er (om). Svar fra
-   kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller uten
-   ETL-funksjon fyller datamotoren selv (data/motor/), fordi de bygges opp mens kartet flyttes.
+   kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
+   brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
+   Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (solv.sammensatt og solv.egne), og hjelpetabeller som
+   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturmaske).
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
@@ -23,11 +25,11 @@ import * as solvGraa from './solv/graa.ts';
 import * as solvGrunnkart from './solv/grunnkart.ts';
 import * as solvInon from './solv/inon.ts';
 import * as solvKommune from './solv/kommune.ts';
-import * as solvPlan from './solv/planrutenett.ts';
+import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvSsb from './solv/ssb.ts';
 import * as solvTemaer from './solv/temaer.ts';
-import type { Fylke } from './solv/felles.ts';
-import type { Blokk, Rutenettet } from './solv/planrutenett.ts';
+import type { Fylke, Flis } from './solv/felles.ts';
+import type { Egne } from './solv/egne.ts';
 import type { Maske } from './solv/temaer.ts';
 import type { Oversikt } from './solv/grunnkart.ts';
 import type { Oversiktsregister } from './bronse/nibio-grunnkart.ts';
@@ -37,6 +39,8 @@ import * as gullInon from './gull/inon.ts';
 import * as gullPlan from './gull/planlagt.ts';
 import * as gullRegnskap from './gull/regnskap.ts';
 import * as gullTemaer from './gull/temaer.ts';
+import * as gullUtbygging from './gull/utbygging.ts';
+import type { Blokk, Utbygging } from './gull/utbygging.ts';
 
 /* Det sammensatte kartet: lerretet (c) med klassene i rene farger, meter per piksel, utsnittet det dekker, flisene som er lagt inn
    (som «nivå/x/y»), og det samme som Oversikt (ov), til kartet og utregningene */
@@ -115,11 +119,12 @@ export const katalog = {
       husk: 6,
       etl: dibk.planopplysninger
     }),
-    planflis: tabell({
+    planflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'planflis',
-      om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler. ' + URL_NOKKEL,
+      om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. ' + URL_NOKKEL,
       husk: 400,
+      nokkel: dibk.planflisAdresse,
       etl: dibk.planflis
     }),
     inonbilde: tabell({
@@ -211,9 +216,15 @@ export const katalog = {
     sammensatt: tabell<string, Samling>({
       lag: 'solv',
       navn: 'sammensatt',
-      om: 'dagens klasser satt sammen av kartbildene som er hentet, for kommuner uten lagret oversiktsbilde. Fylles av datamotoren.',
+      om: 'dagens klasser satt sammen av kartbildene som er hentet, for kommuner uten lagret oversiktsbilde. En kilde fra brukeren: det er kartet brukeren har sett på, og datamotoren fyller det.',
       husk: 4,
       voksende: true
+    }),
+    egne: tabell<string, Egne>({
+      lag: 'solv',
+      navn: 'egne',
+      om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, med flatene i UTM33 og om de er utbygging. En kilde fra brukeren, som datamotoren fyller.',
+      husk: 30
     }),
     plandekning: tabell({
       lag: 'solv',
@@ -228,20 +239,6 @@ export const katalog = {
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
       husk: 6,
       etl: solvPlan.planinfo
-    }),
-    planblokker: tabell<string, Map<string, Blokk>>({
-      lag: 'solv',
-      navn: 'planblokker',
-      om: 'planrutenettet i blokker på 512 x 512 ruter, én per flis på nivå 9. Fylles av datamotoren.',
-      husk: 1,
-      voksende: true
-    }),
-    planrutenett: tabell<string, Rutenettet>({
-      lag: 'solv',
-      navn: 'planrutenett',
-      om: 'kommuneplanen og egne områder lagt oppå dagens klasser, med smale striper tatt bort. Regnes ut av datamotoren, på nytt når det kommer mer kart eller egne områder endres.',
-      husk: 1,
-      endrerGull: true
     }),
     inon: tabell({
       lag: 'solv',
@@ -296,17 +293,10 @@ export const katalog = {
       etl: solvTemaer.kartlagt,
       glemt: (_, nr) => glemMasker('kartlagt/' + nr)
     }),
-    verdsattNaturIKartlagt: tabell({
-      lag: 'solv',
-      navn: 'verdsattNaturIKartlagt',
-      om: 'verdsatt natur per verdikategori innenfor det kartlagte',
-      husk: 30,
-      etl: solvTemaer.verdsattNaturIKartlagt
-    }),
     naturmaske: tabell<string, Maske | null>({
       lag: 'solv',
       navn: 'naturmaske',
-      om: 'områdene i naturtemaene og det kartlagte som masker i et rutenett, til kryssingen med planrutenettet. Nøkkel: tema/kommune/plassen til området. Lages første gang en rute med planlagt utbygging treffer området.',
+      om: 'hjelpetabell: områdene i naturtemaene og det kartlagte som masker i et rutenett, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området. Lages første gang en rute med planlagt utbygging treffer området.',
       husk: Infinity
     })
   },
@@ -346,11 +336,27 @@ export const katalog = {
       husk: 6,
       etl: gullPlan.kommuneplan
     }),
+    utbygging: tabell<string, Utbygging | null>({
+      lag: 'gull',
+      navn: 'utbygging',
+      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullUtbygging.utbygging
+    }),
+    utbyggingsblokker: tabell<string, Map<string, Blokk>>({
+      lag: 'gull',
+      navn: 'utbyggingsblokker',
+      om: 'hjelpetabell: utbyggingen i blokker på 512 x 512 ruter, én per flis på nivå 9, så bare blokker med nytt kart regnes ut på nytt',
+      husk: 1,
+      voksende: true
+    }),
     planlagt: tabell({
       lag: 'gull',
       navn: 'planlagt',
       om: 'natur og jordbruk som planen setter av, med andeler',
       husk: 6,
+      brukerstyrt: true,
       etl: gullPlan.planlagt
     }),
     plansum: tabell({
@@ -358,6 +364,7 @@ export const katalog = {
       navn: 'plansum',
       om: 'natur og jordbruk satt av i km², til oversikten og regnskapet',
       husk: 6,
+      brukerstyrt: true,
       etl: gullPlan.plansum
     }),
     inon: tabell({
@@ -370,16 +377,25 @@ export const katalog = {
     graakryss: tabell({
       lag: 'gull',
       navn: 'graakryss',
-      om: 'planlagt utbygging krysset med grått areal',
+      om: 'utbyggingen krysset med grått areal: planlagt utbygging på land, også der det alt er bebygd, og grønt i bebygd område',
       husk: 6,
+      brukerstyrt: true,
       etl: gullGraa.graakryss
     }),
     graa: tabell({
       lag: 'gull',
       navn: 'graa',
-      om: 'grått areal: arealet samlet og per trinn, andelen av landarealet, og planlagt utbygging på grått areal',
+      om: 'grått areal: arealet samlet og per trinn, og andelen av landarealet',
       husk: 6,
       etl: gullGraa.graa
+    }),
+    graaIPlan: tabell({
+      lag: 'gull',
+      navn: 'graaIPlan',
+      om: 'planlagt utbygging på grått areal, og grønt i bebygd område',
+      husk: 6,
+      brukerstyrt: true,
+      etl: gullGraa.graaIPlan
     }),
     verneomrader: tabell({
       lag: 'gull',
@@ -388,11 +404,20 @@ export const katalog = {
       husk: 6,
       etl: gullTemaer.verneomrader
     }),
+    utbyggingIVerneomrader: tabell({
+      lag: 'gull',
+      navn: 'utbyggingIVerneomrader',
+      om: 'kolonnen for verneområdene i utbyggingen: hvilket område hver rad ligger i',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullTemaer.utbyggingIVerneomrader
+    }),
     verneomraderIPlan: tabell({
       lag: 'gull',
       navn: 'verneomraderIPlan',
-      om: 'planlagt utbygging innenfor verneområdene, samlet og per område',
+      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnen',
       husk: 6,
+      brukerstyrt: true,
       etl: gullTemaer.verneomraderIPlan
     }),
     villrein: tabell({
@@ -402,11 +427,20 @@ export const katalog = {
       husk: 6,
       etl: gullTemaer.villrein
     }),
+    utbyggingIVillrein: tabell({
+      lag: 'gull',
+      navn: 'utbyggingIVillrein',
+      om: 'kolonnen for villreinområdene i utbyggingen: hvilket område hver rad ligger i',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullTemaer.utbyggingIVillrein
+    }),
     villreinIPlan: tabell({
       lag: 'gull',
       navn: 'villreinIPlan',
-      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område',
+      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnen',
       husk: 6,
+      brukerstyrt: true,
       etl: gullTemaer.villreinIPlan
     }),
     verdsattNatur: tabell({
@@ -416,6 +450,13 @@ export const katalog = {
       husk: 6,
       etl: gullTemaer.verdsattNatur
     }),
+    verdsattNaturIKartlagt: tabell({
+      lag: 'gull',
+      navn: 'verdsattNaturIKartlagt',
+      om: 'verdsatt natur per verdikategori innenfor det kartlagte',
+      husk: 30,
+      etl: gullTemaer.verdsattNaturIKartlagt
+    }),
     verdsattNaturKartlagt: tabell({
       lag: 'gull',
       navn: 'verdsattNaturKartlagt',
@@ -423,18 +464,36 @@ export const katalog = {
       husk: 6,
       etl: gullTemaer.verdsattNaturKartlagt
     }),
+    utbyggingIVerdsattNatur: tabell({
+      lag: 'gull',
+      navn: 'utbyggingIVerdsattNatur',
+      om: 'kolonnen for verdsatt natur i utbyggingen: hvilket område hver rad ligger i',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullTemaer.utbyggingIVerdsattNatur
+    }),
     verdsattNaturIPlan: tabell({
       lag: 'gull',
       navn: 'verdsattNaturIPlan',
-      om: 'planlagt utbygging i verdsatt natur: per verdikategori, de berørte lokalitetene, og på natur som ikke er kartlagt',
+      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnen',
       husk: 6,
+      brukerstyrt: true,
       etl: gullTemaer.verdsattNaturIPlan
+    }),
+    utbyggingUtenforKartlagt: tabell({
+      lag: 'gull',
+      navn: 'utbyggingUtenforKartlagt',
+      om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper',
+      husk: 6,
+      brukerstyrt: true,
+      etl: gullTemaer.utbyggingUtenforKartlagt
     }),
     egneRader: tabell({
       lag: 'gull',
       navn: 'egneRader',
       om: 'sammenligningen mellom kommuneplanen og egne områder, for hele kommunen og hvert område',
       husk: 6,
+      brukerstyrt: true,
       etl: gullEgne.egneRader
     })
   }
@@ -443,30 +502,34 @@ export const katalog = {
 const glemMasker = (start: string) => glem(katalog.solv.naturmaske, k => k.startsWith(start));
 
 /* Tabellene for hvert naturtema, etter id, til siden og kartet som er felles for temaene: områdene i sølv, og i gull temaet,
-   planlagt utbygging i det, og kartleggingen for verdsatt natur */
+   planlagt utbygging i det, og for verdsatt natur kartleggingen og planlagt utbygging utenfor det kartlagte */
 export interface Tematabeller {
   omrader: Tabell<string, solvTemaer.Temaomrader>;
   tall: Tabell<string, gullTemaer.Temaet>;
   iPlan: Tabell<string, gullTemaer.TemaIPlan | null>;
   kartlagt: Tabell<string, gullTemaer.Kartleggingen> | null;
+  utenforKartlagt: Tabell<string, gullTemaer.UtenforKartlagt | null> | null;
 }
 export const TEMATABELLER: Record<string, Tematabeller> = {
   vern: {
     omrader: katalog.solv.verneomrader,
     tall: katalog.gull.verneomrader,
     iPlan: katalog.gull.verneomraderIPlan,
-    kartlagt: null
+    kartlagt: null,
+    utenforKartlagt: null
   },
   rein: {
     omrader: katalog.solv.villrein,
     tall: katalog.gull.villrein,
     iPlan: katalog.gull.villreinIPlan,
-    kartlagt: null
+    kartlagt: null,
+    utenforKartlagt: null
   },
   verdi: {
     omrader: katalog.solv.verdsattNatur,
     tall: katalog.gull.verdsattNatur,
     iPlan: katalog.gull.verdsattNaturIPlan,
-    kartlagt: katalog.gull.verdsattNaturKartlagt
+    kartlagt: katalog.gull.verdsattNaturKartlagt,
+    utenforKartlagt: katalog.gull.utbyggingUtenforKartlagt
   }
 };

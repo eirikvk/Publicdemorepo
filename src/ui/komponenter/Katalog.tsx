@@ -141,7 +141,9 @@ function Info({ d }: { d: Tabellen }) {
           ? 'Huskes for alle nøkler.'
           : `Huskes for ${d.husk === 1 ? 'den siste nøkkelen' : `de ${d.husk} siste nøklene`}. Det som er brukt lengst siden, går ut først.`}
         {d.voksende ? ' Fylles på etter at den er lagt inn.' : ''}
-        {d.endrerGull ? ' Når den er ny, regnes gull for kommunen ut på nytt.' : ''}
+        {d.brukerstyrt
+          ? ' Bygger på det brukeren gjør, og regnes ut på nytt når egne områder endres eller det er hentet mer kart.'
+          : ''}
       </p>
     </>
   );

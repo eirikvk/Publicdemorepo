@@ -3,8 +3,8 @@
    (framtidig), som kartbilder. */
 import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { BILDE_PLANDEKNING, rutenett, type Kommune } from '../solv/felles.ts';
-import type { Planopplysninger } from '../solv/planrutenett.ts';
+import { BILDE_PLANDEKNING, flisUtsnitt, rutenett, type Flis, type Kommune } from '../solv/felles.ts';
+import type { Planopplysninger } from '../solv/kommuneplan.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { wmsBilde, wmsOppslag } from './wms.ts';
@@ -77,9 +77,11 @@ export const hentPlaninfo = (
     };
   });
 
-/* Tabellen bronse.planflis: et kartbilde av kommuneplanen, med adressen som nøkkel */
-export async function planflis(url: string): Promise<ArrayBuffer> {
-  return hentKommuneplanFlis(url);
+/* Adressen til kartbildet av kommuneplanen for flisen tc i flisnettet. Den samme som kartet ber om for flisen. */
+export const planflisAdresse = (tc: Flis) => kommuneplanUrl(flisUtsnitt(tc));
+/* Tabellen bronse.planflis: kartbildet av kommuneplanen for flisen tc, med adressen som nøkkel */
+export async function planflis(tc: Flis): Promise<ArrayBuffer> {
+  return hentKommuneplanFlis(planflisAdresse(tc));
 }
 /* Tabellen bronse.plandekning: ett lite bilde av hele planlaget over kommunen */
 export async function plandekning(nr: string): Promise<ArrayBuffer> {

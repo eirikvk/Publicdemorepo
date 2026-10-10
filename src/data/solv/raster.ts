@@ -12,7 +12,7 @@ export function tegneflate(w: number, h: number): CanvasRenderingContext2D {
   return c.getContext('2d', { willReadFrequently: true })!;
 }
 
-/* Et lerret på 512 x 512 piksler: én flis i planrutenettet, eller én flis i kartet tegnet i dobbel tetthet */
+/* Et lerret på 512 x 512 piksler: én flis i utbyggingen, eller én flis i kartet tegnet i dobbel tetthet */
 export function flislerret(): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = c.height = 512;

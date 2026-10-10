@@ -1,10 +1,10 @@
 /* Datamotoren, kommunen: listen over kommuner, valg av kommune, og det sidene viser, som bes om med en gang. Alt hentes gjennom
    katalogen. Sidene spør selv etter det de trenger, men slik er det meste klart før noen spør, og sidene kan byttes uten å vente. */
-import { nårGullUtdatert, se } from '../cache.ts';
+import { nårBrukerEndret, se } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import type { Fylke, Kommune } from '../solv/felles.ts';
+import { oppdaterEgne } from './egne.ts';
 import { lagret, startSamling, stoppRegning } from './grunnkart.ts';
-import { regnAlt } from './plan.ts';
 import { valgtNr } from './valgt.ts';
 import { app, endret } from './tilstand.ts';
 
@@ -36,17 +36,14 @@ const stille = () => {}; /* en feil står i cachen, og siden viser den */
 function regnGull(nr: string) {
   if (nr === valgtNr()) for (const t of Object.values(katalog.gull)) t(nr).catch(stille);
 }
-/* Når planrutenettet er nytt, regnes det sidene viser ut på nytt med en gang */
-nårGullUtdatert(regnGull);
+/* Når brukeren har endret noe (egne områder, eller kartet som er hentet), regnes det sidene viser ut på nytt med en gang */
+nårBrukerEndret(regnGull);
 
-/* Det sidene viser for kommunen nr, og planrutenettet. Planrutenettet regnes ut når grensen, opplysningen om kommuneplanen og dagens
-   klasser zoomet ut finnes: det lagrede oversiktsbildet, eller det sammensatte kartet for kommuner uten. */
+/* Det sidene viser for kommunen nr. Utbyggingen (gull.utbygging) venter selv på det den bygger på. Datamotoren sørger bare for
+   kildene fra brukeren: det sammensatte kartet for kommuner uten lagret oversiktsbilde, eller når det ikke kan hentes. */
 function hentForSidene(nr: string) {
-  regnAlt();
-  if (lagret(nr)) katalog.solv.oversikt(nr).then(regnAlt, () => startSamling(nr).catch(stille));
+  if (lagret(nr)) katalog.solv.oversikt(nr).catch(() => startSamling(nr).catch(stille));
   katalog.solv.grense(nr).then(() => {
-    regnAlt();
-    katalog.solv.planinfo(nr).then(regnAlt, regnAlt);
     if (!lagret(nr)) startSamling(nr).catch(stille);
   }, stille);
   regnGull(nr);
@@ -59,6 +56,7 @@ export function velgKommune(nr: string) {
   if (!t) return;
   app.valgt = t[1];
   stoppRegning();
+  oppdaterEgne(t[1].nr);
   endret();
   hentForSidene(t[1].nr);
 }

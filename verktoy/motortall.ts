@@ -24,7 +24,7 @@ export function motortall() {
     o ? Object.fromEntries(navn.map(n => [n, rund(o[n])])) : null;
   /* Tilstanden til en rad: henter, feil eller ok */
   const tilstand = (x: { status: string } | null) => (x ? x.status : null);
-  const R = M.planrutenett(),
+  const R = M.utbyggingen(),
     T = M.valgt(K.solv.arealtall),
     P = v(K.solv.grense) ? M.valgt(K.gull.kommuneplan) : null,
     I = M.valgt(K.gull.inon),
@@ -63,6 +63,7 @@ export function motortall() {
       const I = v(T.iPlan),
         C = I && I.omrader === x.omrader ? I.K : null,
         B = T.kartlagt ? v(T.kartlagt) : null,
+        U = T.utenforKartlagt ? v(T.utenforKartlagt) : null,
         /* ruter med planlagt utbygging per område, og av dem i smale striper */
         plan = C ? Array.from(C.plan) : x.omrader.map(() => 0),
         smal = C ? Array.from(C.smal) : x.omrader.map(() => 0);
@@ -77,7 +78,7 @@ export function motortall() {
         smal: smal.reduce((s, x) => s + x, 0),
         berort: plan.filter(x => x).length,
         kryss: C ? { S: rund(C.kryss.S), P: C.kryss.P ? rund(C.kryss.P) : null } : null,
-        gap: C && C.gap ? { nat: C.gap.nat, ukjent: C.gap.ukjent, plan: C.gap.plan ? rund(C.gap.plan) : null } : null,
+        gap: U ? { nat: U.nat, ukjent: U.ukjent, plan: U.plan ? rund(U.plan) : null } : null,
         kartlagt: B && B.E ? r(B.E.km2) : null,
         inne: B && B.inne ? rund(B.inne) : null
       };

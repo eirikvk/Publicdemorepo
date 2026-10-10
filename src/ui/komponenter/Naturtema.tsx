@@ -10,7 +10,7 @@ import type { Rad } from '../../data/cache.ts';
 import type { Naturtema as Tema } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { bareHentetKart } from '../../data/motor/grunnkart.ts';
-import { valgt } from '../../data/motor/valgt.ts';
+import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
 import { Fargelinje, Forklaring, Stripe, type Stripedel } from './deler.tsx';
@@ -185,7 +185,9 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       );
     }
   }
-  const G = t.dekning && C && C.gap && C.gap.nat && !utenPlan() ? C.gap : null;
+  /* Planlagt utbygging på natur utenfor det kartlagte, for temaet med kartlegging */
+  const U = tab.utenforKartlagt ? verdi(tab.utenforKartlagt) : null,
+    G = t.dekning && U && U.nat && !utenPlan() ? U : null;
   /* Områdene i listen: for verdsatt natur bare de som berøres av planlagt utbygging, med mest først, ellers alle */
   const maks = t.samlet ? 15 : 40,
     vises = (t.samlet ? (C ? C.berorte : []) : N.omrader.map((_, i) => i)).map(i => ({

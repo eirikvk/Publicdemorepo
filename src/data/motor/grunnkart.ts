@@ -1,20 +1,20 @@
-/* Datamotoren, dagens klasser: hvilken arealklasse hver piksel har i dag, fra grunnkartet til NIBIO. Planlagt utbygging legges oppå
-   dette, og kartlagene for planlagt utbygging, inngrepsfri natur og grått areal tegnes oppå det.
+/* Datamotoren, dagens klasser: hvilken arealklasse hver piksel har i dag, fra grunnkartet til NIBIO. Kartlagene for planlagt
+   utbygging, inngrepsfri natur og grått areal tegnes oppå det.
    Dagens klasser kommer fra tre steder i katalogen:
    - Zoomet inn: kartbildene fra NIBIO, én flis om gangen (bronse.grunnkartflis).
    - Zoomet ut, i kommuner med lagret oversiktsbilde: bildet av hele kommunen (solv.oversikt).
-   - Zoomet ut ellers: det sammensatte kartet, som datamotoren setter sammen av flisene som er hentet (solv.sammensatt).
+   - Zoomet ut ellers: det sammensatte kartet, som datamotoren setter sammen av flisene som er hentet (solv.sammensatt). Det er en
+     kilde fra brukeren: det er kartet brukeren har sett på. Når kartet har stått stille med nye fliser, sier datamotoren fra
+     (brukerEndret), og utbyggingen regnes ut på nytt (gull/utbygging.ts).
    Bildene har klassene i rene farger (DATAFARGE i solv/klasser.ts). Klassen leses av fargen med klasseAv. Kartet får egne kopier i
    visningsfargene, se ui/kart/grunnkart.ts. */
 import { FLISNIVA, grunnkartUrl } from '../bronse/nibio-grunnkart.ts';
 import { opptatt } from '../bronse/henting.ts';
-import { alle, se, vedGlemt, vedNy } from '../cache.ts';
+import { alle, brukerEndret, se, vedGlemt, vedNy } from '../cache.ts';
 import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog, type Samling } from '../katalog.ts';
 import { OPPLOSNINGER, ORIGO, flisUtsnitt, type Flis } from '../solv/felles.ts';
-import type { Oversikt } from '../solv/grunnkart.ts';
-import { flislerret, sti, tegnUtsnitt } from '../solv/raster.ts';
-import { regnAlt } from './plan.ts';
+import { dagensKlasserIFlis, type Oversikt } from '../solv/grunnkart.ts';
 import { valgtNr } from './valgt.ts';
 import { app, endret, tidSlutt, varsle } from './tilstand.ts';
 
@@ -55,10 +55,7 @@ export async function startSamling(nr: string) {
   const e = (await katalog.solv.grense(nr)).ext,
     s = katalog.solv.sammensatt.straks(nr, () => nySamling(e));
   if (s !== samlingen()) return;
-  if (s.har.size) {
-    endret();
-    regnAlt();
-  }
+  if (s.har.size) endret();
   fyllSamling(s);
 }
 /* Et tomt sammensatt kart over utsnittet e */
@@ -140,20 +137,20 @@ function leggISamling(tc: Flis, buf: ArrayBuffer): Promise<void> {
     .catch(() => {});
 }
 
-/* Utregningen etter nye fliser gjøres når kartet har stått stille litt og ingenting lastes lenger, så kartet ikke hakker mens man
-   flytter det. Starter man å flytte igjen, venter den til neste stopp. */
+/* Nye fliser i det sammensatte kartet: når kartet har stått stille litt og ingenting lastes lenger, sier datamotoren fra om at
+   kartet brukeren har sett på, er endret (brukerEndret). Da regnes utbyggingen ut på nytt, uten at kartet hakker mens man flytter
+   det. Starter man å flytte igjen, venter den til neste stopp. */
 let regnTimer: ReturnType<typeof setTimeout> | undefined;
 export let regningVenter = false;
 export function planleggRegning() {
   regningVenter = true;
   clearTimeout(regnTimer);
-  regnTimer = setTimeout(async () => {
+  regnTimer = setTimeout(() => {
     if (app.kartFlyttes) return; /* kartetFlyttes(false) tar opp tråden igjen */
     if (opptatt()) return planleggRegning(); /* tallene venter til alt er hentet */
     regningVenter = false;
-    const t0 = performance.now();
-    await regnAlt();
-    tidSlutt('utregning etter nye fliser', t0);
+    const nr = valgtNr();
+    if (nr) brukerEndret(nr);
   }, 400);
 }
 /* Kartet sier fra når det begynner og slutter å flytte seg */
@@ -168,45 +165,20 @@ export const stoppRegning = () => {
   regningVenter = false;
 };
 
-/* Dagens klasser i flisen tc på 512 x 512 piksler, i de rene fargene fra NIBIO. null hvis de ikke finnes ennå. */
+/* Dagens klasser i flisen tc på 512 x 512 piksler for valgt kommune, i de rene fargene fra NIBIO, til kartlagene. Zoomet inn fra
+   kartbildet fra NIBIO, ellers fra det som er zoomet ut: det lagrede oversiktsbildet, eller det sammensatte kartet. null hvis de ikke
+   finnes ennå. Selve tegningen står i sølv (dagensKlasserIFlis). */
 export async function dagensKlasser(tc: Flis): Promise<Uint8ClampedArray | null> {
-  const c = flislerret(),
-    g = c.getContext('2d', { willReadFrequently: true })!,
-    nr = valgtNr(),
+  const nr = valgtNr(),
     ov = oversikt(),
-    grense = nr ? se(katalog.solv.grense, nr) : null;
-  if (tc[0] >= FLISNIVA)
-    g.drawImage(
-      await createImageBitmap(new Blob([await katalog.bronse.grunnkartflis(grunnkartUrl(flisUtsnitt(tc)))])),
-      0,
-      0,
-      512,
-      512
-    );
-  else if (ov && ov.buf && nr) {
-    const u = flisUtsnitt(tc),
-      r = ov.res;
-    tegnUtsnitt(
-      g,
-      await katalog.solv.oversiktLest(nr),
-      (u[0] - ov.ext[0]) / r,
-      (ov.ext[3] - u[3]) / r,
-      (u[2] - u[0]) / r,
-      (u[3] - u[1]) / r
-    );
-  } else if (ov && ov.lerret && grense && grense.status === 'ok') {
-    /* det sammensatte kartet: bare det som er hentet, og bare innenfor kommunen */
-    const u = flisUtsnitt(tc),
-      r = (ov.ext[2] - ov.ext[0]) / ov.lerret.width,
-      s = 512 / (u[2] - u[0]);
-    tegnUtsnitt(g, ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r);
-    g.globalCompositeOperation = 'destination-in';
-    sti(g, grense.verdi!.koord, u, s);
-    g.fill('evenodd');
-    g.globalCompositeOperation = 'source-over';
-  } else return null;
-  const t0 = performance.now(),
-    data = g.getImageData(0, 0, 512, 512).data;
+    grense = nr ? se(katalog.solv.grense, nr) : null,
+    t0 = performance.now();
+  const K = await dagensKlasserIFlis(tc, {
+    flis: tc[0] >= FLISNIVA ? await katalog.bronse.grunnkartflis(grunnkartUrl(flisUtsnitt(tc))) : undefined,
+    ov,
+    lest: ov && ov.buf && nr ? await katalog.solv.oversiktLest(nr) : null,
+    koord: grense && grense.status === 'ok' ? grense.verdi!.koord : null
+  });
   tidSlutt('dagens klasser', t0);
-  return data;
+  return K;
 }

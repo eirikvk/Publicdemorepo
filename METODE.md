@@ -35,15 +35,17 @@ flowchart LR
     GRAA["Grått areal, NIBIO"]
     INON["Inngrepsfri natur, Mdir"]
   end
-  subgraph Solv["Sølv, src/data/solv"]
+  subgraph Solv["Sølv, src/data/solv: én kilde hver"]
     sssb["ssb.ts"]
+    sgrunn["grunnkart.ts og klasser.ts<br/>dagens klasser per rute"]
+    skplan["kommuneplan.ts<br/>planen per rute"]
     segne["egne.ts"]
-    splan["planrutenett.ts<br/>ruter på 21 m"]
     stemaer["temaer.ts"]
     sgraa["graa.ts"]
     sinon["inon.ts"]
   end
-  subgraph Gull["Gull, src/data/gull"]
+  subgraph Gull["Gull, src/data/gull: setter sammen"]
+    gutb["utbygging.ts<br/>planrutenettet, ruter på 21 m"]
     gregnskap["regnskap.ts"]
     gplan["planlagt.ts"]
     gegne["egne.ts"]
@@ -60,21 +62,22 @@ flowchart LR
     T4["Areal per sone"]
   end
   SSB --> sssb --> gregnskap --> T1
-  NIBIO --> splan
-  DiBK --> splan
-  Bruker --> segne --> splan
-  splan --> gplan --> T2
-  splan --> gegne --> T6
+  NIBIO --> sgrunn --> gutb
+  DiBK --> skplan --> gutb
+  Bruker --> segne --> gutb
+  gutb --> gplan --> T2
+  gutb --> gegne --> T6
   Mdir --> stemaer --> gtemaer --> T3
-  splan --> gtemaer
+  gutb --> gtemaer
   GRAA --> sgraa --> ggraa --> T5
-  splan --> ggraa
+  gutb --> ggraa
   INON --> sinon --> ginon --> T4
 ```
 
 SSB-tallene og inngrepsfri natur står for seg selv. Alt annet går gjennom planrutenettet: kommuneplanen og dagens klasser legges i et
 rutenett med ruter på 21 meter, og hver rute med planlagt utbygging slås opp i temaene og i grått areal. Planrutenettet er derfor
-navet i analysene, og det hører til sølv: det er den felles formen planen, dagens klasser og egne områder får før noe krysses.
+navet i analysene. Hver kilde tolkes først per rute i sølv (planen, dagens klasser og egne områder hver for seg), og planrutenettet
+setter dem sammen i gull. I koden heter det utbyggingen (`gull.utbygging` i `src/data/gull/utbygging.ts`).
 
 ### Tallene på siden
 
@@ -83,13 +86,13 @@ navet i analysene, og det hører til sølv: det er den felles formen planen, dag
 | Bebygd, jordbruk, natur og landareal | `ssb.ts` | `regnskap.ts` | SSB | Hentet, summert i tre klasser |
 | Innsjø, elv og hav | `ssb.ts` | `regnskap.ts` | SSB og Kartverket | Innsjø og elv hentet, hav regnet ut |
 | Utbredelsesregnskap fra 2017 | `ssb.ts` | `regnskap.ts` | SSB | Hentet, forskjellen mellom årgangene regnet ut |
-| Planlagt utbygging på natur og jordbruk | `planrutenett.ts` | `planlagt.ts` | DiBK og NIBIO | Regnet ut i nettleseren |
+| Planlagt utbygging på natur og jordbruk | `kommuneplan.ts` og `grunnkart.ts` | `utbygging.ts` og `planlagt.ts` | DiBK og NIBIO | Regnet ut i nettleseren |
 | Verneområder og villreinområder | `temaer.ts` | `temaer.ts` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
 | Verdsatt natur og kartleggingsgrad | `temaer.ts` | `temaer.ts` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
-| Planlagt utbygging i hvert tema | `temaer.ts` og `planrutenett.ts` | `temaer.ts` | Som over, og planrutenettet | Regnet ut i nettleseren |
+| Planlagt utbygging i hvert tema | `temaer.ts` | `utbygging.ts` og `temaer.ts` | Som over, og planrutenettet | Regnet ut i nettleseren |
 | Inngrepsfri natur | `inon.ts` | `inon.ts` | Miljødirektoratet | Regnet ut fra ett bilde av kommunen |
 | Grått areal og grønt i bebygd område | `graa.ts` | `graa.ts` | NIBIO | Regnet ut fra to bilder av kommunen |
-| Egne områder og opplastet plan | `egne.ts` og `planrutenett.ts` | `egne.ts` | Brukeren | Regnet ut i planrutenettet |
+| Egne områder og opplastet plan | `egne.ts` | `utbygging.ts` og `egne.ts` | Brukeren | Regnet ut i planrutenettet |
 
 ## Felles grunnlag
 
@@ -246,7 +249,7 @@ eller mindre natur enn i 2017?
 
 ## Planlagt utbygging
 
-`src/data/bronse/dibk-kommuneplan.ts`, `src/data/solv/planrutenett.ts` og `src/data/gull/planlagt.ts`
+`src/data/bronse/dibk-kommuneplan.ts`, `src/data/solv/kommuneplan.ts`, `src/data/gull/utbygging.ts` og `src/data/gull/planlagt.ts`
 
 **Spørsmål.** Hvor mye natur og jordbruk setter kommuneplanen av til utbygging?
 
@@ -259,12 +262,13 @@ eller mindre natur enn i 2017?
 
 **Steg.**
 
-1. For hver flis på nivå 9 som dekker kommunen, legges planen oppå dagens klasser, rute for rute (`tellBlokk`, sølv):
-   - En piksel i grunnkartet brukes når den er minst 100 av 255 dekket, og får klassen det er mest av.
-   - En rute er planlagt utbygging når planen dekker minst halve ruta.
+1. For hver flis på nivå 9 som dekker kommunen, legges planen oppå dagens klasser, rute for rute. Hver kilde tolkes for seg i sølv,
+   og så settes de sammen i gull (`kombinerBlokk`):
+   - En piksel i grunnkartet brukes når den er minst 100 av 255 dekket, og får klassen det er mest av (`klasserIFlis`, sølv).
+   - En rute er planlagt utbygging når planen dekker minst halve ruta (`planIFlis`, sølv).
    - Ruter som i dag er natur eller jordbruk, og som er planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke.
-2. Flisene settes sammen til ett rutenett for kommunen (`byggPlanRaster`, sølv). Egne områder legges inn her, se Egne områder.
-3. Smale striper tas ut (`ryddStriper`, sølv). Først finnes kjernene: ruter med planlagt utbygging på alle fire sider. Så beholdes alt
+2. Flisene settes sammen til ett rutenett for kommunen (`byggUtbygging`, gull). Egne områder legges inn her, se Egne områder.
+3. Smale striper tas ut (`ryddStriper`, gull). Først finnes kjernene: ruter med planlagt utbygging på alle fire sider. Så beholdes alt
    som henger sammen med en kjerne, også bare på skrå. Felt som ikke er bredere enn rundt 40 meter noe sted, faller bort. De oppstår
    mest der plangrensen og grunnkartet ikke er tegnet helt likt.
 4. De beholdte rutene telles for natur og jordbruk og regnes om til areal (`byggPlanlagt`, gull). Prosenten er andel av rutene som
@@ -333,9 +337,10 @@ Forbehold ved kontrollen: vektoranalysen er et arbeidskart uten beskrivelse, og 
 bygger på. Planene i den er kopiert fra DiBK 11. januar 2026 for de fleste kommunene, mot 2. februar 2026 i tjenesten siden bruker.
 Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres på nytt herfra.
 
-**Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/planrutenett.ts`. Gull: `src/data/gull/planlagt.ts`. Samordningen:
-`hentBlokk` og `regnPlan` i `src/data/motor/plan.ts`. Tabellene i katalogen: `solv.planinfo`, `bronse.planflis`,
-`solv.planblokker`, `solv.planrutenett`, `gull.planlagt` og `gull.plansum`. Kartlaget: `src/ui/kart/plan.ts`.
+**Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/kommuneplan.ts` (planen) og `src/data/solv/grunnkart.ts`
+(dagens klasser). Gull: `src/data/gull/utbygging.ts` (planrutenettet) og `src/data/gull/planlagt.ts`. Tabellene i katalogen:
+`solv.planinfo`, `bronse.planflis`, `solv.oversikt`, `solv.sammensatt`, `solv.egne`, `gull.utbygging`, `gull.utbyggingsblokker`,
+`gull.planlagt` og `gull.plansum`. Kartlaget: `src/ui/kart/plan.ts`.
 
 ## Egne områder og opplastet plan
 
@@ -354,10 +359,10 @@ nettleseren og sendes ingen steder.
    arealformål, er alle flatene utbygging. Et tegnet område er utbygging, og kan settes til ikke utbygging.
 2. Projeksjonen leses fra filen. Mangler den, gjettes grader eller den UTM-sonen som legger planen nærmest kommunen (`lesPlanfil`,
    bronse).
-3. Flatene legges i planrutenettet etter halvregelen (`leggInnEget`, sølv). Innenfor flatene erstatter de kommuneplanen: som utbygging
+3. Flatene legges i planrutenettet etter halvregelen (`leggInnEget`, gull). Innenfor flatene erstatter de kommuneplanen: som utbygging
    tar de all natur og alt jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Der flater overlapper, vinner
    utbygging.
-4. Planrutenettet regnes ut både med og uten egne områder, og regelen om smale striper brukes på begge (`byggPlanRaster`, sølv).
+4. Planrutenettet regnes ut både med og uten egne områder, og regelen om smale striper brukes på begge (`byggUtbygging`, gull).
 5. For hvert område telles hva som ligger der i dag, hva planen alene tar, og hva som tas med egne områder (`byggEgetOmrade`, gull).
    Radene i sammenligningen viser kommuneplanen alene, tallet med egne områder og forskjellen, for natur, jordbruk, grått areal,
    verneområder, villreinområder, verdsatt natur per verdi og natur som ikke er kartlagt (`byggEgneRader`, gull).
@@ -411,15 +416,17 @@ naturtyper, og hvor mye planlagt utbygging ligger innenfor?
    landarealet fra SSB, og vises som høyst 100 %.
 2. Verdsatt natur deles i det som ligger innenfor og utenfor det kartlagte, med samme rutenett som i steg 1 over (`klasseAreal`,
    gull).
-3. Landarealet deles i kartlagt og ikke kartlagt, og verdsatt natur per verdi i hver del (`byggNaturTall`, gull).
+3. Landarealet deles i kartlagt og ikke kartlagt, og verdsatt natur per verdi i hver del (`byggKartleggingen`, gull).
 
 **Steg for kryssingen med planlagt utbygging** (alle temaene).
 
 1. Hvert område får en maske: et lite rutenett med dekningen per rute (`naturMaske`, sølv).
-2. Midtpunktet i hver rute med planlagt utbygging slås opp i maskene (`kryssNatur`, gull). Ruta hører til området når masken er minst
-   halvt dekket der. En rute telles én gang per tema, i det første området den treffer.
-3. Ruter i smale striper telles for seg.
-4. For verdsatt natur deles rutene med planlagt utbygging på natur i kartlagt og ikke kartlagt, på samme måte.
+2. Midtpunktet i hver rute med planlagt utbygging slås opp i maskene (`temaKolonne`, gull). Ruta hører til området når masken er minst
+   halvt dekket der. En rute hører til det første området den treffer, så den telles én gang per tema. Det gir en kolonne per tema i
+   planrutenettet: hvilket område hver rute med planlagt utbygging ligger i.
+3. Rutene summeres per område og per verdikategori (`kryssNatur`, gull). Ruter i smale striper telles for seg.
+4. Rutene med planlagt utbygging på natur deles i kartlagt og ikke kartlagt, på samme måte (`kryssKartlagt`, gull). Det vises på
+   siden for verdsatt natur.
 
 **Resultat.** Arealet i km² per tema, per område og per verdikategori, det kartlagte arealet, og antall ruter med planlagt
 utbygging per område, per verdikategori og innenfor og utenfor det kartlagte.
@@ -440,10 +447,10 @@ utbygging per område, per verdikategori og innenfor og utenfor det kartlagte.
 
 **Kode.** Bronse: `hentTemaflater` og `hentKartlagt` i `src/data/bronse/mdir-naturtema.ts`. Sølv: `src/data/solv/temaer.ts`. Gull:
 `src/data/gull/temaer.ts`. Tabellene i katalogen, for verneområder: `bronse.verneomrader`,
-`solv.verneomrader`, `gull.verneomrader` (områdene og arealet) og `gull.verneomraderIPlan` (planlagt utbygging innenfor), og
-tilsvarende for villrein og verdsatt natur. For verdsatt natur i tillegg `solv.verdsattNaturAreal`, `solv.kartlagt`,
-`solv.verdsattNaturIKartlagt` og `gull.verdsattNaturKartlagt` (kartleggingen og helhetsbildet). Maskene ligger i
-`solv.naturmaske`. Kartlagene:
+`solv.verneomrader`, `gull.verneomrader` (områdene og arealet), `gull.utbyggingIVerneomrader` (kolonnen i planrutenettet) og
+`gull.verneomraderIPlan` (planlagt utbygging innenfor), og tilsvarende for villrein og verdsatt natur. For verdsatt natur i tillegg
+`solv.verdsattNaturAreal`, `solv.kartlagt`, `gull.verdsattNaturIKartlagt` og `gull.verdsattNaturKartlagt` (kartleggingen og
+helhetsbildet), og `gull.utbyggingUtenforKartlagt`. Maskene ligger i `solv.naturmaske`. Kartlagene:
 `src/ui/kart/naturtema.ts`.
 
 ## Inngrepsfri natur
@@ -492,7 +499,7 @@ vegetasjon. Stilen tegner trinn n i rødt med styrken 51 · n, så trinnet kan l
    uten oppgitt andel, som veier, er et eget trinn. En rute er grå når den er minst halvt dekket.
 2. Rutene innenfor kommunen telles per trinn (`tolkGraa`, sølv) og regnes om til areal, avrundet til nærmeste 10 dekar
    (`arealFraRuter`, gull, den samme som for inngrepsfri natur).
-3. Kryssingen med planrutenettet (`kryssGraa`, gull): midtpunktet i hver rute med planlagt utbygging på land slås opp i bildet. Her er
+3. Kryssingen med planrutenettet (`kryssGraa`, gull, tabellen `gull.graakryss`): midtpunktet i hver rute med planlagt utbygging på land slås opp i bildet. Her er
    alle ruter med, også der det alt er bebygd og i smale striper. «Minst halvparten vegetasjon» er trinnene fra 50 % og opp.
 4. Grønt i bebygd område er ruter som er bebygd i grunnkartet, men ikke grå (`kryssGraa`).
 
@@ -512,7 +519,7 @@ areal i Trondheim. I en gjennomgang av Trondheim på 10 meters ruter var 98,9 % 
 grunnkartet kaller grønne arealer.
 
 **Kode.** Bronse: `hentGraaBilde` i `src/data/bronse/nibio-graa.ts`. Sølv: `src/data/solv/graa.ts`. Gull: `src/data/gull/graa.ts`.
-Tabellene i katalogen: `bronse.graabilder`, `solv.graa`, `bronse.graaflis`, `gull.graakryss` og `gull.graa`, med
+Tabellene i katalogen: `bronse.graabilder`, `solv.graa`, `bronse.graaflis`, `gull.graa`, `gull.graakryss` og `gull.graaIPlan`, med
 tolkingen i `tolketBilde` (`src/data/solv/kommune.ts`), som er felles med inngrepsfri natur. Kartlaget:
 `src/ui/kart/graa.ts`.
 
@@ -581,6 +588,17 @@ med én rad per tabell og kommune. Tabellene i gull huskes også, og regnes ut p
 er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Utbyggingen i gull, 11. oktober 2026.** Regelen er nå at sølv bygger på én kilde, og at gull setter kilder sammen. Planrutenettet
+setter sammen kommuneplanen, dagens klasser og egne områder, og er flyttet fra sølv og datamotoren til gull, som tabellen
+`gull.utbygging`. Planen og dagens klasser tolkes først per rute i sølv (`planIFlis` og `klasserIFlis`), og settes sammen i gull
+(`kombinerBlokk`), med de samme reglene som før. For hvert naturtema er det en kolonne i utbyggingen som sier hvilket område hver
+rute med planlagt utbygging ligger i, og tallene er summer over den. Grått areal er krysset for seg, som før. Datamotoren regner ikke
+lenger ut noe selv: den fyller kildene fra brukeren (det sammensatte kartet og egne områder) og sier fra når de er endret. Gull
+titter ikke lenger etter om noe finnes, men venter på det. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver
+kjørt med sitt eget testverktøy samme natt: tallene fra motoren, teksten på siden og kartbildene var like, også med egne områder
+tegnet, lastet opp og slettet, og i Surnadal, der kartet bygges opp mens man ser på det. Trondheim, så Malvik og så Trondheim igjen
+ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
 **Naturtemaene i gull delt i tre, 11. oktober 2026.** Gull for verneområder, villrein og verdsatt natur var ett stort svar per tema,
 som også tok med kryssingen med planen og kartleggingen hvis de fantes da svaret ble regnet ut. Nå er hvert tema delt der det kommer

@@ -195,11 +195,9 @@ export const SCENARIER: Record<string, Scenario> = {
     await vent(p, R, 'trondheim', () => {
       const M = window.motor;
       if (!M || !M.app.valgt) return false;
-      const v = M.verdi(M.katalog.gull.verdsattNaturIPlan);
       return (
         M.planTall() === 'ok' &&
-        !!v &&
-        !!v.K.gap &&
+        !!M.verdi(M.katalog.gull.utbyggingUtenforKartlagt) &&
         !!M.verdi(M.katalog.gull.graakryss) &&
         M.NATURTEMA.every(t => M.verdi(M.TEMATABELLER[t.id].iPlan))
       );

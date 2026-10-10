@@ -4,7 +4,7 @@
 import type OlMap from 'ol/Map.js';
 import type { innhold } from '../data/cache.ts';
 import type { TEMATABELLER, katalog } from '../data/katalog.ts';
-import type { planrutenett, planTall } from '../data/motor/plan.ts';
+import type { planTall, utbyggingen } from '../data/motor/plan.ts';
 import type { Tilstand } from '../data/motor/tilstand.ts';
 import type { valgt, verdi } from '../data/motor/valgt.ts';
 import type { Naturtema } from '../data/solv/temaer.ts';
@@ -19,7 +19,7 @@ export interface Motor {
   valgt: typeof valgt;
   verdi: typeof verdi;
   planTall: typeof planTall;
-  planrutenett: typeof planrutenett;
+  utbyggingen: typeof utbyggingen;
   innhold: typeof innhold;
   readonly kart: OlMap | null;
 }

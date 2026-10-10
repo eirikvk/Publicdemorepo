@@ -1,6 +1,6 @@
 /* Kartlaget for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av. Planen hentes fra DiBK som
    fliser i samme rutenett (data/bronse/dibk-kommuneplan.ts). For hver flis legges planen oppå dagens klasser i nettleseren, og bare
-   natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut tegnes laget fra planrutenettet i datamotoren. */
+   natur og jordbruk som ligger i slike områder, tegnes. Zoomet ut tegnes laget fra utbyggingen (gull.utbygging). */
 import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
 import type { TileCoord } from 'ol/tilecoord.js';
@@ -10,12 +10,12 @@ import type { Utsnitt } from '../../data/generelt/geometri.ts';
 import { HALV, SYNLIG, UTM, type Flis } from '../../data/solv/felles.ts';
 import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
 import type { Del } from '../../data/solv/egne.ts';
-import type { Planrutenett } from '../../data/solv/planrutenett.ts';
+import type { Utbygging } from '../../data/gull/utbygging.ts';
 import { flislerret, sti } from '../../data/solv/raster.ts';
 import { katalog } from '../../data/katalog.ts';
 import { mine, utenPlan } from '../../data/motor/egne.ts';
 import { dagensKlasser, lagret } from '../../data/motor/grunnkart.ts';
-import { planrutenett } from '../../data/motor/plan.ts';
+import { utbyggingen } from '../../data/motor/plan.ts';
 import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
@@ -48,13 +48,13 @@ function egenMaske(u: Utsnitt) {
   return ut;
 }
 
-/* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra planrutenettet for hele
+/* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra utbyggingen for hele
    kommunen (21 meter per rute). En flispiksel får farge bare hvis det faktisk ligger planlagt utbygging innenfor den, og styrken
    følger hvor stor del av pikselen det gjelder. Feltene blir dermed aldri større enn de er, og de forsvinner heller ikke: små felt
    vises som svake enkeltpiksler. tom sier at ingenting er tegnet. */
 type Planbilde = HTMLCanvasElement & { tom?: boolean };
 function grovPlanFlis(tc: TileCoord): Planbilde | null {
-  const R = planrutenett();
+  const R = utbyggingen();
   if (!R) return null;
   const [z, x, y] = tc,
     f = 2 ** (R.z - z),
@@ -95,8 +95,8 @@ function grovPlanFlis(tc: TileCoord): Planbilde | null {
   return c;
 }
 /* Kartets egen regel for smale striper zoomet inn: en piksel vises når ruta den ligger i, eller en av de fire nabo­rutene, er
-   et felt som ble beholdt i planrutenettet. Tallene bruker selve rutenettet (ryddStriper i solv/planrutenett.ts). */
-function iEllerInntil(R: Planrutenett, x: number, y: number) {
+   et felt som ble beholdt i utbyggingen. Tallene bruker selve rutenettet (ryddStriper i gull/utbygging.ts). */
+function iEllerInntil(R: Utbygging, x: number, y: number) {
   if (x < 0 || y < 0 || x >= R.w || y >= R.h) return false;
   const i = y * R.w + x,
     r = R.ryddet;
@@ -108,7 +108,7 @@ function iEllerInntil(R: Planrutenett, x: number, y: number) {
     (y < R.h - 1 && r[i + R.w])
   );
 }
-async function lastPlanFlis(tile: ImageTile, src: string) {
+async function lastPlanFlis(tile: ImageTile) {
   try {
     if (tile.getTileCoord()[0] <= 9) {
       const t0 = performance.now(),
@@ -122,7 +122,10 @@ async function lastPlanFlis(tile: ImageTile, src: string) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord() as Flis), katalog.bronse.planflis(src)]);
+    const [K, planBuf] = await Promise.all([
+      dagensKlasser(tile.getTileCoord() as Flis),
+      katalog.bronse.planflis(tile.getTileCoord() as Flis)
+    ]);
     if (!K) throw new Error('mangler dagens klasser');
     const c = flislerret(),
       g = c.getContext('2d', { willReadFrequently: true })!,
@@ -136,7 +139,7 @@ async function lastPlanFlis(tile: ImageTile, src: string) {
       pnat = rgb('pnat');
     /* Smale striper skjules ved å kreve at punktet ligger i eller inntil et felt som overlevde ryddingen i rutenettet. */
     const [tz, tx, ty] = tile.getTileCoord(),
-      R = !ui.visSmale && planrutenett(),
+      R = !ui.visSmale && utbyggingen(),
       sh = R ? tz - R.z : 0;
     let tegnet = false;
     const vent =
@@ -193,12 +196,12 @@ export function settSmale(paa: boolean) {
 }
 
 /* Laget følger tilstanden: det vises når grensen er hentet og det finnes planlagt utbygging å vise, og tegnes på nytt når
-   planrutenettet er regnet ut på nytt eller smale striper slås av eller på. */
+   utbyggingen er regnet ut på nytt eller smale striper slås av eller på. */
 const ny = nyttSiden();
 abonner(() => {
   const G = verdi(katalog.solv.grense);
   if (ny('grense', G) && G) planLag.setExtent(G.ext);
-  const nyttRutenett = ny('rutenett', planrutenett()),
+  const nyttRutenett = ny('rutenett', utbyggingen()),
     nyeStriper = ny('smale', ui.visSmale);
   if (nyttRutenett || nyeStriper) friskOpp(planLag);
   planLag.setVisible(!!G && !utenPlan());

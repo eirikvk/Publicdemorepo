@@ -1,5 +1,5 @@
 /* Sølv for naturtemaene fra Miljødirektoratet: verneområder, villreinområder og verdsatt natur. Flatene gjøres om til felles form:
-   klippet mot kommunen og med areal i km², og som masker i et rutenett når de skal krysses med planrutenettet. Også det kartlagte
+   klippet mot kommunen og med areal i km², og som masker i et rutenett når de skal krysses med utbyggingen. Også det kartlagte
    området for naturtyper. Flatene kommer som GeoJSON. */
 import polygonClipping from 'polygon-clipping';
 import {
@@ -129,7 +129,7 @@ export const EGENSKAPER: Record<string, Les> = {
 export interface TemaOmrade extends Omrade {
   ext: Utsnitt;
 }
-/* Et område som et lite rutenett med dekningen per rute (a, 0–255), til oppslag fra planrutenettet. flate er { koord, ext }.
+/* Et område som et lite rutenett med dekningen per rute (a, 0–255), til oppslag fra utbyggingen. flate er { koord, ext }.
    kommune oppgis bare når flaten ikke alt er klippet mot kommunen. m2 er arealet i kartets kvadratmeter. */
 export function naturMaske(flate: FlateMedUtsnitt, kommune: FlateMedUtsnitt | null): Maske | null {
   const e = kommune ? snitt(flate.ext, kommune.ext) : flate.ext;
@@ -313,12 +313,4 @@ export async function verdsattNaturAreal(nr: string): Promise<{ sum: number; kla
 export async function kartlagt(nr: string): Promise<Kartlagt> {
   const [j, g] = await Promise.all([katalog.bronse.kartlagt(nr), katalog.solv.grense(nr)]);
   return byggDekning(j.features || [], g);
-}
-/* Tabellen solv.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte, eller null når ingenting er
-   kartlagt */
-export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | null> {
-  const v = await katalog.solv.kartlagt(nr);
-  if (!v.flate || !v.flate.length) return null;
-  const [{ omrader }, g] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.solv.grense(nr)]);
-  return klasseAreal(omrader, VERDI.klasser!.length, g, v.flate).klasser;
 }

@@ -2,11 +2,11 @@
    områder. Arealer er i km², andeler i prosent. */
 import { katalog } from '../katalog.ts';
 import { RUTE } from '../solv/felles.ts';
-import type { EgetTall, Planrutenett } from '../solv/planrutenett.ts';
 import { NATURTEMA } from '../solv/temaer.ts';
 import { andel } from './felles.ts';
 import type { Graakryss, Graatall } from './graa.ts';
 import type { Gap, Kryss, TemaIPlan } from './temaer.ts';
+import type { EgetTall, Utbygging } from './utbygging.ts';
 
 /* Et tema krysset med planen, slik radene trenger det */
 export interface TemaKryss {
@@ -29,8 +29,8 @@ export interface EgenRad {
 /* En rad før den regnes om: [navn, farge, planen i ruter, med egne i ruter, hva andelen regnes av, gruppe] */
 type Rad = [navn: string, farge: string, plan: number | null, ny: number, av: number, gruppe: string];
 
-/* Hva som ligger i et eget område i dag, i km², fra tellingen T i planrutenettet. ukjent er ruter der kartet ikke er hentet eller
-   som ligger utenfor kommunen. smal sier at området tar natur eller jordbruk i planrutenettet, men at alt faller for regelen om
+/* Hva som ligger i et eget område i dag, i km², fra tellingen T i utbyggingen. ukjent er ruter der kartet ikke er hentet eller
+   som ligger utenfor kommunen. smal sier at området tar natur eller jordbruk i utbyggingen, men at alt faller for regelen om
    smale striper. */
 export const byggEgetOmrade = (T: EgetTall) => ({
   kjent: !!(T.nat + T.jor + T.beb + T.vann),
@@ -43,7 +43,7 @@ export const byggEgetOmrade = (T: EgetTall) => ({
 });
 
 /* Radene i sammenligningen mellom kommuneplanen og egne områder. e er null for hele kommunen, ellers nummeret til området, og T er
-   tallene for det området. R er planrutenettet, GK kryssingen med grått areal, tema temaene som er krysset med planen ({ navn, id,
+   tallene for det området. R er utbyggingen, GK kryssingen med grått areal, tema temaene som er krysset med planen ({ navn, id,
    klasser, kryss }) og gap utbygging på natur som ikke er kartlagt. Hver rad er { navn, farge, gruppe, plan, ny, endring, andelPlan,
    andelNy }: planen alene (null uten kommuneplan), med egne områder og forskjellen i km², og andelen av det som finnes i dag i
    prosent der det er regnet ut. */
@@ -51,7 +51,7 @@ const RADNAVN: Record<string, string> = { rein: 'Villreinområder' }; /* i tabel
 export function byggEgneRader(
   e: number | null,
   T: EgetTall | null,
-  R: Planrutenett,
+  R: Utbygging,
   harPlan: boolean,
   GK: Graakryss | null,
   tema: TemaKryss[],
@@ -112,7 +112,7 @@ export function byggEgneRader(
   }));
 }
 
-/* Tabellen gull.egneRader: sammenligningen mellom kommuneplanen og egne områder i kommunen nr, når planrutenettet er regnet ut med
+/* Tabellen gull.egneRader: sammenligningen mellom kommuneplanen og egne områder i kommunen nr, når utbyggingen er regnet ut med
    egne områder. kommune er radene for hele kommunen, og omrader per eget område (id) hva som ligger der i dag og radene for området.
    Grått areal og temaene som ikke kan hentes, står ikke med. */
 export interface EgneRader {
@@ -120,32 +120,30 @@ export interface EgneRader {
   omrader: { id: number; omrade: ReturnType<typeof byggEgetOmrade>; rader: EgenRad[] }[];
 }
 export async function egneRader(nr: string): Promise<EgneRader | null> {
-  const R = katalog.solv.planrutenett.naa(nr);
+  const R = await katalog.gull.utbygging(nr);
   if (!R || !R.eget) return null;
   const ikke = () => null,
-    [GK, ...temaene] = await Promise.all([
+    [info, GK, gap, ...temaene] = await Promise.all([
+      katalog.solv.planinfo(nr).catch(ikke),
       katalog.gull.graakryss(nr).catch(ikke),
+      katalog.gull.utbyggingUtenforKartlagt(nr).catch(ikke),
       katalog.gull.verneomraderIPlan(nr).catch(ikke),
       katalog.gull.villreinIPlan(nr).catch(ikke),
       katalog.gull.verdsattNaturIPlan(nr).catch(ikke)
     ]),
-    info = katalog.solv.planinfo.naa(nr),
     harPlan = !info || info.finnes;
   const tema = NATURTEMA.flatMap((t, i) => {
-      const C = temaene[i] as TemaIPlan | null;
-      return C && C.K.kryss.P && C.omrader.length
-        ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: C.K.kryss }]
-        : [];
-    }),
-    V = NATURTEMA.findIndex(t => t.dekning),
-    C = V < 0 ? null : (temaene[V] as TemaIPlan | null),
-    gap = C ? C.K.gap : null;
+    const C = temaene[i] as TemaIPlan | null;
+    return C && C.K.kryss.P && C.omrader.length
+      ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: C.K.kryss }]
+      : [];
+  });
   return {
-    kommune: byggEgneRader(null, null, R, harPlan, GK as Graakryss | null, tema, gap),
+    kommune: byggEgneRader(null, null, R, harPlan, GK, tema, gap),
     omrader: R.egneIder.map((id, i) => ({
       id,
       omrade: byggEgetOmrade(R.egneTall[i]),
-      rader: byggEgneRader(i, R.egneTall[i], R, harPlan, GK as Graakryss | null, tema, gap)
+      rader: byggEgneRader(i, R.egneTall[i], R, harPlan, GK, tema, gap)
     }))
   };
 }

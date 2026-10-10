@@ -1,7 +1,7 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
    planen. Tallene kommer ferdig regnet ut fra gull (katalog.gull.kommuneplan og planlagt). */
 import { katalog } from '../../data/katalog.ts';
-import type { Planinfo } from '../../data/solv/planrutenett.ts';
+import type { Planinfo } from '../../data/solv/kommuneplan.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { ingenPlan, planTall } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';

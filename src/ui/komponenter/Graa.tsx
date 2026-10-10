@@ -1,8 +1,9 @@
-/* Temasiden for grått areal. Tallene kommer ferdig regnet ut fra gull (katalog.gull.graa). */
+/* Temasiden for grått areal. Tallene kommer ferdig regnet ut fra gull: arealet (katalog.gull.graa), og planlagt utbygging på grått
+   areal og grønt i bebygd område (katalog.gull.graaIPlan), som legges til når utbyggingen er regnet ut. */
 import { katalog } from '../../data/katalog.ts';
 import { GRAATRINN } from '../../data/solv/graa.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { bildetallet, valgt } from '../../data/motor/valgt.ts';
+import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
 import { Fargelinje } from './deler.tsx';
 import { dekar, iTekst, pst } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
@@ -12,7 +13,8 @@ import { Temaside } from './Temaside.tsx';
 export default function Graa() {
   const G = bildetallet(valgt(katalog.gull.graa)),
     har = G.tilstand === 'ok',
-    P = G.tilstand === 'ok' ? G.plan : null;
+    I = har ? verdi(katalog.gull.graaIPlan) : null,
+    P = I ? I.plan : null;
   const tekst =
     G.tilstand === 'feil'
       ? 'Grått areal kunne ikke hentes fra NIBIO.'
@@ -68,7 +70,7 @@ export default function Graa() {
           <Fargelinje
             id="gront"
             navn="Grønt i bebygd område"
-            tall={G.gront ? (G.gront.delvis ? 'minst ' : '') + dekar(G.gront.km2) : ''}
+            tall={I ? (I.gront.delvis ? 'minst ' : '') + dekar(I.gront.km2) : ''}
             under="Ikke grått areal. Parker, idrettsanlegg, golfbaner og lignende, som grunnkartet regner som bebygd og opparbeidet. Det er grønt, men telles ikke som natur."
           />
         </ul>
