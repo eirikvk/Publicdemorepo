@@ -10,7 +10,8 @@ import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { bakgrunnUrl } from '../../data/bronse/kartverket.ts';
 import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
 import { kartetFlyttes, lagretUtsnitt, oversikt } from '../../data/motor/grunnkart.ts';
-import { grense as kommunegrensen, grenseFeil } from '../../data/motor/gulldata.ts';
+import { katalog } from '../../data/katalog.ts';
+import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret } from '../../data/motor/tilstand.ts';
 import { farge } from '../farger.ts';
 import { kb, nf } from '../tekst.ts';
@@ -113,7 +114,7 @@ abonner(() => {
     kartStatus();
     endret();
   }
-  const G = kommunegrensen();
+  const G = verdi(katalog.solv.grense);
   if (ny('grense', G) && G) {
     const k = app.valgt,
       ext = G.ext;
@@ -126,7 +127,8 @@ abonner(() => {
     if (k && !k.boks && !beholdes(k.nr)) view.fit(ext, { padding: [16, 16, 16, 16], duration: 350 });
     glemBehold();
   }
-  const feil = grenseFeil();
+  const g = valgt(katalog.solv.grense),
+    feil = !!g && g.status === 'feil';
   if (ny('grenseFeil', feil) && feil) {
     ui.probe = { tekst: 'Kommunegrensen kunne ikke hentes.' };
     tema.setVisible(true);

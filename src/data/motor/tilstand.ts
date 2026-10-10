@@ -1,9 +1,10 @@
 /* Datamotoren, tilstanden som gjelder nå: valgene brukeren har gjort (valgt kommune og egne områder) og det tekniske (kall-loggen,
-   om kartet flyttes). Alt som er hentet og regnet ut, ligger i katalogen (katalog.ts og datasett.ts), og leses derfra for valgt
-   kommune (gulldata.ts). Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i ui/tilstand.ts.
+   om kartet flyttes). Alt som er hentet og regnet ut, ligger i cachen (data/cache.ts) og leses gjennom katalogen
+   (data/katalog.ts) for valgt kommune (valgt.ts). Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i ui/tilstand.ts.
    Her er også lageret: React-komponentene og kartet abonnerer med abonner, og tegnes på nytt når noe er endret. Regnefunksjonene i
    sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter. Filen bruker verken React eller OpenLayers. */
 import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse/henting.ts';
+import { nårEndret, nårKjort } from '../cache.ts';
 import type { Planfeil } from '../bronse/planfil.ts';
 import type { Del } from '../solv/egne.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
@@ -11,7 +12,7 @@ import type { Kommune } from '../solv/felles.ts';
 
 /* Et eget område, tegnet i kartet eller lastet opp som fil, i kommunen nr. En opplastet plan har også antall flater som er
    utbygging (bygg) og ikke (annet), plan-id, om den mangler arealformål, og projeksjonen den var i. Hva som ligger i området, står i
-   planrutenettet, se egetTall i gulldata.ts. */
+   planrutenettet, se egetTall i motor/egne.ts. */
 export interface EgetOmrade {
   id: number;
   nr: string;
@@ -104,16 +105,19 @@ nårHentingEndres(() => {
   endret();
 });
 
-/* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker i nettleserens hovedtråd siden siste flytting startet. Vises under
-   Tekniske valg. */
+/* Tidtaking til feilsøking: hvor mye tid de tyngste delene bruker siden siste flytting startet. Vises under Tekniske valg. */
 export let bruk: Record<string, { sum: number; n: number; maks: number }> = {};
 export const nullstillBruk = () => {
   bruk = {};
 };
-export const tidSlutt = (navn: string, t0: number) => {
-  const d = performance.now() - t0,
-    b = bruk[navn] || (bruk[navn] = { sum: 0, n: 0, maks: 0 });
+const brukt = (navn: string, d: number) => {
+  const b = bruk[navn] || (bruk[navn] = { sum: 0, n: 0, maks: 0 });
   b.sum += d;
   b.n++;
   if (d > b.maks) b.maks = d;
 };
+export const tidSlutt = (navn: string, t0: number) => brukt(navn, performance.now() - t0);
+
+/* Cachen sier fra når noe er endret, og hvor lenge ETL-funksjonene i sølv og gull brukte */
+nårEndret(endret);
+nårKjort(brukt);

@@ -1,13 +1,14 @@
-/* Temasiden for inngrepsfri natur. Tallene kommer ferdig regnet ut fra gull (inonTall i gulldata.ts). */
+/* Temasiden for inngrepsfri natur. Tallene kommer ferdig regnet ut fra gull (katalog.gull.inon). */
+import { katalog } from '../../data/katalog.ts';
 import { INONSONER } from '../../data/solv/inon.ts';
-import { inonTall } from '../../data/motor/gulldata.ts';
+import { bildetallet, valgt } from '../../data/motor/valgt.ts';
 import { Fargelinje } from './deler.tsx';
 import { dekar, iTekst, pst } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
 
 /* Inngrepsfri natur: sonene etter avstand til inngrep. Krysses ikke med planlagt utbygging. */
 export default function Inon() {
-  const I = inonTall(),
+  const I = bildetallet(valgt(katalog.gull.inon)),
     har = I.tilstand === 'ok';
   const tekst =
     I.tilstand === 'feil'

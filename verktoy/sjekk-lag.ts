@@ -1,11 +1,14 @@
 /* Sjekker at lagene i koden holdes fra hverandre, slik README beskriver. Hvert lag kan bare importere fra lagene under seg:
 
    src/data/            alt om dataene, uten React og OpenLayers
-     generelt/          det som ikke handler om noe bestemt: geometri, minne, tall og farger. Importerer ingenting, og alle lagene
-                        i data kan bruke det.
-     bronse/            henting fra hver kilde. Importerer bare fra bronse, sølv og generelt, og bruker ikke tilstanden (app).
-     solv/              felles standard. Importerer bare fra sølv og generelt.
-     gull/              svarene sidene viser. Importerer bare fra gull, sølv og generelt.
+     katalog.ts         katalogen: listen over ETL-funksjonene i bronse, sølv og gull, som tabeller
+     cache.ts           cachen: svarene fra ETL-funksjonene. Importerer ingenting.
+     generelt/          det som ikke handler om noe bestemt: geometri, tall, farger og PNG. Importerer ingenting, og alle lagene i
+                        data kan bruke det.
+     bronse/            henting fra hver kilde. Importerer bare fra bronse, sølv, generelt og katalogen, og bruker ikke tilstanden
+                        (app).
+     solv/              felles standard. Importerer bare fra sølv, generelt og katalogen.
+     gull/              svarene sidene viser. Importerer bare fra gull, sølv, generelt og katalogen.
      motor/             datamotoren: tilstanden, og hva som hentes og regnes når. Importerer fra data, men aldri fra ui/.
    src/ui/              brukergrensesnittet. Importerer fra data, men data importerer aldri herfra.
      komponenter/       React. Henter ikke selv og regner ikke selv: importerer ikke fra bronse, og fra sølv bare navn, faste
@@ -17,8 +20,8 @@
      flater og leser bilder i et lerret.
    - De har ingen variabler på toppnivå som kan endres (let). Det som gis inn, kommer som argumenter.
    Og datamotoren har ingen regnefunksjoner: funksjoner som heter tolk, kryss, bygg eller tell noe, hører hjemme i sølv eller gull.
-   Alt datapipelinen husker, ligger i katalogen (data/motor/katalog.ts). Ingen andre filer i data har minne på toppnivå (new Map,
-   WeakMap, Set eller WeakSet). Unntaket er listen over hvem som abonnerer, i data/motor/tilstand.ts. Kartet kan ha sitt eget minne
+   Alt datapipelinen husker, ligger i cachen (data/cache.ts). Ingen andre filer i data har minne på toppnivå (new Map, WeakMap, Set
+   eller WeakSet). Unntaket er listen over hvem som abonnerer, i data/motor/tilstand.ts. Kartet kan ha sitt eget minne
    for det som tegnes.
 
    Typene sjekkes av TypeScript (tsc). Denne sjekken ser bare på hvem som importerer fra hvem, og på reglene over. Koden leses med
@@ -36,18 +39,25 @@ const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'sr
    importere fra. ren: sølv og gull (ingen nettleser, ingen tilstand, ingen let). utenTilstand: bruker ikke app. */
 interface Regel {
   fra?: string[];
+  filer?: string[] /* enkeltfiler laget også kan importere fra */;
   pakker?: string[];
   ikkeFra?: string[];
   ren?: boolean;
   utenTilstand?: boolean;
   solvBareFasteVerdier?: boolean;
 }
+const KATALOGEN = ['../katalog.ts'];
 const LAG: Record<string, Regel> = {
+  data: { fra: ['./', './generelt/', './bronse/', './solv/', './gull/'], pakker: [], utenTilstand: true },
   'data/generelt': { fra: ['./'], pakker: [], ren: true },
-  'data/bronse': { fra: ['./', '../generelt/', '../solv/'], pakker: [], utenTilstand: true },
-  'data/solv': { fra: ['./', '../generelt/'], pakker: ['polygon-clipping', 'proj4'], ren: true },
-  'data/gull': { fra: ['./', '../generelt/', '../solv/'], pakker: ['polygon-clipping'], ren: true },
-  'data/motor': { fra: ['./', '../generelt/', '../bronse/', '../solv/', '../gull/'], pakker: [] },
+  'data/bronse': { fra: ['./', '../generelt/', '../solv/'], filer: KATALOGEN, pakker: [], utenTilstand: true },
+  'data/solv': { fra: ['./', '../generelt/'], filer: KATALOGEN, pakker: ['polygon-clipping', 'proj4'], ren: true },
+  'data/gull': { fra: ['./', '../generelt/', '../solv/'], filer: KATALOGEN, pakker: ['polygon-clipping'], ren: true },
+  'data/motor': {
+    fra: ['./', '../generelt/', '../bronse/', '../solv/', '../gull/'],
+    filer: ['../katalog.ts', '../cache.ts'],
+    pakker: []
+  },
   ui: { ikkeFra: ['./komponenter/', './kart/'] },
   'ui/komponenter': { ikkeFra: ['../../data/bronse/'], solvBareFasteVerdier: true },
   'ui/kart': { ikkeFra: ['../komponenter/'] }
@@ -58,7 +68,7 @@ const UNNTAK: Record<string, string[]> = {
 }; /* fil uten endelse */
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
 const MINNE = ['Map', 'WeakMap', 'Set', 'WeakSet'],
-  MINNE_LOV = ['data/motor/katalog', 'data/motor/tilstand']; /* fil uten endelse */
+  MINNE_LOV = ['data/cache', 'data/motor/tilstand']; /* fil uten endelse */
 const FAST_VERDI = /^[A-ZÆØÅ][A-ZÆØÅ0-9_]*$/;
 
 /* En node i syntakstreet, slik oxc-parser gir den (ESTree, med TypeScript i tillegg) */
@@ -94,6 +104,7 @@ for (const [lag, regel] of Object.entries(LAG)) {
         if (regel.fra) {
           const ok =
             regel.fra.some(p => fra.startsWith(p) && !fra.slice(p.length).includes('/')) ||
+            (regel.filer || []).includes(fra) ||
             (regel.pakker || []).includes(fra);
           if (!ok) feil.push(`${sted} importerer fra ${fra}`);
         }
@@ -107,14 +118,14 @@ for (const [lag, regel] of Object.entries(LAG)) {
       if (regel.ren && d.type === 'VariableDeclaration' && d.kind === 'let')
         feil.push(`${navn}:${linje(d)} har en variabel på toppnivå som kan endres (let)`);
       if (
-        lag.startsWith('data/') &&
+        lag.startsWith('data') &&
         !MINNE_LOV.includes(navn.replace(/\.[jt]sx?$/, '')) &&
         d.type === 'VariableDeclaration'
       )
         for (const x of d.declarations as Node[])
           if (x.init && x.init.type === 'NewExpression' && MINNE.includes(x.init.callee.name))
             feil.push(
-              `${navn}:${linje(d)} har minne på toppnivå (new ${x.init.callee.name}): det hører hjemme i katalogen (data/motor/katalog.ts)`
+              `${navn}:${linje(d)} har minne på toppnivå (new ${x.init.callee.name}): det hører hjemme i cachen (data/cache.ts)`
             );
       if (lag === 'data/motor') {
         const navnene: string[] =

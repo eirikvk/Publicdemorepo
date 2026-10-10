@@ -5,6 +5,7 @@ import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
 import type { Kommune } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
+import { kommunen } from './kartverket.ts';
 import { wmsBilde } from './wms.ts';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
@@ -53,3 +54,17 @@ export const hentOversiktsregister = () =>
 /* Det lagrede oversiktsbildet for kommunen k, som PNG */
 export const hentOversiktsbilde = (k: Kommune) =>
   hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
+
+/* Tabellen bronse.grunnkartflis: et kartbilde av dagens klasser, med adressen som nøkkel */
+export async function grunnkartflis(url: string): Promise<ArrayBuffer> {
+  return hentGrunnkartFlis(url);
+}
+/* Tabellen bronse.oversiktsregister: registeret over lagrede oversiktsbilder, eller null når det ikke kan hentes. Uten registeret
+   brukes det sammensatte kartet. */
+export async function oversiktsregister(): Promise<Oversiktsregister | null> {
+  return hentOversiktsregister().catch(() => null);
+}
+/* Tabellen bronse.oversiktsbilde: det lagrede oversiktsbildet av kommunen, som PNG */
+export async function oversiktsbilde(nr: string): Promise<ArrayBuffer> {
+  return hentOversiktsbilde(await kommunen(nr));
+}

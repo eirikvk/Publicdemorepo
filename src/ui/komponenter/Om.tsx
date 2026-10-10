@@ -1,7 +1,7 @@
 /* Om og metode: kall-loggen og katalogen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
 import { useState } from 'react';
-import { oversiktsregister } from '../../data/motor/gulldata.ts';
-import { innhold } from '../../data/motor/katalog.ts';
+import { innhold } from '../../data/cache.ts';
+import { katalog } from '../../data/katalog.ts';
 import { finn } from '../../data/motor/kommune.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.ts';
@@ -18,56 +18,65 @@ export interface Tekniskvalg {
   settTeknisk: (paa: boolean) => void;
 }
 
-/* Katalogen: alt datapipelinen husker akkurat nå, per datasett. Innholdet leses når man ber om det, så det ikke regnes ut på nytt
-   hver gang siden tegnes. */
+/* Katalogen og cachen: tabellene i bronse, sølv og gull, og det som er lagret i hver akkurat nå. Innholdet leses når man ber om det,
+   så det ikke regnes ut på nytt hver gang siden tegnes. */
+const LAGNAVN: Record<string, string> = {
+  bronse: 'Bronse: svar fra kildene',
+  solv: 'Sølv: tolket til felles standard',
+  gull: 'Gull: det sidene viser'
+};
 function Katalog() {
   const [K, settK] = useState<ReturnType<typeof innhold> | null>(null);
   return (
     <section className="prosa">
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
-        Alt siden husker fra kildene og utregningene, per datasett: hvor mange nøkler det har, hvor mange det kan huske,
-        og omtrent hvor stort det er. Nøkkelen er som regel kommunenummeret. Navnet sier hvilket lag det kommer fra:
-        bronse er svar fra kildene, sølv er tolket til felles standard, og gull er regnet ut. Det som er raskt å regne
-        ut, huskes ikke, men regnes ut når siden spør. Ingenting lagres i nettleseren etter at siden er lukket.
+        Tabellene i datapipelinen, i tre lag, og hva som er lagret i hver akkurat nå. Hver tabell er en funksjon i koden
+        med samme navn: katalog.gull.inon er inon() i src/data/gull/inon.ts. Nøkkelen er som regel kommunenummeret. Gull
+        regnes ut på nytt når planrutenettet eller det kartlagte for kommunen er nytt. Ingenting lagres i nettleseren
+        etter at siden er lukket.
       </p>
       <MdButton theme="secondary" mode="small" onClick={() => settK(innhold())}>
         {K ? 'Oppdater' : 'Vis innholdet nå'}
       </MdButton>
-      {K && (
-        <ul className="talliste">
-          {K.map(d => {
-            const n = d.noekler,
-              uferdige = n.filter(x => x.status !== 'ok'),
-              noekler =
-                n.length && n.length <= 8 && n.every(x => x.nokkel.length <= 24)
-                  ? ': ' + n.map(x => x.nokkel || 'tom nøkkel').join(', ')
-                  : '';
-            return (
-              <li key={d.navn}>
-                <b className="navn">{d.navn}</b>
-                <span className="tall">{n.length ? kb(n.reduce((sum, x) => sum + x.byte, 0)) : ''}</span>
-                <small>
-                  <b>
-                    {nf(n.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
-                    {noekler}
-                  </b>
-                  {uferdige.length
-                    ? ` (${uferdige.map(x => `${x.nokkel || 'tom nøkkel'} ${x.status}`).join(', ')})`
-                    : ''}
-                  {'. ' + d.om[0].toUpperCase() + d.om.slice(1) + (d.om.endsWith('.') ? '' : '.')}
-                </small>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {K &&
+        (['bronse', 'solv', 'gull'] as const).map(lag => (
+          <div key={lag}>
+            <h3 className="md-typography-heading-xs">{LAGNAVN[lag]}</h3>
+            <ul className="talliste">
+              {K.filter(d => d.lag === lag).map(d => {
+                const r = d.rader,
+                  uferdige = r.filter(x => x.status !== 'ok' || x.utdatert),
+                  noekler =
+                    r.length && r.length <= 8 && r.every(x => x.nokkel.length <= 24)
+                      ? ': ' + r.map(x => (x.nokkel || 'tom nøkkel') + (x.delvis ? ' (delvis)' : '')).join(', ')
+                      : '';
+                return (
+                  <li key={d.navn}>
+                    <b className="navn">{d.navn}</b>
+                    <span className="tall">{r.length ? kb(r.reduce((sum, x) => sum + x.byte, 0)) : ''}</span>
+                    <small>
+                      <b>
+                        {nf(r.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
+                        {noekler}
+                      </b>
+                      {uferdige.length
+                        ? ` (${uferdige.map(x => `${x.nokkel || 'tom nøkkel'} ${x.utdatert ? 'utdatert' : x.status}`).join(', ')})`
+                        : ''}
+                      {'. ' + d.om[0].toUpperCase() + d.om.slice(1) + (d.om.endsWith('.') ? '' : '.')}
+                    </small>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
     </section>
   );
 }
 
 export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
-  const reg = oversiktsregister(),
+  const reg = katalog.bronse.oversiktsregister.naa(),
     medBilde = Object.keys((reg && reg.kommuner) || {}).filter(nr => finn(nr));
   return (
     <>

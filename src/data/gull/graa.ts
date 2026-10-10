@@ -1,8 +1,9 @@
 /* Gull for grått areal: arealet per trinn i kommunen, og kryssingen med planrutenettet. */
+import { katalog } from '../katalog.ts';
 import { RUTE, ruteX, ruteY } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
 import type { Planrutenett } from '../solv/planrutenett.ts';
-import { andel, bildetall, type Kommunebilde } from './felles.ts';
+import { andel, arealFraRuter, bildetall, landareal, type Bildetall, type Kommunebilde } from './felles.ts';
 
 /* Grått areal for kommunen: når det er hentet, areal per trinn (plass 1–6) i km², og trinnet per rute i kommunebildet */
 export type Graa = Kommunebilde<{ kl: Uint8Array; trinn: number[] }>;
@@ -89,4 +90,22 @@ export function byggGraa(D: Graa | null, K: Graakryss | null, land: number) {
           }
         : null
   }));
+}
+
+/* Tabellen gull.graakryss: planlagt utbygging krysset med grått areal i kommunen nr, når planrutenettet finnes */
+export async function graakryss(nr: string): Promise<Graakryss | null> {
+  const R = katalog.solv.planrutenett.naa(nr);
+  return R ? kryssGraa(R, await katalog.solv.graa(nr), R.delvis) : null;
+}
+/* Tabellen gull.graa: det temasiden, oversikten og kartet viser for kommunen nr: ok med tallene, eller ingen når kartet over grå
+   arealer ikke har noe i kommunen. Arealet samlet (sum) og per trinn (trinn) står med uansett. */
+export type Graavisning = ReturnType<typeof byggGraa> & { sum: number; trinn: number[] };
+export async function graa(nr: string): Promise<Graavisning> {
+  const [S, K, land] = await Promise.all([
+      katalog.solv.graa(nr),
+      katalog.gull.graakryss(nr).catch(() => null),
+      landareal(nr)
+    ]),
+    A = arealFraRuter(S.n, S.res, S.skala);
+  return { ...byggGraa({ ...S, nr, tilstand: 'ok', trinn: A.km2, sum: A.sum }, K, land), sum: A.sum, trinn: A.km2 };
 }

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felles.ts';
 import { byggInon } from '../src/data/gull/inon.ts';
-import { byggEndring, byggUtbredelse, landOgVann } from '../src/data/gull/regnskap.ts';
+import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
 
 const rutebilde = { u: [0, 0, 1, 1], res: 1, w: 1, h: 1 };
 
@@ -51,6 +51,6 @@ test('regnskapet: natur først, og ingen sammenligning når grensen er flyttet',
 });
 
 test('land og vann: en liten rest regnes ikke som hav', () => {
-  assert.equal(landOgVann(100, 90, { inn: 5, elv: 4.9 })!.hav, 0);
-  assert.equal(landOgVann(100, 80, { inn: 5, elv: 5 })!.hav, 10);
+  assert.equal(byggLandOgVann(100, 90, { inn: 5, elv: 4.9 })!.hav, 0);
+  assert.equal(byggLandOgVann(100, 80, { inn: 5, elv: 5 })!.hav, 10);
 });

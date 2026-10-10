@@ -1,5 +1,6 @@
 /* Bronse for Kartverket: listen over fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet. */
 import { utsnitt, type GeoJsonFlate } from '../generelt/geometri.ts';
+import { katalog } from '../katalog.ts';
 import type { Flis, Fylke, Kommune } from '../solv/felles.ts';
 import { hent } from './henting.ts';
 
@@ -63,3 +64,20 @@ export const hentKommuneIPunkt = (p: number[]) =>
 /* Bakgrunnskartet: Kartverkets topografiske kart i gråtoner, som fliser i UTM33 */
 export const bakgrunnUrl = ([z, x, y]: Flis) =>
   `https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/utm33n/${String(z).padStart(2, '0')}/${y}/${x}.png`;
+
+/* Tabellen bronse.kommuner: fylkene med kommunene sine, sortert etter navn */
+export async function kommuner(): Promise<Fylke[]> {
+  const fylker = await hentKommuneliste();
+  fylker.sort((a, b) => a.navn.localeCompare(b.navn, 'nb'));
+  fylker.forEach(f => f.kommuner.sort((a, b) => a.navn.localeCompare(b.navn, 'nb')));
+  return fylker;
+}
+/* Kommunen med nummeret nr, fra listen. Kildene vil ha navnet til kall-loggen. */
+export async function kommunen(nr: string): Promise<Kommune> {
+  for (const f of await katalog.bronse.kommuner()) for (const k of f.kommuner) if (k.nr === nr) return k;
+  throw new Error(`fant ikke kommune ${nr}`);
+}
+/* Tabellen bronse.kommunegrense: kommunegrensen som GeoJSON i UTM33 */
+export async function kommunegrense(nr: string): Promise<GeoJsonFlate> {
+  return hentKommunegrense(await kommunen(nr));
+}

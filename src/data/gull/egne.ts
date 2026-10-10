@@ -1,10 +1,12 @@
 /* Gull for egne områder: hva som ligger i hvert område, og radene som sammenligner kommuneplanen alene med kommuneplanen og egne
    områder. Arealer er i km², andeler i prosent. */
+import { katalog } from '../katalog.ts';
 import { RUTE } from '../solv/felles.ts';
 import type { EgetTall, Planrutenett } from '../solv/planrutenett.ts';
+import { NATURTEMA } from '../solv/temaer.ts';
 import { andel } from './felles.ts';
 import type { Graakryss, Graatall } from './graa.ts';
-import type { Gap, Kryss } from './temaer.ts';
+import type { Gap, Kryss, Naturtemaet } from './temaer.ts';
 
 /* Et tema krysset med planen, slik radene trenger det */
 export interface TemaKryss {
@@ -108,4 +110,41 @@ export function byggEgneRader(
     andelPlan: av && plan !== null ? andel(plan, av) : null,
     andelNy: av ? andel(ny, av) : null
   }));
+}
+
+/* Tabellen gull.egneRader: sammenligningen mellom kommuneplanen og egne områder i kommunen nr, når planrutenettet er regnet ut med
+   egne områder. kommune er radene for hele kommunen, og omrader per eget område (id) hva som ligger der i dag og radene for området.
+   Grått areal og temaene som ikke kan hentes, står ikke med. */
+export interface EgneRader {
+  kommune: EgenRad[];
+  omrader: { id: number; omrade: ReturnType<typeof byggEgetOmrade>; rader: EgenRad[] }[];
+}
+export async function egneRader(nr: string): Promise<EgneRader | null> {
+  const R = katalog.solv.planrutenett.naa(nr);
+  if (!R || !R.eget) return null;
+  const ikke = () => null,
+    [GK, ...temaene] = await Promise.all([
+      katalog.gull.graakryss(nr).catch(ikke),
+      katalog.gull.verneomrader(nr).catch(ikke),
+      katalog.gull.villrein(nr).catch(ikke),
+      katalog.gull.verdsattNatur(nr).catch(ikke)
+    ]),
+    info = katalog.solv.planinfo.naa(nr),
+    harPlan = !info || info.finnes;
+  const tema = NATURTEMA.flatMap((t, i) => {
+      const D = (temaene[i] as Naturtemaet | null)?.D;
+      return D && D.kryss && D.kryss.P && D.omrader.length
+        ? [{ navn: t.navn, id: t.id, klasser: t.klasser, kryss: D.kryss }]
+        : [];
+    }),
+    V = NATURTEMA.findIndex(t => t.dekning),
+    gap = V < 0 ? null : (temaene[V] as Naturtemaet | null)?.D.gap;
+  return {
+    kommune: byggEgneRader(null, null, R, harPlan, GK as Graakryss | null, tema, gap),
+    omrader: R.egneIder.map((id, i) => ({
+      id,
+      omrade: byggEgetOmrade(R.egneTall[i]),
+      rader: byggEgneRader(i, R.egneTall[i], R, harPlan, GK as Graakryss | null, tema, gap)
+    }))
+  };
 }

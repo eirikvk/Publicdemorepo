@@ -1,10 +1,11 @@
 /* Utvikling fremover: hva kommuneplanen setter av til utbygging, og egne områder man kan tegne eller laste opp og sammenligne med
-   planen. Tallene kommer ferdig regnet ut fra gull/planlagt.ts, gjennom gulldata.ts. */
-import type { Planinfo } from '../../data/motor/datasett.ts';
+   planen. Tallene kommer ferdig regnet ut fra gull (katalog.gull.kommuneplan og planlagt). */
+import { katalog } from '../../data/katalog.ts';
+import type { Planinfo } from '../../data/solv/planrutenett.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { planinfo, planlagt, planTall } from '../../data/motor/gulldata.ts';
-import { ingenPlan } from '../../data/motor/plan.ts';
+import { ingenPlan, planTall } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
+import { valgt, verdi } from '../../data/motor/valgt.ts';
 import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
 import { antallOrd, iTekst, pst } from '../tekst.ts';
@@ -18,20 +19,20 @@ export const planKilde = (p: Planinfo['plan']) =>
 
 /* Planlagt utbygging: status for kommuneplanen og arealet natur og jordbruk som settes av. */
 function Planlagt() {
-  const i = planinfo(),
+  const i = verdi(katalog.solv.grense) ? valgt(katalog.gull.kommuneplan) : null /* sjekken bruker grensen */,
     ingen = ingenPlan(),
     navn = app.valgt ? app.valgt.navn : '';
   const status = !i
     ? ''
-    : i.tilstand === 'sjekker'
+    : i.status === 'henter'
       ? 'Sjekker om Direktoratet for byggkvalitet (DiBK) har en kommuneplan for kommunen …'
-      : i.tilstand === 'feil'
+      : i.status === 'feil'
         ? 'Fikk ikke sjekket om Direktoratet for byggkvalitet (DiBK) har en kommuneplan for kommunen.'
         : ingen
           ? `Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for ${navn}, så planlagt utbygging kan ikke vises eller regnes ut.`
-          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.plan ? ': ' + planKilde(i.plan) : ''}.${i.dekning! < 0.6 ? ` Planen dekker ca. ${Math.round(i.dekning! * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
+          : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.verdi!.plan ? ': ' + planKilde(i.verdi!.plan) : ''}.${i.verdi!.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.verdi!.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
   const tilstand = planTall(),
-    P = planlagt();
+    P = tilstand === 'ok' ? verdi(katalog.gull.planlagt) : null;
   let natur = '',
     jordbruk = '',
     note = '',

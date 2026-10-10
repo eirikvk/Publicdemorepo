@@ -12,11 +12,11 @@ import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
 import type { Del } from '../../data/solv/egne.ts';
 import type { Planrutenett } from '../../data/solv/planrutenett.ts';
 import { flislerret, sti } from '../../data/solv/raster.ts';
-import { PLANFLIS } from '../../data/motor/datasett.ts';
+import { katalog } from '../../data/katalog.ts';
 import { mine, utenPlan } from '../../data/motor/egne.ts';
 import { dagensKlasser, lagret } from '../../data/motor/grunnkart.ts';
-import { grense, planrutenett } from '../../data/motor/gulldata.ts';
-import { hent } from '../../data/motor/katalog.ts';
+import { planrutenett } from '../../data/motor/plan.ts';
+import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
@@ -122,7 +122,7 @@ async function lastPlanFlis(tile: ImageTile, src: string) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord() as Flis), hent(PLANFLIS, src)]);
+    const [K, planBuf] = await Promise.all([dagensKlasser(tile.getTileCoord() as Flis), katalog.bronse.planflis(src)]);
     if (!K) throw new Error('mangler dagens klasser');
     const c = flislerret(),
       g = c.getContext('2d', { willReadFrequently: true })!,
@@ -196,7 +196,7 @@ export function settSmale(paa: boolean) {
    planrutenettet er regnet ut på nytt eller smale striper slås av eller på. */
 const ny = nyttSiden();
 abonner(() => {
-  const G = grense();
+  const G = verdi(katalog.solv.grense);
   if (ny('grense', G) && G) planLag.setExtent(G.ext);
   const nyttRutenett = ny('rutenett', planrutenett()),
     nyeStriper = ny('smale', ui.visSmale);

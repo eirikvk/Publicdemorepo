@@ -8,8 +8,9 @@ import { ol } from './ol.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
 import type { Flis } from '../../data/solv/felles.ts';
 import { flislerret, tegneflate, tegnUtsnitt } from '../../data/solv/raster.ts';
-import type { Kommuneruter } from '../../data/motor/datasett.ts';
-import { grense } from '../../data/motor/gulldata.ts';
+import { katalog } from '../../data/katalog.ts';
+import type { Kommuneruter } from '../../data/solv/kommune.ts';
+import { verdi } from '../../data/motor/valgt.ts';
 import { abonner } from '../../data/motor/tilstand.ts';
 import { ui } from '../tilstand.ts';
 import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
@@ -79,7 +80,7 @@ export function bildelag<E>(o: Bildelag<E>): Flislag {
 
   const ny = nyttSiden();
   abonner(() => {
-    const G = grense();
+    const G = verdi(katalog.solv.grense);
     if (ny('grense', G) && G) lag.setExtent(G.ext);
     if (ny('data', o.data())) friskOpp(lag);
     const synlig = ui.side === o.side && !!G && !!o.data() && o.noe(),

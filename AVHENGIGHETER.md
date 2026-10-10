@@ -82,7 +82,7 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
 - Vilkårene for de andre tjenestene er ikke kontrollert i dette arbeidet. Siden krediterer Kartverket, NIBIO og DiBK i kartet
   og alle kildene i teksten.
 - Siden belaster tjenestene direkte fra hver brukers nettleser. Kall mot NIBIO og DiBK går i kø med høyst fire om gangen per
-  kilde, og svar huskes i katalogen så lenge siden er åpen.
+  kilde, og svar huskes i cachen så lenge siden er åpen.
 
 ## Sikkerhet og personvern
 

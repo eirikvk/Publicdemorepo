@@ -2,9 +2,23 @@
    ruter på 21 meter, med smale striper tatt bort. Planen og dagens klasser kommer som kartbilder på nivå 9, én flis (512 x 512
    ruter) om gangen. Gir klasse og plan per rute, og antall ruter av hvert slag. Én rute er RUTE km². Alle kryssinger i gull går
    gjennom dette rutenettet. */
-import { HALV, PLANNIVA, PLAN_FINNES, RUTE_M, SYNLIG, type Flis, type Piksler, type Plassering } from './felles.ts';
+import type { Utsnitt } from '../generelt/geometri.ts';
+import { katalog } from '../katalog.ts';
+import {
+  BILDE_PLANDEKNING,
+  HALV,
+  PLANNIVA,
+  PLAN_FINNES,
+  RUTE_M,
+  SYNLIG,
+  rutenett,
+  type Flis,
+  type Piksler,
+  type Plassering
+} from './felles.ts';
 import { leggInnEget, type Flater } from './egne.ts';
 import { JOR, NAT, klasseAv } from './klasser.ts';
+import { bildePiksler, flatePiksler } from './raster.ts';
 
 /* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
 export interface Antall {
@@ -271,4 +285,36 @@ export function planDekning(P: Piksler, M: Piksler) {
     }
   const dekning = inne ? treff.length / inne : 0;
   return { dekning, finnes: dekning >= PLAN_FINNES, treff };
+}
+
+/* Tabellen solv.planrutenett: planrutenettet for kommunen, med de egne områdene det er regnet med (egneIder), i rekkefølge.
+   Datamotoren regner det ut og legger det inn selv, fordi det regnes ut på nytt når det kommer mer kart (data/motor/plan.ts). */
+export type Rutenettet = Planrutenett & { egneIder: number[] };
+
+/* Kommuneplanen DiBK har: plan-id, hvem som har levert den, og datoen den ble kopiert til DiBK som [år, måned, dag] */
+export interface Planopplysninger {
+  id: string;
+  vert: string;
+  kopiert: string[] | null;
+}
+/* Tabellen solv.plandekning: hvor stor del av kommunen planlaget dekker, om det regnes som at kommunen har plan, og rutene med plan,
+   i rutenettet bildet er hentet i (u, w, h) */
+export async function plandekning(
+  nr: string
+): Promise<ReturnType<typeof planDekning> & { u: Utsnitt; w: number; h: number }> {
+  const g = await katalog.solv.grense(nr),
+    R = rutenett(g.ext, ...BILDE_PLANDEKNING);
+  const D = planDekning(await bildePiksler(await katalog.bronse.plandekning(nr), R.w, R.h), flatePiksler(g.koord, R));
+  return { ...D, u: R.u, w: R.w, h: R.h };
+}
+/* Tabellen solv.planinfo: om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er */
+export interface Planinfo {
+  finnes: boolean;
+  dekning: number;
+  plan: Planopplysninger | null;
+}
+export async function planinfo(nr: string): Promise<Planinfo> {
+  const { finnes, dekning } = await katalog.solv.plandekning(nr),
+    plan = finnes ? await katalog.bronse.planopplysninger(nr).catch(() => null) : null;
+  return { finnes, dekning, plan };
 }

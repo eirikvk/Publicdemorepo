@@ -1,13 +1,22 @@
-/* Gull for naturtemaene: arealet av verdsatt natur per verdikategori, kryssingen med planrutenettet (hvor mye planlagt utbygging
-   som ligger i hvert område), og tallene temasidene viser. Bygger på flatene og maskene i sølv (solv/temaer.ts) og
-   planrutenettet (solv/planrutenett.ts). Arealer er i km², kryssinger i ruter. */
-import { motKlokka, omriss, type Flerflate, type FlateMedUtsnitt, type Utsnitt } from '../generelt/geometri.ts';
+/* Gull for naturtemaene: kryssingen med planrutenettet (hvor mye planlagt utbygging som ligger i hvert område), og tallene
+   temasidene viser. Bygger på områdene, arealet og maskene i sølv (solv/temaer.ts) og planrutenettet (solv/planrutenett.ts). Arealer
+   er i km², kryssinger i ruter. */
+import { omriss, type FlateMedUtsnitt } from '../generelt/geometri.ts';
 import { summen } from '../generelt/tall.ts';
-import { HALV, RUTE, RUTENETT_VERDI, m2PerKm2, ruteX, ruteY, rutenett } from '../solv/felles.ts';
+import { katalog } from '../katalog.ts';
+import { HALV, RUTE, ruteX, ruteY } from '../solv/felles.ts';
 import type { Planrutenett } from '../solv/planrutenett.ts';
-import { dekketM2, sti, tegneflate } from '../solv/raster.ts';
-import { naturMaske, type Kartlagt, type Maske, type Omrade } from '../solv/temaer.ts';
-import { andel } from './felles.ts';
+import {
+  NATURTEMA,
+  naturMaske,
+  type Kartlagt,
+  type Maske,
+  type Naturtema,
+  type Omrade,
+  type TemaOmrade,
+  type Temaomrader
+} from '../solv/temaer.ts';
+import { andel, landareal } from './felles.ts';
 
 /* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg) */
 export interface Kryss {
@@ -32,15 +41,10 @@ export interface Kryssing {
   plan: Int32Array;
   smal: Int32Array;
 }
-/* Et område slik datamotoren har det, med utsnittet */
-export interface TemaOmrade extends Omrade {
-  ext: Utsnitt;
-}
-/* Det som er hentet og regnet ut for et naturtema i valgt kommune: områdene, arealet samlet og per verdikategori, det kartlagte og
+/* Det som er hentet og regnet ut for et naturtema i en kommune: områdene, arealet samlet og per verdikategori, det kartlagte og
    verdsatt natur innenfor det (inne), og kryssingen med planen når den er regnet ut (regnet) */
 export interface TemaData {
   nr: string;
-  feil?: boolean;
   omrader: TemaOmrade[];
   sum: number;
   klasser?: number[] | null;
@@ -55,53 +59,6 @@ export interface TemaData {
 }
 /* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
 export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
-
-/* Verdsatt natur: mange små flater som overlapper. Arealet per verdikategori finnes ved å tegne flatene i et rutenett over kommunen
-   og summere dekningen i rutene. Én tegning per kategori, der alle flater med minst den verdien tegnes som én sammenhengende form og
-   klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori uten dobbelttelling: der lokaliteter overlapper,
-   teller den høyeste verdien, slik kartet også viser det. omrader har verdien v (0 er høyest). innenfor er en flerflate arealet
-   også klippes mot, for eksempel det kartlagte. */
-export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMedUtsnitt, innenfor?: Flerflate) {
-  const skala = m2PerKm2(kommune.ext),
-    { res, w, h, u } = rutenett(kommune.ext, ...RUTENETT_VERDI);
-  const g = tegneflate(w, h),
-    kum: number[] = [];
-  for (let v = 0; v < antall && omrader.length; v++) {
-    g.globalCompositeOperation = 'source-over';
-    g.clearRect(0, 0, w, h);
-    g.beginPath();
-    for (const o of omrader) {
-      if ((o.v || 0) > v) continue;
-      for (const flate of o.koord)
-        flate.forEach((ring, nr) => {
-          /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
-          const snu = motKlokka(ring) !== (nr === 0),
-            n = ring.length;
-          for (let i = 0; i < n; i++) {
-            const q = ring[snu ? n - 1 - i : i],
-              x = (q[0] - u[0]) / res,
-              y = (u[3] - q[1]) / res;
-            if (i) g.lineTo(x, y);
-            else g.moveTo(x, y);
-          }
-          g.closePath();
-        });
-    }
-    g.fill('nonzero');
-    g.globalCompositeOperation = 'destination-in';
-    sti(g, kommune.koord, u, 1 / res);
-    g.fill('evenodd');
-    if (innenfor) {
-      sti(g, innenfor, u, 1 / res);
-      g.fill('evenodd');
-    }
-    kum.push(dekketM2(g.getImageData(0, 0, w, h).data, res) / skala);
-  }
-  return {
-    klasser: Array.from({ length: antall }, (_, v) => Math.max(0, (kum[v] || 0) - (v ? kum[v - 1] || 0 : 0))),
-    sum: kum.length ? kum[kum.length - 1] : 0
-  };
-}
 
 /* Kryssing med planrutenettet: midtpunktet i hver rute med planlagt utbygging slås opp i maskene for temaets områder. En rute telles
    én gang per tema, i det første området den treffer. D er temaets data (områdene og eventuelt kartleggingen), R planrutenettet,
@@ -304,3 +261,56 @@ export function byggNaturTall(
 }
 /* Det temasiden viser, fra byggNaturTall */
 export type NaturTall = ReturnType<typeof byggNaturTall>;
+
+/* Kryssingen før den er regnet ut: ingen ruter med planlagt utbygging i n områder */
+const ikkeKrysset = (n: number) => ({
+  regnet: false,
+  plan: new Int32Array(n),
+  smal: new Int32Array(n),
+  kryss: null,
+  gap: null
+});
+/* Et naturtema i kommunen nr: dataene (D) og tallene temasiden og oversikten viser (N). O er områdene fra sølv. Arealet per
+   verdikategori kommer fra sølv for verdsatt natur, og er summen av områdene for de andre. Det kartlagte og planrutenettet tas med
+   når de finnes: kommer de senere, regnes gull ut på nytt. Maskene til områdene huskes i solv.naturmaske. */
+export type Naturtemaet = { D: TemaData; N: NaturTall };
+async function naturtemaet(tema: Naturtema, nr: string, O: Temaomrader): Promise<Naturtemaet> {
+  const [land, g, A] = await Promise.all([
+      landareal(nr),
+      katalog.solv.grense(nr),
+      tema.samlet ? katalog.solv.verdsattNaturAreal(nr) : { sum: samletAreal(O.omrader), klasser: undefined }
+    ]),
+    omrader = O.omrader,
+    ekstra = tema.dekning ? katalog.solv.kartlagt.naa(nr) : undefined,
+    inne = tema.dekning && tema.klasser ? katalog.solv.verdsattNaturIKartlagt.naa(nr) || undefined : undefined,
+    R = katalog.solv.planrutenett.naa(nr),
+    navn = new Map<object, string>(omrader.map((o, i) => [o, `${tema.id}/${nr}/${i}`]));
+  if (ekstra) navn.set(ekstra, 'kartlagt/' + nr);
+  const K = R
+    ? kryssNatur({ omrader, ekstra }, R, tema.klasser ? tema.klasser.length : 1, !!tema.dekning, g, (o, lag) =>
+        katalog.solv.naturmaske.straks(navn.get(o)!, lag)
+      )
+    : null;
+  const D: TemaData = {
+    nr,
+    omrader,
+    sum: A.sum,
+    klasser: tema.samlet ? (tema.klasser ? A.klasser : null) : undefined,
+    ufullstendig: O.ufullstendig,
+    ekstra,
+    inne,
+    ...(K ? { ...K, regnet: true } : ikkeKrysset(omrader.length))
+  };
+  return { D, N: byggNaturTall(D, tema.klasser, !!tema.dekning, !!tema.samlet, land) };
+}
+const [VERN, REIN, VERDI] = NATURTEMA;
+/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur */
+export async function verneomrader(nr: string): Promise<Naturtemaet> {
+  return naturtemaet(VERN, nr, await katalog.solv.verneomrader(nr));
+}
+export async function villrein(nr: string): Promise<Naturtemaet> {
+  return naturtemaet(REIN, nr, await katalog.solv.villrein(nr));
+}
+export async function verdsattNatur(nr: string): Promise<Naturtemaet> {
+  return naturtemaet(VERDI, nr, await katalog.solv.verdsattNatur(nr));
+}

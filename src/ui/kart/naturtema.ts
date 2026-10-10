@@ -1,5 +1,5 @@
 /* Kartlagene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur, sløret over det som ikke er kartlagt,
-   og markeringen av ett område valgt fra en liste. Områdene og det kartlagte leses fra katalogen gjennom data/motor/gulldata.ts.
+   og markeringen av ett område valgt fra en liste. Områdene og det kartlagte leses fra katalogen (katalog.solv).
    Hvert tema vises på sin egen side. */
 import type Feature from 'ol/Feature.js';
 import type { FeatureLike } from 'ol/Feature.js';
@@ -14,9 +14,9 @@ import { ol } from './ol.ts';
 import { flislerret } from '../../data/solv/raster.ts';
 import { OPPLOSNINGER } from '../../data/solv/felles.ts';
 import type { Kartlagt } from '../../data/solv/temaer.ts';
-import type { TemaOmrade } from '../../data/gull/temaer.ts';
-import { grense, kartlagt as kartlagtFor, temaomrader } from '../../data/motor/gulldata.ts';
-import { NATURTEMA, type Naturtema } from '../../data/motor/naturtema.ts';
+import { TEMATABELLER, katalog } from '../../data/katalog.ts';
+import { NATURTEMA, type Naturtema, type TemaOmrade } from '../../data/solv/temaer.ts';
+import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { farge, rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
@@ -37,6 +37,8 @@ interface Temalag {
 const LAG = new Map<string, Temalag>();
 const flaterFor = new WeakMap<object, Flate[]>();
 const lagFor = (t: Naturtema) => LAG.get(t.id)!;
+/* Områdene i et tema for valgt kommune, fra sølv. Samme objekt så lenge temaet ikke hentes på nytt. */
+const temaomrader = (t: Naturtema) => verdi(TEMATABELLER[t.id].omrader);
 for (const t of NATURTEMA) {
   const kilde = new ol.source.Vector<Flate>();
   /* Bare omriss: en hvit kant og en farget strek. En fylling over hele området måtte tegnes på nytt i hvert bilde når kartet flyttes.
@@ -258,7 +260,7 @@ const ny = nyttSiden();
 abonner(() => {
   if (ny('valgt', app.valgt)) fjernMerket();
   if (ui.vist && ui.side !== ui.vist.id) fjernMerket();
-  const G = grense(),
+  const G = verdi(katalog.solv.grense),
     nyGrense = ny('grense', G);
   for (const t of NATURTEMA) {
     const { lag, kilde } = lagFor(t),
@@ -271,7 +273,7 @@ abonner(() => {
     }
     lag.setVisible(paa && !!G && !!O && O.omrader.length > 0);
     if (t.dekning) {
-      const E = O ? kartlagtFor(t) : null;
+      const E = O ? verdi(katalog.solv.kartlagt) : null;
       if (ny('kartlagt', E)) settDekning(E);
       if (nyGrense && G) dekLag.setExtent(G.ext);
       dekLag.setVisible(paa && ui.slorPaa && !!G && !!E && E.km2 > 0);

@@ -1,7 +1,9 @@
 /* Sølv for inngrepsfri natur: bildet av hele kommunen fra Miljødirektoratets kartlag (status) gjort om til sone per rute, etter
    avstand til tyngre tekniske inngrep. */
 import { naermesteFarge } from '../generelt/farge.ts';
+import { katalog } from '../katalog.ts';
 import { HALV, type Piksler } from './felles.ts';
+import { tolketBilde, type Kommuneruter } from './kommune.ts';
 
 /* Sonene: [kode i tjenesten, farge i kartet her, farge i tjenestens bilder, avstand, navn] */
 export const INONSONER: [kode: string, farge: string, rgb: number[], avstand: string, navn: string][] = [
@@ -33,4 +35,10 @@ export function tolkInon(P: Piksler, M: Piksler) {
     if (M[i + 3] >= HALV) n[s]++;
   }
   return { sone, n };
+}
+
+/* Tabellen solv.inon: sonen per rute i bildet av kommunen, og antall ruter per sone innenfor kommunen */
+export type InonRuter = Kommuneruter<{ sone: Uint8Array }>;
+export async function inon(nr: string): Promise<InonRuter> {
+  return tolketBilde(nr, [await katalog.bronse.inonbilde(nr)], ([P], M) => tolkInon(P, M));
 }

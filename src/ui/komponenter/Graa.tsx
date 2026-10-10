@@ -1,7 +1,8 @@
-/* Temasiden for grått areal. Tallene kommer ferdig regnet ut fra gull (graaTall i gulldata.ts). */
+/* Temasiden for grått areal. Tallene kommer ferdig regnet ut fra gull (katalog.gull.graa). */
+import { katalog } from '../../data/katalog.ts';
 import { GRAATRINN } from '../../data/solv/graa.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { graaTall } from '../../data/motor/gulldata.ts';
+import { bildetallet, valgt } from '../../data/motor/valgt.ts';
 import { Fargelinje } from './deler.tsx';
 import { dekar, iTekst, pst } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
@@ -9,7 +10,7 @@ import { Temaside } from './Temaside.tsx';
 /* Grått areal: areal som alt er tatt i bruk eller sterkt påvirket, etter andel vegetasjon, og hvor mye av planlagt utbygging som
    ligger der. */
 export default function Graa() {
-  const G = graaTall(),
+  const G = bildetallet(valgt(katalog.gull.graa)),
     har = G.tilstand === 'ok',
     P = G.tilstand === 'ok' ? G.plan : null;
   const tekst =

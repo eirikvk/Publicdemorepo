@@ -1,10 +1,13 @@
 /* Temasidene for naturtemaene fra Miljødirektoratet: verneområder, villrein og verdsatt natur. Toppen svarer på hvor mye som finnes i
    kommunen, hvor stor del av landarealet det er, og hvor mye planlagt utbygging som ligger innenfor. Under står områdene som liste,
-   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull (naturtemaet i gulldata.ts). */
+   og for verdsatt natur helhetsbildet med kartleggingen. Tallene kommer ferdig regnet ut fra gull (katalog.gull.verneomrader,
+   villrein og verdsattNatur). */
+import { TEMATABELLER } from '../../data/katalog.ts';
 import type { NaturTall } from '../../data/gull/temaer.ts';
+import type { Naturtema as Tema } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { bareHentetKart, naturtemaet } from '../../data/motor/gulldata.ts';
-import type { Naturtema as Tema } from '../../data/motor/naturtema.ts';
+import { bareHentetKart } from '../../data/motor/grunnkart.ts';
+import { valgt } from '../../data/motor/valgt.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
 import { Fargelinje, Forklaring, Stripe, type Stripedel } from './deler.tsx';
@@ -97,7 +100,7 @@ function Helhet({ t, H, E }: { t: Tema; H: NonNullable<NaturTall['helhet']>; E: 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
 export function Naturtema({ t: tema }: { t: Tema }) {
   const t = { ...tema, ...TEMAORD[tema.id] },
-    T = naturtemaet(tema);
+    T = valgt(TEMATABELLER[tema.id].tall);
   const kilde = (
     <p className="hint">
       Kilde: {t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i
@@ -105,8 +108,15 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       {t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}
     </p>
   );
-  if (!T) return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} kilde={kilde} />;
-  const { D, N } = T,
+  if (!T || T.status === 'henter')
+    return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} kilde={kilde} />;
+  if (T.status === 'feil')
+    return (
+      <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'feil' }} kilde={kilde}>
+        <p>{t.navn} kunne ikke hentes fra Miljødirektoratet.</p>
+      </Temaside>
+    );
+  const { D, N } = T.verdi!,
     E = N.kartlagt,
     hentet = bareHentetKart(),
     der = hentet ? ' i den delen av kommunen det er hentet kart for' : '',
@@ -124,11 +134,9 @@ export function Naturtema({ t: tema }: { t: Tema }) {
           ? 'planlagt utbygging ikke regnet ut ennå'
           : (N.plan ? `ca. ${dekar(N.planKm2)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') +
             (hentet ? ', i hentet kart' : ''));
-  const sumTekst = D.feil
-    ? `${t.navn} kunne ikke hentes fra Miljødirektoratet.`
-    : !N.antall
-      ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-      : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
+  const sumTekst = !N.antall
+    ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
+    : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${D.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
   const merk =
     !E || helhet
       ? ''
@@ -163,13 +171,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
     <Temaside
       id={t.id}
       navn={t.navn}
-      tall={
-        D.feil
-          ? { tilstand: 'feil' }
-          : N.antall
-            ? { tilstand: 'ok', sum: N.sum, andelLand: N.andelLand }
-            : { tilstand: 'ingen' }
-      }
+      tall={N.antall ? { tilstand: 'ok', sum: N.sum, andelLand: N.andelLand } : { tilstand: 'ingen' }}
       under={under}
       kilde={kilde}
     >

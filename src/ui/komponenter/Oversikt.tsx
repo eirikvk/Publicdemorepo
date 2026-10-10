@@ -1,19 +1,12 @@
 /* Oversikten: det viktigste fra hver side, kort. Hver linje har sidens navn som lenke, ett tall og én eller to setninger. Tallene er
-   de samme som på sidene selv, fordi de kommer fra de samme funksjonene i gull. Linjene står i de samme blokkene som i sidevelgeren,
+   de samme som på sidene selv, fordi de kommer fra de samme tabellene i gull. Linjene står i de samme blokkene som i sidevelgeren,
    så temaene står under «Naturen i kommunen». */
 import { Fragment } from 'react';
+import { TEMATABELLER, katalog } from '../../data/katalog.ts';
+import { NATURTEMA } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import {
-  arealtall,
-  endring,
-  graaTall,
-  inonTall,
-  naturtemaet,
-  planSum,
-  planTall,
-  utbredelse
-} from '../../data/motor/gulldata.ts';
-import { NATURTEMA } from '../../data/motor/naturtema.ts';
+import { planTall } from '../../data/motor/plan.ts';
+import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
 import { BLOKKER } from '../sider.ts';
 import { ETT, TEMAORD } from './Naturtema.tsx';
 import { Sidelenke } from './deler.tsx';
@@ -32,17 +25,17 @@ const avLand = (a: number | null) => (a !== null ? `, ${andelTekst(a)} av landar
 
 /* Utbredelsesregnskapet: natur nå, og forskjellen fra 2017 */
 function regnskap() {
-  const T = arealtall();
-  if (!T || T.tilstand === 'henter') return HENTER;
-  if (T.tilstand !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
-  const U = utbredelse(),
-    natur = U!.klasser[0],
-    E = endring(),
+  const T = valgt(katalog.gull.utbredelse);
+  if (!T || T.status === 'henter') return HENTER;
+  if (T.status !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
+  const U = T.verdi!,
+    natur = U.klasser[0],
+    E = verdi(katalog.gull.endring),
     d = E && !E.endret ? E.klasser[0].km2 : 0;
   return {
     tall: dekar(natur.km2),
     tekst:
-      `Natur i ${U!.aar}${avLand(natur.andel)}.` +
+      `Natur i ${U.aar}${avLand(natur.andel)}.` +
       (Math.round(d * 1000)
         ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E!.fra}, men forskjellen mellom årgangene er ikke målt endring.`
         : '')
@@ -51,12 +44,11 @@ function regnskap() {
 
 /* Verneområder, villrein og verdsatt natur: antall, areal og planlagt utbygging innenfor */
 function naturtema(id: string) {
-  const tema = NATURTEMA.find(x => x.id === id)!,
-    t = { ...tema, ...TEMAORD[id] },
-    T = naturtemaet(tema);
-  if (!T) return HENTER;
-  const { D, N } = T;
-  if (D.feil) return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
+  const t = { ...NATURTEMA.find(x => x.id === id)!, ...TEMAORD[id] },
+    T = valgt(TEMATABELLER[id].tall);
+  if (!T || T.status === 'henter') return HENTER;
+  if (T.status === 'feil') return ingenTall(`${t.navn} kunne ikke hentes fra Miljødirektoratet.`);
+  const { D, N } = T.verdi!;
   if (!N.antall) return ingenTall(`Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`);
   const verdi = N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : '',
     plan =
@@ -73,7 +65,7 @@ function naturtema(id: string) {
 
 /* Inngrepsfri natur og grått areal hentes som ett bilde av kommunen */
 function inon() {
-  const I = inonTall();
+  const I = bildetallet(valgt(katalog.gull.inon));
   if (I.tilstand === 'henter') return HENTER;
   if (I.tilstand === 'feil') return ingenTall('Inngrepsfri natur kunne ikke hentes fra Miljødirektoratet.');
   if (I.tilstand === 'ingen')
@@ -81,7 +73,7 @@ function inon() {
   return { tall: dekar(I.sum), tekst: `Minst én kilometer fra tyngre tekniske inngrep${avLand(I.andelLand)}.` };
 }
 function graa() {
-  const G = graaTall();
+  const G = bildetallet(valgt(katalog.gull.graa));
   if (G.tilstand === 'henter') return HENTER;
   if (G.tilstand === 'feil') return ingenTall('Grått areal kunne ikke hentes fra NIBIO.');
   if (G.tilstand === 'ingen') return ingenTall('Kartet over grå arealer har ingen flater i kommunen.');
@@ -94,7 +86,7 @@ function graa() {
 /* Utvikling fremover: natur og jordbruk som kommuneplanen setter av til utbygging */
 function framtid() {
   if (utenPlan()) return ingenTall('Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for kommunen.');
-  const P = planSum();
+  const P = verdi(katalog.gull.plansum);
   if (P)
     return {
       tall: dekar(P.nat),

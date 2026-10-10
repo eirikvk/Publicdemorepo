@@ -1,43 +1,28 @@
-/* Datamotoren, kommunen: listen over kommuner, valg av kommune, og det som hentes og regnes ut med en gang når en kommune velges.
-   Alt som hentes, går gjennom katalogen. Visningen spør selv etter det den trenger (les-gjennom), men slik er det meste klart før
-   noen spør, og sidene kan byttes uten å vente. */
-import { ferdig, hent, se } from './katalog.ts';
-import {
-  AREALTALL,
-  GRAA,
-  GRENSE,
-  HISTORIE,
-  INON,
-  KARTLAGT,
-  KOMMUNER,
-  OVERSIKTSBILDE,
-  OVERSIKTSREGISTER,
-  PLANINFO,
-  TEMAAREAL,
-  TEMAINNE,
-  TEMAOMRADER
-} from './datasett.ts';
+/* Datamotoren, kommunen: listen over kommuner, valg av kommune, og det sidene viser, som bes om med en gang. Alt hentes gjennom
+   katalogen. Sidene spør selv etter det de trenger, men slik er det meste klart før noen spør, og sidene kan byttes uten å vente. */
+import { nårGullUtdatert, se } from '../cache.ts';
+import { katalog } from '../katalog.ts';
 import type { Fylke, Kommune } from '../solv/felles.ts';
 import { lagret, startSamling, stoppRegning } from './grunnkart.ts';
-import { NATURTEMA, type Naturtema } from './naturtema.ts';
-import { regnAlt, regnKryss } from './plan.ts';
+import { regnAlt } from './plan.ts';
+import { valgtNr } from './valgt.ts';
 import { app, endret } from './tilstand.ts';
 
 /* Fylkene med kommunene sine, sortert etter navn. Tom til listen er hentet. */
-export const kommuner = (): Fylke[] => ferdig(KOMMUNER, '') || [];
+export const kommuner = (): Fylke[] => katalog.bronse.kommuner.naa() || [];
 /* Kommunelisten kunne ikke hentes */
 export const listeFeil = () => {
-  const e = se(KOMMUNER, '');
-  return !!e && e.status === 'feil';
+  const r = se(katalog.bronse.kommuner, undefined);
+  return !!r && r.status === 'feil';
 };
 /* Listen over fylker og kommuner, og registeret over lagrede oversiktsbilder. Kalles én gang når siden åpnes. */
 export async function hentKommuner() {
   try {
-    await hent(KOMMUNER, '');
+    await katalog.bronse.kommuner();
   } catch (e) {
     return false;
   }
-  await hent(OVERSIKTSREGISTER, '');
+  await katalog.bronse.oversiktsregister();
   return true;
 }
 
@@ -46,39 +31,25 @@ export const finn = (nr: string): [Fylke, Kommune] | null => {
   return null;
 };
 
-const stille = () => {}; /* en feil står i katalogen, og siden viser den */
+const stille = () => {}; /* en feil står i cachen, og siden viser den */
+/* Alt sidene viser for kommunen nr: alle tabellene i gull. De henter selv det de bygger på. */
+function regnGull(nr: string) {
+  if (nr === valgtNr()) for (const t of Object.values(katalog.gull)) t(nr).catch(stille);
+}
+/* Når planrutenettet eller det kartlagte er nytt, regnes det sidene viser ut på nytt med en gang */
+nårGullUtdatert(regnGull);
 
-/* Det sidene viser for kommunen nr, hentes og regnes ut med en gang. Grensen kommer først, fordi temaene, planen og bildene av hele
-   kommunen klippes mot den. */
+/* Det sidene viser for kommunen nr, og planrutenettet. Planrutenettet regnes ut når grensen, opplysningen om kommuneplanen og dagens
+   klasser zoomet ut finnes: det lagrede oversiktsbildet, eller det sammensatte kartet for kommuner uten. */
 function hentForSidene(nr: string) {
   regnAlt();
-  /* Med lagret oversiktsbilde regnes planlagt utbygging ut for hele kommunen når bildet er hentet. Feiler det, brukes det
-     sammensatte kartet i stedet. */
-  if (lagret(nr)) hent(OVERSIKTSBILDE, nr).then(regnAlt, () => startSamling(nr).catch(stille));
-  hent(AREALTALL, nr).catch(stille);
-  hent(HISTORIE, nr).catch(stille);
-  hent(GRENSE, nr).then(() => {
+  if (lagret(nr)) katalog.solv.oversikt(nr).then(regnAlt, () => startSamling(nr).catch(stille));
+  katalog.solv.grense(nr).then(() => {
     regnAlt();
-    hent(PLANINFO, nr).then(regnAlt, regnAlt);
-    hent(INON, nr).catch(stille);
-    hent(GRAA, nr).then(regnKryss, stille);
-    for (const tema of NATURTEMA) hentTema(tema, nr);
+    katalog.solv.planinfo(nr).then(regnAlt, regnAlt);
     if (!lagret(nr)) startSamling(nr).catch(stille);
   }, stille);
-}
-/* Et naturtema: områdene, arealet, og for verdsatt natur det kartlagte og arealet innenfor det. Kryssingen følger når områdene
-   er hentet. */
-function hentTema(tema: Naturtema, nr: string) {
-  const x = { tema, nr };
-  hent(TEMAOMRADER, x).then(() => {
-    hent(TEMAAREAL, x).catch(stille);
-    regnKryss();
-    if (tema.dekning)
-      hent(KARTLAGT, nr).then(() => {
-        if (tema.klasser) hent(TEMAINNE, x).catch(stille);
-        regnKryss();
-      }, stille);
-  }, stille);
+  regnGull(nr);
 }
 
 /* Velger kommunen nr. Det som gjelder kommunen, leses fra katalogen med kommunenummeret, så ingenting fra forrige kommune kan vises

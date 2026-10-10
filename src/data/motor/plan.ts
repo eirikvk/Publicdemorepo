@@ -1,34 +1,40 @@
-/* Datamotoren, planlagt utbygging: samordningen av planrutenettet og kryssingene som følger det. Om DiBK har kommuneplanen, står i
-   datasettet solv.planinfo. Kommuneplanen hentes i bronse/dibk-kommuneplan.ts, planrutenettet bygges i solv/planrutenett.ts, og
-   tallene sidene viser, lages i gull/planlagt.ts. Kartlaget for planen ligger i ui/kart/plan.ts. */
+/* Datamotoren, planlagt utbygging: utregningen av planrutenettet, som datamotoren legger i katalogen selv (solv.planrutenett), fordi
+   det bygges opp etter hvert som det kommer mer kart. Kommuneplanen hentes i bronse/dibk-kommuneplan.ts, planrutenettet bygges i
+   solv/planrutenett.ts, og tallene sidene viser, lages i gull/planlagt.ts. Kartlaget for planen ligger i ui/kart/plan.ts.
+   Når et nytt planrutenett legges inn, er gull for kommunen utdatert, og det sidene viser, regnes ut på nytt (se kommune.ts). */
 import { kommuneplanUrl } from '../bronse/dibk-kommuneplan.ts';
+import { begynt, feilet, glem, legg, se, utdaterGull } from '../cache.ts';
+import { katalog } from '../katalog.ts';
 import { PLANNIVA, RUTE_M, flisUtsnitt, fliserI, type Flis } from '../solv/felles.ts';
 import { byggPlanRaster, tellBlokk, type Blokk } from '../solv/planrutenett.ts';
 import { bildePiksler } from '../solv/raster.ts';
-import type { Naturtema } from './naturtema.ts';
-import { begynt, feilet, hent, hentStraks, legg, se, utgave } from './katalog.ts';
-import {
-  GRAA,
-  GRAAKRYSS,
-  GRENSE,
-  KARTLAGT,
-  PLANBLOKKER,
-  PLANFLIS,
-  PLANINFO,
-  PLANRUTENETT,
-  TEMAKRYSS,
-  TEMAOMRADER,
-  type Kryssnokkel
-} from './datasett.ts';
 import { mine, utenPlan } from './egne.ts';
-import { dagensKlasser, oversikt, samlingen } from './grunnkart.ts';
-import { NATURTEMA } from './naturtema.ts';
-import { app, endret, tidSlutt } from './tilstand.ts';
+import { dagensKlasser, lagret, oversikt, samlingen } from './grunnkart.ts';
+import { valgtNr } from './valgt.ts';
+import { endret, tidSlutt } from './tilstand.ts';
 
 /* Kommunen har ingen kommuneplan hos DiBK */
 export function ingenPlan() {
-  const e = app.valgt && se(PLANINFO, app.valgt.nr);
-  return !!e && e.status === 'ok' && !e.verdi!.finnes;
+  const nr = valgtNr(),
+    r = nr ? se(katalog.solv.planinfo, nr) : null;
+  return !!r && r.status === 'ok' && !r.verdi!.finnes;
+}
+/* Planrutenettet for valgt kommune: det siste som er regnet ut, også mens det regnes ut på nytt */
+export function planrutenett() {
+  const nr = valgtNr(),
+    r = nr ? se(katalog.solv.planrutenett, nr) : null;
+  return r && r.verdi ? r.verdi : null;
+}
+/* Hvor langt utregningen av planlagt utbygging er kommet: tom (ingenting å regne på), zoom (zoom inn for å få kart), regner, feil
+   eller ok */
+export function planTall(): 'tom' | 'zoom' | 'regner' | 'feil' | 'ok' {
+  const nr = valgtNr(),
+    g = nr ? se(katalog.solv.grense, nr) : null;
+  if (!nr || !g || g.status !== 'ok' || utenPlan()) return 'tom';
+  const r = se(katalog.solv.planrutenett, nr);
+  if (r) return r.status === 'henter' ? 'regner' : r.status;
+  if (!oversikt()) return lagret(nr) ? 'tom' : 'zoom';
+  return 'regner';
 }
 
 /* Planrutenettet regnes ut i nettleseren: planflisene på nivå 9 (21 meter per piksel) legges oppå dagens klasser, og pikslene telles.
@@ -38,7 +44,7 @@ let regnNr = 0;
 async function hentBlokk(tc: Flis, fliser: Flis[] | null): Promise<Blokk> {
   const [K, buf] = await Promise.all([
     dagensKlasser(tc),
-    ingenPlan() ? null : hent(PLANFLIS, kommuneplanUrl(flisUtsnitt(tc)))
+    ingenPlan() ? null : katalog.bronse.planflis(kommuneplanUrl(flisUtsnitt(tc)))
   ]);
   if (!K) throw new Error('mangler dagens klasser');
   const P = buf
@@ -47,23 +53,34 @@ async function hentBlokk(tc: Flis, fliser: Flis[] | null): Promise<Blokk> {
   return { ...tellBlokk(K, P, tc, fliser), utenPlan: !buf };
 }
 /* Samordner utregningen for valgt kommune: finner ut hva som kan regnes ut nå, regner ut blokkene som mangler, bygger rutenettet og
-   legger det i katalogen. Hvor langt det er kommet, leses av planTall i gulldata.ts. */
+   legger det i katalogen. Uten plan og uten egne områder finnes det ikke noe planrutenett. */
 async function regnPlan() {
   const mitt = ++regnNr,
     Z = PLANNIVA,
-    nr = app.valgt ? app.valgt.nr : null,
-    g = nr ? se(GRENSE, nr) : null;
-  if (!nr || !g || g.status !== 'ok' || utenPlan()) return endret();
+    nr = valgtNr(),
+    g = nr ? se(katalog.solv.grense, nr) : null;
+  if (!nr || !g || g.status !== 'ok') return endret();
+  if (utenPlan()) {
+    if (se(katalog.solv.planrutenett, nr)) {
+      glem(katalog.solv.planrutenett, k => k === nr);
+      utdaterGull(nr);
+    }
+    return endret();
+  }
   const E = mine(),
     ov = oversikt();
   if (!ov) return endret();
   const dyn = !!ov.dynamisk,
     sm = dyn ? samlingen() : null;
   if (dyn && !sm) return;
-  begynt(PLANRUTENETT, nr, dyn); /* nye tall i det sammensatte kartet erstatter de gamle uten at teksten blinker */
+  begynt(
+    katalog.solv.planrutenett,
+    nr,
+    dyn
+  ); /* nye tall i det sammensatte kartet erstatter de gamle uten at teksten blinker */
   /* Rutenettet bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
      fliser innenfor den, så et nytt utsnitt koster én eller to blokker og ikke hele det hentede området. */
-  const blokker = hentStraks(PLANBLOKKER, nr, () => new Map<string, Blokk>()),
+  const blokker = katalog.solv.planblokker.straks(nr, () => new Map<string, Blokk>()),
     under = new Map<string, Flis[] | null>();
   if (dyn)
     for (const v of sm!.har) {
@@ -85,10 +102,10 @@ async function regnPlan() {
       })
     );
   } catch (e) {
-    if (mitt === regnNr) feilet(PLANRUTENETT, nr);
+    if (mitt === regnNr) feilet(katalog.solv.planrutenett, nr);
     return;
   }
-  if (mitt !== regnNr || nr !== (app.valgt && app.valgt.nr)) return;
+  if (mitt !== regnNr || nr !== valgtNr()) return;
   const t0 = performance.now(),
     m = RUTE_M;
   const R = byggPlanRaster(
@@ -100,46 +117,7 @@ async function regnPlan() {
     Math.round(dyn ? Math.max(m, sm!.res) : m)
   );
   tidSlutt('plantall', t0);
-  legg(PLANRUTENETT, nr, { ...R, egneIder: E.map(x => x.id) });
+  legg(katalog.solv.planrutenett, nr, { ...R, egneIder: E.map(x => x.id) });
 }
-
-/* Det kryssingen av et naturtema bygger på, for valgt kommune: planrutenettet, og det kartlagte når temaet har kartleggingsgrad,
-   med utgavene av det kryssingen regnes ut av. null uten planrutenett eller uten noe å krysse med. */
-export function temagrunnlag(tema: Naturtema): Kryssnokkel | null {
-  const nr = app.valgt && app.valgt.nr,
-    e = nr ? se(PLANRUTENETT, nr) : null;
-  if (!nr || !e || !e.verdi || utenPlan()) return null;
-  const v = tema.dekning ? se(KARTLAGT, nr) : null,
-    kartlagt = v && v.status === 'ok' ? v.verdi! : null;
-  return {
-    tema,
-    nr,
-    R: e.verdi,
-    kartlagt,
-    utgaver: [e.utgave, utgave(TEMAOMRADER, { tema, nr }), kartlagt ? v!.utgave : 0]
-  };
-}
-/* Det samme for grått areal: planrutenettet, når grått areal er hentet */
-export function graagrunnlag() {
-  const nr = app.valgt && app.valgt.nr,
-    e = nr ? se(PLANRUTENETT, nr) : null,
-    G = nr ? se(GRAA, nr) : null;
-  if (!nr || !e || !e.verdi || utenPlan() || !G || G.status !== 'ok') return null;
-  return { nr, R: e.verdi, utgaver: [e.utgave, G.utgave] };
-}
-/* Kryssingene som følger planrutenettet regnes ut med en gang, så de er klare når en side spør: naturtemaene som er hentet, og grått
-   areal. */
-export function regnKryss() {
-  const nr = app.valgt && app.valgt.nr;
-  if (!nr) return;
-  for (const tema of NATURTEMA) {
-    const K = temagrunnlag(tema),
-      O = se(TEMAOMRADER, { tema, nr });
-    if (K && O && O.status === 'ok') hent(TEMAKRYSS, K).catch(() => {});
-  }
-  const G = graagrunnlag();
-  if (G) hent(GRAAKRYSS, G).catch(() => {});
-  endret();
-}
-/* Planrutenettet, og så kryssingene, som følger det */
-export const regnAlt = () => regnPlan().then(regnKryss);
+/* Planrutenettet for valgt kommune regnes ut, hvis det kan. Et nytt planrutenett gjør gull for kommunen utdatert. */
+export const regnAlt = () => regnPlan();

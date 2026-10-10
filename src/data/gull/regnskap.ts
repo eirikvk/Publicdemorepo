@@ -1,6 +1,7 @@
 /* Gull for utbredelsesregnskapet og land og vann: det siden viser om arealet i kommunen, regnet ut fra SSB-tallene i sølv. Klassene
    står med natur først. Alle arealer er i km². */
 import { summen } from '../generelt/tall.ts';
+import { katalog } from '../katalog.ts';
 import { HAV_MIN_ANDEL, HAV_MIN_KM2 } from '../solv/felles.ts';
 import { KL, type KlasseId } from '../solv/klasser.ts';
 import type { Historie } from '../solv/ssb.ts';
@@ -65,7 +66,7 @@ export function byggOppstilling(H: Historie | null) {
 
 /* Delene av kommunens flate: land og ferskvann fra SSB, og hav som det som blir igjen av flaten (fra kommunegrensen). En liten rest
    er avvik mellom grense og statistikk, ikke hav. */
-export function landOgVann(flate: number, land: number, ferskvann: { inn: number; elv: number } | null) {
+export function byggLandOgVann(flate: number, land: number, ferskvann: { inn: number; elv: number } | null) {
   if (!land || !ferskvann || !flate) return null;
   let hav = flate - land - ferskvann.inn - ferskvann.elv;
   if (hav < Math.max(HAV_MIN_KM2, flate * HAV_MIN_ANDEL)) hav = 0;
@@ -80,4 +81,21 @@ export function landOgVann(flate: number, land: number, ferskvann: { inn: number
       ] as [id: string, navn: string, km2: number][]
     ).filter(d => d[2] > 0)
   };
+}
+
+/* Tabellene gull.utbredelse, gull.endring, gull.oppstilling og gull.landOgVann for kommunen nr */
+export type Utbredelse = NonNullable<ReturnType<typeof byggUtbredelse>>;
+export async function utbredelse(nr: string): Promise<Utbredelse> {
+  const T = await katalog.solv.arealtall(nr);
+  return byggUtbredelse({ tilstand: 'ok', a: T.a, aar: T.aar })!;
+}
+export async function endring(nr: string): Promise<Endring | null> {
+  return byggEndring(await katalog.solv.historie(nr));
+}
+export async function oppstilling(nr: string): Promise<ReturnType<typeof byggOppstilling>> {
+  return byggOppstilling(await katalog.solv.historie(nr));
+}
+export async function landOgVann(nr: string): Promise<ReturnType<typeof byggLandOgVann>> {
+  const [g, T] = await Promise.all([katalog.solv.grense(nr), katalog.solv.arealtall(nr)]);
+  return byggLandOgVann(g.km2, T.land, T.ferskvann);
 }

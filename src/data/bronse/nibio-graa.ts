@@ -4,6 +4,8 @@ import { GRAATRINN } from '../solv/graa.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
 import type { Kommune } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
+import { kommunen } from './kartverket.ts';
+import { bildenett } from '../solv/kommune.ts';
 import { wmsBilde } from './wms.ts';
 
 const GRAA = 'https://wms.nibio.no/cgi-bin/graastruktur';
@@ -37,3 +39,15 @@ export const hentGraaBilde = (k: Kommune, lag: number, u: Utsnitt, w: number, h:
     false,
     true
   );
+
+/* Tabellen bronse.graaflis: et kartbilde av grått areal til kartlaget, med adressen som nøkkel */
+export async function graaflis(url: string): Promise<ArrayBuffer> {
+  return hentGraaFlis(url);
+}
+/* Tabellen bronse.graabilder: de to bildene av grått areal over hele kommunen, som PNG: alt grått areal, og flatene med oppgitt
+   andel vegetasjon */
+export async function graabilder(nr: string): Promise<ArrayBuffer[]> {
+  const k = await kommunen(nr),
+    R = await bildenett(nr);
+  return Promise.all([hentGraaBilde(k, 0, R.u, R.w, R.h), hentGraaBilde(k, 1, R.u, R.w, R.h)]);
+}

@@ -11,9 +11,9 @@ import { ol } from './ol.ts';
 import { grunnkartUrl } from '../../data/bronse/nibio-grunnkart.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
 import { UTM } from '../../data/solv/felles.ts';
-import { GRUNNKARTFLIS, type Oversikt } from '../../data/motor/datasett.ts';
+import { katalog } from '../../data/katalog.ts';
+import type { Oversikt } from '../../data/solv/grunnkart.ts';
 import { oversikt } from '../../data/motor/grunnkart.ts';
-import { hent } from '../../data/motor/katalog.ts';
 import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
 import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte, type Flislag } from './felles.ts';
@@ -24,7 +24,8 @@ import { tegnPlan } from './plan.ts';
 export const klare = new Set<string>(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
 const flisUrl = (tc: TileCoord) => grunnkartUrl(flisnett.getTileCoordExtent(tc));
 function lastFlis(tile: ImageTile, src: string) {
-  hent(GRUNNKARTFLIS, src)
+  katalog.bronse
+    .grunnkartflis(src)
     .then(fargeleggBlob)
     .then(blob => {
       const img = tile.getImage() as HTMLImageElement,

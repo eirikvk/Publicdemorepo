@@ -2,16 +2,12 @@
    arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdselsanlegg og teknisk infrastruktur) og arealbruksstatus 2
    (framtidig), som kartbilder. */
 import type { Utsnitt } from '../generelt/geometri.ts';
-import type { Kommune } from '../solv/felles.ts';
+import { katalog } from '../katalog.ts';
+import { BILDE_PLANDEKNING, rutenett, type Kommune } from '../solv/felles.ts';
+import type { Planopplysninger } from '../solv/planrutenett.ts';
 import { hent, lagHenter } from './henting.ts';
+import { kommunen } from './kartverket.ts';
 import { wmsBilde, wmsOppslag } from './wms.ts';
-
-/* Kommuneplanen DiBK har: plan-id, hvem som har levert den, og datoen den ble kopiert til DiBK som [år, måned, dag] */
-export interface Planopplysninger {
-  id: string;
-  vert: string;
-  kopiert: string[] | null;
-}
 
 const PLAN = 'https://nap.ft.dibk.no/services/wms/kommuneplaner/';
 const planSom = (v: string) =>
@@ -80,3 +76,21 @@ export const hentPlaninfo = (
       kopiert: d ? [d[1], d[2], d[3]] : null
     };
   });
+
+/* Tabellen bronse.planflis: et kartbilde av kommuneplanen, med adressen som nøkkel */
+export async function planflis(url: string): Promise<ArrayBuffer> {
+  return hentKommuneplanFlis(url);
+}
+/* Tabellen bronse.plandekning: ett lite bilde av hele planlaget over kommunen */
+export async function plandekning(nr: string): Promise<ArrayBuffer> {
+  const R = rutenett((await katalog.solv.grense(nr)).ext, ...BILDE_PLANDEKNING);
+  return hentPlandekning(await kommunen(nr), R.u, R.w, R.h);
+}
+/* Tabellen bronse.planopplysninger: hvilken plan kommunen har, slått opp i én rute midt i det planen dekker. null når planen ikke
+   finnes, eller ruta ikke har en plan fra kommunen. */
+export async function planopplysninger(nr: string): Promise<Planopplysninger | null> {
+  const D = await katalog.solv.plandekning(nr);
+  if (!D.finnes) return null;
+  const q = D.treff[D.treff.length >> 1];
+  return hentPlaninfo(await kommunen(nr), D.u, D.w, D.h, q % D.w, Math.floor(q / D.w));
+}

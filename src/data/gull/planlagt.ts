@@ -1,8 +1,9 @@
 /* Gull for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av, regnet ut fra planrutenettet i
    sølv. Arealer er i km², andeler i prosent. */
+import { katalog } from '../katalog.ts';
 import { OPPLOSNINGER, RUTE } from '../solv/felles.ts';
-import type { Planrutenett } from '../solv/planrutenett.ts';
-import { andel } from './felles.ts';
+import type { Planinfo, Planrutenett } from '../solv/planrutenett.ts';
+import { andel, landareal } from './felles.ts';
 
 /* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av i km², om bare en del av kommunen er hentet, og hvor mange
    egne områder som er med */
@@ -42,3 +43,18 @@ export const byggPlanSum = (R: Planrutenett): PlanSum => ({
   delvis: R.delvis,
   egne: R.antallEgne
 });
+
+/* Tabellen gull.kommuneplan: om DiBK har kommuneplanen for kommunen nr, hvor stor del av kommunen den dekker, og hvilken plan */
+export async function kommuneplan(nr: string): Promise<Planinfo> {
+  return katalog.solv.planinfo(nr);
+}
+/* Tabellene gull.planlagt og gull.plansum for kommunen nr, når planrutenettet finnes */
+export type Planlagt = ReturnType<typeof byggPlanlagt>;
+export async function planlagt(nr: string): Promise<Planlagt | null> {
+  const R = katalog.solv.planrutenett.naa(nr);
+  return R ? byggPlanlagt(R, await landareal(nr)) : null;
+}
+export async function plansum(nr: string): Promise<PlanSum | null> {
+  const R = katalog.solv.planrutenett.naa(nr);
+  return R ? byggPlanSum(R) : null;
+}

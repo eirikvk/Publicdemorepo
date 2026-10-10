@@ -3,6 +3,8 @@
 import type { Utsnitt } from '../generelt/geometri.ts';
 import type { Kommune } from '../solv/felles.ts';
 import { hent } from './henting.ts';
+import { kommunen } from './kartverket.ts';
+import { bildenett } from '../solv/kommune.ts';
 import { wmsBilde } from './wms.ts';
 
 const INON = 'https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms';
@@ -17,3 +19,9 @@ const inonBilde = (u: Utsnitt, w: number, h: number) =>
 /* Bildet av utsnittet u med w x h ruter for kommunen k, som PNG */
 export const hentInonBilde = (k: Kommune, u: Utsnitt, w: number, h: number) =>
   hent('Miljødirektoratet', `Inngrepsfri natur i ${k.navn}`, inonBilde(u, w, h), false, true);
+
+/* Tabellen bronse.inonbilde: bildet av sonene over hele kommunen, som PNG, i rutenettet bildet tolkes i */
+export async function inonbilde(nr: string): Promise<ArrayBuffer> {
+  const R = await bildenett(nr);
+  return hentInonBilde(await kommunen(nr), R.u, R.w, R.h);
+}

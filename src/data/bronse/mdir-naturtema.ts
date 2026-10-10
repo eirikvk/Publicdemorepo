@@ -1,9 +1,11 @@
 /* Bronse for Miljødirektoratets karttjenester (ArcGIS REST): verneområder, leveområder for villrein, naturtyper med KU-verdi og
    dekningskartet for naturtypekartlegging. Flatene hentes som GeoJSON i UTM33, forenklet med noen meter, og kommer urørt tilbake. */
 import type { Utsnitt } from '../generelt/geometri.ts';
+import { katalog } from '../katalog.ts';
 import { UTM, type Kommune } from '../solv/felles.ts';
 import type { Objekt } from '../solv/temaer.ts';
 import { hent } from './henting.ts';
+import { kommunen } from './kartverket.ts';
 
 /* Svaret fra tjenesten: flatene, og om det var flere enn tjenesten gir i ett svar */
 export interface Temasvar {
@@ -61,3 +63,18 @@ export const hentKartlagt = (k: Kommune, e: Utsnitt) =>
       outFields: 'Årstall'
     })
   ) as Promise<Temasvar>;
+
+/* Tabellene bronse.verneomrader, bronse.villrein og bronse.verdsattNatur: flatene i hvert tema for kommunen, som GeoJSON */
+export async function verneomrader(nr: string): Promise<Temasvar> {
+  return hentTemaflater('vern', 'Verneområder', await kommunen(nr));
+}
+export async function villrein(nr: string): Promise<Temasvar> {
+  return hentTemaflater('rein', 'Villrein', await kommunen(nr));
+}
+export async function verdsattNatur(nr: string): Promise<Temasvar> {
+  return hentTemaflater('verdi', 'Verdsatt natur', await kommunen(nr));
+}
+/* Tabellen bronse.kartlagt: dekningsflatene for naturtypekartlegging rundt kommunen, som GeoJSON */
+export async function kartlagt(nr: string): Promise<Temasvar> {
+  return hentKartlagt(await kommunen(nr), (await katalog.solv.grense(nr)).ext) as Promise<Temasvar>;
+}

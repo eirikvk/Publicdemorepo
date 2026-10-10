@@ -1,6 +1,7 @@
 /* Bronse for SSB: tabell 09594, «Arealbruk og arealressurser», gjennom SSBs API. Svarene kommer urørt tilbake som JSON-stat 2.0 og
    gjøres om i solv/ssb.ts. */
 import type { Kommune } from '../solv/felles.ts';
+import { kommunen } from './kartverket.ts';
 import { KL, VANN } from '../solv/klasser.ts';
 import type { JsonStat } from '../solv/ssb.ts';
 import { hent } from './henting.ts';
@@ -53,3 +54,12 @@ export const hentTidsserie = (k: Kommune) =>
     ['agg:KommSummer', ['K-' + k.nr]],
     ['all', ['*']]
   );
+
+/* Tabellen bronse.arealtall: arealet per klasse for kommunen i nyeste år, som JSON-stat */
+export async function arealtall(nr: string): Promise<JsonStat> {
+  return hentArealtall(await kommunen(nr));
+}
+/* Tabellen bronse.arealtidsserie: arealet per klasse fra 2017, som JSON-stat */
+export async function arealtidsserie(nr: string): Promise<JsonStat> {
+  return hentTidsserie(await kommunen(nr));
+}

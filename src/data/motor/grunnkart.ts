@@ -1,59 +1,59 @@
 /* Datamotoren, dagens klasser: hvilken arealklasse hver piksel har i dag, fra grunnkartet til NIBIO. Planlagt utbygging legges oppå
    dette, og kartlagene for planlagt utbygging, inngrepsfri natur og grått areal tegnes oppå det.
-   Dagens klasser kommer fra tre steder, alle i katalogen (datasett.ts):
+   Dagens klasser kommer fra tre steder i katalogen:
    - Zoomet inn: kartbildene fra NIBIO, én flis om gangen (bronse.grunnkartflis).
-   - Zoomet ut, i kommuner med lagret oversiktsbilde: bildet av hele kommunen (bronse.oversiktsbilde).
-   - Zoomet ut ellers: det sammensatte kartet, satt sammen av flisene som er hentet (solv.sammensatt).
+   - Zoomet ut, i kommuner med lagret oversiktsbilde: bildet av hele kommunen (solv.oversikt).
+   - Zoomet ut ellers: det sammensatte kartet, som datamotoren setter sammen av flisene som er hentet (solv.sammensatt).
    Bildene har klassene i rene farger (DATAFARGE i solv/klasser.ts). Klassen leses av fargen med klasseAv. Kartet får egne kopier i
    visningsfargene, se ui/kart/grunnkart.ts. */
 import { FLISNIVA, grunnkartUrl } from '../bronse/nibio-grunnkart.ts';
 import { opptatt } from '../bronse/henting.ts';
+import { alle, se, vedGlemt, vedNy } from '../cache.ts';
 import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
+import { katalog, type Samling } from '../katalog.ts';
 import { OPPLOSNINGER, ORIGO, flisUtsnitt, type Flis } from '../solv/felles.ts';
+import type { Oversikt } from '../solv/grunnkart.ts';
 import { flislerret, sti, tegnUtsnitt } from '../solv/raster.ts';
-import { alle, ferdig, hent, se, vedNy } from './katalog.ts';
-import {
-  GRENSE,
-  GRUNNKARTFLIS,
-  OVERSIKTSBILDE,
-  OVERSIKTSREGISTER,
-  OVERSIKT_LEST,
-  SAMMENSATT,
-  type Oversikt,
-  type Samling
-} from './datasett.ts';
 import { regnAlt } from './plan.ts';
+import { valgtNr } from './valgt.ts';
 import { app, endret, tidSlutt, varsle } from './tilstand.ts';
 
 /* Utsnittet det lagrede oversiktsbildet for kommunen nr dekker, når kommunen står i registeret og bildet ikke har feilet */
 export function lagretUtsnitt(nr: string): Utsnitt | null {
-  const reg = ferdig(OVERSIKTSREGISTER, ''),
+  const reg = katalog.bronse.oversiktsregister.naa(),
     ext = reg && reg.kommuner && reg.kommuner[nr];
   if (!ext) return null;
-  const e = se(OVERSIKTSBILDE, nr);
-  return e && e.status === 'feil' ? null : ext;
+  const r = se(katalog.solv.oversikt, nr);
+  return r && r.status === 'feil' ? null : ext;
 }
 export const lagret = (nr: string) => !!lagretUtsnitt(nr);
+/* Tallene gjelder bare den delen av kommunen nettleseren har hentet kart for (kommuner uten lagret oversiktsbilde) */
+export const bareHentetKart = () => {
+  const o = oversikt();
+  return !!o && !!o.dynamisk;
+};
 
 /* Det sammensatte kartet for valgt kommune, når det finnes */
 export function samlingen(): Samling | null {
-  const e = app.valgt && se(SAMMENSATT, app.valgt.nr);
-  return e && e.status === 'ok' ? e.verdi! : null;
+  const nr = valgtNr(),
+    r = nr ? se(katalog.solv.sammensatt, nr) : null;
+  return r && r.status === 'ok' ? r.verdi! : null;
 }
 /* Dagens klasser zoomet ut for valgt kommune: det lagrede oversiktsbildet, eller det sammensatte kartet når det har fått fliser */
 export function oversikt(): Oversikt | null {
-  const nr = app.valgt && app.valgt.nr;
+  const nr = valgtNr();
   if (!nr) return null;
-  if (lagret(nr)) return ferdig(OVERSIKTSBILDE, nr);
+  if (lagret(nr)) return katalog.solv.oversikt.naa(nr);
   const s = samlingen();
   return s && s.har.size ? s.ov : null;
 }
 
-/* Kommuner uten lagret oversiktsbilde: datamotoren setter sammen sitt eget av flisene som er hentet. Zoomer man ut igjen, finnes
-   dermed dagens klasser for det man alt har sett, og planlagt utbygging kan regnes ut for den delen. Det hentes ingenting nytt for
-   dette. Velges kommunen igjen, brukes samlingen fra sist, og alle fliser katalogen har som berører kommunen, legges inn. */
+/* Kommuner uten lagret oversiktsbilde: datamotoren setter sammen sitt eget kart av flisene som er hentet. Zoomer man ut igjen,
+   finnes dermed dagens klasser for det man alt har sett, og planlagt utbygging kan regnes ut for den delen. Det hentes ingenting
+   nytt for dette. Velges kommunen igjen, brukes samlingen fra sist, og alle fliser cachen har som berører kommunen, legges inn. */
 export async function startSamling(nr: string) {
-  const s = await hent(SAMMENSATT, nr);
+  const e = (await katalog.solv.grense(nr)).ext,
+    s = katalog.solv.sammensatt.straks(nr, () => nySamling(e));
   if (s !== samlingen()) return;
   if (s.har.size) {
     endret();
@@ -61,6 +61,27 @@ export async function startSamling(nr: string) {
   }
   fyllSamling(s);
 }
+/* Et tomt sammensatt kart over utsnittet e */
+function nySamling(e: Utsnitt): Samling {
+  const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(e[2] - e[0], e[3] - e[1]) / 2048),
+    c = document.createElement('canvas');
+  c.width = Math.ceil((e[2] - e[0]) / res);
+  c.height = Math.ceil((e[3] - e[1]) / res);
+  const ext: [number, number, number, number] = [e[0], e[3] - c.height * res, e[0] + c.width * res, e[3]];
+  return {
+    c,
+    g: c.getContext('2d', { willReadFrequently: true })!,
+    res,
+    ext,
+    har: new Set<string>(),
+    ov: { lerret: c, ext, res, dynamisk: true }
+  };
+}
+/* Et sammensatt kart som går ut av cachen, frigjøres, og kartet får beskjed så det kan kaste sin kopi */
+vedGlemt(katalog.solv.sammensatt, s => {
+  s.c.width = 0;
+  varsle('samlingFjernet', s.c);
+});
 /* Flisen [z, x, y] en adresse til NIBIO gjelder, lest av utsnittet i adressen, og utsnittet */
 function flisAv(url: string): { tc: Flis; b: number[] } | null {
   let b: number[];
@@ -74,16 +95,16 @@ function flisAv(url: string): { tc: Flis; b: number[] } | null {
     side = 256 * OPPLOSNINGER[z];
   return { tc: [z, Math.round((b[0] - ORIGO[0]) / side), Math.round((ORIGO[1] - b[3]) / side)], b };
 }
-/* Alle fliser katalogen har som berører samlingen, legges inn, én om gangen og uten nye kall */
+/* Alle fliser cachen har som berører samlingen, legges inn, én om gangen og uten nye kall */
 async function fyllSamling(s: Samling) {
-  for (const [url, buf] of alle(GRUNNKARTFLIS)) {
+  for (const [url, buf] of alle(katalog.bronse.grunnkartflis)) {
     if (s !== samlingen()) return;
     const f = flisAv(url);
     if (f && overlapper(f.b, s.ext)) await leggISamling(f.tc, buf);
   }
 }
 /* Hver ny flis fra NIBIO legges inn i det sammensatte kartet for valgt kommune */
-vedNy(GRUNNKARTFLIS, (buf, url) => {
+vedNy(katalog.bronse.grunnkartflis, (buf, url) => {
   const f = flisAv(url);
   if (f) leggISamling(f.tc, buf);
 });
@@ -151,12 +172,12 @@ export const stoppRegning = () => {
 export async function dagensKlasser(tc: Flis): Promise<Uint8ClampedArray | null> {
   const c = flislerret(),
     g = c.getContext('2d', { willReadFrequently: true })!,
-    nr = app.valgt && app.valgt.nr,
+    nr = valgtNr(),
     ov = oversikt(),
-    grense = nr ? se(GRENSE, nr) : null;
+    grense = nr ? se(katalog.solv.grense, nr) : null;
   if (tc[0] >= FLISNIVA)
     g.drawImage(
-      await createImageBitmap(new Blob([await hent(GRUNNKARTFLIS, grunnkartUrl(flisUtsnitt(tc)))])),
+      await createImageBitmap(new Blob([await katalog.bronse.grunnkartflis(grunnkartUrl(flisUtsnitt(tc)))])),
       0,
       0,
       512,
@@ -167,7 +188,7 @@ export async function dagensKlasser(tc: Flis): Promise<Uint8ClampedArray | null>
       r = ov.res;
     tegnUtsnitt(
       g,
-      await hent(OVERSIKT_LEST, nr),
+      await katalog.solv.oversiktLest(nr),
       (u[0] - ov.ext[0]) / r,
       (ov.ext[3] - u[3]) / r,
       (u[2] - u[0]) / r,

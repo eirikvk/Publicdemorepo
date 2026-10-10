@@ -1,6 +1,6 @@
 /* Bronse, felles for alle kildene: hvordan det hentes. Hvert kall måles og føres i kall-loggen, og kartbilder hentes gjennom en kø
-   per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen. Bronse husker ingenting: det som skal huskes, legger
-   datamotoren i katalogen (data/motor/katalog.ts), og den deler også kall som alt er underveis.
+   per kilde med høyst fire kall om gangen. Alt nettverk går gjennom denne filen. Bronse husker ingenting: svarene huskes i cachen
+   (data/cache.ts), som også deler kall som alt er underveis.
    Filen vet ingenting om resten av siden. Hva som skjer, står i henteStatus, og den som vil vite det, gir en funksjon til
    nårHentingEndres (datamotoren gjør det, se data/motor/tilstand.ts). */
 

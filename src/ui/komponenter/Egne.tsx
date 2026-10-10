@@ -1,13 +1,13 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene kommer ferdig regnet ut fra
-   gull/egne.ts gjennom gulldata.ts: egetOmrade for hvert område, og radene i tabellene fra egneRader. */
+   gull: tabellen katalog.gull.egneRader, med hva som ligger i hvert område og radene i tabellene. */
 import { useRef, type ReactNode } from 'react';
-import type { EgenRad } from '../../data/gull/egne.ts';
+import { katalog } from '../../data/katalog.ts';
+import type { EgenRad, EgneRader } from '../../data/gull/egne.ts';
 import type { Type } from '../../data/solv/egne.ts';
-import type { Planrutenett } from '../../data/solv/planrutenett.ts';
-import { lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
-import { oversikt } from '../../data/motor/grunnkart.ts';
-import { bareHentetKart, egetOmrade, egneRader, egneRutenett, grense } from '../../data/motor/gulldata.ts';
+import { egneRutenett, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
+import { bareHentetKart, oversikt } from '../../data/motor/grunnkart.ts';
 import { ingenPlan } from '../../data/motor/plan.ts';
+import { verdi } from '../../data/motor/valgt.ts';
 import { app, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
 import { Talltabell, type Tabellrad } from './deler.tsx';
@@ -69,8 +69,9 @@ function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: s
   return <Talltabell tittel="Planlagt utbygging, daa" kolonner={['På', navnPlan, navnNy, 'Endring']} rader={ut} />;
 }
 
-function EgetOmrade({ g, nr, R }: { g: Eget; nr: number; R: Planrutenett | null }) {
-  const O = R ? egetOmrade(g) : null,
+function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
+  const her = rader && rader.omrader.find(x => x.id === g.id),
+    O = her ? her.omrade : null,
     tekster: string[] = [];
   let tabell: ReactNode = null;
   if (!O) tekster.push(ingenPlan() || oversikt() ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
@@ -96,7 +97,7 @@ function EgetOmrade({ g, nr, R }: { g: Eget; nr: number; R: Planrutenett | null 
     if (O.kjent)
       tabell = (
         <EgenTabell
-          rader={egneRader(nr).filter((r, i) => i < 2 || r.plan || r.ny || r.navn === 'Grått areal')}
+          rader={her!.rader.filter((r, i) => i < 2 || r.plan || r.ny || r.navn === 'Grått areal')}
           navnPlan="Planen her"
           navnNy={g.kilde === 'fil' ? 'Opplastet' : 'Tegningen'}
         />
@@ -160,6 +161,7 @@ export default function Egne() {
   const fil = useRef<HTMLInputElement>(null),
     E = mine(),
     R = egneRutenett(),
+    rader = R ? verdi(katalog.gull.egneRader) : null,
     t = tegner(),
     m = app.egneStatus && STATUS[app.egneStatus.hva](app.egneStatus),
     s = m && { tekst: m[0], type: m[1] };
@@ -176,7 +178,7 @@ export default function Egne() {
               theme="secondary"
               leftIcon={<MdIconEdit />}
               onClick={startTegning}
-              disabled={!grense()}
+              disabled={!verdi(katalog.solv.grense)}
             >
               Tegn eget område
             </MdButton>
@@ -227,16 +229,16 @@ export default function Egne() {
         ))}
       {E.length > 0 && (
         <ul className="egneliste">
-          {E.map((g, nr) => (
-            <EgetOmrade key={g.id} g={g} nr={nr} R={R} />
+          {E.map(g => (
+            <EgetOmrade key={g.id} g={g} rader={rader} />
           ))}
         </ul>
       )}
-      {E.length > 0 && R && (
+      {E.length > 0 && rader && (
         <div className="kort samlet">
           <h3 className="md-typography-heading-xs">Samlet for kommunen</h3>
           <EgenTabell
-            rader={egneRader(null)}
+            rader={rader.kommune}
             navnPlan="Planen"
             navnNy={E.length === 1 && E[0].kilde === 'fil' ? 'Med opplastet' : 'Med egne'}
           />

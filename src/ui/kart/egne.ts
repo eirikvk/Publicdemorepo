@@ -6,7 +6,8 @@ import type Draw from 'ol/interaction/Draw.js';
 import { ol } from './ol.ts';
 import { OPPLOSNINGER, type Kommune } from '../../data/solv/felles.ts';
 import { leggTilEget, mine } from '../../data/motor/egne.ts';
-import { grense } from '../../data/motor/gulldata.ts';
+import { katalog } from '../../data/katalog.ts';
+import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, type EgetOmrade } from '../../data/motor/tilstand.ts';
 import { farge } from '../farger.ts';
 import { kart, tilKartet, view } from './kart.ts';
@@ -64,7 +65,7 @@ export const ferdigTegning = () => {
   if (tegn) tegn.finishDrawing();
 };
 export function startTegning() {
-  if (!app.valgt || !grense() || tegner()) return;
+  if (!app.valgt || !verdi(katalog.solv.grense) || tegner()) return;
   lukkBytt();
   tegn = new ol.interaction.Draw({ type: 'Polygon', stopClick: true, minPoints: 3, style: tegnStil });
   tegn.on('drawend', e => {
@@ -79,7 +80,7 @@ export function startTegning() {
   tilKartet();
 }
 export function visEgetIKartet(g: EgetOmrade) {
-  const G = grense();
+  const G = verdi(katalog.solv.grense);
   view.fit(G ? ol.extent.getIntersection(g.ext, G.ext) : g.ext, {
     padding: [56, 56, 56, 56],
     minResolution: OPPLOSNINGER[13],

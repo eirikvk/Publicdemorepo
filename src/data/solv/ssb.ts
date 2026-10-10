@@ -1,6 +1,7 @@
 /* Sølv for SSB, tabell 09594: svarene (JSON-stat 2.0) gjort om til arealet i km² per klasse (bebygd, jordbruk, natur), med innsjø og
    elv for seg, for nyeste år og for 2017. */
 import { summen } from '../generelt/tall.ts';
+import { katalog } from '../katalog.ts';
 import { GRENSE_FLYTTET } from './felles.ts';
 import { KL } from './klasser.ts';
 
@@ -65,4 +66,13 @@ export function tolkHistorie(j: JsonStat, nr: string): Historie | null {
     a1: klasser(nT - 1),
     endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > GRENSE_FLYTTET
   };
+}
+
+/* Tabellen solv.arealtall: arealet per klasse fra SSB i nyeste år, med landareal, innsjø og elv */
+export async function arealtall(nr: string): Promise<Arealtall> {
+  return tolkAreal(await katalog.bronse.arealtall(nr));
+}
+/* Tabellen solv.historie: arealet per klasse i 2017 og i nyeste år, eller null når serien ikke rekker så langt */
+export async function historie(nr: string): Promise<Historie | null> {
+  return tolkHistorie(await katalog.bronse.arealtidsserie(nr), nr);
 }

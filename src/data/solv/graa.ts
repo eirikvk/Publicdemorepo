@@ -1,6 +1,8 @@
 /* Sølv for grått areal: de to bildene av hele kommunen fra kart over grå arealer (NIBIO, testversjon) gjort om til trinn per rute,
    etter andel vegetasjon. Grått areal er areal som alt er tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet. */
+import { katalog } from '../katalog.ts';
 import { HALV, type Piksler, type Rutebilde } from './felles.ts';
+import { tolketBilde, type Kommuneruter } from './kommune.ts';
 
 /* Trinnet per rute i kommunebildet (0 ikke grått, 1–5 andel vegetasjon, 6 uten oppgitt andel), i rutenettet bildet er hentet i */
 export interface Graatrinn extends Rutebilde {
@@ -41,3 +43,9 @@ export const graaVed = (D: Graatrinn, x: number, y: number) => {
     py = Math.floor((D.u[3] - y) / D.res);
   return px < 0 || py < 0 || px >= D.w || py >= D.h ? 0 : D.kl[py * D.w + px];
 };
+
+/* Tabellen solv.graa: trinnet per rute i bildet av kommunen, og antall ruter per trinn innenfor kommunen */
+export type GraaRuter = Kommuneruter<{ kl: Uint8Array }>;
+export async function graa(nr: string): Promise<GraaRuter> {
+  return tolketBilde(nr, await katalog.bronse.graabilder(nr), ([P, V], M) => tolkGraa(P, V, M));
+}

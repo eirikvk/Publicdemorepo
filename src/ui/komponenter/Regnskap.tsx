@@ -1,19 +1,13 @@
 /* Utbredelsesregnskapet: hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre. Først forklart med
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
-   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull/regnskap.ts, gjennom gulldata.ts. Her blir de tekst, stolper og
-   tabell. */
+   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull (katalog.gull.utbredelse, endring, oppstilling og landOgVann).
+   Her blir de tekst, stolper og tabell. */
 import type { CSSProperties } from 'react';
+import { katalog } from '../../data/katalog.ts';
 import type { Endring } from '../../data/gull/regnskap.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import {
-  arealtall,
-  endring as endringen,
-  landOgVannet,
-  oppstilling,
-  planSum,
-  utbredelse
-} from '../../data/motor/gulldata.ts';
+import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.ts';
 import './Regnskap.css';
@@ -71,10 +65,10 @@ function Endring({ E }: { E: Endring }) {
 
 /* Det pedagogiske: hvor mye natur det er nå, fordelingen på de tre klassene, og forskjellen fra 2017 */
 function Utbredelse() {
-  const T = arealtall(),
-    U = utbredelse(),
+  const T = valgt(katalog.gull.utbredelse),
+    U = T && T.status === 'ok' ? T.verdi! : null,
     natur = U && U.klasser[0],
-    E = endringen();
+    E = verdi(katalog.gull.endring);
   return (
     <section className="utbredelse" aria-labelledby="regnskap-tittel">
       <h2 className="md-typography-heading-s" id="regnskap-tittel">
@@ -82,7 +76,7 @@ function Utbredelse() {
       </h2>
       <p>Hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre over tid.</p>
       {!U ? (
-        <p>{T && T.tilstand === 'feil' ? 'Tallene kunne ikke hentes fra SSB.' : 'Henter …'}</p>
+        <p>{T && T.status === 'feil' ? 'Tallene kunne ikke hentes fra SSB.' : 'Henter …'}</p>
       ) : (
         <div className="fordeling">
           <p className="total">
@@ -107,9 +101,9 @@ function Utbredelse() {
 
 /* Regnskapsoppstillingen: én kolonne per klasse og en sum, og radene areal ved start, netto endring og areal ved slutt */
 function Oppstilling() {
-  const O = oppstilling();
+  const O = verdi(katalog.gull.oppstilling);
   if (!O) return null;
-  const P = utenPlan() ? null : planSum();
+  const P = utenPlan() ? null : verdi(katalog.gull.plansum);
   return (
     <section className="regnskap prosa" aria-labelledby="oppstilling-tittel">
       <h2 className="md-typography-heading-s" id="oppstilling-tittel">
@@ -148,7 +142,7 @@ function Oppstilling() {
 
 /* Land og vann: land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate minus land og ferskvann. */
 function LandOgVann() {
-  const V = landOgVannet();
+  const V = verdi(katalog.gull.landOgVann);
   return (
     <section className="vann" aria-labelledby="vann-tittel">
       <h2 className="md-typography-heading-s" id="vann-tittel">

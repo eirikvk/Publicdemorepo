@@ -195,8 +195,8 @@ export const SCENARIER: Record<string, Scenario> = {
     await vent(p, R, 'trondheim', () => {
       const M = window.motor;
       if (!M || !M.app.valgt) return false;
-      const v = M.data.temadata(M.NATURTEMA.find(t => t.id === 'verdi')!);
-      return M.data.planTall() === 'ok' && !!v && !!v.gap && !!M.data.graaKryss();
+      const v = M.verdi(M.katalog.gull.verdsattNatur);
+      return M.planTall() === 'ok' && !!v && !!v.D.gap && !!M.verdi(M.katalog.gull.graakryss);
     });
     await p.rolig();
     R.motor.start = await p.motor();
@@ -268,9 +268,10 @@ export const SCENARIER: Record<string, Scenario> = {
   async surnadal(p, R, S) {
     await p.goto('http://demo.test/' + S.adresse('1566'));
     await vent(p, R, 'surnadal', () => {
-      const M = window.motor,
-        ok = (x: { tilstand: string } | null) => !!x && x.tilstand === 'ok';
-      return !!M && ok(M.data.inonbilde()) && ok(M.data.arealtall()) && ok(M.data.graabilde());
+      const M = window.motor;
+      return (
+        !!M && !!M.verdi(M.katalog.gull.inon) && !!M.verdi(M.katalog.solv.arealtall) && !!M.verdi(M.katalog.gull.graa)
+      );
     });
     await p.rolig();
     R.motor.start = await p.motor();
@@ -301,9 +302,10 @@ export const SCENARIER: Record<string, Scenario> = {
     await vent(p, R, 'oslo', () => {
       const M = window.motor;
       if (!M) return false;
-      const P = M.data.planinfo(),
-        G = M.data.graabilde();
-      return !!P && P.tilstand === 'ingen' && !!G && G.tilstand === 'ok' && M.NATURTEMA.every(t => M.data.temadata(t));
+      const P = M.verdi(M.katalog.gull.kommuneplan);
+      return (
+        !!P && !P.finnes && !!M.verdi(M.katalog.gull.graa) && M.NATURTEMA.every(t => M.verdi(M.TEMATABELLER[t.id].tall))
+      );
     });
     await p.rolig();
     R.motor.start = await p.motor();
@@ -314,7 +316,7 @@ export const SCENARIER: Record<string, Scenario> = {
     await p.waitForTimeout(6000);
     await vent(p, R, 'malvik', () => {
       const M = window.motor;
-      return !!M && M.data.planTall() === 'ok' && !!M.data.graaKryss();
+      return !!M && M.planTall() === 'ok' && !!M.verdi(M.katalog.gull.graakryss);
     });
     await p.rolig();
     R.motor.malvik = await p.motor();

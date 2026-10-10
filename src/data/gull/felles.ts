@@ -1,5 +1,6 @@
 /* Gull, felles: små hjelpere som flere av svarene bruker. */
 import { summen } from '../generelt/tall.ts';
+import { katalog } from '../katalog.ts';
 import type { Rutebilde } from '../solv/felles.ts';
 
 /* Andelen del er av av, i prosent. null når det ikke er noe å regne andelen av. */
@@ -32,3 +33,11 @@ export function arealFraRuter(n: ArrayLike<number>, res: number, skala: number) 
   const km2 = Array.from(n, v => tiDekar((v * res * res) / skala));
   return { km2, sum: tiDekar(summen(km2)) };
 }
+
+/* Landarealet i kommunen nr i km², summen av de tre klassene fra SSB. 0 når tallene ikke kan hentes, og da regnes ingen andeler av
+   landarealet ut. */
+export const landareal = (nr: string): Promise<number> =>
+  katalog.solv.arealtall(nr).then(
+    T => T.land,
+    () => 0
+  );

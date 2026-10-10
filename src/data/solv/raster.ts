@@ -72,3 +72,6 @@ export function dekketM2(d: Piksler, res: number) {
   for (let i = 3; i < d.length; i += 4) sum += d[i];
   return (sum / 255) * res * res;
 }
+
+/* Et bilde fra en kilde (PNG) lest inn, så det kan tegnes i et lerret */
+export const lesBilde = (buf: ArrayBuffer) => createImageBitmap(new Blob([buf]));

@@ -1,16 +1,16 @@
 /* Datamotoren, egne områder: tegnede områder og opplastede planer. Hvilke flater som er utbygging og hvordan de legges inn i
-   planrutenettet, står i solv/egne.ts, og radene i sammenligningen med kommuneplanen bygges i gull/egne.ts (se egneRader i
-   gulldata.ts). Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder er valg brukeren har gjort, og ligger i app.egne.
+   planrutenettet, står i solv/egne.ts, og radene i sammenligningen med kommuneplanen bygges i gull/egne.ts (tabellen
+   gull.egneRader). Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder er valg brukeren har gjort, og ligger i app.egne.
    De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. */
 import { lesPlanfil } from '../bronse/planfil.ts';
 import { areal, utsnitt, type Flerflate } from '../generelt/geometri.ts';
 import { EGET_MIN_M2, arealKm2 } from '../solv/felles.ts';
 import { planflater, type Type } from '../solv/egne.ts';
 import { tilUTM } from '../solv/projeksjoner.ts';
-import { se } from './katalog.ts';
-import { GRENSE } from './datasett.ts';
+import { se } from '../cache.ts';
+import { katalog } from '../katalog.ts';
 import { finn, velgKommune } from './kommune.ts';
-import { ingenPlan, regnAlt } from './plan.ts';
+import { ingenPlan, planrutenett, regnAlt } from './plan.ts';
 import { app, endret, type EgetOmrade, type EgneStatus } from './tilstand.ts';
 
 let egenTeller = 0;
@@ -63,7 +63,7 @@ export async function lastOppPlan(fil: File | null | undefined) {
     await new Promise(ok => setTimeout(ok, 30));
     const midtAv = (nr: string) => {
       const k = finn(nr)![1],
-        g = app.valgt && app.valgt.nr === nr ? se(GRENSE, nr) : null,
+        g = app.valgt && app.valgt.nr === nr ? se(katalog.solv.grense, nr) : null,
         e = g && g.status === 'ok' ? g.verdi!.ext : null;
       return e
         ? [(e[0] + e[2]) / 2, (e[1] + e[3]) / 2]
@@ -103,4 +103,17 @@ export function settType(g: EgetOmrade, type: Type) {
 export function slettEget(g: EgetOmrade) {
   app.egne.splice(app.egne.indexOf(g), 1);
   egneEndret();
+}
+
+/* Planrutenettet når det er regnet ut med de egne områdene som finnes nå, ellers null */
+export function egneRutenett() {
+  const R = planrutenett(),
+    E = mine();
+  return R && R.eget && R.egneIder.join() === E.map(g => g.id).join() ? R : null;
+}
+/* Hva som ligger i et eget område, i ruter fra planrutenettet. null til området er regnet med. */
+export function egetTall(g: EgetOmrade) {
+  const R = planrutenett(),
+    i = R ? R.egneIder.indexOf(g.id) : -1;
+  return i < 0 ? null : R!.egneTall[i];
 }
