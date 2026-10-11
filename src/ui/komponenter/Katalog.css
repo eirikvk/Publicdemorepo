@@ -16,19 +16,19 @@
   flex-wrap: nowrap;
   gap: var(--md-spacing-4);
 }
-.katalog tr.detalj td {
+.katalog tr.detalj > td {
   padding-left: var(--md-spacing-12);
   border-left: 2px solid var(--linje);
 }
 /* Detaljene gjør ikke tabellen bredere: innholdet er null bredt for tabellen, men fyller cellen. Lange linjer rulles sidelengs. */
-.katalog tr.detalj td > div {
+.katalog tr.detalj > td > div {
   width: 0;
   min-width: 100%;
 }
-.katalog tr.detalj p {
+.katalog tr.detalj > td > div > p {
   margin: 0 0 var(--md-spacing-8);
 }
-.katalog tr.detalj p:last-child {
+.katalog tr.detalj > td > div > p:last-child {
   margin-bottom: 0;
 }
 .katalog code,
@@ -47,4 +47,82 @@
   max-height: 24em;
   overflow: auto;
   white-space: pre;
+}
+
+/* Innholdet i en rad: bilder, rutenett, tabeller og flater (Datavisning.tsx) */
+.datavisning figure {
+  margin: var(--md-spacing-12) 0 0;
+}
+.datavisning figcaption {
+  margin-bottom: var(--md-spacing-4);
+  color: var(--dempet);
+}
+.datavisning img,
+.datavisning canvas,
+.datavisning svg {
+  box-sizing: border-box;
+}
+.datavisning img,
+.datavisning canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--linje);
+  image-rendering: pixelated;
+  touch-action: none;
+}
+.datavisning svg {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  border: 1px solid var(--linje);
+}
+.datavisning svg path {
+  fill: rgba(42, 120, 214, 0.15);
+  stroke: #2a78d6;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.datavisning .her {
+  margin: var(--md-spacing-4) 0 0;
+  color: var(--dempet);
+}
+.datavisning .forklaring {
+  list-style: none;
+  margin: var(--md-spacing-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-4) var(--md-spacing-12);
+}
+.datavisning .forklaring .rute {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: var(--md-spacing-4);
+  vertical-align: -0.1em;
+  border: 1px solid var(--linje);
+}
+.datavisning .forklaring button {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--md-color-cta-primary-default);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.datavisning .forklaring button[aria-pressed='true'] {
+  font-weight: var(--md-typography-weight-medium);
+}
+.datavisning .rullbar {
+  overflow: auto;
+  max-height: 360px;
+}
+.datavisning .rullbar .talltabell th,
+.datavisning .rullbar .talltabell td {
+  white-space: nowrap;
+}
+.katalog details.tre {
+  margin-top: var(--md-spacing-12);
 }

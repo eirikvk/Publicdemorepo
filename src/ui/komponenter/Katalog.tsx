@@ -1,9 +1,11 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: én kort tabell over tabellene i bronse, sølv og gull, med hvor mye
    cachen har lagret i hver. «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
-   kan åpnes for å se verdien. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang siden tegnes. */
+   kan åpnes for å se innholdet: bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Innholdet leses
+   når man ber om det, så det ikke regnes ut på nytt hver gang siden tegnes. */
 import { Fragment, useState } from 'react';
 import { innhold, verdiI } from '../../data/cache.ts';
 import { kb, nf, tid } from '../tekst.ts';
+import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
 import { MdButton } from './md.ts';
 import './Katalog.css';
 
@@ -100,13 +102,18 @@ function somTekst(v: unknown): string {
   return linjer.join('\n');
 }
 
-/* Én rad i cachen. Verdien vises først når raden åpnes, og leses da fra cachen. */
+/* Én rad i cachen. Verdien vises først når raden åpnes, og leses da fra cachen: innholdet etter formen det har, og alle feltene som
+   tre. */
 function Rad({ navn, r }: { navn: string; r: Raden }) {
-  const [tekst, settTekst] = useState<string | null>(null);
+  const [vist, settVist] = useState<{ former: Form[]; tekst: string } | null>(null);
   const vis = (apen: boolean) => {
-    if (!apen) return settTekst(null);
+    if (!apen) return settVist(null);
     const v = verdiI(navn, r.nokkel);
-    settTekst(v === undefined ? 'Ingen verdi ennå, eller ikke lenger i cachen.' : somTekst(v));
+    settVist(
+      v === undefined
+        ? { former: [], tekst: 'Ingen verdi ennå, eller ikke lenger i cachen.' }
+        : { former: finnFormer(v), tekst: somTekst(v) }
+    );
   };
   return (
     <details onToggle={e => vis(e.currentTarget.open)}>
@@ -116,7 +123,18 @@ function Rad({ navn, r }: { navn: string; r: Raden }) {
         {r.byte ? ` · ${kb(r.byte)}` : ''}
         {r.ms ? ` · laget på ${tid(r.ms)}` : ''} · {alder(r.sekunder)} siden
       </summary>
-      {tekst !== null && <pre>{tekst}</pre>}
+      {vist &&
+        (vist.former.length ? (
+          <>
+            <Datavisning former={vist.former} />
+            <details className="tre">
+              <summary>Alle feltene som tre</summary>
+              <pre>{vist.tekst}</pre>
+            </details>
+          </>
+        ) : (
+          <pre>{vist.tekst}</pre>
+        ))}
     </details>
   );
 }
@@ -133,7 +151,7 @@ function Info({ d }: { d: Tabellen }) {
             ETL-funksjonen er <code>{d.navn.split('.')[1]}()</code> i <code>src/data/{d.lag}/</code>.
           </>
         ) : (
-          <>Har ingen ETL-funksjon: datamotoren fyller den selv (src/data/motor/).</>
+          <>Har ingen ETL-funksjon, se over.</>
         )}
       </p>
       <p>
