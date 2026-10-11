@@ -52,7 +52,8 @@ export interface Tabelldef<N, V> {
   glemt?: (v: V, nokkel: string) => void /* kalles når en verdi går ut av cachen */;
   eksempel?: (
     u: Utgangspunkt
-  ) => N | null /* nøkkelen katalogvisningen spør med. Uten: kommunenummeret, eller ingen for tabeller uten nøkkel. */;
+  ) => N | null /* til tabeller som ikke lagres: nøkkelen katalogvisningen kan spørre med, valgt blant det som alt er hentet, så
+                   spørringen ikke gir nye kall til kildene. Uten kan tabellen ikke spørres derfra. */;
 }
 /* Det katalogvisningen har å spørre ut fra: valgt kommune, og midten av kartet med flisnivået der */
 export interface Utgangspunkt {
@@ -348,6 +349,7 @@ export function innhold() {
     etl: !!t.etl,
     voksende: !!t.voksende,
     brukerstyrt: !!t.brukerstyrt,
+    sporbar: !t.husk && !!t.etl && !!t.eksempel,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,
       status: r.status,
@@ -359,12 +361,13 @@ export function innhold() {
     }))
   }));
 }
-/* Til «Data» i katalogvisningen: nøkkelen tabellen med det fulle navnet kan spørres med ut fra u, som verdi (n) og tekst (nokkel).
-   null når tabellen ikke har noen ETL-funksjon, eller u ikke gir noen nøkkel. */
+/* Til «Spør» i katalogvisningen: nøkkelen tabellen med det fulle navnet kan spørres med ut fra u, som verdi (n) og tekst (nokkel).
+   Bare tabeller som ikke lagres, kan spørres, for det som lagres, står i cachen. Og bare når svaret kan lages av det som alt er
+   hentet (eksempel). Ellers null. */
 export function eksempelI(navn: string, u: Utgangspunkt): { n: unknown; nokkel: string } | null {
   const t = ALLE.find(x => fulltNavn(x) === navn);
-  if (!t || !t.etl) return null;
-  const n = t.eksempel ? t.eksempel(u) : t.etl.length ? u.nr : undefined;
+  if (!t || !t.etl || t.husk || !t.eksempel) return null;
+  const n = t.eksempel(u);
   return n === null ? null : { n, nokkel: nokkelAv(t, n) };
 }
 /* Kaller tabellen med det fulle navnet med nøkkelen n, som enhver som bruker katalogen */

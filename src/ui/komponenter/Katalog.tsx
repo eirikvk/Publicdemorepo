@@ -1,6 +1,6 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
    etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. «Info» viser hva tabellen er, det tekniske navnet og hvor
-   ETL-funksjonen ligger. «Data» spør katalogen med en nøkkel ut fra valgt kommune eller midten av kartet, og viser radene i cachen.
+   ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, med det som alt er hentet.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
    siden tegnes. */
@@ -159,15 +159,15 @@ function Rad({ navn, r }: { navn: string; r: Raden }) {
   );
 }
 
-/* Spør katalogen: kaller tabellen som enhver som bruker katalogen, med en nøkkel ut fra valgt kommune eller midten av kartet, og viser
-   svaret. Svaret lagres bare hvis tabellen lagrer (husk), som ellers. */
+/* For tabeller som ikke lagres: spør katalogen, som enhver som bruker den, med en nøkkel valgt blant det som alt er hentet (nærmest
+   midten av kartet), så spørringen ikke gir nye kall til kildene. Tabeller som lagres, viser det som står i cachen i stedet. */
 function Sporring({ d }: { d: Tabellen }) {
   const [svar, settSvar] = useState<{ nokkel: string; v?: unknown; feil?: string; ms: number } | null>(null),
     [spor, settSpor] = useState(false);
-  if (!d.etl) return <p>Har ingen ETL-funksjon, så katalogen kan ikke spørres. Det som er lagt inn, står under.</p>;
+  if (!d.sporbar) return <p>Lagres ikke, og kan ikke spørres herfra uten nye kall til kilden.</p>;
   const midte = kartetsMidte(),
     E = eksempelI(d.navn, { nr: app.valgt ? app.valgt.nr : null, midt: midte && midte.midt, z: midte ? midte.z : 0 });
-  if (!E) return <p>Velg en kommune og vis kartet, så finnes det en nøkkel å spørre med.</p>;
+  if (!E) return <p>Lagres ikke. Kan spørres når det den bygger på, er hentet.</p>;
   const kjor = async () => {
     settSpor(true);
     const t0 = performance.now();
@@ -346,11 +346,8 @@ function Tabellrad({
                 <Info d={d} />
               ) : (
                 <>
-                  <h4 className="md-typography-label-s">Spør katalogen</h4>
-                  <Sporring d={d} />
-                  <h4 className="md-typography-label-s">I cachen nå</h4>
                   {!d.husk ? (
-                    <p>Lagres ikke.</p>
+                    <Sporring d={d} />
                   ) : r.length ? (
                     r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} />)
                   ) : (
@@ -377,10 +374,10 @@ export default function Katalog() {
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
         Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. «Info» sier hva tabellen er og hvor
-        ETL-funksjonen ligger. «Data» spør katalogen, med valgt kommune eller midten av kartet som nøkkel, og viser det
-        som ligger i cachen. Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i
-        nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv
-        bestemmer.
+        ETL-funksjonen ligger. «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i stedet, så
+        lenge svaret kan lages av det som alt er hentet. Alt ligger i minnet og er borte når siden lukkes: siden lagrer
+        ingenting selv i nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik
+        tjenestene selv bestemmer.
       </p>
       <MdButton
         theme="secondary"

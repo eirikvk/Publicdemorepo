@@ -597,8 +597,8 @@ er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utga
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
-**Katalogen kan spørres, 11. oktober 2026.** «Data» i katalogvisningen spør nå katalogen med valgt kommune eller midten av
-kartet som nøkkel, også for tabeller som ikke lagrer noe. Kartbildene av kommuneplanen og grått areal huskes med flisen som nøkkel,
+**Katalogen kan spørres, 11. oktober 2026.** En tabell som ikke lagrer, kan nå spørres fra katalogvisningen, men bare når svaret
+kan lages av det som alt er hentet, så det ikke gir nye kall til kildene. Tabeller som lagrer, viser det som står i cachen. Kartbildene av kommuneplanen og grått areal huskes med flisen som nøkkel,
 som grunnkartet. Metoden ble ikke endret, og regresjonstesten ga ingen avvik.
 
 **Lagre bare der det trengs, 11. oktober 2026.** Gull lagres. Sølv og bronse lagres bare når noen vil spørre etter dem igjen.
