@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { innhold } from '../../data/cache.ts';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
-import { planTall, utbyggingen } from '../../data/motor/plan.ts';
+import { planTall, settPlanniva, utbyggingen } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { kart } from '../kart/kart.ts';
@@ -46,6 +46,7 @@ export default function App() {
         verdi,
         planTall,
         utbyggingen,
+        settPlanniva,
         innhold,
         get kart() {
           return kart;

@@ -1,8 +1,9 @@
 /* Datamotoren, planlagt utbygging: det siden og kartet trenger å vite om utbyggingen for valgt kommune. Selve utbyggingen regnes ut
    i gull (gull/utbygging.ts, tabellen gull.utbygging). Datamotoren bestemmer bare når den er utdatert: når egne områder endres
    (egne.ts), og når kartet har stått stille med nye fliser (grunnkart.ts). Kartlaget for planen ligger i ui/kart/plan.ts. */
-import { se } from '../cache.ts';
+import { brukerEndretOveralt, legg, se } from '../cache.ts';
 import { katalog } from '../katalog.ts';
+import { PLANNIVA } from '../solv/felles.ts';
 import { utenPlan } from './egne.ts';
 import { lagret, oversikt } from './grunnkart.ts';
 import { valgt, valgtNr } from './valgt.ts';
@@ -29,4 +30,13 @@ export function planTall(): 'tom' | 'zoom' | 'regner' | 'feil' | 'ok' {
   if (r && r.status === 'feil') return 'feil';
   if (!oversikt()) return lagret(nr) ? 'tom' : 'zoom';
   return 'regner';
+}
+
+/* Rutestørrelsen under Tekniske valg: nivået utbyggingen regnes på, 9 (21 meter) eller 10 (10,6 meter). Valget er en kilde fra
+   brukeren (bronse.planniva), og alt som bygger på utbyggingen, regnes ut på nytt for alle kommuner. */
+export const planniva = () => katalog.bronse.planniva.naa() || PLANNIVA;
+export function settPlanniva(z: number) {
+  if (z === planniva()) return;
+  legg(katalog.bronse.planniva, undefined, z);
+  brukerEndretOveralt();
 }

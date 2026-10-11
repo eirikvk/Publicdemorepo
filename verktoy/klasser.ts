@@ -1,4 +1,4 @@
-/* Lager de lagrede klassene: dagens klasser per blokk på nivå 9 for noen kommuner, lagret sammen med siden. De er det ferdige
+/* Lager de lagrede klassene: dagens klasser per blokk på nivå 10 (10,6 meter) for noen kommuner, lagret sammen med siden. De er det ferdige
    svaret for solv.klasser, så siden slipper å hente kartbildene fra NIBIO for hele kommunen. Arbeidet gjøres i en nettleser
    (Chromium via Playwright) med katalogen i src, se klasser-side.ts. Svaret lages altså av den samme ETL-funksjonen som siden
    bruker når det ikke finnes noe lagret. Her står bare det å lagre: hver blokk som et lite bilde med fargetabell (KLASSETABELL i
@@ -8,8 +8,8 @@
        node verktoy/klasser.ts 5001 5021
        node verktoy/klasser.ts --fylke 50 --hentet "11. oktober 2026"
 
-   Blokkene legges i public/klasser/9/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
-   --paa-nytt. En blokk koster fire kall mot NIBIO. Grunnkartet er lisensiert «Norge digitalt begrenset». */
+   Blokkene legges i public/klasser/10/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
+   --paa-nytt. En blokk koster ett kall mot NIBIO. Grunnkartet er lisensiert «Norge digitalt begrenset». */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -47,16 +47,19 @@ if (!numre.length) {
   console.log('Bruk: node verktoy/klasser.ts <kommunenumre> [--fylke 50] [--paa-nytt] [--hentet tekst] [--ut mappe]');
   process.exit(2);
 }
+const NIVA = 10; /* blokkene er kartbildene fra NIBIO på nivå 10 */
 interface Register {
   versjon: string;
   hentet: string;
+  z: number;
   kommuner: Record<string, number[][]>;
 }
 const regfil = path.join(valg.ut!, 'klasser.json'),
   register: Register = fs.existsSync(regfil)
     ? JSON.parse(fs.readFileSync(regfil, 'utf8'))
-    : { versjon: 'årsversjon 2025', hentet: '', kommuner: {} };
-const blokkfil = ([x, y]: number[]) => path.join(valg.ut!, 'klasser', '9', String(x), `${y}.png`);
+    : { versjon: 'årsversjon 2025', hentet: '', z: NIVA, kommuner: {} };
+if (register.z !== NIVA) throw new Error(`registeret er for nivå ${register.z}, ikke ${NIVA}`);
+const blokkfil = ([x, y]: number[]) => path.join(valg.ut!, 'klasser', String(NIVA), String(x), `${y}.png`);
 const DEKNING = KLASSETABELL.map((_, i) => (i ? 255 : 0)); /* plass 0 er gjennomsiktig */
 
 /* Koden i src serveres av Vite, og nettleseren henter den gjennom en side på http://klasser.test/. Registeret over lagrede
@@ -91,16 +94,19 @@ for (const nr of numre) {
     );
     let nye = 0,
       byte = 0;
-    for (const b of B) {
+    const igjen = B.filter(b => {
       const fil = blokkfil(b);
-      if (laget.has(fil) || (!valg['paa-nytt'] && fs.existsSync(fil))) {
-        byte += fs.statSync(fil).size;
-        continue;
-      }
-      const K: Awaited<ReturnType<typeof lagBlokk>> = await side.evaluate(
-        ([m, x, y]) => import(m as string).then(s => s.lagBlokk(x, y)),
-        [modul, b[0], b[1]]
-      );
+      if (!laget.has(fil) && (valg['paa-nytt'] || !fs.existsSync(fil))) return true;
+      byte += fs.statSync(fil).size;
+      return false;
+    });
+    /* Fire blokker om gangen, så køen mot NIBIO i nettleseren (høyst fire kall) holdes full */
+    const lag = async (b: number[]) => {
+      const fil = blokkfil(b),
+        K: Awaited<ReturnType<typeof lagBlokk>> = await side.evaluate(
+          ([m, x, y]) => import(m as string).then(s => s.lagBlokk(x, y)),
+          [modul, b[0], b[1]]
+        );
       const png = palettPng(512, 512, Buffer.from(K.kl, 'base64'), KLASSETABELL, DEKNING, data =>
         deflateSync(data, { level: 9 })
       );
@@ -109,7 +115,8 @@ for (const nr of numre) {
       laget.add(fil);
       nye++;
       byte += png.length;
-    }
+    };
+    for (let i = 0; i < igjen.length; i += 4) await Promise.all(igjen.slice(i, i + 4).map(lag));
     register.kommuner[nr] = B;
     if (valg.hentet) register.hentet = valg.hentet;
     fs.writeFileSync(

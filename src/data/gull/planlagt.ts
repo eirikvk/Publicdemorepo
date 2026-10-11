@@ -1,7 +1,7 @@
 /* Gull for planlagt utbygging: natur og jordbruk som kommuneplanen (og egne områder) setter av, summert over utbyggingen
    (gull/utbygging.ts). Arealer er i km², andeler i prosent. */
 import { katalog } from '../katalog.ts';
-import { OPPLOSNINGER, RUTE } from '../solv/felles.ts';
+import { OPPLOSNINGER, ruteKm2 } from '../solv/felles.ts';
 import type { Planinfo } from '../solv/kommuneplan.ts';
 import { andel, landareal } from './felles.ts';
 import type { Utbygging } from './utbygging.ts';
@@ -39,8 +39,8 @@ export function byggPlanlagt(R: Utbygging, land: number) {
 /* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av, i km² */
 export const byggPlanSum = (R: Utbygging): PlanSum => ({
   nr: R.nr,
-  nat: R.sum.rn * RUTE,
-  jor: R.sum.rj * RUTE,
+  nat: R.sum.rn * ruteKm2(R.z),
+  jor: R.sum.rj * ruteKm2(R.z),
   delvis: R.delvis,
   egne: R.antallEgne
 });

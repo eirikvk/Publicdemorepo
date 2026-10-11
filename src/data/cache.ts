@@ -313,6 +313,13 @@ export function brukerEndret(nr: string) {
   brukerUtgave.set(nr, (brukerUtgave.get(nr) || 0) + 1);
   kroker.brukerEndret(nr);
 }
+/* Brukeren har endret noe som gjelder alle kommuner (rutestørrelsen under Tekniske valg): som brukerEndret for hver kommune som har
+   en rad i en brukerstyrt tabell */
+export function brukerEndretOveralt() {
+  const nr = new Set<string>();
+  for (const t of ALLE) if (t.brukerstyrt) for (const k of rom(t).keys()) nr.add(k);
+  nr.forEach(brukerEndret);
+}
 /* Alle ferdige verdier i tabellen, som [nøkkel, verdi], eldst først */
 export const alle = <N, V>(t: Tabelldef<N, V>): [string, V][] =>
   [...rom(t)].filter(([, r]) => r.status === 'ok').map(([k, r]) => [k, r.verdi as V]);

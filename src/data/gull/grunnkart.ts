@@ -7,7 +7,7 @@ import { katalog } from '../katalog.ts';
 import { flisAvNavn, type Flis } from '../solv/felles.ts';
 import type { Oversikt } from '../solv/grunnkart.ts';
 
-/* Dagens klasser for kommunen: bildet zoomet ut (ov), og kommunens flate det klippes mot (koord). blokker er blokkene på nivå 9
+/* Dagens klasser for kommunen: bildet zoomet ut (ov), og kommunens flate det klippes mot (koord). blokker er blokkene på nivå 10
    når kommunen har lagrede klasser, og da er hele kommunen med. Ellers sier delvis at bare det som er hentet, er med, og fliser er
    flisene som er hentet. */
 export interface DagensKlasser {

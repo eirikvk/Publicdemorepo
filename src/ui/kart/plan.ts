@@ -53,7 +53,7 @@ function egenMaske(u: Utsnitt) {
 }
 
 /* Zoomet ut er mange planfelt mindre enn en skjermpiksel. Flisene på nivå 9 og grovere tegnes derfor fra utbyggingen for hele
-   kommunen (21 meter per rute). En flispiksel får farge bare hvis det faktisk ligger planlagt utbygging innenfor den, og styrken
+   kommunen (21 eller 10,6 meter per rute). En flispiksel får farge bare hvis det faktisk ligger planlagt utbygging innenfor den, og styrken
    følger hvor stor del av pikselen det gjelder. Feltene blir dermed aldri større enn de er, og de forsvinner heller ikke: små felt
    vises som svake enkeltpiksler. tom sier at ingenting er tegnet. */
 type Planbilde = HTMLCanvasElement & { tom?: boolean };

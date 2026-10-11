@@ -3,7 +3,7 @@
    datamotoren fyller. Gull avgjør at et eget område erstatter kommuneplanen der det ligger (gull/utbygging.ts). */
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { HALV, ORIGO, PLANNIVA, RUTE_M, arealKm2, type Planruter } from './felles.ts';
+import { HALV, ORIGO, PLANNIVA, arealKm2, ruteM, type Planruter } from './felles.ts';
 import { sti, tegneflate } from './raster.ts';
 
 /* Utbygging ('bygg') eller ikke utbygging ('fri') */
@@ -68,14 +68,15 @@ export async function egne(nr: string): Promise<Egne> {
   };
 }
 
-/* Tabellen solv.egneruter: de egne områdene i kommunen nr som planen per rute (Planruter i felles.ts), i rutenettet for planen og
-   over utsnittet rundt alle områdene. plan er 1 utbygging og 2 ikke utbygging, og omrade hvilket område ruta hører til (1 er det
+/* Tabellen solv.egneruter: de egne områdene i kommunen nr som planen per rute (Planruter i felles.ts), i rutenettet for planen på
+   nivået brukeren har valgt (bronse.planniva) og over utsnittet rundt alle områdene. plan er 1 utbygging og 2 ikke utbygging, og omrade hvilket område ruta hører til (1 er det
    første i ider). null uten egne områder. */
 export type Egneruter = Planruter & { omrade: Uint8Array; ider: number[] };
 export async function egneruter(nr: string): Promise<Egneruter | null> {
-  const E = await katalog.solv.egne(nr);
+  const [E, z] = await Promise.all([katalog.solv.egne(nr), katalog.bronse.planniva()]);
   if (!E.flater.length) return null;
-  const m = RUTE_M,
+  const Z = z || PLANNIVA,
+    m = ruteM(Z),
     x0 = Math.min(...E.flater.map(g => g.ext[0])),
     y0 = Math.min(...E.flater.map(g => g.ext[1])),
     x1 = Math.max(...E.flater.map(g => g.ext[2])),
@@ -85,7 +86,7 @@ export async function egneruter(nr: string): Promise<Egneruter | null> {
     w = Math.floor((x1 - ORIGO[0]) / m) - cx0 + 1,
     h = Math.floor((ORIGO[1] - y0) / m) - cy0 + 1;
   const R: Egneruter = {
-    z: PLANNIVA,
+    z: Z,
     cx0,
     cy0,
     w,
@@ -102,7 +103,7 @@ export async function egneruter(nr: string): Promise<Egneruter | null> {
    flater i samme område overlapper, vinner utbygging. Der områder overlapper, gjelder det siste. */
 function tegnEget(g: Flater, merke: number, R: Egneruter) {
   const u = g.ext,
-    m = RUTE_M,
+    m = ruteM(R.z),
     X0 = Math.max(0, Math.floor((u[0] - ORIGO[0]) / m) - R.cx0),
     X1 = Math.min(R.w - 1, Math.floor((u[2] - ORIGO[0]) / m) - R.cx0),
     Y0 = Math.max(0, Math.floor((ORIGO[1] - u[3]) / m) - R.cy0),

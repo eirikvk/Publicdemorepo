@@ -1,6 +1,6 @@
 /* Bronse for NIBIO, Nasjonalt grunnkart for arealanalyse (WMS): kartbilder av dagens arealklasser. Siden ber NIBIO tegne seks
    klasser i rene farger (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. Her er også de lagrede klassene: dagens
-   klasser per blokk på nivå 9 for noen kommuner, laget av de samme kartbildene og lagret sammen med siden (verktoy/klasser.ts). De
+   klasser per blokk på nivå 10 for noen kommuner, laget av de samme kartbildene og lagret sammen med siden (verktoy/klasser.ts). De
    er det ferdige svaret for solv.klasser. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
@@ -38,10 +38,12 @@ export const grunnkartUrl = (u: Utsnitt, w = 512, h = 512) =>
 /* Kartbildene hentes gjennom en egen kø */
 export const hentGrunnkartFlis = lagHenter('NIBIO', 'Kart');
 
-/* Registeret over de lagrede klassene: årsversjonen av grunnkartet, når de er laget, og blokkene [x, y] på nivå 9 per kommune */
+/* Registeret over de lagrede klassene: årsversjonen av grunnkartet, når de er laget, nivået blokkene er på (z), og blokkene [x, y]
+   per kommune */
 export interface Klasseregister {
   versjon?: string;
   hentet?: string;
+  z?: number;
   kommuner?: Record<string, number[][]>;
 }
 
@@ -56,11 +58,14 @@ export async function klasseregister(): Promise<Klasseregister | null> {
     () => null
   );
 }
-/* Tabellen bronse.klassefil: dagens klasser i blokken tc [9, x, y] slik de er lagret, som PNG med fargetabell. null når blokken ikke
+/* Tabellen bronse.klassefil: dagens klasser i blokken tc [z, x, y] slik de er lagret, som PNG med fargetabell. null når blokken ikke
    står i registeret. */
 export async function klassefil(tc: Flis): Promise<ArrayBuffer | null> {
   const reg = await katalog.bronse.klasseregister(),
-    finnes = Object.values((reg && reg.kommuner) || {}).some(L => L.some(([x, y]) => x === tc[1] && y === tc[2]));
+    finnes =
+      !!reg &&
+      reg.z === tc[0] &&
+      Object.values(reg.kommuner || {}).some(L => L.some(([x, y]) => x === tc[1] && y === tc[2]));
   if (!finnes) return null;
   return hent('Egen fil', `Lagrede klasser ${flisnavn(tc)}`, `klasser/${flisnavn(tc)}.png`, false, true);
 }

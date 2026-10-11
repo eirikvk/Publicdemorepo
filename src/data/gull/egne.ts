@@ -1,7 +1,7 @@
 /* Gull for egne områder: hva som ligger i hvert område, og radene som sammenligner kommuneplanen alene med kommuneplanen og egne
    områder. Arealer er i km², andeler i prosent. */
 import { katalog } from '../katalog.ts';
-import { RUTE } from '../solv/felles.ts';
+import { ruteKm2 } from '../solv/felles.ts';
 import { NATURTEMA } from '../solv/temaer.ts';
 import { andel } from './felles.ts';
 import type { Graakryss, Graatall } from './graa.ts';
@@ -29,16 +29,16 @@ export interface EgenRad {
 /* En rad før den regnes om: [navn, farge, planen i ruter, med egne i ruter, hva andelen regnes av, gruppe] */
 type Rad = [navn: string, farge: string, plan: number | null, ny: number, av: number, gruppe: string];
 
-/* Hva som ligger i et eget område i dag, i km², fra tellingen T i utbyggingen. ukjent er ruter der kartet ikke er hentet eller
+/* Hva som ligger i et eget område i dag, i km², fra tellingen T i utbyggingen, med r km² per rute. ukjent er ruter der kartet ikke er hentet eller
    som ligger utenfor kommunen. smal sier at området tar natur eller jordbruk i utbyggingen, men at alt faller for regelen om
    smale striper. */
-export const byggEgetOmrade = (T: EgetTall) => ({
+export const byggEgetOmrade = (T: EgetTall, r: number) => ({
   kjent: !!(T.nat + T.jor + T.beb + T.vann),
-  natur: T.nat * RUTE,
-  jordbruk: T.jor * RUTE,
-  bebygd: T.beb * RUTE,
-  vann: T.vann * RUTE,
-  ukjent: T.ukjent * RUTE,
+  natur: T.nat * r,
+  jordbruk: T.jor * r,
+  bebygd: T.beb * r,
+  vann: T.vann * r,
+  ukjent: T.ukjent * r,
   smal: !!(T.nat + T.jor) && !(T.nnat + T.njor)
 });
 
@@ -104,9 +104,9 @@ export function byggEgneRader(
     navn,
     farge,
     gruppe,
-    plan: plan === null ? null : plan * RUTE,
-    ny: ny * RUTE,
-    endring: (ny - (plan || 0)) * RUTE,
+    plan: plan === null ? null : plan * ruteKm2(R.z),
+    ny: ny * ruteKm2(R.z),
+    endring: (ny - (plan || 0)) * ruteKm2(R.z),
     andelPlan: av && plan !== null ? andel(plan, av) : null,
     andelNy: av ? andel(ny, av) : null
   }));
@@ -142,7 +142,7 @@ export async function egneRader(nr: string): Promise<EgneRader | null> {
     kommune: byggEgneRader(null, null, R, harPlan, GK, tema, gap),
     omrader: R.egneIder.map((id, i) => ({
       id,
-      omrade: byggEgetOmrade(R.egneTall[i]),
+      omrade: byggEgetOmrade(R.egneTall[i], ruteKm2(R.z)),
       rader: byggEgneRader(i, R.egneTall[i], R, harPlan, GK, tema, gap)
     }))
   };
