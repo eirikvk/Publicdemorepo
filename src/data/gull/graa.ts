@@ -1,6 +1,7 @@
 /* Gull for grått areal: arealet per trinn i kommunen (gull.graa), og kryssingen med utbyggingen (gull.graakryss og gull.graaIPlan).
    Grått areal krysses med utbyggingen for seg, ikke som en kolonne, fordi det også teller planlagt utbygging der det alt er bebygd,
    og grønt i bebygd område. */
+import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
 import { RUTE, ruteX, ruteY } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
@@ -52,21 +53,29 @@ export function kryssGraa(R: Utbygging, D: Graatrinn, delvis: boolean): Graakrys
     };
   let bebygd = 0,
     gront = 0;
-  for (let i = 0; i < R.kl.length; i++) {
-    const c = R.kl[i];
-    if (c < 1 || c > 3) continue;
-    const b = R.pl[i],
-      ty = nE ? R.egetType![i] : 0,
-      s = ty === 1 ? 1 : ty === 2 ? 0 : b;
-    if (c !== 1 && !b && !s) continue;
-    const k = graaVed(D, ruteX(R, i), ruteY(R, i)),
-      e = nE ? R.eget![i] : 0;
-    if (c === 1) {
-      bebygd++;
-      if (!k) gront++;
+  /* Blokk for blokk: dagens klasser har alle blokkene, planen og egne områder bare dem de har noe i */
+  for (const [nokkel, KL] of R.kl.blokker) {
+    const [bx, by] = blokkAv(nokkel),
+      PL = R.pl.blokker.get(nokkel),
+      ET = nE ? R.egetType!.blokker.get(nokkel) : undefined,
+      EG = nE ? R.eget!.blokker.get(nokkel) : undefined;
+    for (let q = 0; q < KL.length; q++) {
+      const c = KL[q];
+      if (c < 1 || c > 3) continue;
+      const b = PL ? PL[q] : 0,
+        ty = ET ? ET[q] : 0,
+        s = ty === 1 ? 1 : ty === 2 ? 0 : b;
+      if (c !== 1 && !b && !s) continue;
+      const i = nummer(R.kl, bx * BLOKK + (q % BLOKK), by * BLOKK + Math.floor(q / BLOKK)),
+        k = graaVed(D, ruteX(R, i), ruteY(R, i)),
+        e = EG ? EG[q] : 0;
+      if (c === 1) {
+        bebygd++;
+        if (!k) gront++;
+      }
+      if (s) legg(S, e, k, c);
+      if (b) legg(P, e, k, c);
     }
-    if (s) legg(S, e, k, c);
-    if (b) legg(P, e, k, c);
   }
   return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis };
 }

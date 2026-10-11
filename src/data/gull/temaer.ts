@@ -9,6 +9,7 @@
    en gang. Bygger på områdene, arealet og maskene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i km²,
    kryssinger i ruter. */
 import { omriss, type FlateMedUtsnitt } from '../generelt/geometri.ts';
+import { verdi } from '../generelt/glissen.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { HALV, RUTE, ruteX, ruteY } from '../solv/felles.ts';
@@ -98,18 +99,18 @@ export function kryssNatur(O: TemaOmrade[], R: Utbygging, treff: Int32Array, nK:
     const i = R.rader[r],
       v = O[a].v || 0;
     if (r < nC) {
-      const e = nE ? R.eget![i] : 0;
-      if (R.ryddet[i]) {
+      const e = nE ? verdi(R.eget!, i) : 0;
+      if (verdi(R.ryddet, i)) {
         plan[a]++;
         S.alt[v]++;
         if (e) S.eg[e - 1][v]++;
       } else smal[a]++;
-      if (B && B.ryddet[i]) {
+      if (B && verdi(B.ryddet, i)) {
         P.alt[v]++;
         if (e) P.eg[e - 1][v]++;
       }
     } else {
-      const e = R.eget![i];
+      const e = verdi(R.eget!, i);
       P.alt[v]++;
       if (e) P.eg[e - 1][v]++;
     }
@@ -132,7 +133,7 @@ export function kryssKartlagt(R: Utbygging, M: Maske | null): Gap {
     G = ny(),
     GP = ny();
   const tell = (T: Ukjent & { eg: Ukjent[] }, i: number, uk: boolean) => {
-    const e = nE ? R.eget![i] : 0;
+    const e = nE ? verdi(R.eget!, i) : 0;
     T.nat++;
     if (uk) T.ukjent++;
     if (e) {
@@ -143,13 +144,13 @@ export function kryssKartlagt(R: Utbygging, M: Maske | null): Gap {
   for (let r = 0; r < R.rader.length; r++) {
     const i = R.rader[r];
     if (r < nC) {
-      const s = R.ryddet[i] === 1,
-        b = !!B && B.ryddet[i] === 1;
+      const s = verdi(R.ryddet, i) === 1,
+        b = !!B && verdi(B.ryddet, i) === 1;
       if (!s && !b) continue;
       const uk = !M || !iMasken(M, R, i);
       if (s) tell(G, i, uk);
       if (b) tell(GP, i, uk);
-    } else if (B!.ryddet[i] === 1) tell(GP, i, !M || !iMasken(M, R, i));
+    } else if (verdi(B!.ryddet, i) === 1) tell(GP, i, !M || !iMasken(M, R, i));
   }
   return { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
 }

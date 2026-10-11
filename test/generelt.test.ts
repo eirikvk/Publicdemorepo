@@ -1,4 +1,4 @@
-/* Tester for src/data/generelt: geometri, tall, farger og PNG. Kjør: npm test */
+/* Tester for src/data/generelt: geometri, tall, farger, PNG og glisne rutenett. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -14,6 +14,7 @@ import {
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
 import { palettPng, pngBit, pngBiter } from '../src/data/generelt/png.ts';
+import { finn, glissent, leggInnDelt, sett, verdi } from '../src/data/generelt/glissen.ts';
 import { deflateSync } from 'node:zlib';
 
 const kvadrat = (x: number, y: number, s: number) => [
@@ -79,5 +80,23 @@ test('PNG: biter med kontrollsum, og bilde med fargetabell', () => {
   assert.deepEqual(
     pngBiter(png).map(b => b.type),
     ['IHDR', 'PLTE', 'tRNS', 'IDAT', 'IEND']
+  );
+});
+
+test('glissent rutenett: som et vanlig rutenett, og en delt blokk kopieres før den endres', () => {
+  const L = glissent({ cx0: 510, cy0: 0, w: 4, h: 2 }, 3),
+    delt = new Uint8Array(512 * 512);
+  leggInnDelt(L, 0, 0, delt); /* rutene 510 og 511: kolonne 0 og 1 */
+  sett(L, 5, 1); /* rad 1, kolonne 1 */
+  sett(L, 2, 2); /* kolonne 2 ligger i neste blokk */
+  assert.deepEqual(
+    [0, 1, 2, 3, 4, 5, 6, 7].map(i => verdi(L, i)),
+    [0, 0, 2, 3, 0, 1, 3, 3]
+  );
+  assert.equal(verdi(L, 8), undefined);
+  assert.equal(delt[512 + 511], 0);
+  assert.deepEqual(
+    finn(L, v => v === 1 || v === 2),
+    [2, 5]
   );
 });

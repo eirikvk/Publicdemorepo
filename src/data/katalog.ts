@@ -452,7 +452,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbygging',
       tittel: 'Utbyggingen',
-      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
+      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
       husk: 1,
       brukerstyrt: true,
       etl: gullUtbygging.utbygging

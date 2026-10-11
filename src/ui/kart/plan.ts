@@ -7,6 +7,7 @@ import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
 import { kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
+import { BLOKK, blokkAv, nummer, verdi as rute } from '../../data/generelt/glissen.ts';
 import { HALV, UTM, type Flis } from '../../data/solv/felles.ts';
 import { JOR, NAT, klasserIFlis } from '../../data/solv/klasser.ts';
 import { planIFlis } from '../../data/solv/kommuneplan.ts';
@@ -63,35 +64,44 @@ function grovPlanFlis(tc: TileCoord): Planbilde | null {
     f = 2 ** (R.z - z),
     D = ui.visSmale ? R.alle : R.ryddet,
     F = [rgb('pnat'), rgb('pjor')];
+  /* Rutene med planlagt utbygging telles per flispiksel. Bare blokkene i utbyggingen som har planlagt utbygging, finnes, og bare de
+     som ligger i flisen, gås gjennom. */
+  const A = new Uint32Array(262144),
+    B = new Uint32Array(262144),
+    X0 = x * 512 * f,
+    Y0 = y * 512 * f;
+  for (const [nokkel, blokk] of D.blokker) {
+    const [bx, by] = blokkAv(nokkel);
+    if ((bx + 1) * BLOKK <= X0 || bx * BLOKK >= X0 + 512 * f || (by + 1) * BLOKK <= Y0 || by * BLOKK >= Y0 + 512 * f)
+      continue;
+    for (let q = 0; q < blokk.length; q++) {
+      const v = blokk[q];
+      if (v !== 1 && v !== 2) continue;
+      const X = bx * BLOKK + (q % BLOKK),
+        Y = by * BLOKK + Math.floor(q / BLOKK);
+      if (X < X0 || Y < Y0 || X >= X0 + 512 * f || Y >= Y0 + 512 * f || nummer(D, X, Y) < 0) continue;
+      const p = Math.floor((Y - Y0) / f) * 512 + Math.floor((X - X0) / f);
+      if (v === 1) A[p]++;
+      else B[p]++;
+    }
+  }
   const c: Planbilde = flislerret(),
     g = c.getContext('2d')!,
     ut = g.createImageData(512, 512),
     o = ut.data;
   let tegnet = false;
-  for (let py = 0; py < 512; py++) {
-    const Y = (y * 512 + py) * f - R.cy0;
-    if (Y + f <= 0 || Y >= R.h) continue;
-    for (let px = 0; px < 512; px++) {
-      const X = (x * 512 + px) * f - R.cx0;
-      if (X + f <= 0 || X >= R.w) continue;
-      let a = 0,
-        b = 0;
-      for (let j = Math.max(0, Y), jm = Math.min(R.h, Y + f); j < jm; j++)
-        for (let i = Math.max(0, X), im = Math.min(R.w, X + f), rad = j * R.w; i < im; i++) {
-          const v = D[rad + i];
-          if (v === 1) a++;
-          else if (v === 2) b++;
-        }
-      if (!a && !b) continue;
-      tegnet = true;
-      const q = F[b > a ? 1 : 0],
-        i = 4 * (py * 512 + px),
-        andel = (a + b) / (f * f);
-      o[i] = q[0];
-      o[i + 1] = q[1];
-      o[i + 2] = q[2];
-      o[i + 3] = Math.round(255 * Math.max(SVAKEST, Math.sqrt(andel)));
-    }
+  for (let p = 0; p < 262144; p++) {
+    const a = A[p],
+      b = B[p];
+    if (!a && !b) continue;
+    tegnet = true;
+    const q = F[b > a ? 1 : 0],
+      i = 4 * p,
+      andel = (a + b) / (f * f);
+    o[i] = q[0];
+    o[i + 1] = q[1];
+    o[i + 2] = q[2];
+    o[i + 3] = Math.round(255 * Math.max(SVAKEST, Math.sqrt(andel)));
   }
   g.putImageData(ut, 0, 0);
   c.tom = !tegnet;
@@ -102,13 +112,13 @@ function grovPlanFlis(tc: TileCoord): Planbilde | null {
 function iEllerInntil(R: Utbygging, x: number, y: number) {
   if (x < 0 || y < 0 || x >= R.w || y >= R.h) return false;
   const i = y * R.w + x,
-    r = R.ryddet;
+    r = (j: number) => rute(R.ryddet, j);
   return !!(
-    r[i] ||
-    (x > 0 && r[i - 1]) ||
-    (x < R.w - 1 && r[i + 1]) ||
-    (y > 0 && r[i - R.w]) ||
-    (y < R.h - 1 && r[i + R.w])
+    r(i) ||
+    (x > 0 && r(i - 1)) ||
+    (x < R.w - 1 && r(i + 1)) ||
+    (y > 0 && r(i - R.w)) ||
+    (y < R.h - 1 && r(i + R.w))
   );
 }
 async function lastPlanFlis(tile: ImageTile) {

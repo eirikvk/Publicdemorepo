@@ -6,6 +6,18 @@
    datamodell, og dagens klasser (solv.klasser, eller dagensKlasserIFlis og klasserIFlis for det sammensatte kartet). Her settes de
    sammen: dagens klasser klippes til kommunen, et eget område erstatter kommuneplanen der det ligger, og planen legges oppå dagens
    klasser. Én rute er RUTE km². */
+import {
+  BLOKK,
+  blokkAv,
+  finn,
+  glissent,
+  kopiAv,
+  leggInnDelt,
+  nummer,
+  sett,
+  verdi,
+  type Glissen
+} from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
 import { PLANNIVA, RUTE_M, type Flis, type Plassering } from '../solv/felles.ts';
 import type { Egneruter } from '../solv/egne.ts';
@@ -21,12 +33,12 @@ export interface Antall {
   pjor: number;
 }
 /* Én flis i utbyggingen, fra kombinerBlokk. sig sier hvor mange kartfliser den er regnet av (-1 for hele kommunen), og utenPlan at
-   den er regnet uten kommuneplan. */
+   den er regnet uten kommuneplan. d og pl er null når de bare har 0, som i de fleste blokkene. */
 export interface Blokk {
   sig: number;
-  d: Uint8Array;
+  d: Uint8Array | null;
   kl: Uint8Array;
-  pl: Uint8Array;
+  pl: Uint8Array | null;
   n: Antall;
   utenPlan?: boolean;
 }
@@ -34,7 +46,7 @@ export interface Blokk {
    per rute (ryddet: 1 natur, 2 jordbruk), og antallet natur (rn) og jordbruk (rj) som er beholdt */
 export interface Rydding {
   celler: number[];
-  ryddet: Uint8Array;
+  ryddet: Glissen;
   rn: number;
   rj: number;
 }
@@ -53,17 +65,20 @@ export interface EgetTall {
 /* Tabellen gull.utbygging: utbyggingen i kommunen, se byggUtbygging. Radene (rader) er rutene med planlagt utbygging på natur
    eller jordbruk: først de med planen og egne områder (celler, med smale striper), så de som bare planen alene har, der egne
    områder har tatt planen bort. Kolonnene for temaene (gull/temaer.ts) står i samme rekkefølge. egneIder er de egne områdene
-   utbyggingen er regnet med, i rekkefølge. */
+   utbyggingen er regnet med, i rekkefølge.
+   Rutenettene er glisne (generelt/glissen.ts): bare blokkene som har noe, finnes, og de leses med verdi(L, i). Dagens klasser (kl)
+   har alle blokkene i kommunen. Planen (alle, ryddet, pl) og egne områder har bare blokkene der det er planlagt utbygging eller egne
+   områder. */
 export interface Utbygging extends Plassering {
   nr: string;
   h: number;
-  alle: Uint8Array /* med smale striper */;
-  ryddet: Uint8Array /* uten smale striper */;
+  alle: Glissen /* med smale striper */;
+  ryddet: Glissen /* uten smale striper */;
   celler: Int32Array;
-  eget: Uint8Array | null /* hvilket eget område ruta hører til, 1, 2 og så videre */;
-  egetType: Uint8Array | null /* 1 utbygging, 2 ikke utbygging */;
-  kl: Uint8Array;
-  pl: Uint8Array;
+  eget: Glissen | null /* hvilket eget område ruta hører til, 1, 2 og så videre */;
+  egetType: Glissen | null /* 1 utbygging, 2 ikke utbygging */;
+  kl: Glissen;
+  pl: Glissen;
   antallEgne: number;
   basis: Rydding | null /* kommuneplanen alene, når det finnes egne områder */;
   sum: { rn: number; rj: number };
@@ -119,27 +134,27 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
     }
     if (p) d[q] = jor ? 2 : 1;
   }
-  return { sig: fliser ? fliser.length : -1, d, kl, pl, n };
+  const noe = (a: Uint8Array) => a.some(v => v !== 0);
+  return { sig: fliser ? fliser.length : -1, d: noe(d) ? d : null, kl, pl: noe(pl) ? pl : null, n };
 }
 
 /* Smale striper: felt som ikke er bredere enn to ruter (rundt 40 meter) noe sted. De oppstår mest der plangrensen og grunnkartet
    ikke er tegnet helt likt, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle
    fire sider. Så beholdes alt som henger sammen med en kjerne, også på skrå. Et større felt beholdes dermed helt, også der det
-   smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk, 3 ukjent) og w bredden. Ukjente ruter
-   teller som naboer, så et felt ikke skrelles av langs kanten av det som er hentet. Gir de beholdte rutene (ryddet) og antallet
-   natur (rn) og jordbruk (rj) i dem. */
-export function ryddStriper(d: Uint8Array, w: number): Rydding {
-  const celler: number[] = [];
-  for (let i = 0; i < d.length; i++) {
-    const v = d[i];
-    if (v === 1 || v === 2) celler.push(i);
-  }
-  const ryddet = new Uint8Array(d.length);
+   smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk, 3 ukjent). Ukjente ruter teller som
+   naboer, så et felt ikke skrelles av langs kanten av det som er hentet. Naboene finnes med nummeret på ruta, som i et vanlig
+   rutenett med bredden w. Gir de beholdte rutene (ryddet) og antallet natur (rn) og jordbruk (rj) i dem. */
+export function ryddStriper(d: Glissen): Rydding {
+  const w = d.w,
+    n = d.w * d.h,
+    v = (i: number) => verdi(d, i),
+    celler = finn(d, x => x === 1 || x === 2);
+  const ryddet = glissent(d);
   let front: number[] = [];
   for (const i of celler) {
     const x = i % w;
-    if (x > 0 && x < w - 1 && i >= w && i < d.length - w && d[i - 1] && d[i + 1] && d[i - w] && d[i + w]) {
-      ryddet[i] = d[i];
+    if (x > 0 && x < w - 1 && i >= w && i < n - w && v(i - 1) && v(i + 1) && v(i - w) && v(i + w)) {
+      sett(ryddet, i, v(i)!);
       front.push(i);
     }
   }
@@ -147,9 +162,9 @@ export function ryddStriper(d: Uint8Array, w: number): Rydding {
     const ny: number[] = [];
     for (const i of front)
       for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) {
-        const v = d[j];
-        if ((v === 1 || v === 2) && !ryddet[j]) {
-          ryddet[j] = v;
+        const x = v(j);
+        if ((x === 1 || x === 2) && !verdi(ryddet, j)) {
+          sett(ryddet, j, x);
           ny.push(j);
         }
       }
@@ -158,8 +173,9 @@ export function ryddStriper(d: Uint8Array, w: number): Rydding {
   let rn = 0,
     rj = 0;
   for (const i of celler) {
-    if (ryddet[i] === 1) rn++;
-    else if (ryddet[i] === 2) rj++;
+    const x = verdi(ryddet, i);
+    if (x === 1) rn++;
+    else if (x === 2) rj++;
   }
   return { celler, ryddet, rn, rj };
 }
@@ -168,6 +184,8 @@ export function ryddStriper(d: Uint8Array, w: number): Rydding {
    nokler er [x, y] for flisene på nivå 9, blokker resultatene fra kombinerBlokk per flis («x/y»), delvis sier at bare en del av
    kommunen er hentet, E er de egne områdene per rute fra solv.egneruter (null uten), og rute er rutestørrelsen i meter slik den
    skal oppgis.
+   Rutenettet er glissent: blokkene fra kombinerBlokk deles, og bare blokkene med planlagt utbygging eller egne områder er med i
+   planen. Rutene har samme nummer som i ett stort rutenett over alle flisene, med en kant på én rute når bare en del er hentet.
    Med egne områder regnes også kommuneplanen alene (basis), så forskjellen kan vises. For hvert eget område telles hva som ligger
    der i dag, hva planen alene tar (fnat, fjor) og hva som går med nå (nnat, njor). */
 export function byggUtbygging(
@@ -182,38 +200,37 @@ export function byggUtbygging(
     kant = delvis ? 1 : 0,
     tx0 = Math.min(...nokler.map(t => t[0])),
     ty0 = Math.min(...nokler.map(t => t[1]));
-  const cx0 = tx0 * 512 - kant,
-    cy0 = ty0 * 512 - kant,
-    w = (Math.max(...nokler.map(t => t[0])) - tx0 + 1) * 512 + 2 * kant,
-    h = (Math.max(...nokler.map(t => t[1])) - ty0 + 1) * 512 + 2 * kant;
-  let d = new Uint8Array(w * h);
-  const kl = new Uint8Array(w * h),
-    pl = new Uint8Array(w * h),
-    n: Antall = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
-  if (delvis) d.fill(3);
+  const G = {
+    cx0: tx0 * BLOKK - kant,
+    cy0: ty0 * BLOKK - kant,
+    w: (Math.max(...nokler.map(t => t[0])) - tx0 + 1) * BLOKK + 2 * kant,
+    h: (Math.max(...nokler.map(t => t[1])) - ty0 + 1) * BLOKK + 2 * kant
+  };
+  let d = glissent(G, delvis ? 3 : 0); /* utenfor det som er hentet, er ruta ukjent */
+  const kl = glissent(G),
+    pl = glissent(G),
+    n: Antall = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 },
+    null0 = delvis ? new Uint8Array(BLOKK * BLOKK) : null; /* en hentet blokk uten plan, når resten er ukjent */
   for (const [x, y] of nokler) {
-    const b = blokker.get(`${x}/${y}`)!,
-      start = ((y - ty0) * 512 + kant) * w + (x - tx0) * 512 + kant;
-    for (let r = 0; r < 512; r++) {
-      d.set(b.d.subarray(r * 512, r * 512 + 512), start + r * w);
-      kl.set(b.kl.subarray(r * 512, r * 512 + 512), start + r * w);
-      pl.set(b.pl.subarray(r * 512, r * 512 + 512), start + r * w);
-    }
+    const b = blokker.get(`${x}/${y}`)!;
+    if (b.d || null0) leggInnDelt(d, x, y, b.d || null0!);
+    if (b.pl) leggInnDelt(pl, x, y, b.pl);
+    leggInnDelt(kl, x, y, b.kl);
     for (const k in n) n[k as keyof Antall] += b.n[k as keyof Antall];
   }
   /* Egne områder: innenfor hvert område erstatter det kommuneplanen. */
   let basis: Rydding | null = null,
-    eget: Uint8Array | null = null,
-    egetType: Uint8Array | null = null;
+    eget: Glissen | null = null,
+    egetType: Glissen | null = null;
   const egneIder = E ? E.ider : [];
   if (E) {
-    basis = ryddStriper(d, w);
-    d = d.slice();
-    eget = new Uint8Array(w * h);
-    egetType = new Uint8Array(w * h);
-    leggInnEgne(E, d, kl, eget, egetType, { cx0, cy0, w, h });
+    basis = ryddStriper(d);
+    d = kopiAv(d);
+    eget = glissent(G);
+    egetType = glissent(G);
+    leggInnEgne(E, d, kl, eget, egetType);
   }
-  const { celler, ryddet, rn, rj } = ryddStriper(d, w);
+  const { celler, ryddet, rn, rj } = ryddStriper(d);
   const egneTall: EgetTall[] = egneIder.map(() => ({
     nat: 0,
     jor: 0,
@@ -226,13 +243,11 @@ export function byggUtbygging(
     njor: 0
   }));
   if (eget && basis)
-    for (let i = 0; i < eget.length; i++) {
-      const e = eget[i];
-      if (!e) continue;
-      const T = egneTall[e - 1],
-        c = kl[i],
-        b = basis.ryddet[i],
-        ny = ryddet[i];
+    for (const i of finn(eget, e => e !== 0)) {
+      const T = egneTall[verdi(eget, i)! - 1],
+        c = verdi(kl, i)!,
+        b = verdi(basis.ryddet, i),
+        ny = verdi(ryddet, i);
       if (c === 3) T.nat++;
       else if (c === 2) T.jor++;
       else if (c === 1) T.beb++;
@@ -244,14 +259,16 @@ export function byggUtbygging(
       else if (ny === 2) T.njor++;
     }
   /* Radene: rutene med planlagt utbygging nå, og så rutene som bare planen alene har, der egne områder har tatt planen bort */
-  const bareBasis = basis ? basis.celler.filter(i => basis!.ryddet[i] && d[i] !== 1 && d[i] !== 2) : [];
+  const bareBasis = basis
+    ? basis.celler.filter(i => {
+        const v = verdi(d, i);
+        return verdi(basis!.ryddet, i) && v !== 1 && v !== 2;
+      })
+    : [];
   return {
     nr,
     z: Z,
-    cx0,
-    cy0,
-    w,
-    h,
+    ...G,
     alle: d,
     ryddet,
     celler: Int32Array.from(celler),
@@ -274,35 +291,28 @@ export function byggUtbygging(
 }
 
 /* Egne områder inn i utbyggingen: innenfor et eget område erstatter det kommuneplanen. E er områdene per rute fra solv.egneruter, d
-   rutenettet for planlagt utbygging, kl dagens klasser, og G rutenettets plassering. Som utbygging tar området all natur og alt
-   jordbruk i ruta. Som ikke utbygging fjerner det planlagt utbygging der. Fyller eget (hvilket område ruta hører til) og egetType
-   (1 utbygging, 2 ikke utbygging), og endrer d. */
-export function leggInnEgne(
-  E: Egneruter,
-  d: Uint8Array,
-  kl: Uint8Array,
-  eget: Uint8Array,
-  egetType: Uint8Array,
-  G: { cx0: number; cy0: number; w: number; h: number }
-) {
-  for (let y = 0; y < E.h; y++) {
-    const Y = E.cy0 + y - G.cy0;
-    if (Y < 0 || Y >= G.h) continue;
+   rutenettet for planlagt utbygging og kl dagens klasser. Som utbygging tar området all natur og alt jordbruk i ruta. Som ikke
+   utbygging fjerner det planlagt utbygging der. Fyller eget (hvilket område ruta hører til) og egetType (1 utbygging, 2 ikke
+   utbygging), og endrer d. */
+export function leggInnEgne(E: Egneruter, d: Glissen, kl: Glissen, eget: Glissen, egetType: Glissen) {
+  for (let y = 0; y < E.h; y++)
     for (let x = 0; x < E.w; x++) {
-      const X = E.cx0 + x - G.cx0,
-        q = y * E.w + x,
-        o = E.omrade[q];
-      if (!o || X < 0 || X >= G.w) continue;
-      const i = Y * G.w + X,
-        t = E.plan[q];
-      eget[i] = o;
-      egetType[i] = t;
+      const q = y * E.w + x,
+        o = E.omrade[q],
+        i = o ? nummer(d, E.cx0 + x, E.cy0 + y) : -1;
+      if (i < 0) continue;
+      const t = E.plan[q];
+      sett(eget, i, o);
+      sett(egetType, i, t);
       if (t === 1) {
-        if (kl[i] === 3) d[i] = 1;
-        else if (kl[i] === 2) d[i] = 2;
-      } else if (d[i] === 1 || d[i] === 2) d[i] = 0;
+        const c = verdi(kl, i);
+        if (c === 3) sett(d, i, 1);
+        else if (c === 2) sett(d, i, 2);
+      } else {
+        const v = verdi(d, i);
+        if (v === 1 || v === 2) sett(d, i, 0);
+      }
     }
-  }
 }
 
 /* Tabellen gull.utbygging: utbyggingen i kommunen nr. null når det ikke finnes noe å regne på: uten kommuneplan og uten egne
@@ -337,7 +347,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     [...under].map(async ([k, fliser]) => {
       const har = blokker.get(k),
         sig = fliser ? fliser.length : -1;
-      if (har && har.sig === sig && har.kl && har.pl && har.utenPlan === ingenPlan) return;
+      if (har && har.sig === sig && har.kl && har.utenPlan === ingenPlan) return;
       const [x, y] = k.split('/').map(Number),
         tc: Flis = [Z, x, y];
       const [kl, P] = await Promise.all([

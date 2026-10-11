@@ -155,6 +155,7 @@ regner likt. Filene importerer ingenting.
 | `tall.ts` | Summen av en liste tall (`summen`) |
 | `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
 | `png.ts` | PNG-filer: bitene i en fil, og et bilde med fargetabell (til de lagrede klassene) |
+| `glissen.ts` | Glisne rutenett: et stort rutenett i blokker på 512 × 512 ruter, der bare blokkene som har noe, finnes. Leses rute for rute som et vanlig rutenett. Brukes av utbyggingen. |
 
 Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan det hentes og for kartjenester etter WMS.
 
@@ -195,7 +196,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 |---|---|
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes som ett bilde |
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene der kommunen har lagrede klasser, ellers det sammensatte kartet |
-| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. |
+| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
