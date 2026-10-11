@@ -12,7 +12,7 @@ import { omriss, type FlateMedUtsnitt } from '../generelt/geometri.ts';
 import { verdi } from '../generelt/glissen.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import { HALV, RUTE, ruteX, ruteY } from '../solv/felles.ts';
+import { HALV, ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
 import {
   NATURTEMA,
   klasseAreal,
@@ -48,6 +48,7 @@ export interface Kryssing {
   kryss: { S: Kryss; P: Kryss | null };
   plan: Int32Array;
   smal: Int32Array;
+  ruteKm2: number;
 }
 /* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
 export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
@@ -115,7 +116,7 @@ export function kryssNatur(O: TemaOmrade[], R: Utbygging, treff: Int32Array, nK:
       if (e) P.eg[e - 1][v]++;
     }
   }
-  return { kryss: { S, P: B ? P : null }, plan, smal };
+  return { kryss: { S, P: B ? P : null }, plan, smal, ruteKm2: ruteKm2(R.z) };
 }
 
 /* Planlagt utbygging på natur i utbyggingen R, uten smale striper, delt på kartlagt og ikke kartlagt. M er masken for det
@@ -250,15 +251,15 @@ export function byggTemaIPlan(T: Temaet, K: Kryssing, klasser: [navn: string, fa
             o.forEach((x, i) => {
               if (x.v === v) pl += P[i];
             });
-            return { plan: pl, planKm2: pl * RUTE };
+            return { plan: pl, planKm2: pl * K.ruteKm2 };
           })
         : null,
     plan,
-    planKm2: plan * RUTE,
+    planKm2: plan * K.ruteKm2,
     smal,
-    smalKm2: smal * RUTE,
+    smalKm2: smal * K.ruteKm2,
     berort: o.filter((_, i) => P[i]).length,
-    perOmrade: Array.from(P, p => p * RUTE),
+    perOmrade: Array.from(P, p => p * K.ruteKm2),
     berorte: o
       .map((_, i) => i)
       .filter(i => P[i])
@@ -361,7 +362,8 @@ export async function utbyggingUtenforKartlagt(nr: string): Promise<UtenforKartl
         )
       : null;
   const G = kryssKartlagt(R, M);
-  return { ...G, natKm2: G.nat * RUTE, ukjentKm2: G.ukjent * RUTE, andel: andel(G.ukjent, G.nat) };
+  const r = ruteKm2(R.z);
+  return { ...G, natKm2: G.nat * r, ukjentKm2: G.ukjent * r, andel: andel(G.ukjent, G.nat) };
 }
 
 /* Tabellen gull.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte i kommunen nr, eller null når

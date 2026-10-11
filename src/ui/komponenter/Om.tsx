@@ -1,6 +1,7 @@
 /* Om og metode: kall-loggen og katalogen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
 import { katalog } from '../../data/katalog.ts';
 import { finn } from '../../data/motor/kommune.ts';
+import { planniva, settPlanniva } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.ts';
 import { kb, tid } from '../tekst.ts';
@@ -154,8 +155,17 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
           onChange={e => settSmale(e.target.checked)}
         />
         <p className="hint">
-          Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte grøntdrag og kanter langs
-          eksisterende bebyggelse. Smale deler av et større felt vises alltid.
+          Smale striper er felt som ikke er bredere enn rundt {planniva() === 10 ? 20 : 40} meter noe sted, ofte
+          grøntdrag og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.
+        </p>
+        <MdCheckbox
+          label="Regn i ruter på 10 meter (forsøk)"
+          checked={planniva() === 10}
+          onChange={e => settPlanniva(e.target.checked ? 10 : 9)}
+        />
+        <p className="hint">
+          Planlagt utbygging og alt som krysses med den, regnes da i ruter på 10,6 meter i stedet for 21. Det gir fire
+          ganger så mange kall mot DiBK. Regelen om smale striper gjelder fortsatt to ruter.
         </p>
       </section>
     </>

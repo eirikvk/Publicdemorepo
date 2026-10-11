@@ -8,7 +8,7 @@ import { app } from '../../data/motor/tilstand.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
-import { antallOrd, iTekst, pst } from '../tekst.ts';
+import { antallOrd, iTekst, nf, pst } from '../tekst.ts';
 import { MdAlertMessage } from './md.ts';
 
 /* Hvilken plan DiBK har, i tekst: plan-id, hvem som har levert den, og når den ble kopiert til DiBK */
@@ -56,7 +56,7 @@ function Planlagt() {
     const felles =
       'Smale striper er felt som ikke er bredere enn rundt 40 meter noe sted, ofte langs eksisterende bebyggelse. Smale deler av et større felt regnes med. Stripene vises ikke i kartet med mindre du slår dem på under Tekniske valg på siden Om og metode. Anslag til illustrasjon, ikke offisiell statistikk.';
     if (P.hentet)
-      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(P.hentet.km2)} land${P.hentet.land ? ` av ${iTekst(P.hentet.land)} (${pst(P.hentet.andel)} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${P.rute} meter. ${felles}`;
+      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(P.hentet.km2)} land${P.hentet.land ? ` av ${iTekst(P.hentet.land)} (${pst(P.hentet.andel)} %)` : ''}. Zoom inn og flytt kartet for å få med mer. Regnet ut i nettleseren med piksler på ${nf(P.rute, P.rute < 15 ? 1 : 0)} meter. ${felles}`;
     else note = `Regnet ut i nettleseren fra ${P.fliser} kartfliser med piksler på ${P.rute} meter. ${felles}`;
   }
   return (

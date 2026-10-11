@@ -115,6 +115,13 @@ export const katalog = {
       nokkel: flisnavn,
       etl: nibioGrunnkart.grunnkartflis
     }),
+    planniva: tabell<void, number>({
+      lag: 'bronse',
+      navn: 'planniva',
+      tittel: 'Rutestørrelse',
+      om: 'nivået i flisnettet utbyggingen regnes på, slik brukeren har valgt under Tekniske valg: 9 (ruter på 21 meter, som er standard) eller 10 (10,6 meter). Datamotoren fyller den. Tom betyr standard.',
+      husk: 1
+    }),
     klasseregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'klasseregister',
@@ -127,8 +134,8 @@ export const katalog = {
       lag: 'bronse',
       navn: 'klassefil',
       tittel: 'Lagrede klasser per blokk',
-      om: 'dagens klasser i en blokk på nivå 9 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [9, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
-      husk: 256,
+      om: 'dagens klasser i en blokk på nivå 9 eller 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [z, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
+      husk: 1024,
       nokkel: flisnavn,
       etl: nibioGrunnkart.klassefil
     }),
@@ -252,19 +259,20 @@ export const katalog = {
       lag: 'solv',
       navn: 'klasser',
       tittel: 'Dagens klasser per blokk',
-      om: 'dagens klasse per rute på 21 meter i en blokk på nivå 9, kalt med blokken [9, x, y]. Laget av de fire kartbildene fra NIBIO som dekker blokken. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
+      om: 'dagens klasse per rute i en blokk, kalt med blokken [z, x, y]: på nivå 9 er ruta 21 meter, laget av de fire kartbildene fra NIBIO som dekker blokken, og på nivå 10 er ruta 10,6 meter og blokken ett kartbilde. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
       husk: 0,
       nokkel: flisnavn,
       etl: solvGrunnkart.klasser,
       lagret: solvGrunnkart.lagredeKlasser,
       eksempel: flisMidt(PLANNIVA)
     }),
-    blokker: tabell<string, Flis[]>({
+    blokker: tabell<[string, number], Flis[]>({
       lag: 'solv',
       navn: 'blokker',
       tittel: 'Blokkene i kommunen',
-      om: 'blokkene på nivå 9 der kommunen har minst én rute, etter halvregelen. For kommunene med lagrede klasser står listen i registeret (bronse.klasseregister).',
-      husk: 6,
+      om: 'blokkene på nivå 9 eller 10 der kommunen har minst én rute, etter halvregelen, kalt med [kommunenummer, nivå]. For kommunene med lagrede klasser står listen i registeret (bronse.klasseregister). Nøkkel: «nummer/nivå».',
+      husk: 12,
+      nokkel: ([nr, z]) => `${nr}/${z}`,
       etl: solvGrunnkart.blokker,
       lagret: solvGrunnkart.lagredeBlokker
     }),
@@ -452,7 +460,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbygging',
       tittel: 'Utbyggingen',
-      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
+      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg) med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
       husk: 1,
       brukerstyrt: true,
       etl: gullUtbygging.utbygging

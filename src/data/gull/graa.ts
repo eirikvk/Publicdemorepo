@@ -3,7 +3,7 @@
    og grønt i bebygd område. */
 import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
-import { RUTE, ruteX, ruteY } from '../solv/felles.ts';
+import { ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
 import { andel, arealFraRuter, bildetall, landareal, type Kommunebilde } from './felles.ts';
 import type { Utbygging } from './utbygging.ts';
@@ -27,6 +27,7 @@ export interface Graakryss {
   gront: number;
   antallEgne: number;
   delvis: boolean;
+  ruteKm2: number;
 }
 
 /* Planlagt utbygging krysset med grått areal: hvor mye av all planlagt utbygging på land som ligger på areal som alt er grått, altså
@@ -77,7 +78,7 @@ export function kryssGraa(R: Utbygging, D: Graatrinn, delvis: boolean): Graakrys
       if (b) legg(P, e, k, c);
     }
   }
-  return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis };
+  return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis, ruteKm2: ruteKm2(R.z) };
 }
 
 /* Det temasiden, oversikten og kartet viser: tilstanden, arealet samlet og per trinn, og andelen av landarealet. D er grått areal
@@ -88,13 +89,13 @@ export function byggGraa(D: Graa | null, land: number) {
 /* Det temasiden viser fra kryssingen K med utbyggingen: grønt i bebygd område, og planlagt utbygging på grått areal */
 export function byggGraaIPlan(K: Graakryss) {
   return {
-    gront: { km2: K.gront * RUTE, delvis: K.delvis },
+    gront: { km2: K.gront * K.ruteKm2, delvis: K.delvis },
     plan: K.S.tot
       ? {
-          km2: K.S.tot * RUTE,
-          graa: K.S.graa * RUTE,
-          gron: K.S.gron * RUTE,
-          gront: K.S.gront * RUTE,
+          km2: K.S.tot * K.ruteKm2,
+          graa: K.S.graa * K.ruteKm2,
+          gron: K.S.gron * K.ruteKm2,
+          gront: K.S.gront * K.ruteKm2,
           andelGraa: andel(K.S.graa, K.S.tot),
           delvis: K.delvis,
           antallEgne: K.antallEgne

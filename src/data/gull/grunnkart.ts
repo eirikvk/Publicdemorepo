@@ -7,13 +7,13 @@ import { katalog } from '../katalog.ts';
 import { flisAvNavn, type Flis } from '../solv/felles.ts';
 import type { Oversikt } from '../solv/grunnkart.ts';
 
-/* Dagens klasser for kommunen: bildet zoomet ut (ov), og kommunens flate det klippes mot (koord). blokker er blokkene på nivå 9
-   når kommunen har lagrede klasser, og da er hele kommunen med. Ellers sier delvis at bare det som er hentet, er med, og fliser er
-   flisene som er hentet. */
+/* Dagens klasser for kommunen: bildet zoomet ut (ov), og kommunens flate det klippes mot (koord). lagret sier at kommunen har
+   lagrede klasser, og da er hele kommunen med, i blokkene fra solv.blokker og solv.klasser. Ellers sier delvis at bare det som er
+   hentet, er med, og fliser er flisene som er hentet. */
 export interface DagensKlasser {
   ov: Oversikt;
   koord: Flerflate;
-  blokker: Flis[] | null;
+  lagret: boolean;
   fliser: Flis[] | null;
   delvis: boolean;
 }
@@ -23,10 +23,10 @@ export interface DagensKlasser {
 export async function dagensKlasser(nr: string): Promise<DagensKlasser | null> {
   const [reg, g] = await Promise.all([katalog.bronse.klasseregister(), katalog.solv.grense(nr)]);
   if (reg && reg.kommuner && reg.kommuner[nr]) {
-    const L = await Promise.all([katalog.solv.blokker(nr), katalog.solv.klassekart(nr)]).catch(() => null);
-    if (L) return { ov: L[1], koord: g.koord, blokker: L[0], fliser: null, delvis: false };
+    const ov = await katalog.solv.klassekart(nr).catch(() => null);
+    if (ov) return { ov, koord: g.koord, lagret: true, fliser: null, delvis: false };
   }
   const s = await katalog.solv.sammensatt(nr);
   if (!s.har.size) return null;
-  return { ov: s.ov, koord: g.koord, blokker: null, fliser: [...s.har].map(flisAvNavn), delvis: true };
+  return { ov: s.ov, koord: g.koord, lagret: false, fliser: [...s.har].map(flisAvNavn), delvis: true };
 }

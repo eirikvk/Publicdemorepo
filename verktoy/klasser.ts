@@ -1,5 +1,5 @@
-/* Lager de lagrede klassene: dagens klasser per blokk på nivå 9 for noen kommuner, lagret sammen med siden. De er det ferdige
-   svaret for solv.klasser, så siden slipper å hente kartbildene fra NIBIO for hele kommunen. Arbeidet gjøres i en nettleser
+/* Lager de lagrede klassene: dagens klasser per blokk på nivå 9 (21 meter) og 10 (10,6 meter) for noen kommuner, lagret sammen med
+   siden. De er det ferdige svaret for solv.klasser, så siden slipper å hente kartbildene fra NIBIO for hele kommunen. Arbeidet gjøres i en nettleser
    (Chromium via Playwright) med katalogen i src, se klasser-side.ts. Svaret lages altså av den samme ETL-funksjonen som siden
    bruker når det ikke finnes noe lagret. Her står bare det å lagre: hver blokk som et lite bilde med fargetabell (KLASSETABELL i
    src/data/solv/klasser.ts), og registeret over hvilke blokker hver kommune har.
@@ -7,9 +7,11 @@
    Kjør fra roten av repoet:
        node verktoy/klasser.ts 5001 5021
        node verktoy/klasser.ts --fylke 50 --hentet "11. oktober 2026"
+       node verktoy/klasser.ts 5612 --niva 10
 
-   Blokkene legges i public/klasser/9/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
-   --paa-nytt. En blokk koster fire kall mot NIBIO. Grunnkartet er lisensiert «Norge digitalt begrenset». */
+   Blokkene legges i public/klasser/z/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
+   --paa-nytt. En blokk koster fire kall mot NIBIO på nivå 9 og ett på nivå 10. Kartbildene huskes i nettleseren mens verktøyet går,
+   så nivå 10 etter nivå 9 koster lite ekstra. Grunnkartet er lisensiert «Norge digitalt begrenset». */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +30,7 @@ const { values: valg, positionals: kommuner } = parseArgs({
     fylke: { type: 'string' } /* alle kommunene i et fylke, etter fylkesnummer i public/kommuner.json */,
     'paa-nytt': { type: 'boolean' } /* lag blokkene også når de er lagret fra før */,
     hentet: { type: 'string' } /* tekst for når klassene er laget, vises på siden */,
+    niva: { type: 'string', default: '9,10' } /* nivåene som lages */,
     ut: { type: 'string', default: path.join(ROT, 'public') } /* mappen klasser/ og klasser.json legges i */
   }
 });
@@ -47,16 +50,19 @@ if (!numre.length) {
   console.log('Bruk: node verktoy/klasser.ts <kommunenumre> [--fylke 50] [--paa-nytt] [--hentet tekst] [--ut mappe]');
   process.exit(2);
 }
+const NIVAER = valg.niva!.split(',').map(Number);
+if (NIVAER.some(z => z !== 9 && z !== 10)) throw new Error('nivåene er 9 og 10');
+/* Registeret: blokkene [x, y] per kommune og nivå */
 interface Register {
   versjon: string;
   hentet: string;
-  kommuner: Record<string, number[][]>;
+  kommuner: Record<string, Record<string, number[][]>>;
 }
 const regfil = path.join(valg.ut!, 'klasser.json'),
   register: Register = fs.existsSync(regfil)
     ? JSON.parse(fs.readFileSync(regfil, 'utf8'))
     : { versjon: 'årsversjon 2025', hentet: '', kommuner: {} };
-const blokkfil = ([x, y]: number[]) => path.join(valg.ut!, 'klasser', '9', String(x), `${y}.png`);
+const blokkfil = (z: number, [x, y]: number[]) => path.join(valg.ut!, 'klasser', String(z), String(x), `${y}.png`);
 const DEKNING = KLASSETABELL.map((_, i) => (i ? 255 : 0)); /* plass 0 er gjennomsiktig */
 
 /* Koden i src serveres av Vite, og nettleseren henter den gjennom en side på http://klasser.test/. Registeret over lagrede
@@ -82,49 +88,54 @@ await side.goto('http://klasser.test/');
 const modul = '/verktoy/klasser-side.ts'; /* i nettleseren, fra Vite */
 
 const laget = new Set<string>(); /* blokker som er laget i denne kjøringen */
+/* Blokkene for kommunen nr på nivå z: de som mangler, lages fire om gangen, så køen mot NIBIO i nettleseren (høyst fire kall)
+   holdes full. Gir blokkene, hvor mange som er nye, og størrelsen på filene. */
+async function lagNiva(nr: string, z: number) {
+  const B: Awaited<ReturnType<typeof blokkerFor>> = await side.evaluate(
+    ([m, nr, z]) => import(m as string).then(s => s.blokkerFor(nr, z)),
+    [modul, nr, z]
+  );
+  let nye = 0,
+    byte = 0;
+  const igjen = B.filter(b => {
+    const fil = blokkfil(z, b);
+    if (!laget.has(fil) && (valg['paa-nytt'] || !fs.existsSync(fil))) return true;
+    byte += fs.statSync(fil).size;
+    return false;
+  });
+  const lag = async (b: number[]) => {
+    const fil = blokkfil(z, b),
+      K: Awaited<ReturnType<typeof lagBlokk>> = await side.evaluate(
+        ([m, z, x, y]) => import(m as string).then(s => s.lagBlokk(z, x, y)),
+        [modul, z, b[0], b[1]]
+      );
+    const png = palettPng(512, 512, Buffer.from(K.kl, 'base64'), KLASSETABELL, DEKNING, data =>
+      deflateSync(data, { level: 9 })
+    );
+    fs.mkdirSync(path.dirname(fil), { recursive: true });
+    fs.writeFileSync(fil, png);
+    laget.add(fil);
+    nye++;
+    byte += png.length;
+  };
+  for (let i = 0; i < igjen.length; i += 4) await Promise.all(igjen.slice(i, i + 4).map(lag));
+  return { B, nye, kB: Math.round(byte / 1024) };
+}
 for (const nr of numre) {
   const t0 = Date.now();
   try {
-    const B: Awaited<ReturnType<typeof blokkerFor>> = await side.evaluate(
-      ([m, nr]) => import(m).then(s => s.blokkerFor(nr)),
-      [modul, nr]
-    );
-    let nye = 0,
-      byte = 0;
-    for (const b of B) {
-      const fil = blokkfil(b);
-      if (laget.has(fil) || (!valg['paa-nytt'] && fs.existsSync(fil))) {
-        byte += fs.statSync(fil).size;
-        continue;
-      }
-      const K: Awaited<ReturnType<typeof lagBlokk>> = await side.evaluate(
-        ([m, x, y]) => import(m as string).then(s => s.lagBlokk(x, y)),
-        [modul, b[0], b[1]]
-      );
-      const png = palettPng(512, 512, Buffer.from(K.kl, 'base64'), KLASSETABELL, DEKNING, data =>
-        deflateSync(data, { level: 9 })
-      );
-      fs.mkdirSync(path.dirname(fil), { recursive: true });
-      fs.writeFileSync(fil, png);
-      laget.add(fil);
-      nye++;
-      byte += png.length;
+    const ut: Record<string, unknown> = {};
+    for (const z of NIVAER) {
+      const { B, nye, kB } = await lagNiva(nr, z);
+      register.kommuner[nr] = { ...register.kommuner[nr], [z]: B };
+      ut[z] = { blokker: B.length, nye, kB };
     }
-    register.kommuner[nr] = B;
     if (valg.hentet) register.hentet = valg.hentet;
     fs.writeFileSync(
       regfil,
       JSON.stringify(register)
     ); /* for hver kommune, så en avbrutt kjøring ikke mister det som er gjort */
-    console.log(
-      nr,
-      JSON.stringify({
-        blokker: B.length,
-        nye,
-        kB: Math.round(byte / 1024),
-        sekunder: Math.round((Date.now() - t0) / 1000)
-      })
-    );
+    console.log(nr, JSON.stringify({ ...ut, sekunder: Math.round((Date.now() - t0) / 1000) }));
   } catch (e) {
     console.log(nr, 'FEIL', String((e as Error).message).slice(0, 200));
   }

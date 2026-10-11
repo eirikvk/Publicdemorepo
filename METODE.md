@@ -191,15 +191,20 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
    lages av de fire kartbildene fra NIBIO på nivå 10, 1:50 000, som dekker den. Der er én piksel 10,6 meter, så én rute er 2 × 2
    piksler. Fargen i ruta er snittet av de fire, vektet med dekningen, og klassen leses av fargen som i steg 2. Ruta regnes som
    tegnet når snittet av dekningen er minst 100 av 255.
+4. Velges ruter på 10 meter under Tekniske valg, er blokken ett kartbilde på nivå 10, og hver rute er én piksel (10,6 meter).
+   Klassen leses som i steg 2. Begge nivåene lages fra kartbildene. 21 meter regnes ikke av 10 meter: da er klassen allerede
+   avrundet for hver piksel, og blandingsfargen i kanten er borte. En vei på 5 meter blir da bebygd i to av fire piksler og
+   avrundes på nytt til en bebygd rute på 21 meter.
 
-**Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 21 meter i hver blokk.
+**Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 21 meter (eller 10,6
+meter) i hver blokk.
 
 **Usikkerhet.**
 
 - Kartet og SSBs tall bygger på to ulike inndelinger. Kartet følger grunnkartets økosystemtyper, tallene følger SSBs
   arealklasser. Tallene på siden blander derfor offisielle tall fra SSB med tall regnet ut fra grunnkartet.
 - Grønne områder og idrettsområder er bebygd i begge inndelingene.
-- NIBIO tegner grunnkartet først fra 1:50 000. For 42 kommuner i Trøndelag, Bergen, Alta, Karasjok og Kautokeino ligger klassene per blokk lagret sammen med
+- NIBIO tegner grunnkartet først fra 1:50 000. For 42 kommuner i Trøndelag, Bergen, Alta, Karasjok og Kautokeino ligger klassene per blokk på 21 og 10 meter lagret sammen med
   siden (`public/klasser/`, laget med `verktoy/klasser.ts`). De er laget av den samme funksjonen som siden bruker (`solv.klasser`),
   så svaret er det samme som om siden hadde hentet kartbildene selv. Da regnes alt for hele kommunen på 21 meter, og zoomet ut viser
   kartet blokkene satt sammen (`solv.klassekart`). For andre kommuner setter nettleseren sammen et bilde av flisene den har hentet,
@@ -289,6 +294,12 @@ eller mindre natur enn i 2017?
 
 Har kommunen ikke lagrede klasser, regnes bare den delen nettleseren har hentet kart for, og siden sier det. Ruter som
 ikke er hentet, regnes som naboer i regelen om smale striper, så felt ikke skrelles av langs kanten av det som er hentet.
+
+**Ruter på 10 meter (forsøk).** Under Tekniske valg kan utbyggingen regnes i ruter på 10,6 meter i stedet for 21 (nivå 10 i
+flisnettet, `bronse.planniva`). Da hentes også kommuneplanen fra DiBK på nivå 10, med fire ganger så mange kall, og egne områder
+legges i det samme rutenettet. Alt annet er likt, også regelen om smale striper, som fortsatt tar bort felt som ikke er bredere enn
+to ruter. På 10 meter er det rundt 20 meter, mot rundt 40 meter på 21 meter. Arealet per rute følger rutestørrelsen
+(`ruteKm2` i `src/data/solv/felles.ts`).
 
 **Har kommunen plan?** Et lite bilde av planlaget over hele kommunen viser hvor stor del av kommunen planen dekker (`planDekning`, sølv).
 Langs grensen stikker naboenes planer litt inn, så under 15 % regnes som at DiBK ikke har kommuneplanen.
@@ -666,6 +677,29 @@ kartleggingen (venter på det kartlagte). Siden setter delene sammen. Metoden bl
 før, hver kjørt med sitt eget testverktøy samme kveld: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så
 Malvik og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
+**Ruter på 10 meter som valg, 11. oktober 2026.** Dagens klasser er nå lagret på både 21 og 10,6 meter for de 42 kommunene
+(3 844 filer, 19 MB), og under Tekniske valg kan utbyggingen regnes på 10 meter. 21 meter er standard og uendret: regresjonstesten
+ga ingen avvik, og tallene for alle de 42 kommunene var like. Først ble bare 10 meter lagret, og 21 meter regnet av det. Det ga for
+store endringer, fordi klassen da avrundes to ganger (se Arealklassene, steg 4): i Trondheim ble natur satt av 6 % lavere og bebygd i
+dag 8 % høyere, og i Kautokeino ble bebygd i dag 46 % høyere. Derfor lages begge nivåene fra kartbildene og lagres hver for seg.
+Registeret over lagrede klasser ble 50 kB, mot 12 kB (11 kB komprimert).
+
+Tallene på 10 meter mot 21 meter, for de 38 av de 42 kommunene som har kommuneplanen hos DiBK, hver kommune i en fersk side:
+
+- Natur satt av til utbygging: til sammen 2,4 % høyere (89 590 mot 91 720 dekar). Medianen er +0,9 %, og i de fleste kommunene er
+  endringen innenfor 1 %. Størst er Bergen (+38 %), Trondheim (+24 %), Oppdal (+23 %), Heim (+16 %) og Leka (+15 %). Der er det
+  mange smale felt og veier, og regelen om smale striper tar bort mindre på 10 meter.
+- Jordbruk satt av: 5,6 % høyere. Bebygd i dag: 13,7 % høyere, fordi smale veier og små bygg kommer med. Natur i dag: 0,2 % lavere.
+- Mot vektoranalysen fra Miljødirektoratet (se Planlagt utbygging) kom alle de fem kommunene vi har tall for, nærmere på 10 meter:
+  Heim fra −16,6 % til −3,3 %, Oppdal fra −22,4 % til −4,8 %, Meråker fra +2,0 % til +1,0 %, Ørland fra +1,3 % til +0,6 % og Skaun
+  fra −0,3 % til +0,3 %. Vektoranalysen bygger på planer kopiert til DiBK i januar, mot februar i tjenesten siden bruker.
+- Tid til tallene er ferdige: median 8,7 mot 4,9 sekunder, og høyst 27 sekunder (Frøya). Kautokeino 26 mot 10 sekunder. Det meste
+  er de fire gangene så mange kallene mot DiBK.
+- Minnet i cachen: 2 120 mot 1 280 MB for de 42 til sammen, høyst 127 MB (Kautokeino). Nedlastingen av lagrede filer er 2,5 til 3,4
+  ganger større, for eksempel 483 mot 185 kB i Trondheim og 2 145 mot 644 kB i Kautokeino.
+- Egne områder virker på 10 meter. Frem og tilbake mellom 21 og 10 meter med en opplastet plan ga de samme tallene på 21 meter som en
+  fersk side.
+
 **Glissen utbygging, 11. oktober 2026.** Utbyggingen var fire store rutenett over hele kommunen: planen med og uten smale striper,
 dagens klasser og planen på land. Nå er de glisne (`src/data/generelt/glissen.ts`): delt i blokker på 512 × 512 ruter, der bare
 blokkene som har noe, finnes. Planen har bare blokkene med planlagt utbygging eller egne områder, og dagens klasser deler blokkene
@@ -745,6 +779,9 @@ Svakheter:
 
 Åpne spørsmål om metoden:
 
+- **Smale striper på 10 meter.** Regelen tar bort felt som ikke er bredere enn to ruter, rundt 20 meter på 10 meter og rundt 40
+  meter på 21 meter. Med 10 meter som standard må det avgjøres om grensen skal følge rutene eller holdes på rundt 40 meter, og det
+  må kontrolleres mot vektoranalysen.
 - **Halvregelen gjelder ikke overalt.** Grunnkartet og plansjekken bruker 100 av 255, og verdsatt natur regnes av dekningen.
   Klippingen til kommunen bruker halvregelen for kommunene med lagrede klasser, og 100 av 255 for det sammensatte kartet. Skal det
   gjøres likt, endres tallene for planlagt utbygging litt.

@@ -133,7 +133,7 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 | `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
 | `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
-| `public/` | Filer som legges ut som de er: listen over kommuner og dagens klasser lagret per blokk for noen kommuner (`klasser/` og `klasser.json`) |
+| `public/` | Filer som legges ut som de er: listen over kommuner og dagens klasser lagret per blokk på 21 og 10 meter for noen kommuner (`klasser/` og `klasser.json`) |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
@@ -196,7 +196,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 |---|---|
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes som ett bilde |
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene der kommunen har lagrede klasser, ellers det sammensatte kartet |
-| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
+| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
@@ -315,8 +315,10 @@ svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som 
 **Cachen kan starte utfylt.** En tabell kan ha ferdige svar som ligger lagret sammen med siden (`lagret` i katalogen). Finnes
 svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Dagens klasser per blokk (`solv.klasser`) er
 slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (`verktoy/klasser.ts`) og lagret som små bilder i
-`public/klasser/`, så siden slipper fire kall mot NIBIO per blokk. Blokkene i kommunen (`solv.blokker`) står i registeret
-(`public/klasser.json`).
+`public/klasser/`, både på 21 meter (nivå 9) og 10,6 meter (nivå 10), rundt 3 800 filer og 19 MB. Siden slipper da kallene mot
+NIBIO, og nettleseren henter bare filene for valgt kommune og rutestørrelse. Blokkene i kommunen (`solv.blokker`) står i
+registeret (`public/klasser.json`). Begge nivåene lages fra kartbildene fra NIBIO. 21 meter regnes ikke av 10 meter, for da ville
+klassen avrundes to ganger.
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 
@@ -465,7 +467,7 @@ GitHub. Dette er brukt hvor:
 | `MdButton`, `MdIconButton` | Tegning og opplasting, vis i kartet, faktaark, slett, bytt kommune, til listen og fjern markering |
 | `MdLink` (og stilen `md-link`) | Lenker i løpende tekst, og lenkene mellom sidene |
 | `MdRadioGroup` | Om et tegnet område er utbygging eller ikke |
-| `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper og teknisk visning |
+| `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper, ruter på 10 meter og teknisk visning |
 | `MdLoadingSpinner` | Mens kartet hentes |
 | `MdAccordionItem` | Bronse, sølv og gull i katalogen under teknisk visning |
 | Ikoner | Tegn, last opp, sted, åpne i ny fane, slett og lukk |
@@ -570,10 +572,11 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   gjør siden tilstanden, temaene, katalogen, innholdet i cachen og kartet tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
 - `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
   (`tsc`) for `src` og `verktoy`, og så denne.
-- `klasser.ts` lager de lagrede klassene, for eksempel `npm run klasser -- --fylke 50`. Arbeidet gjøres i Chromium med katalogen
-  i `src` (`klasser-side.ts`): verktøyet kaller `solv.blokker` og `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og
-  lagrer svaret. Siden bruker da den samme funksjonens svar som ferdig svar (`lagret` i katalogen). Én blokk koster fire kall mot
-  NIBIO.
+- `klasser.ts` lager de lagrede klassene på 21 og 10 meter, for eksempel `npm run klasser -- --fylke 50`, eller bare ett nivå med
+  `--niva 9`. Arbeidet gjøres i Chromium med katalogen i `src` (`klasser-side.ts`): verktøyet kaller `solv.blokker` og
+  `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og lagrer svaret. Siden bruker da den samme funksjonens svar som
+  ferdig svar (`lagret` i katalogen). En blokk koster fire kall mot NIBIO på 21 meter og ett på 10 meter, og de samme kartbildene
+  brukes til begge.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.
 
 `npm run formater` formaterer koden etter `.prettierrc.json`.

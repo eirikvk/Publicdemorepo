@@ -56,7 +56,7 @@ Alle kall går direkte fra nettleseren til tjenesten. Ingen av dem krever innlog
 | Miljødirektoratet | Inngrepsfrie naturområder | kart.miljodirektoratet.no/geoserver/inngrepsfrinatur | WMS | Inngrepsfri natur |
 
 Lagret sammen med siden ligger listen over fylker og kommuner (`public/kommuner.json`, fra Kartverket) og dagens klasser per blokk
-på 21 meter for 42 kommuner (`public/klasser/` og `public/klasser.json`, laget fra NIBIOs grunnkart med `verktoy/klasser.ts`).
+på 21 og 10 meter for 42 kommuner (`public/klasser/` og `public/klasser.json`, laget fra NIBIOs grunnkart med `verktoy/klasser.ts`).
 
 ## Drift
 

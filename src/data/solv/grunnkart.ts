@@ -1,7 +1,7 @@
 /* Sølv for grunnkartet fra NIBIO: dagens klasser i to former.
-   Per blokk (solv.klasser): klassen per rute på 21 meter i blokkene på nivå 9, i samme rutenett som planen. Laget av de fire
-   kartbildene fra NIBIO som dekker blokken, eller lagret ferdig sammen med siden for noen kommuner (bronse.klassefil). Det lagrede
-   er laget med den samme funksjonen, så det er samme svar.
+   Per blokk (solv.klasser): klassen per rute i blokkene på nivå 10 (10,6 meter) eller 9 (21 meter), i samme rutenett som planen.
+   Begge lages av kartbildene fra NIBIO, og for noen kommuner ligger de lagret ferdig sammen med siden (bronse.klassefil).
+   Det lagrede er laget med den samme funksjonen, så det er samme svar. Begge nivåene er lagret.
    For hele kommunen zoomet ut (Oversikt), fra to kilder side om side: blokkene satt sammen (solv.klassekart) og det sammensatte
    kartet av flisene som er hentet (solv.sammensatt). Gull velger mellom dem (gull.dagensKlasser).
    Kartbildene fra NIBIO leses som de er: klassen leses av fargen (klasserIFlis i klasser.ts). */
@@ -11,8 +11,6 @@ import {
   FLISNIVA,
   HALV,
   OPPLOSNINGER,
-  PLANNIVA,
-  RUTE_M,
   flisAvNavn,
   flisUtsnitt,
   flisnavn,
@@ -42,7 +40,7 @@ export interface Oversikt {
   dynamisk?: boolean;
 }
 
-/* Dagens klasser i en blokk på nivå 9: 512 x 512 ruter, plassert i flisnettet som planen (Planruter i felles.ts). kl er klassen per
+/* Dagens klasser i en blokk på nivå 9 eller 10: 512 x 512 ruter, plassert i flisnettet som planen (Planruter i felles.ts). kl er klassen per
    rute som i klasserIFlis: 0 ukjent, ellers plassen i ALLE pluss én (1 bebygd, 2 jordbruk, 3 natur, 4–6 vann). */
 export interface Klasser extends Plassering {
   h: number;
@@ -56,12 +54,16 @@ const iBlokk = (tc: Flis): Plassering & { h: number } => ({
   h: 512
 });
 
-/* Tabellen solv.klasser: dagens klasser i blokken tc [9, x, y], laget av de fire kartbildene fra NIBIO på nivå 10 som dekker den
-   (bronse.grunnkartflis). Én rute er 2 x 2 piksler i kartbildene. Fargen i ruta er snittet av de fire, vektet med dekningen, og
-   klassen leses av fargen som ellers (klasserIFlis): det det er mest av, når fargen er en blanding. */
+/* Tabellen solv.klasser: dagens klasser i blokken tc [z, x, y], laget av kartbildene fra NIBIO på nivå 10 (bronse.grunnkartflis).
+   På nivå 10 er blokken ett kartbilde, 512 x 512 piksler på 10,6 meter, og hver rute er én piksel.
+   På nivå 9 er hver rute på 21 meter 2 x 2 piksler i de fire kartbildene som dekker blokken. Fargen i ruta er snittet av de fire,
+   vektet med dekningen.
+   Klassen leses av fargen (klasserIFlis): det det er mest av, når fargen er en blanding. Begge nivåene lages fra kartbildene, ikke
+   det ene fra det andre. Da avrundes klassen bare én gang. */
 export async function klasser(tc: Flis): Promise<Klasser> {
-  if (tc[0] !== PLANNIVA || FLISNIVA !== PLANNIVA + 1)
-    throw new Error('blokkene er på nivå 9, og kartbildene på nivå 10');
+  if (tc[0] === FLISNIVA)
+    return { ...iBlokk(tc), kl: klasserIFlis(await bildePiksler(await katalog.bronse.grunnkartflis(tc), 512, 512)) };
+  if (tc[0] !== FLISNIVA - 1) throw new Error('blokkene er på nivå 9 eller 10');
   const P = new Uint8ClampedArray(512 * 512 * 4);
   await Promise.all(
     [0, 1, 2, 3].map(async d => {
@@ -107,7 +109,7 @@ export async function lagredeKlasser(tc: Flis): Promise<Klasser | null> {
 
 /* Hvor mye av hver rute i blokken tc flaten koord dekker, som alfa fra 0 til 255 */
 const flateIBlokk = (koord: Flerflate, tc: Flis) =>
-  flatePiksler(koord, { u: flisUtsnitt(tc), res: RUTE_M, w: 512, h: 512 });
+  flatePiksler(koord, { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 });
 /* Dagens klasser K klippet til flaten koord (kommunen): ruter flaten dekker mindre enn halvparten av (HALV), blir ukjent (0) */
 export function klasserIFlate(K: Klasser, koord: Flerflate): Uint8Array {
   const M = flateIBlokk(koord, [K.z, K.cx0 / 512, K.cy0 / 512]),
@@ -115,26 +117,28 @@ export function klasserIFlate(K: Klasser, koord: Flerflate): Uint8Array {
   for (let q = 0; q < kl.length; q++) if (M[4 * q + 3] < HALV) kl[q] = 0;
   return kl;
 }
-/* Tabellen solv.blokker: blokkene på nivå 9 der kommunen nr har minst én rute etter halvregelen, som [9, x, y] */
-export async function blokker(nr: string): Promise<Flis[]> {
+/* Tabellen solv.blokker: blokkene på nivå z (9 eller 10) der kommunen nr har minst én rute etter halvregelen, som [z, x, y].
+   Kalles med [nr, z]. */
+export async function blokker([nr, z]: [string, number]): Promise<Flis[]> {
   const g = await katalog.solv.grense(nr);
-  return fliserI(g.ext, PLANNIVA).filter(tc => {
+  return fliserI(g.ext, z).filter(tc => {
     const M = flateIBlokk(g.koord, tc);
     for (let i = 3; i < M.length; i += 4) if (M[i] >= HALV) return true;
     return false;
   });
 }
-/* Det lagrede svaret for solv.blokker: blokkene i registeret over de lagrede klassene, eller null når kommunen ikke står der */
-export async function lagredeBlokker(nr: string): Promise<Flis[] | null> {
+/* Det lagrede svaret for solv.blokker: blokkene på nivå z i registeret over de lagrede klassene, eller null når kommunen ikke står
+   der */
+export async function lagredeBlokker([nr, z]: [string, number]): Promise<Flis[] | null> {
   const reg = await katalog.bronse.klasseregister(),
-    L = reg && reg.kommuner && reg.kommuner[nr];
-  return L ? L.map(([x, y]): Flis => [PLANNIVA, x, y]) : null;
+    L = reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][z];
+  return L ? L.map(([x, y]): Flis => [z, x, y]) : null;
 }
-/* Tabellen solv.klassekart: dagens klasser for kommunen nr zoomet ut, satt sammen av blokkene (solv.blokker og solv.klasser) og
-   klippet til kommunen, så det er tomt utenfor. Én piksel er 1, 2, 4 eller flere ruter, så det blir høyst 2048 piksler på lengste
+/* Tabellen solv.klassekart: dagens klasser for kommunen nr zoomet ut, satt sammen av blokkene på 21 meter (solv.blokker og
+   solv.klasser på nivå 9) og klippet til kommunen, så det er tomt utenfor. Én piksel er 1, 2, 4 eller flere ruter, så det blir høyst 2048 piksler på lengste
    side. */
 export async function klassekart(nr: string): Promise<Oversikt> {
-  const [B, G] = await Promise.all([katalog.solv.blokker(nr), katalog.solv.grense(nr)]);
+  const [B, G] = await Promise.all([katalog.solv.blokker([nr, FLISNIVA - 1]), katalog.solv.grense(nr)]);
   if (!B.length) throw new Error('ingen blokker');
   const x0 = Math.min(...B.map(t => t[1])),
     y0 = Math.min(...B.map(t => t[2])),
@@ -142,10 +146,12 @@ export async function klassekart(nr: string): Promise<Oversikt> {
     ny = Math.max(...B.map(t => t[2])) - y0 + 1;
   let f = 1; /* ruter per piksel */
   while ((Math.max(nx, ny) * 512) / f > 2048) f *= 2;
-  const s = 512 / f,
+  const z = B[0][0],
+    m = OPPLOSNINGER[z] / 2,
+    s = 512 / f,
     g = tegneflate(nx * s, ny * s),
-    a = flisUtsnitt([PLANNIVA, x0, y0]),
-    b = flisUtsnitt([PLANNIVA, x0 + nx - 1, y0 + ny - 1]);
+    a = flisUtsnitt([z, x0, y0]),
+    b = flisUtsnitt([z, x0 + nx - 1, y0 + ny - 1]);
   g.imageSmoothingQuality = 'high';
   await Promise.all(
     B.map(async tc => {
@@ -156,10 +162,10 @@ export async function klassekart(nr: string): Promise<Oversikt> {
   );
   const ext: Utsnitt = [a[0], b[1], b[2], a[3]];
   g.globalCompositeOperation = 'destination-in';
-  sti(g, G.koord, ext, 1 / (RUTE_M * f));
+  sti(g, G.koord, ext, 1 / (m * f));
   g.fill('evenodd');
   g.globalCompositeOperation = 'source-over';
-  return { lerret: g.canvas, ext, res: RUTE_M * f };
+  return { lerret: g.canvas, ext, res: m * f };
 }
 
 /* Det sammensatte kartet: lerretet (c) med klassene i rene farger, meter per piksel, utsnittet det dekker, flisene som er lagt inn

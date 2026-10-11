@@ -65,10 +65,14 @@ export const fliserI = (e: Utsnitt, z: number): Flis[] => {
    Zoomet lenger ut brukes blokkene satt sammen eller det sammensatte kartet. */
 export const FLISNIVA = 10;
 
-/* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. */
+/* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. Under
+   Tekniske valg kan brukeren velge nivå 10 i stedet (bronse.planniva), med ruter på 10,6 meter. */
 export const PLANNIVA = 9,
   RUTE_M = OPPLOSNINGER[PLANNIVA] / 2 /* 21,16 meter */,
   RUTE = RUTE_M ** 2 / 1e6; /* km² per rute, 0,448 dekar */
+/* Meter langs siden av en rute og km² per rute i rutenettet på nivå z, med 512 ruter per flis */
+export const ruteM = (z: number) => OPPLOSNINGER[z] / 2,
+  ruteKm2 = (z: number) => ruteM(z) ** 2 / 1e6;
 
 /* Terskler. Dekningen av en piksel er alfa, fra 0 (tom) til 255 (helt dekket). */
 export const HALV = 128; /* halvregelen: en rute teller når en flate dekker minst halve ruta */

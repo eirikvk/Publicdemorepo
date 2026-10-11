@@ -14,14 +14,14 @@ async function medForsok<T>(f: () => Promise<T>, forsok = 6): Promise<T> {
     }
 }
 
-/* Blokkene på nivå 9 der kommunen nr har ruter, som [x, y] */
-export async function blokkerFor(nr: string): Promise<number[][]> {
-  return (await medForsok(() => katalog.solv.blokker(nr))).map(([, x, y]) => [x, y]);
+/* Blokkene på nivå z der kommunen nr har ruter, som [x, y] */
+export async function blokkerFor(nr: string, z: number): Promise<number[][]> {
+  return (await medForsok(() => katalog.solv.blokker([nr, z]))).map(([, x, y]) => [x, y]);
 }
-/* Dagens klasser i blokken [9, x, y]: klassen per rute (base64), og hvor lang tid det tok */
-export async function lagBlokk(x: number, y: number) {
+/* Dagens klasser i blokken [z, x, y]: klassen per rute (base64), og hvor lang tid det tok */
+export async function lagBlokk(z: number, x: number, y: number) {
   const t0 = performance.now(),
-    K = await medForsok(() => katalog.solv.klasser([9, x, y]));
+    K = await medForsok(() => katalog.solv.klasser([z, x, y]));
   let tekst = '';
   for (let i = 0; i < K.kl.length; i += 32768) tekst += String.fromCharCode(...K.kl.subarray(i, i + 32768));
   return { kl: btoa(tekst), ms: performance.now() - t0 };
