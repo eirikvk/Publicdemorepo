@@ -60,6 +60,14 @@ export const katalog = {
       navn: 'kommuner',
       tittel: 'Fylker og kommuner',
       om: 'fylkene og kommunene, sortert etter navn',
+      forklaring:
+        'Listen over fylker og kommuner med nummer og navn. Den ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.',
+      kilde: {
+        navn: 'Kartverket',
+        datasett: 'Administrative enheter, kommuner (Kommuneinfo-API-et)',
+        adresse: 'https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b',
+        lisens: 'CC BY 4.0'
+      },
       husk: 1,
       etl: kartverket.kommuner
     }),
@@ -68,6 +76,13 @@ export const katalog = {
       navn: 'kommunegrense',
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen fra Kartverket som GeoJSON',
+      forklaring: 'Kommunegrensen fra Kartverket.',
+      kilde: {
+        navn: 'Kartverket',
+        datasett: 'Administrative enheter, kommuner (Kommuneinfo-API-et)',
+        adresse: 'https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b',
+        lisens: 'CC BY 4.0'
+      },
       husk: 6,
       etl: kartverket.kommunegrense
     }),
@@ -95,6 +110,14 @@ export const katalog = {
       navn: 'arealtall',
       tittel: 'Arealtall fra SSB',
       om: 'arealet per klasse i nyeste år fra SSB, som JSON-stat',
+      forklaring:
+        'Arealet i km² per arealklasse for kommunen i nyeste år. SSBs nye API (PxWebApi v2) brukes først, og det eldre (v0) hvis det nye ikke svarer. De to gir samme tall.',
+      kilde: {
+        navn: 'Statistisk sentralbyrå (SSB)',
+        datasett: 'tabell 09594, Arealbruk og arealressurser',
+        adresse: 'https://www.ssb.no/statbank/table/09594',
+        lisens: 'CC BY 4.0'
+      },
       husk: 6,
       etl: ssb.arealtall
     }),
@@ -103,6 +126,14 @@ export const katalog = {
       navn: 'arealtidsserie',
       tittel: 'Arealtall fra SSB for 2017',
       om: 'arealet per klasse fra 2017 fra SSB, som JSON-stat',
+      forklaring:
+        'Det samme fra 2017 og fram, med SSBs sammenslåtte tidsserier (kodelisten agg_KommSummer). Da gjelder tallene for 2017 dagens kommune også der kommuner er slått sammen.',
+      kilde: {
+        navn: 'Statistisk sentralbyrå (SSB)',
+        datasett: 'tabell 09594, Arealbruk og arealressurser',
+        adresse: 'https://www.ssb.no/statbank/table/09594',
+        lisens: 'CC BY 4.0'
+      },
       husk: 6,
       etl: ssb.arealtidsserie
     }),
@@ -244,6 +275,8 @@ export const katalog = {
       navn: 'grense',
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen som flerflate i UTM33, med utsnitt og flate i km²',
+      forklaring:
+        'Kommunegrensen i UTM sone 33, og kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).',
       husk: 6,
       etl: solvKommune.grense
     }),
@@ -252,6 +285,8 @@ export const katalog = {
       navn: 'arealtall',
       tittel: 'Arealtall per klasse',
       om: 'arealet per klasse i nyeste år, med landareal, innsjø og elv',
+      forklaring:
+        'SSBs arealklasser summeres til bebygd, jordbruk og natur (se Arealklassene), og innsjø og elv tas ut for seg. Landarealet er summen av de tre klassene på land.',
       husk: 6,
       etl: solvSsb.arealtall
     }),
@@ -260,6 +295,12 @@ export const katalog = {
       navn: 'historie',
       tittel: 'Arealtall i 2017 og nå',
       om: 'arealet per klasse i 2017 og i nyeste år',
+      forklaring:
+        'Arealet per klasse i 2017 og i nyeste år, summert på samme måte. Avviker kommunens samlede areal med mer enn 0,5 % mellom årgangene, er grensen trolig flyttet, og årgangene sammenlignes ikke.',
+      usikkerhet: [
+        'SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. Forskjellen fra 2017 er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der tallet står.',
+        'Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved deling.'
+      ],
       husk: 6,
       etl: solvSsb.historie
     }),
@@ -437,6 +478,7 @@ export const katalog = {
       navn: 'utbredelse',
       tittel: 'Utbredelsen nå',
       om: 'utbredelsen nå: landarealet, og arealet og andelen for hver klasse',
+      forklaring: 'Arealet for hver klasse i nyeste år, og andelen av landarealet.',
       husk: 6,
       etl: gullRegnskap.utbredelse
     }),
@@ -445,6 +487,7 @@ export const katalog = {
       navn: 'endring',
       tittel: 'Endring fra 2017',
       om: 'forskjellen fra 2017 for hver klasse',
+      forklaring: 'Forskjellen fra 2017 til nyeste år for hver klasse.',
       husk: 6,
       etl: gullRegnskap.endring
     }),
@@ -453,6 +496,12 @@ export const katalog = {
       navn: 'oppstilling',
       tittel: 'Regnskapsoppstillingen',
       om: 'regnskapsoppstillingen: areal ved start, netto endring og areal ved slutt',
+      forklaring:
+        'Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA EA): inngående areal i 2017, netto endring og utgående areal i nyeste år, per klasse og med en sum for landarealet.',
+      usikkerhet: [
+        'Landarealet er ikke alltid det samme i de to årgangene, så netto endring går ikke alltid i null. Siden sier fra når det skjer.',
+        'Bare netto endring per klasse er kjent. Tilvekst og avgang hver for seg, og hva natur ble til, kommer først med SSBs egne tabeller over arealendringer.'
+      ],
       husk: 6,
       etl: gullRegnskap.oppstilling
     }),
@@ -461,6 +510,8 @@ export const katalog = {
       navn: 'landOgVann',
       tittel: 'Land og vann',
       om: 'land, innsjø, elv og hav i kommunens flate',
+      forklaring:
+        'Hav er kommunens flate minus landareal, innsjø og elv. SSB har klassen 23 «Sjøområde», men den er tom per kommune. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik mellom grense og statistikk, og kommunen vises uten hav.',
       husk: 6,
       etl: gullRegnskap.landOgVann
     }),

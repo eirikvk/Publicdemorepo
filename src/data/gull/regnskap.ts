@@ -65,12 +65,14 @@ export function byggOppstilling(H: Historie | null) {
 }
 
 /* Delene av kommunens flate: land og ferskvann fra SSB, og hav som det som blir igjen av flaten (fra kommunegrensen). En liten rest
-   er avvik mellom grense og statistikk, ikke hav. */
+   er avvik mellom grense og statistikk, ikke hav. flate og rest er med til forklaringen av tallene. */
 export function byggLandOgVann(flate: number, land: number, ferskvann: { inn: number; elv: number } | null) {
   if (!land || !ferskvann || !flate) return null;
-  let hav = flate - land - ferskvann.inn - ferskvann.elv;
-  if (hav < Math.max(HAV_MIN_KM2, flate * HAV_MIN_ANDEL)) hav = 0;
+  const rest = flate - land - ferskvann.inn - ferskvann.elv,
+    hav = rest < Math.max(HAV_MIN_KM2, flate * HAV_MIN_ANDEL) ? 0 : rest;
   return {
+    flate,
+    rest,
     hav,
     deler: (
       [

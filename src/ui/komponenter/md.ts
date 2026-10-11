@@ -3,6 +3,8 @@
 export { MdAccordionItem } from '@miljodirektoratet/md-react/dist/accordion/MdAccordionItem';
 export { MdAlertMessage } from '@miljodirektoratet/md-react/dist/messages/MdAlertMessage';
 export { MdButton } from '@miljodirektoratet/md-react/dist/button/MdButton';
+export { MdHelpButton } from '@miljodirektoratet/md-react/dist/help/MdHelpButton';
+export { MdHelpText } from '@miljodirektoratet/md-react/dist/help/MdHelpText';
 export { MdCheckbox } from '@miljodirektoratet/md-react/dist/formElements/MdCheckbox';
 export { MdIconButton } from '@miljodirektoratet/md-react/dist/iconButton/MdIconButton';
 export { MdLink } from '@miljodirektoratet/md-react/dist/link/MdLink';

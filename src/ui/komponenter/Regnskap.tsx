@@ -10,6 +10,7 @@ import { utenPlan } from '../../data/motor/egne.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.ts';
+import { Korttittel } from './Tallforklaring.tsx';
 import './Regnskap.css';
 
 /* Hele dekar fra km², og en endring i hele dekar med fortegn */
@@ -71,9 +72,7 @@ function Utbredelse() {
     E = verdi(katalog.gull.endring);
   return (
     <section className="utbredelse" aria-labelledby="regnskap-tittel">
-      <h2 className="md-typography-heading-s" id="regnskap-tittel">
-        Utbredelsesregnskap
-      </h2>
+      <Korttittel kort="utbredelse" id="regnskap-tittel" />
       <p>Hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre over tid.</p>
       {!U ? (
         <p>{T && T.status === 'feil' ? 'Tallene kunne ikke hentes fra SSB.' : 'Henter …'}</p>
@@ -106,9 +105,7 @@ function Oppstilling() {
   const P = utenPlan() ? null : verdi(katalog.gull.plansum);
   return (
     <section className="regnskap prosa" aria-labelledby="oppstilling-tittel">
-      <h2 className="md-typography-heading-s" id="oppstilling-tittel">
-        Regnskapsoppstilling
-      </h2>
+      <Korttittel kort="oppstilling" id="oppstilling-tittel" />
       <Talltabell
         kolonner={['daa', ...O.kolonner]}
         rader={[
@@ -145,9 +142,7 @@ function LandOgVann() {
   const V = verdi(katalog.gull.landOgVann);
   return (
     <section className="vann" aria-labelledby="vann-tittel">
-      <h2 className="md-typography-heading-s" id="vann-tittel">
-        Land og vann
-      </h2>
+      <Korttittel kort="landOgVann" id="vann-tittel" />
       {V && (
         <>
           <Stripe hva="Kommunens flate" deler={V.deler.map(([id, navn, v]) => [navn, '--' + id, v])} />

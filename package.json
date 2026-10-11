@@ -16,7 +16,8 @@
     "regresjon": "node verktoy/regresjon.ts ut/ny",
     "utgave": "node verktoy/utgave.ts",
     "klasser": "node verktoy/klasser.ts",
-    "sjekk": "tsc -p . && tsc -p verktoy && node verktoy/sjekk-lag.ts"
+    "forklaringer": "node verktoy/forklaringer.ts",
+    "sjekk": "tsc -p . && tsc -p verktoy && node verktoy/sjekk-lag.ts && node verktoy/forklaringer.ts --sjekk"
   },
   "dependencies": {
     "@fontsource/open-sans": "5.2.7",

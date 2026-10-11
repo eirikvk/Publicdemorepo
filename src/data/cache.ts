@@ -20,6 +20,13 @@
    for svar fra tjenestene er noe annet, og styres av tjenestene.) Filen importerer ingenting. */
 
 export type Lag = 'bronse' | 'solv' | 'gull';
+/* Kilden til en tabell i bronse: hvem, hvilket datasett, adressen til en side om det, og lisensen */
+export interface Kildeinfo {
+  navn: string;
+  datasett: string;
+  adresse: string;
+  lisens: string;
+}
 export type Status = 'henter' | 'feil' | 'ok';
 /* Én rad: status, verdien (den siste som ble ferdig), utgaven (et løpenummer som er nytt hver gang en verdi legges inn, så det aldri
    brukes to ganger), når den ble laget, hvor lenge ETL-funksjonen brukte, om svaret gjelder bare en del av kommunen (delvis, fra
@@ -55,6 +62,9 @@ export interface Tabelldef<N, V> {
     n: N
   ) => Promise<V | null> /* et ferdig svar som ligger lagret sammen med siden. Finnes det, brukes det, og ETL-funksjonen kjøres
                             ikke. null eller feil: ETL-funksjonen kjøres som vanlig. Slik kan cachen starte utfylt. */;
+  forklaring?: string /* hva tabellen gjør, på klarspråk, til infoknappene og metodebeskrivelsen (verktoy/forklaringer.ts) */;
+  usikkerhet?: string[] /* forbehold ved tallene som kommer fra dette steget */;
+  kilde?: Kildeinfo /* i bronse: hvor dataene hentes fra */;
   eksempel?: (
     u: Utgangspunkt
   ) => N | null /* til tabeller som ikke lagres: nøkkelen katalogvisningen spør med. null når det tabellen bygger på, ikke finnes,
@@ -370,6 +380,7 @@ export function innhold() {
     voksende: !!t.voksende,
     brukerstyrt: !!t.brukerstyrt,
     lagret: !!t.lagret,
+    forklaring: t.forklaring || '',
     sporbar: !t.husk && !!t.etl,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,

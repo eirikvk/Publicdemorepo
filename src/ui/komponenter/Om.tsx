@@ -4,13 +4,12 @@ import { finn } from '../../data/motor/kommune.ts';
 import { planniva, settPlanniva } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.ts';
+import { REPO } from '../forklaringer.ts';
 import { kb, tid } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { VERSJON } from '../../utgave.ts';
 import Katalog from './Katalog.tsx';
 import { MdCheckbox, MdLink, MdToggle } from './md.ts';
-
-const REPO = 'https://github.com/eirikvk/Publicdemorepo/blob/main/';
 
 /* Teknisk visning: om den er slått på, og hvordan den slås av og på. Valget står i adressen, se App.tsx. */
 export interface Tekniskvalg {

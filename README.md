@@ -143,7 +143,8 @@ Katalogen og cachen, i `src/data/`. Se «Katalogen og cachen» under.
 
 | Fil | Innhold |
 |---|---|
-| `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. |
+| `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. Tabellene bak tallene har også forklaringen, usikkerheten og kilden (`forklaring`, `usikkerhet`, `kilde`). |
+| `avhengigheter.ts` | Hvilke tabeller i katalogen hver tabell bygger på, lest ut av koden. Laget av `verktoy/forklaringer.ts`, ikke rediger for hånd. |
 | `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok), tid og om svaret er delvis. Gjør kallene, deler kall som pågår, og glemmer det eldste. Importerer ingenting. |
 
 Generelt, i `src/data/generelt/`. Det som ikke vet noe om natur, kommuner eller kilder. Hver ting finnes bare her, så alle lagene
@@ -225,6 +226,7 @@ Felles, i `src/ui/`:
 | `sider.ts` | Sidene, valg av side, adressen, og oppstarten |
 | `farger.ts` | Fargene i kartet og i tegnforklaringene |
 | `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
+| `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser og regnestykket for valgt kommune, og stegene fra kilde til tall. Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
 | `teknisk.ts` | Formen på `window.motor`: det siden gjør tilgjengelig med `?teknisk`, til feilsøking og regresjonstesten |
 
 Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
@@ -259,6 +261,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
 | `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
+| `Tallforklaring.tsx` | Overskriften på et kort med infoknappen, og panelet under: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall, usikkerheten og lenker til metoden og koden |
 | `Temaside.tsx` | Toppen og rammen som alle temasidene har: navnet, arealet i kommunen, andelen av landarealet og kilden |
 | `Naturtema.tsx` | Sidene for verneområder, villrein og verdsatt natur, med lister over områdene, og ordene sidene bruker om hvert tema |
 | `Inon.tsx` | Siden for inngrepsfri natur |
@@ -276,7 +279,10 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 
 - [KOM-I-GANG.md](KOM-I-GANG.md) viser hvordan man kjører, bygger og tester siden lokalt.
 - [METODE.md](METODE.md) forklarer hver analyse med samme oppsett (spørsmål, data inn, steg, resultat, usikkerhet, kontroll og
-  kode), i samme inndeling som `src/data/`.
+  kode), i samme inndeling som `src/data/`. Den er en sammenstilling: de generelle delene skrives for hånd, og kapitlene om tallene
+  på kortene lages av katalogen og kortene (foreløpig SSB-tallene). Katalogen og kortene har ansvaret for sin egen forklaring:
+  tabellene i katalogen har forklaringen, usikkerheten og kilden, kortene i `src/ui/forklaringer.ts` har spørsmålet, kort fortalt
+  og regnestykket, og hvilke tabeller hver tabell bygger på, leses ut av koden. Infoknappene på kortene viser det samme.
 - [AVHENGIGHETER.md](AVHENGIGHETER.md) lister biblioteker, tjenester og verktøy, med lisenser og det som gjelder sikkerhet og
   personvern.
 
@@ -571,7 +577,10 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Tallene leses fra katalogen, med samme utdata som før. Med `?teknisk`
   gjør siden tilstanden, temaene, katalogen, innholdet i cachen og kartet tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
 - `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
-  (`tsc`) for `src` og `verktoy`, og så denne.
+  (`tsc`) for `src` og `verktoy`, så denne, og så `forklaringer.ts --sjekk`.
+- `forklaringer.ts` leser ut av ETL-funksjonene hvilke tabeller hver tabell bygger på (`src/data/avhengigheter.ts`), og skriver
+  kapitlene i METODE.md mellom merkene `<!-- forklaringer:gruppe -->` fra kortene og katalogen. `npm run forklaringer` kjører den.
+  Med `--sjekk` sier den fra hvis filene ikke er oppdatert, eller et steg mangler forklaring.
 - `klasser.ts` lager de lagrede klassene på 21 og 10 meter, for eksempel `npm run klasser -- --fylke 50`, eller bare ett nivå med
   `--niva 9`. Arbeidet gjøres i Chromium med katalogen i `src` (`klasser-side.ts`): verktøyet kaller `solv.blokker` og
   `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og lagrer svaret. Siden bruker da den samme funksjonens svar som

@@ -1,7 +1,7 @@
 # Metode: hvordan tallene regnes ut
 
 Dette dokumentet forklarer hvert tall siden viser: hvor dataene kommer fra, hvordan de regnes om, hvor sikkert resultatet er, og
-hvordan det er kontrollert. Det følger koden slik den var 10. oktober 2026.
+hvordan det er kontrollert. Det følger koden slik den var 11. oktober 2026.
 
 Dokumentet har samme inndeling som koden. Dataene går gjennom tre lag: bronse henter fra hver tjeneste (`src/data/bronse/`), sølv gjør
 dataene om til en felles standard så kildene kan brukes sammen (`src/data/solv/`), og gull regner ut svarene sidene viser
@@ -17,6 +17,11 @@ Hver analyse har sin del her. «Data inn» svarer til bronse, og «Steg» til s�
 | Usikkerhet | Hva som gjør tallet usikkert, og hva det ikke sier |
 | Kontroll | Hva tallene er sjekket mot |
 | Kode | Hvor analysen ligger i bronse, sølv og gull, og hvor motoren samordner den |
+
+Noen kapitler er laget av koden, og har et annet oppsett: hvert kort på siden med spørsmålet, kort fortalt og tabellene det viser,
+så stegene fra kilde til tall, usikkerheten og koden. Teksten står i katalogen (forklaringen, usikkerheten og kilden for hver
+tabell) og i kortene (`src/ui/forklaringer.ts`), og den samme teksten vises i infoknappen på kortet. Hvilke tabeller hver tabell
+bygger på, er lest ut av koden. `npm run forklaringer` skriver kapitlene på nytt. Foreløpig gjelder det SSB-tallene.
 
 Siden er en prototype. Tall fra SSB er offisiell statistikk. Alt som regnes ut i nettleseren, er anslag til illustrasjon.
 
@@ -219,48 +224,82 @@ kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`.
 
 ## SSB-tallene og utbredelsesregnskapet
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts` og `src/data/gull/regnskap.ts`
+<!-- forklaringer:ssb -->
 
-**Spørsmål.** Hvor mye natur, jordbruk og bebygd areal har kommunen, hvordan fordeler flaten seg på land og vann, og er det mer
-eller mindre natur enn i 2017?
+<!-- Laget av verktoy/forklaringer.ts fra kortene i src/ui/forklaringer.ts og tabellene i katalogen. Endre teksten der. -->
 
-**Data inn.**
+### Utbredelsesregnskap
 
-- SSB tabell 09594, «Arealbruk og arealressurser»: arealet i km² per arealklasse for kommunen, nyeste år. SSBs nye API
-  (PxWebApi v2) brukes først, og det eldre (v0) hvis det nye ikke svarer. De to gir samme tall.
-- Samme tabell fra 2017 og fram, med SSBs sammenslåtte tidsserier (kodelisten `agg_KommSummer`). Da gjelder tallene for 2017
-  dagens kommune også der kommuner er slått sammen.
-- Kommunegrensen fra Kartverket, til kommunens samlede flate.
+**Spørsmål.** Hvor mye natur, jordbruk og bebygd areal har kommunen, og er det mer eller mindre natur enn i 2017?
 
-**Steg.**
+**Kort fortalt.** Tallene er SSBs arealstatistikk. Natur, jordbruk og bebygd areal er SSBs arealklasser slått sammen til tre, og
+andelen er regnet av landarealet. Forskjellen fra 2017 er forskjellen mellom to årganger av statistikken, ikke målt endring.
 
-1. Arealklassene summeres til bebygd, jordbruk og natur, og innsjø og elv tas ut for seg (`tolkAreal`, sølv). Landarealet er summen
-   av de tre klassene på land. Prosentene på siden er andel av landarealet (`byggUtbredelse`, gull).
-2. Hav er kommunens flate minus landareal, innsjø og elv (`landOgVann`, gull). Flaten er arealet av kommunegrensen, rettet for målestokken.
-   SSB har klassen 23 «Sjøområde», men den er tom per kommune. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik
-   mellom grense og statistikk, og kommunen vises uten hav.
-3. Arealet per klasse hentes for 2017 og nyeste år (`tolkHistorie`, sølv). Avviker kommunens samlede areal med mer enn 0,5 % mellom
-   årgangene, er grensen trolig flyttet, og årgangene sammenlignes ikke.
-4. Forskjellen fra 2017 per klasse regnes ut (`byggEndring`, gull).
-5. Utbredelsesregnskapet settes opp etter mønster fra FNs standard for naturregnskap (SEEA EA): inngående areal 2017, netto endring
-   og utgående areal i nyeste år, per klasse og med en sum for landarealet (`byggOppstilling`, gull).
+**Tabeller.** `gull.utbredelse`, `gull.endring`, `gull.oppstilling`. Kortet står i `src/ui/komponenter/Regnskap.tsx`.
 
-**Resultat.** Arealet per klasse i km² og året tallene gjelder. Innsjø, elv og hav i km². Arealet per klasse i 2017 og nyeste år.
+### Regnskapsoppstilling
 
-**Usikkerhet.**
+**Spørsmål.** Hvor mye areal hadde hver klasse i 2017 og nå, satt opp som et regnskap?
+
+**Kort fortalt.** Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og
+areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år.
+
+**Tabeller.** `gull.oppstilling`. Kortet står i `src/ui/komponenter/Regnskap.tsx`.
+
+### Land og vann
+
+**Spørsmål.** Hvordan fordeler kommunens flate seg på land, innsjø, elv og hav?
+
+**Kort fortalt.** Land, innsjø og elv er SSBs tall. Hav er det som blir igjen når de trekkes fra kommunens flate, som er arealet
+innenfor kommunegrensen fra Kartverket.
+
+**Tabeller.** `gull.landOgVann`. Kortet står i `src/ui/komponenter/Regnskap.tsx`.
+
+### Fra kilde til tall
+
+1. **Fylker og kommuner** (`bronse.kommuner`). Listen over fylker og kommuner med nummer og navn. Den ligger lagret sammen med
+   siden, og hentes fra Kartverket hvis den mangler. Kilde: [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0.
+2. **Arealtall fra SSB** (`bronse.arealtall`). Arealet i km² per arealklasse for kommunen i nyeste år. SSBs nye API (PxWebApi v2)
+   brukes først, og det eldre (v0) hvis det nye ikke svarer. De to gir samme tall. Kilde: [Statistisk sentralbyrå (SSB), tabell
+   09594, Arealbruk og arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0.
+3. **Arealtall fra SSB for 2017** (`bronse.arealtidsserie`). Det samme fra 2017 og fram, med SSBs sammenslåtte tidsserier
+   (kodelisten agg_KommSummer). Da gjelder tallene for 2017 dagens kommune også der kommuner er slått sammen. Kilde: [Statistisk
+   sentralbyrå (SSB), tabell 09594, Arealbruk og arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0.
+4. **Kommunegrensen** (`bronse.kommunegrense`). Kommunegrensen fra Kartverket. Kilde: [Kartverket, Administrative enheter,
+   kommuner (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0.
+5. **Arealtall per klasse** (`solv.arealtall`). SSBs arealklasser summeres til bebygd, jordbruk og natur (se Arealklassene), og
+   innsjø og elv tas ut for seg. Landarealet er summen av de tre klassene på land.
+6. **Arealtall i 2017 og nå** (`solv.historie`). Arealet per klasse i 2017 og i nyeste år, summert på samme måte. Avviker
+   kommunens samlede areal med mer enn 0,5 % mellom årgangene, er grensen trolig flyttet, og årgangene sammenlignes ikke.
+7. **Kommunegrensen** (`solv.grense`). Kommunegrensen i UTM sone 33, og kommunens flate i km², rettet for målestokken i UTM (se
+   Felles grunnlag).
+8. **Utbredelsen nå** (`gull.utbredelse`). Arealet for hver klasse i nyeste år, og andelen av landarealet.
+9. **Endring fra 2017** (`gull.endring`). Forskjellen fra 2017 til nyeste år for hver klasse.
+10. **Regnskapsoppstillingen** (`gull.oppstilling`). Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA
+    EA): inngående areal i 2017, netto endring og utgående areal i nyeste år, per klasse og med en sum for landarealet.
+11. **Land og vann** (`gull.landOgVann`). Hav er kommunens flate minus landareal, innsjø og elv. SSB har klassen 23 «Sjøområde»,
+    men den er tom per kommune. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik mellom grense og statistikk, og
+    kommunen vises uten hav.
+
+### Usikkerhet
 
 - SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig
   over tid. Forskjellen fra 2017 er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der
   tallet står.
-- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved deling.
+- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved
+  deling.
 - Landarealet er ikke alltid det samme i de to årgangene, så netto endring går ikke alltid i null. Siden sier fra når det skjer.
-- Bare netto endring per klasse er kjent. Tilvekst og avgang hver for seg, og hva natur ble til, kommer først med SSBs egne tabeller
-  over arealendringer.
+- Bare netto endring per klasse er kjent. Tilvekst og avgang hver for seg, og hva natur ble til, kommer først med SSBs egne
+  tabeller over arealendringer.
 - Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.
 
-**Kode.** Bronse: `hentArealtall`, `hentTidsserie` og `hentSSB` i `src/data/bronse/ssb.ts`. Sølv: `src/data/solv/ssb.ts`. Gull:
-`src/data/gull/regnskap.ts`. Tabellene i katalogen: `bronse.arealtall`, `bronse.arealtidsserie`, `solv.arealtall`, `solv.historie`, `gull.utbredelse`,
-`gull.endring`, `gull.oppstilling` og `gull.landOgVann`.
+### Kode
+
+`src/data/bronse/kartverket.ts`, `src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/solv/kommune.ts`,
+`src/data/gull/regnskap.ts`. Kortene: `src/ui/komponenter/Regnskap.tsx`.
+
+<!-- /forklaringer:ssb -->
 
 ## Planlagt utbygging
 
@@ -702,6 +741,13 @@ Kontrollen viser at oversikten fant alle blokkene med plan i disse kommunene, me
 kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m² borte i oversikten. De er for små til å gi en rute
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
+
+**Forklaringene bak tallene, 11. oktober 2026.** Kortene på regnskapssiden har fått en infoknapp ved overskriften. Den viser
+kort fortalt, regnestykket for valgt kommune med tallene fra gull, stegene fra kilde til tall og usikkerheten. Teksten står ett
+sted: tabellene i katalogen har forklaringen, usikkerheten og kilden, og kortene (`src/ui/forklaringer.ts`) har spørsmålet, kort
+fortalt og regnestykket. Hvilke tabeller hver tabell bygger på, leses ut av koden (`verktoy/forklaringer.ts`). Kapitlet om
+SSB-tallene er laget av det samme. Metoden ble ikke endret: `gull.landOgVann` gir nå også flaten og resten før grensen for hav, så
+regnestykket kan vises. Regresjonstesten ga ingen avvik i tall, tekst eller kartbilder for Trondheim og Oslo.
 
 **Ruter på 10 meter som valg, 11. oktober 2026.** Dagens klasser er nå lagret på både 21 og 10,6 meter for de 42 kommunene
 (3 844 filer, 19 MB), og under Tekniske valg kan utbyggingen regnes på 10 meter. 21 meter er standard og uendret: regresjonstesten
