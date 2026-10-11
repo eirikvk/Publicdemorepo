@@ -24,8 +24,12 @@ import { TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag 
 import { rolig, tilKartet, view } from './kart.ts';
 
 /* Hvordan hvert tema tegnes. Verdsatt natur er mange små lokaliteter, så de tegnes fylt og uten hvit kant, i fire toner av samme
-   farge: mørkere jo høyere verdi. De andre tegnes som omriss. */
+   farge: mørkere jo høyere verdi. Villreinområdene er store og dekker ofte det meste av kommunen, så de tegnes med skravur: da synes
+   det at man er innenfor også zoomet inn langt fra kanten, og dagens klasser og planlagt utbygging kan leses under. Verneområder
+   tegnes som omriss. */
 const FYLT: Record<string, boolean> = { verdi: true };
+const SKRAVERT: Record<string, boolean> = { rein: true };
+const somFliser = (t: Naturtema) => !!(FYLT[t.id] || SKRAVERT[t.id]);
 
 /* Ett lag per tema, med en kilde for flatene. Flatene lages én gang per hentet tema og huskes så lenge temaet ligger i katalogen.
    Fylte temaer tegnes som fliser (Flislag), de andre som omriss (VectorLayer). */
@@ -64,12 +68,12 @@ for (const t of NATURTEMA) {
       image: new ol.style.Circle({ radius: 4, stroke: new ol.style.Stroke({ color: farge(t.id), width: 2.75 }) })
     })
   ];
-  const lag = FYLT[t.id]
+  const lag = somFliser(t)
     ? new ol.layer.Tile({
         className: 'plan',
         properties: { tittel: t.navn },
         visible: false,
-        source: tegnetKilde((tile: ImageTile) => tegnFlateflis(t, tile))
+        source: tegnetKilde((tile: ImageTile) => (SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile))
       })
     : new ol.layer.Vector({
         className: 'plan',
@@ -154,8 +158,56 @@ export function settSlor(paa: boolean) {
 /* Temaene som vises i kartet nå, og om sløret over det som ikke er kartlagt vises, til tegnforklaringen */
 export const synligeTemaer = () => NATURTEMA.filter(t => lagFor(t).lag.getVisible());
 export const slorSynlig = () => dekLag.getVisible();
-export const flateLag = NATURTEMA.filter(t => FYLT[t.id]).map(t => lagFor(t).lag),
-  omrissLag = NATURTEMA.filter(t => !FYLT[t.id]).map(t => lagFor(t).lag);
+export const flateLag = NATURTEMA.filter(somFliser).map(t => lagFor(t).lag),
+  omrissLag = NATURTEMA.filter(t => !somFliser(t)).map(t => lagFor(t).lag);
+/* Temaene som tegnes med skravur, til tegnforklaringen */
+export const skravert = (t: Naturtema) => !!SKRAVERT[t.id];
+
+/* Skravur: skrå striper i temaets farge over hele området, og en strek langs kanten. Stripene ligger fast i kartet (der x + y i
+   flispiksler fra origo går opp i SKRAVUR), så de går rett over fra flis til flis. Avstand og bredde er i flispiksler, som er halve
+   skjermpiksler. */
+const SKRAVUR = 20,
+  STRIPE = 3,
+  KANT = 4;
+function tegnSkravurflis(t: Naturtema, tile: ImageTile) {
+  const t0 = performance.now(),
+    tc = tile.getTileCoord(),
+    u = plannett.getTileCoordExtent(tc),
+    fl = lagFor(t).kilde.getFeaturesInExtent(u);
+  if (!fl.length) {
+    tile.setState(TOM);
+    return;
+  }
+  const s = 512 / (u[2] - u[0]),
+    maske = flislerret(),
+    mg = maske.getContext('2d')!;
+  for (const f of fl) {
+    geomSti(mg, f.getGeometry()!, u, s);
+    mg.fill('evenodd');
+  }
+  const c = flislerret(),
+    g = c.getContext('2d')!;
+  g.strokeStyle = `rgba(${rgb(t.id).join(',')},.8)`;
+  g.lineWidth = STRIPE;
+  g.beginPath();
+  for (let d = (((-(tc[1] + tc[2]) * 512) % SKRAVUR) + SKRAVUR) % SKRAVUR; d < 1024 + SKRAVUR; d += SKRAVUR) {
+    g.moveTo(d, 0);
+    g.lineTo(d - 512, 512);
+  }
+  g.stroke();
+  g.globalCompositeOperation = 'destination-in'; /* stripene bare innenfor områdene */
+  g.drawImage(maske, 0, 0);
+  g.globalCompositeOperation = 'source-over';
+  g.strokeStyle = farge(t.id);
+  g.lineWidth = KANT;
+  g.lineJoin = 'round';
+  for (const f of fl) {
+    geomSti(g, f.getGeometry()!, u, s);
+    g.stroke();
+  }
+  tile.setImage(c);
+  tidSlutt(t.navn.toLowerCase() + ', fliser', t0);
+}
 function tegnFlateflis(t: Naturtema, tile: ImageTile) {
   /* enkeltflatene som berører flisen, tegnet tett og så gjort litt gjennomsiktige samlet, så overlapp ikke blir mørkere */
   const t0 = performance.now(),
@@ -278,7 +330,7 @@ abonner(() => {
     if (ny('data ' + t.id, O)) {
       kilde.clear();
       if (O) kilde.addFeatures(flater(O));
-      if (FYLT[t.id]) friskOpp(lag as Flislag);
+      if (somFliser(t)) friskOpp(lag as Flislag);
     }
     lag.setVisible(paa && !!G && !!O && O.omrader.length > 0);
     if (t.dekning) {

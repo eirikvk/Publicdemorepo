@@ -6,12 +6,14 @@ import { GRAATRINN } from '../../data/solv/graa.ts';
 import { INONSONER } from '../../data/solv/inon.ts';
 import { KL, VANN } from '../../data/solv/klasser.ts';
 import { synligeLag } from '../kart/kart.ts';
+import { skravert } from '../kart/naturtema.ts';
 
-/* En farge i forklaringen: navnet, fargene (som id i farger.ts, flere når den er en skala), og om fargen er et omriss */
+/* En farge i forklaringen: navnet, fargene (som id i farger.ts, flere når den er en skala), og om fargen er et omriss eller skravur */
 interface Linje {
   navn: string;
   farger: string[];
   omriss?: boolean;
+  skravur?: boolean;
 }
 /* En gruppe: overskriften (kan mangle) og fargene */
 interface Gruppe {
@@ -45,7 +47,13 @@ function grupper(): Gruppe[] {
           ...(S.slor ? [{ navn: 'ikke kartlagt', farger: ['slor'] }] : [])
         ]
       });
-    else enkle.push({ navn: t.id === 'rein' ? 'Villreinområder' : t.navn, farger: [t.id], omriss: true });
+    else
+      enkle.push({
+        navn: t.id === 'rein' ? 'Villreinområder' : t.navn,
+        farger: [t.id],
+        omriss: !skravert(t),
+        skravur: skravert(t)
+      });
   if (S.egne) enkle.push({ navn: 'Egne områder', farger: ['egne'], omriss: true });
   if (enkle.length) ut.push({ linjer: enkle });
   if (S.plan)
@@ -84,7 +92,7 @@ export default function Tegnforklaring() {
                   {l.farger.map(f => (
                     <i
                       key={f}
-                      className={l.omriss ? 'omriss' : undefined}
+                      className={l.omriss ? 'omriss' : l.skravur ? 'skravur' : undefined}
                       style={{ ['--f' as string]: `var(--${f})` }}
                     />
                   ))}
