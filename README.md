@@ -263,7 +263,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
 | `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `Katalog.tsx` | Katalogen i teknisk visning: én kort tabell over tabellene, med «Info» (hva tabellen er og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
+| `Katalog.tsx` | Katalogen i teknisk visning: én kort tabell over tabellene med tittelen, og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `Datavisning.tsx` | Innholdet i en rad i cachen, etter formen det har: bilder fra kildene slik de kom, rutenett som bilde med én farge per verdi, lister som tabell, flater som omriss, og de enkle feltene. Formen finnes ut fra dataene, uten oppsett per tabell. |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |

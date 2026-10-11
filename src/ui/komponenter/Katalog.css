@@ -2,12 +2,6 @@
 .katalog .talltabell tbody th {
   min-width: 0;
 }
-/* Det tekniske navnet under tittelen: lite og grått, som det ETL-funksjonen heter i koden */
-.katalog .talltabell tbody th small {
-  display: block;
-  font-weight: normal;
-  color: var(--dempet);
-}
 /* Det som ikke er ferdig (henter, feilet, utdatert), kan deles over linjer, så kolonnen holder seg smal */
 .katalog td small.uferdig {
   white-space: normal;

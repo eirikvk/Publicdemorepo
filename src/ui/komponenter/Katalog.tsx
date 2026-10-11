@@ -1,5 +1,5 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: én kort tabell over tabellene i bronse, sølv og gull, med tittelen
-   og det tekniske navnet, og hvor mye cachen har lagret i hver. «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
+   og hvor mye cachen har lagret i hver. Det tekniske navnet står under «Info». «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
    kan åpnes for å se innholdet: bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Innholdet leses
    når man ber om det, så det ikke regnes ut på nytt hver gang siden tegnes. */
 import { Fragment, useState } from 'react';
@@ -21,15 +21,6 @@ const LAGNAVN: Record<string, string> = {
 const stor = (s: string) => s[0].toUpperCase() + s.slice(1) + (s.endsWith('.') ? '' : '.');
 const nokkelen = (k: string) => k || 'uten nøkkel';
 const alder = (s: number) => (s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${nf(s / 3600)} t`);
-/* Det tekniske navnet kan deles foran hver stor bokstav, så lange navn som verdsattNaturIKartlagt brytes mellom ordene på smal
-   skjerm */
-const deltNavn = (navn: string) =>
-  navn.split(/(?=[A-ZÆØÅ])/).map((del, i) => (
-    <Fragment key={i}>
-      {i > 0 && <wbr />}
-      {del}
-    </Fragment>
-  ));
 const statusen = (r: Raden) => (r.utdatert ? 'utdatert' : r.status === 'feil' ? 'feilet' : r.status);
 
 /* En verdi fra cachen som lesbar tekst, med innrykk: de første leddene i lister og kart, og de første feltene i objekter. Bilder,
@@ -212,12 +203,7 @@ export default function Katalog() {
                   return (
                     <Fragment key={d.navn}>
                       <tr>
-                        <th scope="row">
-                          {d.tittel}
-                          <small>
-                            <code>{deltNavn(d.navn.split('.')[1])}</code>
-                          </small>
-                        </th>
+                        <th scope="row">{d.tittel}</th>
                         <td className="tall">
                           {nf(r.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
                           {r.length > 0 && <small>{kb(sum(d))}</small>}
