@@ -213,8 +213,10 @@ meter) i hver blokk.
 - NIBIO tegner grunnkartet først fra 1:50 000. For 42 kommuner i Trøndelag, Bergen, Alta, Karasjok og Kautokeino ligger klassene per blokk på 21 og 10 meter lagret sammen med
   siden (`public/klasser/`, laget med `verktoy/klasser.ts`). De er laget av den samme funksjonen som siden bruker (`solv.klasser`),
   så svaret er det samme som om siden hadde hentet kartbildene selv. Da regnes alt for hele kommunen på 21 meter, og zoomet ut viser
-  kartet blokkene satt sammen (`solv.klassekart`). For andre kommuner setter nettleseren sammen et bilde av flisene den har hentet,
-  med høyst 2048 piksler på lengste side, og regner bare den delen (`solv.sammensatt`). Hvilken av de to som brukes, avgjøres i
+  kartet blokkene satt sammen (`solv.klassekart`). For andre kommuner henter nettleseren kartbildene fra NIBIO for hele kommunen
+  når den velges, fire per blokk, og lager blokkene med den samme funksjonen. Da regnes også alt for hele kommunen, når alt er
+  hentet. Mens det hentes, viser kartet et bilde av flisene som er kommet (`solv.sammensatt`), med høyst 2048 piksler på lengste side.
+  Kan ikke blokkene lages, regnes bare den delen som er hentet, av det bildet. Hvilken av de to som brukes, avgjøres i
   `gull.dagensKlasser`.
 
 **Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
@@ -354,18 +356,20 @@ kommer av at grensene ikke er tegnet helt likt, tas bort.
     plan det er.
 11. **Dagens klasser per blokk** (`solv.klasser`). Dagens klasse per rute i en blokk på 512 × 512 ruter (se Arealklassene). På 21
     meter er den laget av de fire kartbildene fra NIBIO som dekker blokken, og på 10,6 meter av ett. For 42 kommuner ligger svaret
-    lagret sammen med siden.
-12. **Sammensatt kart** (`solv.sammensatt`). For kommuner uten lagrede klasser: dagens klasser satt sammen av kartbildene som er
-    hentet, altså den delen av kommunen brukeren har sett på i kartet. En piksel leses når den er minst 100 av 255 dekket, og får
-    klassen det er mest av.
+    lagret sammen med siden. For de andre, og for en lagret blokk som ikke kan leses, lages det av kartbildene når kommunen
+    velges.
+12. **Sammensatt kart** (`solv.sammensatt`). Dagens klasser satt sammen av kartbildene som er hentet, flis for flis. Kartet viser
+    det mens blokkene hentes. Tallene bygger bare på det når blokkene ikke kan lages, og gjelder da den delen av kommunen brukeren
+    har sett på i kartet. En piksel leses når den er minst 100 av 255 dekket, og får klassen det er mest av.
 13. **Egne områder per rute** (`solv.egneruter`). Forklart under [Egne områder](#egne-områder-og-opplastet-plan).
 14. **Kommuneplanen per rute** (`solv.kommuneplanruter`). Kommuneplanen per rute: en rute er planlagt utbygging når planen dekker
     minst halve ruta. Samme datamodell som egne områder.
 15. **Arealtall per klasse** (`solv.arealtall`). SSBs arealklasser summeres til bebygd, jordbruk og natur (se Arealklassene), og
     innsjø og elv tas ut for seg. Landarealet er summen av de tre klassene på land.
 16. **Kommuneplanen** (`gull.kommuneplan`). Opplysningene om kommuneplanen fra sølv, slik siden viser dem.
-17. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for kommunen: blokkene der kommunen har lagrede klasser, og da er
-    hele kommunen med, ellers det sammensatte kartet av det som er hentet.
+17. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for hele kommunen, satt sammen av blokkene. For kommunene med
+    lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og
+    blokkene lages med den samme funksjonen. Kan ikke blokkene lages, brukes det sammensatte kartet av det som er hentet.
 18. **Utbyggingen** (`gull.utbygging`). For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker
     mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er
     bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
@@ -400,8 +404,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - Kommuneplanens arealdel viser hva som er satt av, ikke hva som blir bygd. Reguleringsplaner er ikke med.
 - Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.
-- For kommuner uten lagrede klasser er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte kartet
-  er grovere enn rutene på 21 meter i store kommuner. Siden sier fra når det gjelder.
+- Kan ikke blokkene hentes fra NIBIO, er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte
+  kartet er grovere enn rutene på 21 meter i store kommuner. Siden sier fra når det gjelder.
 - Rutenettet overser bebygde flater som er smalere enn en rute, særlig veier. Regelen om smale striper tar bort det meste av
   dette, men også noe som er reelt: smale felt og nye veier.
 
@@ -905,6 +909,16 @@ kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m²
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
 
+**Hele kommunen også uten lagrede klasser, 12. oktober 2026.** Før ble dagens klasser for kommuner uten lagrede klasser satt
+sammen av kartbildene brukeren hadde zoomet inn på, og tallene gjaldt bare den delen. Nå henter siden kartbildene fra NIBIO for hele
+kommunen når den velges, og lager blokkene med den samme funksjonen som laget de lagrede (`solv.blokker` og `solv.klasser`). Det er
+en mellomløsning til alle kommunene har lagrede klasser, og en reserve når en lagret blokk ikke kan leses. Kartet fylles flis for
+flis mens det hentes, og tallene regnes ut når alt er hentet. Siden sier hvor langt den er kommet. Drammen tok 13 sekunder (11
+blokker, 44 kall mot NIBIO) og Narvik 30 sekunder (50 blokker, 200 kall), målt fra skyen. Metoden er endret for kommunene uten
+lagrede klasser: de regnes nå som de 42 med lagrede klasser. I Surnadal gikk planlagt utbygging på natur fra «zoom inn» til 1 325
+dekar for hele kommunen. Regresjonstesten ga ingen avvik for Trondheim, og for Oslo var det bare kartbildet zoomet ut som endret seg.
+Bytte av kommune med knappen i kartet flytter nå kartet til kommunen, og tegnforklaringen sier «på natur» og «på jordbruk».
+
 **Forklaringer for alle kortene, 12. oktober 2026.** Infoknappen ved overskriften finnes nå på alle kortene med tall: de tre
 på regnskapssiden, de fem temasidene, planlagt utbygging og egne områder. Kapitlene om analysene i dette dokumentet er laget av det
 samme, og kontrollene står for hånd under hvert kapittel. Tekstene fra de gamle kapitlene er flyttet til tabellene i katalogen.
@@ -1016,8 +1030,10 @@ se over.
 Svakheter:
 
 - Kartet og tallene bygger på to ulike inndelinger: grunnkartets økosystemtyper og SSBs arealklasser.
-- Alt som krysses med planlagt utbygging, har en oppløsning på 21 meter. For kommuner uten lagrede klasser er det grovere der det
-  sammensatte kartet er grovere, i store kommuner.
+- Alt som krysses med planlagt utbygging, har en oppløsning på 21 meter. Kan ikke blokkene hentes fra NIBIO, er det grovere der
+  det sammensatte kartet er grovere, i store kommuner.
+- For kommuner uten lagrede klasser hentes hele kommunen fra NIBIO hver gang den velges: fire kall per blokk, fra 44 kall i
+  Drammen til 200 i Narvik. Kartbilder for det man zoomer inn på, står i samme kø og kan måtte vente.
 - Prosent av landarealet er misvisende for tema som også ligger i vann: verneområder, inngrepsfri natur og kartleggingsgrad.
 - Tallene kommer fra tjenester som kan endre seg.
 - Siden er testet i Chromium med mobilvisning. Den er ikke testet systematisk på andre nettlesere.
@@ -1028,7 +1044,7 @@ Svakheter:
   meter på 21 meter. Med 10 meter som standard må det avgjøres om grensen skal følge rutene eller holdes på rundt 40 meter, og det
   må kontrolleres mot vektoranalysen.
 - **Halvregelen gjelder ikke overalt.** Grunnkartet og plansjekken bruker 100 av 255, og verdsatt natur regnes av dekningen.
-  Klippingen til kommunen bruker halvregelen for kommunene med lagrede klasser, og 100 av 255 for det sammensatte kartet. Skal det
+  Klippingen til kommunen bruker halvregelen for blokkene, og 100 av 255 for det sammensatte kartet. Skal det
   gjøres likt, endres tallene for planlagt utbygging litt.
 - **Avrundingen er ulik.** Inngrepsfri natur og grått areal rundes til 10 dekar i gull, de andre først på siden.
 - **Enhetene er ulike inni beregningene.** Planlagt utbygging og kryssingene telles i ruter, de andre i km². Gull regner alt om til

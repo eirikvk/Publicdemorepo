@@ -90,6 +90,8 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
   synlige. Teksten på siden nevner alle kildene.
 - Siden belaster tjenestene direkte fra hver brukers nettleser. Kall mot NIBIO og DiBK går i kø med høyst fire om gangen per
   kilde, og svar huskes i cachen så lenge siden er åpen.
+  For kommuner uten lagrede klasser henter siden kartbildene fra NIBIO for hele kommunen når den velges, fire per blokk (44 kall
+  for Drammen, 200 for Narvik). Lagrede klasser for flere kommuner tar den belastningen bort.
 
 ## Sikkerhet og personvern
 

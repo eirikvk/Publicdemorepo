@@ -149,7 +149,13 @@ export function kartStatus() {
       treff = !!o && !!kart && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
     oversiktSynlig(true);
     ui.ute = !treff && !!app.valgt;
-    ui.siste = !treff ? '' : ov && ov.dynamisk ? 'Viser kart nettleseren allerede har hentet' : 'Viser lagrede klasser';
+    ui.siste = !treff
+      ? ''
+      : ov && ov.dynamisk
+        ? 'Viser kart nettleseren allerede har hentet'
+        : app.valgt && lagret(app.valgt.nr)
+          ? 'Viser lagrede klasser'
+          : 'Viser klassene hentet fra NIBIO for hele kommunen';
   }
   if (ui.ute !== varUte || ui.siste !== varSiste) endret();
 }

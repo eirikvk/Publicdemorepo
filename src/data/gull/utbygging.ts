@@ -320,11 +320,11 @@ export function leggInnEgne(E: Egneruter, d: Glissen, kl: Glissen, eget: Glissen
 }
 
 /* Tabellen gull.utbygging: utbyggingen i kommunen nr. null når det ikke finnes noe å regne på: uten kommuneplan og uten egne
-   områder, eller før det er hentet kart i en kommune uten lagrede klasser.
-   Dagens klasser kommer fra gull.dagensKlasser. For kommunene med lagrede klasser er det blokkene (solv.klasser), klippet til
-   kommunen etter halvregelen, og hele kommunen er med. Ellers er det det sammensatte kartet av flisene som er hentet. Da gjelder
-   utbyggingen bare den delen av kommunen nettleseren har hentet kart for (delvis), og den regnes ut på nytt når datamotoren sier fra
-   om mer kart. Egne områder kommer fra solv.egneruter.
+   områder, eller når dagens klasser mangler.
+   Dagens klasser kommer fra gull.dagensKlasser. Som regel er det blokkene (solv.klasser), lagret eller hentet fra NIBIO, klippet til
+   kommunen etter halvregelen, og hele kommunen er med. Kan ikke blokkene lages, er det det sammensatte kartet av flisene som er
+   hentet. Da gjelder utbyggingen bare den delen av kommunen nettleseren har hentet kart for (delvis), og den regnes ut på nytt når
+   datamotoren sier fra om mer kart. Egne områder kommer fra solv.egneruter.
    Utbyggingen bygges av blokker på 512 x 512 ruter, én per flis på nivået brukeren har valgt (bronse.planniva, 9 som standard). En blokk regnes bare ut på nytt når det har kommet nye
    kartfliser innenfor den, så mer kart koster én eller to blokker og ikke hele det hentede området. Blokkene huskes i
    gull.utbyggingsblokker. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
@@ -342,7 +342,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     blokker = katalog.gull.utbyggingsblokker.straks(nr, () => new Map<string, Blokk>()),
     under = new Map<string, Flis[] | null>();
   for (const k of [...blokker.keys()]) if (!k.startsWith(`${Z}/`)) blokker.delete(k); /* blokker på et annet nivå */
-  if (D.lagret) for (const [, x, y] of await katalog.solv.blokker([nr, Z])) under.set(`${x}/${y}`, null);
+  if (!dyn) for (const [, x, y] of await katalog.solv.blokker([nr, Z])) under.set(`${x}/${y}`, null);
   else
     for (const [z, x, y] of D.fliser || []) {
       const k = `${x >> (z - Z)}/${y >> (z - Z)}`;
@@ -357,7 +357,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
       const [x, y] = k.split('/').map(Number),
         tc: Flis = [Z, x, y];
       const [kl, P] = await Promise.all([
-        D.lagret
+        !dyn
           ? katalog.solv.klasser(tc).then(K => klasserIFlate(K, D.koord))
           : dagensKlasserIFlis(tc, D).then(K => K && klasserIFlis(K)),
         ingenPlan || (O && !kanHaPlan(O, tc)) ? null : katalog.solv.kommuneplanruter(tc)

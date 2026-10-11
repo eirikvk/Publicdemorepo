@@ -1,8 +1,9 @@
 /* Datamotoren, dagens klasser: hvilken arealklasse hver piksel har i dag, fra grunnkartet til NIBIO. Kartlagene for planlagt
    utbygging, inngrepsfri natur og grått areal tegnes oppå det.
-   Dagens klasser for kommunen står i gull.dagensKlasser: blokkene for kommunene med lagrede klasser (solv.klassekart), eller det
-   sammensatte kartet av flisene som er hentet (solv.sammensatt). Zoomet inn brukes kartbildene fra NIBIO, én flis om gangen
-   (bronse.grunnkartflis).
+   Dagens klasser for kommunen står i gull.dagensKlasser: blokkene for hele kommunen (solv.klassekart), lagret sammen med siden eller
+   hentet fra NIBIO når kommunen velges, eller det sammensatte kartet av flisene som er hentet (solv.sammensatt) når blokkene ikke kan
+   lages. Mens blokkene hentes, viser kartet det sammensatte kartet, som fylles flis for flis. Zoomet inn brukes kartbildene fra NIBIO,
+   én flis om gangen (bronse.grunnkartflis).
    Det sammensatte kartet er en kilde fra brukeren: det er kartet brukeren har sett på. Datamotoren bestemmer bare når: hver ny flis
    legges inn med en gang, og når kartet har stått stille med nye fliser, sier datamotoren fra (brukerEndret), så gull regnes ut på
    nytt. Selve tegningen står i sølv (solv/grunnkart.ts).
@@ -16,21 +17,48 @@ import { FLISNIVA, flisAvNavn, flisUtsnitt, flisnavn, type Flis } from '../solv/
 import { dagensKlasserIFlis, tegnISamling, type Oversikt, type Samling } from '../solv/grunnkart.ts';
 import { lesBilde } from '../solv/raster.ts';
 import { valgtNr, verdi } from './valgt.ts';
-import { app, tidSlutt, varsle } from './tilstand.ts';
+import { app, endret, tidSlutt, varsle } from './tilstand.ts';
 
+/* Om kommunen nr står i registeret over lagrede klasser */
+const iRegisteret = (nr: string) => {
+  const reg = katalog.bronse.klasseregister.naa();
+  return !!(reg && reg.kommuner && reg.kommuner[nr]);
+};
 /* Om kommunen nr har lagrede klasser: den står i registeret, og blokkene har ikke feilet */
 export function lagret(nr: string) {
-  const reg = katalog.bronse.klasseregister.naa();
-  if (!(reg && reg.kommuner && reg.kommuner[nr])) return false;
+  if (!iRegisteret(nr)) return false;
   const r = se(katalog.solv.klassekart, nr);
   return !(r && r.status === 'feil');
 }
 
-/* Dagens klasser for valgt kommune, fra gull. oversikt er bildet zoomet ut: blokkene satt sammen, eller det sammensatte kartet. bareHentetKart sier at tallene bare gjelder den delen av kommunen nettleseren har hentet kart for. */
+/* Hvor langt hentingen av blokkene fra NIBIO er kommet for valgt kommune, når den ikke har lagrede klasser og blokkene hentes nå:
+   kartbildene som er hentet (ferdig), og hvor mange det er i alt, fire per blokk (av, 0 før blokkene er funnet). null ellers. */
+export function hentingAvKlasser(): { ferdig: number; av: number } | null {
+  const nr = valgtNr();
+  if (!nr || iRegisteret(nr)) return null;
+  const k = se(katalog.solv.klassekart, nr);
+  if (!k || k.status !== 'henter') return null;
+  const b = se(katalog.solv.blokker, [nr, FLISNIVA - 1]);
+  if (!b || b.status !== 'ok') return { ferdig: 0, av: 0 };
+  const hentet = (tc: Flis) => {
+    const r = se(katalog.bronse.grunnkartflis, tc);
+    return !!r && r.status === 'ok';
+  };
+  let ferdig = 0;
+  for (const [, x, y] of b.verdi!)
+    for (let d = 0; d < 4; d++) if (hentet([FLISNIVA, 2 * x + (d & 1), 2 * y + (d >> 1)])) ferdig++;
+  return { ferdig, av: 4 * b.verdi!.length };
+}
+
+/* Dagens klasser for valgt kommune, fra gull. oversikt er bildet zoomet ut: blokkene satt sammen, eller det sammensatte kartet. Mens
+   blokkene hentes fra NIBIO, er det det sammensatte kartet, som fylles etter hvert. bareHentetKart sier at tallene bare gjelder den
+   delen av kommunen nettleseren har hentet kart for. */
 const dagensKlasserNaa = () => verdi(katalog.gull.dagensKlasser);
 export function oversikt(): Oversikt | null {
   const D = dagensKlasserNaa();
-  return D ? D.ov : null;
+  if (D) return D.ov;
+  const s = hentingAvKlasser() ? verdi(katalog.solv.sammensatt) : null;
+  return s ? s.ov : null;
 }
 export const bareHentetKart = () => {
   const D = dagensKlasserNaa();
@@ -76,7 +104,9 @@ function leggISamling(s: Samling, tc: Flis, buf: ArrayBuffer): Promise<void> {
       if (bm.close) bm.close();
       if (s !== samlingen()) return;
       varsle('nyFlis', s.c, sted);
-      planleggRegning();
+      const D = dagensKlasserNaa();
+      if (D && D.delvis) planleggRegning(); /* tallene bygger på det sammensatte kartet */
+      else if (hentingAvKlasser()) endret(); /* hvor langt hentingen av blokkene er kommet */
       tidSlutt('sammensatt kart', t0);
     })
     .catch(() => {});

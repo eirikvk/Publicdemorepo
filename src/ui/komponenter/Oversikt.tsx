@@ -5,12 +5,13 @@ import { Fragment } from 'react';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
+import { hentingAvKlasser } from '../../data/motor/grunnkart.ts';
 import { planTall } from '../../data/motor/plan.ts';
 import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
 import { BLOKKER } from '../sider.ts';
 import { ETT, TEMAORD, planenFor } from './Naturtema.tsx';
 import { Sidelenke } from './deler.tsx';
-import { andelTekst, antallOrd, dekar, iTekst, stor } from '../tekst.ts';
+import { andelTekst, antallOrd, dekar, henteTekst, iTekst, stor } from '../tekst.ts';
 import './Oversikt.css';
 
 /* Én linje: tallet til høyre og teksten under */
@@ -95,11 +96,14 @@ function framtid() {
       tekst: `Natur som kommuneplanen setter av til framtidig utbygging. I tillegg ca. ${iTekst(P.jor)} jordbruk.${P.egne ? ' Egne områder er med.' : ''}${P.delvis ? ' Gjelder bare den delen av kommunen nettleseren har hentet kart for.' : ''}`
     };
   const tilstand = planTall();
-  return tilstand === 'zoom'
-    ? ingenTall('Zoom inn i kartet for å få et anslag.')
-    : tilstand === 'feil'
-      ? ingenTall('Arealet kunne ikke regnes ut.')
-      : HENTER;
+  const h = hentingAvKlasser();
+  return h
+    ? ingenTall(henteTekst(h) + '.')
+    : tilstand === 'zoom'
+      ? ingenTall('Zoom inn i kartet for å få et anslag.')
+      : tilstand === 'feil'
+        ? ingenTall('Arealet kunne ikke regnes ut.')
+        : HENTER;
 }
 
 const LINJE: Record<string, () => Linje> = {

@@ -46,3 +46,9 @@ export const medFortegn = (v: number, vis: (v: number) => string) =>
 
 /* Ett årstall, eller et spenn: 2019 eller 2019–2026 */
 export const periode = (fra: number, til: number) => (fra === til ? String(fra) : fra + '–' + til);
+
+/* Hvor langt hentingen av kartet fra NIBIO er kommet, for en kommune uten lagrede klasser (hentingAvKlasser i datamotoren) */
+export const henteTekst = (h: { ferdig: number; av: number }) =>
+  h.av
+    ? `Henter kartet fra NIBIO for hele kommunen: ${nf(h.ferdig, 0)} av ${nf(h.av, 0)} fliser`
+    : 'Finner kartflisene som dekker kommunen …';

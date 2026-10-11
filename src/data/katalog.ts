@@ -409,7 +409,7 @@ export const katalog = {
       tittel: 'Dagens klasser per blokk',
       om: 'dagens klasse per rute i en blokk, kalt med blokken [z, x, y]: på nivå 9 er ruta 21 meter, laget av de fire kartbildene fra NIBIO som dekker blokken, og på nivå 10 er ruta 10,6 meter og blokken ett kartbilde. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
       forklaring:
-        'Dagens klasse per rute i en blokk på 512 × 512 ruter (se Arealklassene). På 21 meter er den laget av de fire kartbildene fra NIBIO som dekker blokken, og på 10,6 meter av ett. For 42 kommuner ligger svaret lagret sammen med siden.',
+        'Dagens klasse per rute i en blokk på 512 × 512 ruter (se Arealklassene). På 21 meter er den laget av de fire kartbildene fra NIBIO som dekker blokken, og på 10,6 meter av ett. For 42 kommuner ligger svaret lagret sammen med siden. For de andre, og for en lagret blokk som ikke kan leses, lages det av kartbildene når kommunen velges.',
       husk: 0,
       nokkel: flisnavn,
       etl: solvGrunnkart.klasser,
@@ -433,7 +433,7 @@ export const katalog = {
       lag: 'solv',
       navn: 'klassekart',
       tittel: 'Dagens klasser satt sammen av blokkene',
-      om: 'dagens klasser for kommunen zoomet ut, satt sammen av blokkene (solv.klasser), med høyst 2048 piksler på lengste side. Brukes for kommunene med lagrede klasser.',
+      om: 'dagens klasser for kommunen zoomet ut, satt sammen av blokkene (solv.klasser), med høyst 2048 piksler på lengste side. Lages for alle kommuner: av de lagrede blokkene, eller av kartbildene fra NIBIO, som da hentes for hele kommunen.',
       teknisk: true,
       forklaring: 'Dagens klasser for hele kommunen zoomet ut, satt sammen av blokkene, til kartet.',
       husk: 1,
@@ -443,11 +443,11 @@ export const katalog = {
       lag: 'solv',
       navn: 'sammensatt',
       tittel: 'Sammensatt kart',
-      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet: kartet brukeren har sett på. Brukes for kommuner uten lagrede klasser. Datamotoren legger inn nye fliser etter hvert som de hentes.',
+      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet. Kartet viser det mens blokkene for hele kommunen hentes, og tallene bygger på det når blokkene ikke kan lages. Datamotoren legger inn nye fliser etter hvert som de hentes.',
       forklaring:
-        'For kommuner uten lagrede klasser: dagens klasser satt sammen av kartbildene som er hentet, altså den delen av kommunen brukeren har sett på i kartet. En piksel leses når den er minst 100 av 255 dekket, og får klassen det er mest av.',
+        'Dagens klasser satt sammen av kartbildene som er hentet, flis for flis. Kartet viser det mens blokkene hentes. Tallene bygger bare på det når blokkene ikke kan lages, og gjelder da den delen av kommunen brukeren har sett på i kartet. En piksel leses når den er minst 100 av 255 dekket, og får klassen det er mest av.',
       usikkerhet: [
-        'For kommuner uten lagrede klasser er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte kartet er grovere enn rutene på 21 meter i store kommuner. Siden sier fra når det gjelder.'
+        'Kan ikke blokkene hentes fra NIBIO, er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte kartet er grovere enn rutene på 21 meter i store kommuner. Siden sier fra når det gjelder.'
       ],
       husk: 4,
       voksende: true,
@@ -612,9 +612,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'dagensKlasser',
       tittel: 'Dagens klasser',
-      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: blokkene der kommunen har lagrede klasser, ellers det sammensatte kartet av det som er hentet. Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
+      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet av det som er hentet når blokkene ikke kan lages. Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
       forklaring:
-        'Dagens klasser for kommunen: blokkene der kommunen har lagrede klasser, og da er hele kommunen med, ellers det sammensatte kartet av det som er hentet.',
+        'Dagens klasser for hele kommunen, satt sammen av blokkene. For kommunene med lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og blokkene lages med den samme funksjonen. Kan ikke blokkene lages, brukes det sammensatte kartet av det som er hentet.',
       husk: 1,
       brukerstyrt: true,
       etl: gullGrunnkart.dagensKlasser

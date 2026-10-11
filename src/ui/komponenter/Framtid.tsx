@@ -3,12 +3,13 @@
 import { katalog } from '../../data/katalog.ts';
 import type { Planinfo } from '../../data/solv/kommuneplan.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
+import { hentingAvKlasser } from '../../data/motor/grunnkart.ts';
 import { ingenPlan, planTall } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
-import { antallOrd, iTekst, nf, pst } from '../tekst.ts';
+import { antallOrd, henteTekst, iTekst, nf, pst } from '../tekst.ts';
 import { MdAlertMessage } from './md.ts';
 import { Korttittel } from './Tallforklaring.tsx';
 
@@ -39,9 +40,11 @@ function Planlagt() {
     note = '',
     egnemerk = '';
   if (!P) {
-    natur = jordbruk = tilstand === 'regner' ? 'regner …' : '';
-    note =
-      tilstand === 'zoom'
+    const h = tilstand === 'henter' ? hentingAvKlasser() : null;
+    natur = jordbruk = tilstand === 'regner' ? 'regner …' : h ? 'henter kart …' : '';
+    note = h
+      ? `${henteTekst(h)}. Tallene regnes ut når hele kommunen er hentet.`
+      : tilstand === 'zoom'
         ? 'Zoom inn i kartet for å få et anslag. Arealet regnes ut for den delen av kommunen nettleseren har hentet kart for.'
         : tilstand === 'feil'
           ? 'Arealet kunne ikke regnes ut.'

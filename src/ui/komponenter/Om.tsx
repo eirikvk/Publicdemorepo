@@ -112,7 +112,7 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
         <h2 className="md-typography-heading-s">Om siden</h2>
         <p>
           Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra Statistisk
-          sentralbyrå (SSB) og kartet fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.
+          sentralbyrå (SSB) og kartet fra NIBIO. Listen over fylker og kommuner ligger lagret sammen med siden.
         </p>
         {medKlasser.length > 0 && reg && (
           <p>
@@ -122,6 +122,11 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
             Fliser fra NIBIO tar over når du zoomer inn.
           </p>
         )}
+        <p>
+          For de andre kommunene hentes kartet fra NIBIO for hele kommunen når du velger den, flis for flis. Kartet
+          fylles etter hvert, og tallene regnes ut på samme måte når alt er hentet. Det tar fra noen sekunder til rundt
+          et minutt, etter hvor stor kommunen er.
+        </p>
         <p>
           Hvordan hvert tall er hentet eller regnet ut, står i{' '}
           <MdLink href={REPO + 'METODE.md'}>metodebeskrivelsen</MdLink>. Biblioteker og tjenester siden bruker, står i{' '}

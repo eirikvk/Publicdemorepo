@@ -268,14 +268,17 @@ export const SCENARIER: Record<string, Scenario> = {
     await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('10-vist');
   },
-  /* Kommune uten lagrede klasser: kartet og tallene bygges av det som hentes når man zoomer inn. */
+  /* Kommune uten lagrede klasser: kartet hentes fra NIBIO for hele kommunen når den velges, og tallene regnes ut når alt er
+     hentet. Zoomet inn brukes kartbildene fra NIBIO. */
   async surnadal(p, R, S) {
     await p.goto('http://demo.test/' + S.adresse('1566'));
     await vent(p, R, 'surnadal', () => {
       const M = window.motor;
-      return (
-        !!M && !!M.verdi(M.katalog.gull.inon) && !!M.verdi(M.katalog.solv.arealtall) && !!M.verdi(M.katalog.gull.graa)
-      );
+      if (!M || !M.verdi(M.katalog.gull.inon) || !M.verdi(M.katalog.solv.arealtall) || !M.verdi(M.katalog.gull.graa))
+        return false;
+      const D = M.verdi(M.katalog.gull.dagensKlasser),
+        T = M.planTall();
+      return !!D && (T === 'ok' || T === 'tom');
     });
     await p.rolig();
     R.motor.start = await p.motor();
