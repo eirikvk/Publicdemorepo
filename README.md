@@ -313,7 +313,7 @@ svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som 
 
 **Cachen kan starte utfylt.** En tabell kan ha ferdige svar som ligger lagret sammen med siden (`lagret` i katalogen). Finnes
 svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Dagens klasser per blokk (`solv.klasser`) er
-slik: for 39 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (`verktoy/klasser.ts`) og lagret som små bilder i
+slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (`verktoy/klasser.ts`) og lagret som små bilder i
 `public/klasser/`, så siden slipper fire kall mot NIBIO per blokk. Blokkene i kommunen (`solv.blokker`) står i registeret
 (`public/klasser.json`).
 

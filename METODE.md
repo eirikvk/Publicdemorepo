@@ -199,7 +199,7 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
 - Kartet og SSBs tall bygger på to ulike inndelinger. Kartet følger grunnkartets økosystemtyper, tallene følger SSBs
   arealklasser. Tallene på siden blander derfor offisielle tall fra SSB med tall regnet ut fra grunnkartet.
 - Grønne områder og idrettsområder er bebygd i begge inndelingene.
-- NIBIO tegner grunnkartet først fra 1:50 000. For 39 kommuner i Trøndelag og Bergen ligger klassene per blokk lagret sammen med
+- NIBIO tegner grunnkartet først fra 1:50 000. For 42 kommuner i Trøndelag, Bergen, Alta, Karasjok og Kautokeino ligger klassene per blokk lagret sammen med
   siden (`public/klasser/`, laget med `verktoy/klasser.ts`). De er laget av den samme funksjonen som siden bruker (`solv.klasser`),
   så svaret er det samme som om siden hadde hentet kartbildene selv. Da regnes alt for hele kommunen på 21 meter, og zoomet ut viser
   kartet blokkene satt sammen (`solv.klassekart`). For andre kommuner setter nettleseren sammen et bilde av flisene den har hentet,
@@ -665,6 +665,14 @@ inn en ny kilde: temaet (områdene og arealet), planlagt utbygging i temaet (ven
 kartleggingen (venter på det kartlagte). Siden setter delene sammen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven
 før, hver kjørt med sitt eget testverktøy samme kveld: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så
 Malvik og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Tre store kommuner i Finnmark, 11. oktober 2026.** Kautokeino, Karasjok og Alta har fått lagrede klasser, som et forsøk med
+store kommuner. Uten dem regnes bare det som er hentet, og det sammensatte kartet blir grovt. Det tok 217 nye blokker og 868 kall mot
+NIBIO. Kautokeino har 109 blokker, 595 kB, og tallene er ferdige etter 9 til 14 sekunder. Utbyggingen er et rutenett på 7 168 × 6 144
+ruter og tar 168 MB, og blokkene 82 MB, til sammen 269 MB i cachen. Det er mest av alle kommunene med lagrede klasser (Frøya: 186
+MB). Alta har 60 blokker, 350 kB, 7 til 9 sekunder og 144 MB. Karasjok har ikke kommuneplanen hos DiBK, så der regnes ingen
+utbygging, men kartet viser dagens klasser for hele kommunen. Ingen av de tre hadde tall å sammenligne med, for før måtte man zoome
+inn.
 
 **Dagens klasser på 21 meter for 39 kommuner, 11. oktober 2026.** De lagrede oversiktsbildene er byttet ut med dagens klasser per
 blokk på 21 meter (`solv.klasser`), laget av de fire kartbildene fra NIBIO på 1:50 000 som dekker hver blokk. For de 39 kommunene
