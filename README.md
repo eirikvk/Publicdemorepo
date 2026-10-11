@@ -171,7 +171,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
-Sølv, i `src/data/solv/`. Hver fil bygger på én kilde, gjort om til felles standard. METODE.md forklarer metoden bak hver fil.
+Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene side om side. METODE.md forklarer metoden bak hver fil.
 
 | Fil | Innhold |
 |---|---|
@@ -331,10 +331,13 @@ Noen tabeller har ingen ETL-funksjon. Kildene fra brukeren fyller datamotoren: e
 
 ### Prinsippene for dataflyten
 
-1. **Sølv er én kilde, gull setter sammen.** En tabell i sølv bygger på én kilde, gjort om til felles standard: UTM33, km², de tre
-   klassene og rutenettet. Kommunegrensen og rutenettet er rammen, ikke en kilde, så å klippe verneområdene mot kommunen er sølv.
-   Alt som setter kilder sammen, er gull: kommuneplanen lagt oppå dagens klasser, verneområdene krysset med utbyggingen, verdsatt
-   natur innenfor det kartlagte.
+1. **Sølv er felles standard, gull setter sammen.** Hver ting, som planen, dagens klasser eller et naturtema, får én datamodell i
+   sølv: UTM33, km², de tre klassene og rutenettet. Har den flere kilder, ligger de side om side og uendret, merket så de kan
+   skilles. Planen har to: kommuneplanen fra DiBK og egne områder fra brukeren. Sølv velger ikke mellom kildene og setter ikke
+   ulike ting sammen. Det gjør gull: at et eget område erstatter kommuneplanen der det ligger, planen lagt oppå dagens klasser,
+   verneområdene krysset med utbyggingen, verdsatt natur innenfor det kartlagte. Kommunegrensen og rutenettet er rammen, ikke en
+   kilde, så å klippe verneområdene mot kommunen er sølv. Koden følger ikke dette helt ennå: egne områder legges i rutenettet først
+   i gull, og det sammensatte kartet fylles av datamotoren.
 2. **Gull deles der det kommer inn en ny eller tregere kilde.** Hver tabell i gull svarer på ett spørsmål. Trenger en del av svaret
    noe som kommer senere, som utbyggingen, blir den delen en egen tabell som kaller den første. `gull.verneomrader` er
    verneområdene i kommunen, og `gull.verneomraderIPlan` er planlagt utbygging innenfor dem. Gull kan kalle gull.

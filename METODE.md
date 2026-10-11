@@ -35,7 +35,7 @@ flowchart LR
     GRAA["Grått areal, NIBIO"]
     INON["Inngrepsfri natur, Mdir"]
   end
-  subgraph Solv["Sølv, src/data/solv: én kilde hver"]
+  subgraph Solv["Sølv, src/data/solv: felles standard"]
     sssb["ssb.ts"]
     sgrunn["grunnkart.ts og klasser.ts<br/>dagens klasser per rute"]
     skplan["kommuneplan.ts<br/>planen per rute"]
