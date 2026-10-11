@@ -77,11 +77,9 @@ export const hentPlaninfo = (
     };
   });
 
-/* Adressen til kartbildet av kommuneplanen for flisen tc i flisnettet. Den samme som kartet ber om for flisen. */
-export const planflisAdresse = (tc: Flis) => kommuneplanUrl(flisUtsnitt(tc));
-/* Tabellen bronse.planflis: kartbildet av kommuneplanen for flisen tc, med adressen som nøkkel */
+/* Tabellen bronse.planflis: kartbildet av kommuneplanen for flisen tc [z, x, y] i flisnettet */
 export async function planflis(tc: Flis): Promise<ArrayBuffer> {
-  return hentKommuneplanFlis(planflisAdresse(tc));
+  return hentKommuneplanFlis(kommuneplanUrl(flisUtsnitt(tc)));
 }
 /* Tabellen bronse.plandekning: ett lite bilde av hele planlaget over kommunen */
 export async function plandekning(nr: string): Promise<ArrayBuffer> {

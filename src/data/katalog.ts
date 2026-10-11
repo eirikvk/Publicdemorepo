@@ -15,7 +15,7 @@
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
-import { glem, tabell, type Tabell } from './cache.ts';
+import { glem, tabell, type Tabell, type Utgangspunkt } from './cache.ts';
 import * as dibk from './bronse/dibk-kommuneplan.ts';
 import * as kartverket from './bronse/kartverket.ts';
 import * as mdirInon from './bronse/mdir-inon.ts';
@@ -30,7 +30,7 @@ import * as solvKommune from './solv/kommune.ts';
 import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvSsb from './solv/ssb.ts';
 import * as solvTemaer from './solv/temaer.ts';
-import { flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
+import { FLISNIVA, PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
 import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
 import type { Maske } from './solv/temaer.ts';
@@ -46,7 +46,11 @@ import * as gullTemaer from './gull/temaer.ts';
 import * as gullUtbygging from './gull/utbygging.ts';
 import type { Blokk, Utbygging } from './gull/utbygging.ts';
 
-const URL_NOKKEL = 'Nøkkel: adressen.';
+/* Til «Data» i katalogvisningen: flisen midt i kartet, på kartets nivå, men ikke grovere enn zMin, eller på nivå z alltid */
+const flisMidt =
+  (zMin: number, fast = false) =>
+  (u: Utgangspunkt): Flis | null =>
+    u.midt ? flisVed(u.midt, fast ? zMin : Math.max(zMin, u.z)) : null;
 
 export const katalog = {
   bronse: {
@@ -73,7 +77,8 @@ export const katalog = {
       om: 'fliser av Kartverkets topografiske kart i gråtoner, kalt med flisen [z, x, y]. Lagres ikke: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.',
       husk: 0,
       nokkel: flisnavn,
-      etl: kartverket.bakgrunnsflis
+      etl: kartverket.bakgrunnsflis,
+      eksempel: flisMidt(0)
     }),
     kommuneIPunkt: tabell<number[], { kommunenummer: string }>({
       lag: 'bronse',
@@ -82,7 +87,8 @@ export const katalog = {
       om: 'hvilken kommune et punkt i kartet ligger i, fra Kartverket, når man trykker utenfor valgt kommune. Nøkkel: punktet i hele meter.',
       husk: 20,
       nokkel: kartverket.punktNokkel,
-      etl: kartverket.kommuneIPunkt
+      etl: kartverket.kommuneIPunkt,
+      eksempel: u => u.midt
     }),
     arealtall: tabell({
       lag: 'bronse',
@@ -123,7 +129,8 @@ export const katalog = {
       om: 'kartbilder av dagens arealklasser fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       husk: 400,
       nokkel: flisnavn,
-      etl: nibioGrunnkart.grunnkartflis
+      etl: nibioGrunnkart.grunnkartflis,
+      eksempel: flisMidt(FLISNIVA)
     }),
     plandekning: tabell({
       lag: 'bronse',
@@ -145,10 +152,11 @@ export const katalog = {
       lag: 'bronse',
       navn: 'planflis',
       tittel: 'Kartbilder av kommuneplanen',
-      om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. ' + URL_NOKKEL,
+      om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       husk: 400,
-      nokkel: dibk.planflisAdresse,
-      etl: dibk.planflis
+      nokkel: flisnavn,
+      etl: dibk.planflis,
+      eksempel: flisMidt(PLANNIVA, true)
     }),
     inonbilde: tabell({
       lag: 'bronse',
@@ -166,13 +174,15 @@ export const katalog = {
       husk: 6,
       etl: nibioGraa.graabilder
     }),
-    graaflis: tabell({
+    graaflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'graaflis',
       tittel: 'Kartbilder av grått areal',
-      om: 'kartbilder av grått areal fra NIBIO, 512 x 512 piksler. ' + URL_NOKKEL,
+      om: 'kartbilder av grått areal fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       husk: 400,
-      etl: nibioGraa.graaflis
+      nokkel: flisnavn,
+      etl: nibioGraa.graaflis,
+      eksempel: flisMidt(FLISNIVA)
     }),
     verneomrader: tabell({
       lag: 'bronse',
@@ -306,7 +316,8 @@ export const katalog = {
       om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y]. Lagres ikke: blokkene i utbyggingen lagres, og kartbildet i bronse holder for å lage den på nytt.',
       husk: 0,
       nokkel: flisnavn,
-      etl: solvPlan.kommuneplanruter
+      etl: solvPlan.kommuneplanruter,
+      eksempel: flisMidt(PLANNIVA, true)
     }),
     inon: tabell({
       lag: 'solv',

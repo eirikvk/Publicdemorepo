@@ -597,6 +597,10 @@ er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utga
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
+**Katalogen kan spørres, 11. oktober 2026.** «Data» i katalogvisningen spør nå katalogen med valgt kommune eller midten av
+kartet som nøkkel, også for tabeller som ikke lagrer noe. Kartbildene av kommuneplanen og grått areal huskes med flisen som nøkkel,
+som grunnkartet. Metoden ble ikke endret, og regresjonstesten ga ingen avvik.
+
 **Lagre bare der det trengs, 11. oktober 2026.** Gull lagres. Sølv og bronse lagres bare når noen vil spørre etter dem igjen.
 Svarene fra Miljødirektoratet om verneområder, villrein, verdsatt natur og det kartlagte lagres ikke lenger, og heller ikke
 kommuneplanen per rute. Det sparte rundt 7 MB i minnetesten. Metoden ble ikke endret, og regresjonstesten ga ingen avvik.

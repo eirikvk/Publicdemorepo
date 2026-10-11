@@ -107,6 +107,12 @@ export const arealKm2 = (koord: Flerflate, e: Utsnitt = utsnitt(koord)) => areal
 /* Navnet på flisen [z, x, y], som «z/x/y», og flisen fra navnet */
 export const flisnavn = (tc: Flis) => tc.join('/');
 export const flisAvNavn = (n: string) => n.split('/').map(Number) as Flis;
+/* Flisen på nivå z som punktet p [øst, nord] ligger i */
+export const flisVed = (p: number[], z: number): Flis => [
+  z,
+  Math.floor((p[0] - ORIGO[0]) / (FLIS * OPPLOSNINGER[z])),
+  Math.floor((ORIGO[1] - p[1]) / (FLIS * OPPLOSNINGER[z]))
+];
 
 /* Plasseringen av et rutenett i flisnettet: nivå, første kolonne og rad, og bredden i ruter */
 export interface Plassering {

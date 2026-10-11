@@ -1,7 +1,6 @@
 /* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i katalogen (solv.graa). Zoomet inn hentes laget som
    fliser fra NIBIO gjennom katalogen (bronse.graaflis), så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
    område: areal som er bebygd i grunnkartet, men ikke grått. Det som er felles med inngrepsfri natur, står i kommunebilde.ts. */
-import { graaFlisUrl } from '../../data/bronse/nibio-graa.ts';
 import { FLISNIVA, HALV } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
 import { BEB, klasserIFlis } from '../../data/solv/klasser.ts';
@@ -47,7 +46,7 @@ export const graaLag = bildelag({
       GR = rgb('gront');
     if (tc[0] >= FLISNIVA) {
       /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
-      const o = await bildePiksler(await katalog.bronse.graaflis(graaFlisUrl(u)), 512, 512);
+      const o = await bildePiksler(await katalog.bronse.graaflis(tc), 512, 512);
       const K = klasser(
         await dagensKlasser(tc).catch(() => null)
       ); /* dagens klasser: bebygd som ikke er grått, tegnes som grønt i bebygd område */

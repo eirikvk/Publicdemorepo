@@ -326,11 +326,13 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 - **Bare så lenge siden er åpen.** Siden lagrer ingenting selv i nettleseren: ingen informasjonskapsler og ingen lokal lagring.
   Cachen er borte når siden lukkes. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik hver
   tjeneste selv bestemmer, og da kan neste besøk få svaret uten et nytt kall.
-- **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» hva som ligger i cachen akkurat nå, per lag og
-  gruppert etter ETL-filen (i bronse er det kilden, i sølv og gull innholdet), med
-  størrelse. «Info» på hver tabell sier hva den er og hvor ETL-funksjonen ligger. «Data» viser radene, delt i to: om dataene (status,
-  når de ble laget, og feltene som beskriver dataene, som kommune, utsnitt og størrelse) og dataene selv: bildene slik de kom fra
-  kildene, rutenettene i sølv og gull som bilder, lister som tabeller og flater som omriss. Til slutt viser «Kartets minne» hvor
+- **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» alle tabellene, per lag og gruppert etter
+  ETL-filen (i bronse er det kilden, i sølv og gull innholdet), og hvor mye cachen har lagret i hver. «Info» på hver tabell sier
+  hva den er og hvor ETL-funksjonen ligger. «Data» spør katalogen, som enhver som bruker den: med valgt kommune, eller flisen eller
+  punktet midt i kartet, som nøkkel (`eksempel` i katalogen). Det virker også for tabeller som ikke lagrer noe. Under står radene
+  som ligger i cachen. Innholdet vises i to deler: om dataene (status, tiden, og feltene som beskriver dataene, som kommune,
+  utsnitt og størrelse) og dataene selv: bildene slik de kom fra kildene, rutenettene i sølv og gull som bilder, lister som tabeller
+  og flater som omriss. Til slutt viser «Kartets minne» hvor
   mange ferdige fliser OpenLayers holder på i hvert kartlag (opptil 512 per lag), og omtrent hvor mye minne de tar.
 
 Noen tabeller har ingen ETL-funksjon. Egne områder slik brukeren laget dem (`bronse.egne`) fyller datamotoren. Det sammensatte

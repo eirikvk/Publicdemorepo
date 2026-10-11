@@ -1,11 +1,13 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
-   etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Det tekniske navnet står under «Info». «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
-   kan åpnes for å se innholdet: bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
+   etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. «Info» viser hva tabellen er, det tekniske navnet og hvor
+   ETL-funksjonen ligger. «Data» spør katalogen med en nøkkel ut fra valgt kommune eller midten av kartet, og viser radene i cachen.
+   Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
    siden tegnes. */
 import { useState } from 'react';
-import { innhold, verdiI } from '../../data/cache.ts';
-import { kartetsMinne } from '../kart/kart.ts';
+import { eksempelI, innhold, kallI, verdiI } from '../../data/cache.ts';
+import { app } from '../../data/motor/tilstand.ts';
+import { kartetsMidte, kartetsMinne } from '../kart/kart.ts';
 import { kb, nf, tid } from '../tekst.ts';
 import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
 import { MdAccordionItem, MdButton } from './md.ts';
@@ -96,56 +98,109 @@ function somTekst(v: unknown): string {
   return linjer.join('\n');
 }
 
-/* Én rad i cachen. Verdien vises først når raden åpnes, og leses da fra cachen. Den deles i to: om dataene (det cachen vet, og feltene
-   som beskriver dataene) og dataene selv, etter formen de har. Alle feltene står også som tre. */
-function Rad({ navn, r }: { navn: string; r: Raden }) {
-  const [vist, settVist] = useState<{ om: [string, string][]; former: Form[]; tekst: string } | null>(null);
-  const vis = (apen: boolean) => {
-    if (!apen) return settVist(null);
-    const v = verdiI(navn, r.nokkel);
-    settVist(
-      v === undefined
-        ? { om: [], former: [], tekst: 'Ingen verdi ennå, eller ikke lenger i cachen.' }
-        : { ...finnFormer(v), tekst: somTekst(v) }
-    );
-  };
+/* En verdi vist i to deler: om dataene (foran, og feltene som beskriver dataene) og dataene selv, etter formen de har (Datavisning.tsx).
+   Alle feltene står også som tre. */
+function Innholdet({ v, foran }: { v: unknown; foran: [string, string][] }) {
+  const [vist] = useState<{ om: [string, string][]; former: Form[]; tekst: string }>(() => ({
+    ...finnFormer(v),
+    tekst: somTekst(v)
+  }));
   return (
-    <details onToggle={e => vis(e.currentTarget.open)}>
+    <>
+      <h4 className="md-typography-label-s">Om dataene</h4>
+      <div className="rullbar">
+        <table className="talltabell">
+          <tbody>
+            {[...foran, ...vist.om].map(([k, x], i) => (
+              <tr key={k}>
+                <th scope="row">{i < foran.length ? k : <code>{k}</code>}</th>
+                <td>{x}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <h4 className="md-typography-label-s">Dataene</h4>
+      {vist.former.length ? <Datavisning former={vist.former} /> : <pre>{vist.tekst}</pre>}
+      {vist.former.length > 0 && (
+        <details className="tre">
+          <summary>Alle feltene som tre</summary>
+          <pre>{vist.tekst}</pre>
+        </details>
+      )}
+    </>
+  );
+}
+
+/* Én rad i cachen. Verdien leses fra cachen først når raden åpnes. */
+function Rad({ navn, r }: { navn: string; r: Raden }) {
+  const [apen, settApen] = useState(false),
+    v = apen ? verdiI(navn, r.nokkel) : undefined;
+  return (
+    <details onToggle={e => settApen(e.currentTarget.open)}>
       <summary>
         <b>{nokkelen(r.nokkel)}</b> · {statusen(r)}
         {r.byte ? ` · ${kb(r.byte)}` : ''}
       </summary>
-      {vist && (
-        <>
-          <h4 className="md-typography-label-s">Om dataene</h4>
-          <div className="rullbar">
-            <table className="talltabell">
-              <tbody>
-                {[
-                  ['Status', statusen(r) + (r.delvis ? ', gjelder bare en del av kommunen' : '')],
-                  ...(r.ms ? [['Laget på', tid(r.ms)]] : []),
-                  ['Lagret', alder(r.sekunder) + ' siden'],
-                  ...vist.om
-                ].map(([k, v], i) => (
-                  <tr key={k}>
-                    <th scope="row">{i < (r.ms ? 3 : 2) ? k : <code>{k}</code>}</th>
-                    <td>{v}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <h4 className="md-typography-label-s">Dataene</h4>
-          {vist.former.length ? <Datavisning former={vist.former} /> : <pre>{vist.tekst}</pre>}
-          {vist.former.length > 0 && (
-            <details className="tre">
-              <summary>Alle feltene som tre</summary>
-              <pre>{vist.tekst}</pre>
-            </details>
-          )}
-        </>
-      )}
+      {apen &&
+        (v === undefined ? (
+          <p>Ingen verdi ennå, eller ikke lenger i cachen.</p>
+        ) : (
+          <Innholdet
+            v={v}
+            foran={[
+              ['Status', statusen(r) + (r.delvis ? ', gjelder bare en del av kommunen' : '')],
+              ...(r.ms ? ([['Laget på', tid(r.ms)]] as [string, string][]) : []),
+              ['Lagret', alder(r.sekunder) + ' siden']
+            ]}
+          />
+        ))}
     </details>
+  );
+}
+
+/* Spør katalogen: kaller tabellen som enhver som bruker katalogen, med en nøkkel ut fra valgt kommune eller midten av kartet, og viser
+   svaret. Svaret lagres bare hvis tabellen lagrer (husk), som ellers. */
+function Sporring({ d }: { d: Tabellen }) {
+  const [svar, settSvar] = useState<{ nokkel: string; v?: unknown; feil?: string; ms: number } | null>(null),
+    [spor, settSpor] = useState(false);
+  if (!d.etl) return <p>Har ingen ETL-funksjon, så katalogen kan ikke spørres. Det som er lagt inn, står under.</p>;
+  const midte = kartetsMidte(),
+    E = eksempelI(d.navn, { nr: app.valgt ? app.valgt.nr : null, midt: midte && midte.midt, z: midte ? midte.z : 0 });
+  if (!E) return <p>Velg en kommune og vis kartet, så finnes det en nøkkel å spørre med.</p>;
+  const kjor = async () => {
+    settSpor(true);
+    const t0 = performance.now();
+    try {
+      const v = await kallI(d.navn, E.n);
+      settSvar({ nokkel: E.nokkel, v, ms: performance.now() - t0 });
+    } catch (e) {
+      settSvar({ nokkel: E.nokkel, feil: e instanceof Error ? e.message : String(e), ms: performance.now() - t0 });
+    } finally {
+      settSpor(false);
+    }
+  };
+  return (
+    <>
+      <MdButton theme="secondary" mode="small" onClick={kjor} disabled={spor}>
+        {spor ? 'Spør …' : `Spør med ${nokkelen(E.nokkel)}`}
+      </MdButton>
+      {svar &&
+        (svar.feil !== undefined ? (
+          <p>
+            {nokkelen(svar.nokkel)}: feilet ({svar.feil}).
+          </p>
+        ) : (
+          <Innholdet
+            key={svar.nokkel + svar.ms}
+            v={svar.v}
+            foran={[
+              ['Nøkkel', nokkelen(svar.nokkel)],
+              ['Tid', tid(svar.ms)]
+            ]}
+          />
+        ))}
+    </>
   );
 }
 
@@ -289,10 +344,19 @@ function Tabellrad({
             <div>
               {her === 'info' ? (
                 <Info d={d} />
-              ) : r.length ? (
-                r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} />)
               ) : (
-                <p>Ingenting lagret ennå.</p>
+                <>
+                  <h4 className="md-typography-label-s">Spør katalogen</h4>
+                  <Sporring d={d} />
+                  <h4 className="md-typography-label-s">I cachen nå</h4>
+                  {!d.husk ? (
+                    <p>Lagres ikke.</p>
+                  ) : r.length ? (
+                    r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} />)
+                  ) : (
+                    <p>Ingenting lagret ennå.</p>
+                  )}
+                </>
               )}
             </div>
           </td>
@@ -313,9 +377,10 @@ export default function Katalog() {
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
         Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. «Info» sier hva tabellen er og hvor
-        ETL-funksjonen ligger. «Data» viser radene, som regel én per kommune. Alt ligger i minnet og er borte når siden
-        lukkes: siden lagrer ingenting selv i nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar
-        fra tjenestene, slik tjenestene selv bestemmer.
+        ETL-funksjonen ligger. «Data» spør katalogen, med valgt kommune eller midten av kartet som nøkkel, og viser det
+        som ligger i cachen. Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i
+        nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv
+        bestemmer.
       </p>
       <MdButton
         theme="secondary"

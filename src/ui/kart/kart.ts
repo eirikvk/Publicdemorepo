@@ -18,7 +18,7 @@ import { farge } from '../farger.ts';
 import { kb, nf } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { egneLag, sluttTegning, tegner } from './egne.ts';
-import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden, type Flistegner } from './felles.ts';
+import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden, plannett, type Flistegner } from './felles.ts';
 import { graaLag } from './graa.ts';
 import {
   etterVenter,
@@ -95,6 +95,13 @@ const dekket = ([z, x, y]: TileCoord) => {
 /* Kartets minne, til katalogen: hvert fliselag i OpenLayers holder på flisene det har tegnet ferdig, så kartet kan flyttes fram og
    tilbake uten å tegne dem på nytt. Gir per lag hvor mange fliser som holdes, hvor mange det er plass til, og omtrent hvor mye
    minne bildene tar (bredde × høyde × 4 byte). Lag som ikke er fliser (grensen, omrissene og egne områder), er ikke med. */
+/* Midten av kartet og flisnivået der, til nøklene katalogvisningen spør med. null før kartet finnes. */
+export function kartetsMidte() {
+  const c = view.getCenter(),
+    r = view.getResolution();
+  return kart && c && r ? { midt: c, z: plannett.getZForResolution(r) } : null;
+}
+
 export function kartetsMinne() {
   if (!kart) return [];
   return kart.getAllLayers().flatMap(l => {

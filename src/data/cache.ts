@@ -50,6 +50,15 @@ export interface Tabelldef<N, V> {
   voksende?: boolean /* verdien fylles på etter at den er lagt inn */;
   brukerstyrt?: boolean /* bygger på det brukeren gjør, og er utdatert når brukeren har endret noe i kommunen (nøkkelen) */;
   glemt?: (v: V, nokkel: string) => void /* kalles når en verdi går ut av cachen */;
+  eksempel?: (
+    u: Utgangspunkt
+  ) => N | null /* nøkkelen katalogvisningen spør med. Uten: kommunenummeret, eller ingen for tabeller uten nøkkel. */;
+}
+/* Det katalogvisningen har å spørre ut fra: valgt kommune, og midten av kartet med flisnivået der */
+export interface Utgangspunkt {
+  nr: string | null;
+  midt: number[] | null;
+  z: number;
 }
 /* En tabell man kaller med nøkkelen: katalog.solv.inon('5001') gir sonene for Trondheim, fra cachen eller fra ETL-funksjonen.
    For tabeller uten ETL-funksjon gir kallet verdien som den er, eller null. naa gir verdien som den er nå, eller null, og starter hentingen hvis den mangler. straks gir verdien med en gang, og lager den
@@ -349,6 +358,19 @@ export function innhold() {
       sekunder: Math.round((na - r.tid) / 1000)
     }))
   }));
+}
+/* Til «Data» i katalogvisningen: nøkkelen tabellen med det fulle navnet kan spørres med ut fra u, som verdi (n) og tekst (nokkel).
+   null når tabellen ikke har noen ETL-funksjon, eller u ikke gir noen nøkkel. */
+export function eksempelI(navn: string, u: Utgangspunkt): { n: unknown; nokkel: string } | null {
+  const t = ALLE.find(x => fulltNavn(x) === navn);
+  if (!t || !t.etl) return null;
+  const n = t.eksempel ? t.eksempel(u) : t.etl.length ? u.nr : undefined;
+  return n === null ? null : { n, nokkel: nokkelAv(t, n) };
+}
+/* Kaller tabellen med det fulle navnet med nøkkelen n, som enhver som bruker katalogen */
+export function kallI(navn: string, n: unknown): Promise<unknown> {
+  const t = ALLE.find(x => fulltNavn(x) === navn);
+  return t ? hent(t, n) : Promise.reject(new Error('ukjent tabell'));
 }
 /* Verdien i raden med nøkkelen k i tabellen med det fulle navnet (som solv.inon), til oversikten under Tekniske valg. undefined når
    raden ikke finnes, eller ikke har noen verdi ennå. */
