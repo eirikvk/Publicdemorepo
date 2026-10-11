@@ -8,7 +8,6 @@ import type { Coordinate } from 'ol/coordinate.js';
 import type MultiPolygon from 'ol/geom/MultiPolygon.js';
 import type Point from 'ol/geom/Point.js';
 import type Polygon from 'ol/geom/Polygon.js';
-import type VectorLayer from 'ol/layer/Vector.js';
 import type VectorSource from 'ol/source/Vector.js';
 import { ol } from './ol.ts';
 import { flislerret } from '../../data/solv/raster.ts';
@@ -23,19 +22,19 @@ import { ui } from '../tilstand.ts';
 import { TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
 import { rolig, tilKartet, view } from './kart.ts';
 
-/* Hvordan hvert tema tegnes. Verdsatt natur er mange små lokaliteter, så de tegnes fylt og uten hvit kant, i fire toner av samme
-   farge: mørkere jo høyere verdi. Villreinområdene er store og dekker ofte det meste av kommunen, så de tegnes med skravur: da synes
-   det at man er innenfor også zoomet inn langt fra kanten, og dagens klasser og planlagt utbygging kan leses under. Verneområder
-   tegnes som omriss. */
-const FYLT: Record<string, boolean> = { verdi: true };
-const SKRAVERT: Record<string, boolean> = { rein: true };
-const somFliser = (t: Naturtema) => !!(FYLT[t.id] || SKRAVERT[t.id]);
+/* Hvordan hvert tema tegnes. Alle tegnes om til kartfliser i nettleseren, slik planlaget gjør: tusen flater som vektor måtte tegnes
+   på nytt i hvert bilde når kartet flyttes, mens fliser tegnes én gang og flyttes som bilder.
+   - Verneområder og villrein tegnes med skravur. Områdene er ofte store og dekker mye av kommunen, og som omriss falt streken
+     sammen med kommunegrensen, og zoomet inn var det ingenting som viste at man var innenfor. Med skrå striper og en strek langs
+     kanten synes det, og dagens klasser og planlagt utbygging kan leses under.
+   - Verdsatt natur er mange små lokaliteter, så de tegnes fylt og uten hvit kant, i fire toner av samme farge: mørkere jo høyere
+     verdi. */
+const SKRAVERT: Record<string, boolean> = { vern: true, rein: true };
 
-/* Ett lag per tema, med en kilde for flatene. Flatene lages én gang per hentet tema og huskes så lenge temaet ligger i katalogen.
-   Fylte temaer tegnes som fliser (Flislag), de andre som omriss (VectorLayer). */
+/* Ett lag per tema, med en kilde for flatene. Flatene lages én gang per hentet tema og huskes så lenge temaet ligger i katalogen. */
 type Flate = Feature<MultiPolygon>;
 interface Temalag {
-  lag: Flislag | VectorLayer<VectorSource<Flate>>;
+  lag: Flislag;
   kilde: VectorSource<Flate>;
 }
 const LAG = new Map<string, Temalag>();
@@ -45,46 +44,12 @@ const lagFor = (t: Naturtema) => LAG.get(t.id)!;
 const temaomrader = (t: Naturtema) => verdi(TEMATABELLER[t.id].omrader);
 for (const t of NATURTEMA) {
   const kilde = new ol.source.Vector<Flate>();
-  /* Bare omriss: en hvit kant og en farget strek. En fylling over hele området måtte tegnes på nytt i hvert bilde når kartet flyttes.
-     Laget deler lerret med planlaget, så de klippes samlet. Den store bufferen gjør at alle omrissene i kommunen tegnes i ett, også de
-     utenfor utsnittet, så de er på plass mens kartet flyttes. */
-  /* Fylte flater tegnes om til kartfliser i nettleseren, slik planlaget gjør. Tusen små flater som vektor måtte tegnes på nytt i hvert
-     bilde når kartet flyttes. Som fliser tegnes de én gang og flyttes som bilder. */
-  /* Et område som er mindre enn noen få piksler i kartet, for eksempel et fredet tre, tegnes som en liten ring med fast størrelse.
-     Som omriss ville det blinket når kartet flyttes: havner alle punktene i samme piksel, blir streken null lang og tegnes ikke. */
-  const midt = (f: FeatureLike & { midt?: Point }) =>
-    f.midt || (f.midt = new ol.geom.Point(ol.extent.getCenter(f.getGeometry()!.getExtent())));
-  const strek = [
-    new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(255,255,255,.92)', width: 6 }) }),
-    new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge(t.id), width: 2.75 }) })
-  ];
-  const merke = [
-    new ol.style.Style({
-      geometry: midt,
-      image: new ol.style.Circle({ radius: 7, fill: new ol.style.Fill({ color: 'rgba(255,255,255,.92)' }) })
-    }),
-    new ol.style.Style({
-      geometry: midt,
-      image: new ol.style.Circle({ radius: 4, stroke: new ol.style.Stroke({ color: farge(t.id), width: 2.75 }) })
-    })
-  ];
-  const lag = somFliser(t)
-    ? new ol.layer.Tile({
-        className: 'plan',
-        properties: { tittel: t.navn },
-        visible: false,
-        source: tegnetKilde((tile: ImageTile) => (SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile))
-      })
-    : new ol.layer.Vector({
-        className: 'plan',
-        source: kilde,
-        visible: false,
-        renderBuffer: 4000,
-        style: (f, res) => {
-          const u = f.getGeometry()!.getExtent();
-          return Math.max(u[2] - u[0], u[3] - u[1]) < 8 * res ? merke : strek;
-        }
-      });
+  const lag = new ol.layer.Tile({
+    className: 'plan',
+    properties: { tittel: t.navn },
+    visible: false,
+    source: tegnetKilde((tile: ImageTile) => (SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile))
+  });
   LAG.set(t.id, { lag, kilde });
 }
 /* Flatene i kartet for et hentet tema: én per område, i samme rekkefølge */
@@ -154,32 +119,41 @@ export function settSlor(paa: boolean) {
   endret();
 }
 
-/* Rekkefølge i kartet: fylte flater ligger under planlaget, så planlagt utbygging oppå verdifull natur synes. Omriss ligger øverst. */
+/* Rekkefølge i kartet: temaene ligger under planlaget, så planlagt utbygging oppå dem synes. */
 /* Temaene som vises i kartet nå, og om sløret over det som ikke er kartlagt vises, til tegnforklaringen */
 export const synligeTemaer = () => NATURTEMA.filter(t => lagFor(t).lag.getVisible());
 export const slorSynlig = () => dekLag.getVisible();
-export const flateLag = NATURTEMA.filter(somFliser).map(t => lagFor(t).lag),
-  omrissLag = NATURTEMA.filter(t => !somFliser(t)).map(t => lagFor(t).lag);
+export const flateLag = NATURTEMA.map(t => lagFor(t).lag);
 /* Temaene som tegnes med skravur, til tegnforklaringen */
 export const skravert = (t: Naturtema) => !!SKRAVERT[t.id];
 
 /* Skravur: skrå striper i temaets farge over hele området, og en strek langs kanten. Stripene ligger fast i kartet (der x + y i
-   flispiksler fra origo går opp i SKRAVUR), så de går rett over fra flis til flis. Avstand og bredde er i flispiksler, som er halve
-   skjermpiksler. */
+   flispiksler fra origo går opp i SKRAVUR), så de går rett over fra flis til flis. Et område som er mindre enn noen få piksler i
+   kartet, for eksempel et fredet tre, tegnes som en liten ring med hvit bunn, ellers ville det ikke synes. Ringen kan stikke inn i
+   naboflisen, så flisen tar med områdene rett utenfor også. Mål i flispiksler, som er halve skjermpiksler. */
 const SKRAVUR = 20,
   STRIPE = 3,
-  KANT = 4;
+  KANT = 4,
+  LITE = 16 /* områder mindre enn dette tegnes som ring */,
+  RING = 8,
+  BUNN = 14;
 function tegnSkravurflis(t: Naturtema, tile: ImageTile) {
   const t0 = performance.now(),
     tc = tile.getTileCoord(),
     u = plannett.getTileCoordExtent(tc),
-    fl = lagFor(t).kilde.getFeaturesInExtent(u);
-  if (!fl.length) {
+    s = 512 / (u[2] - u[0]),
+    alle = lagFor(t).kilde.getFeaturesInExtent(ol.extent.buffer(u, BUNN / s)),
+    lite = (f: Flate) => {
+      const e = f.getGeometry()!.getExtent();
+      return Math.max(e[2] - e[0], e[3] - e[1]) * s < LITE;
+    },
+    sma = alle.filter(lite),
+    fl = alle.filter(f => !lite(f) && ol.extent.intersects(f.getGeometry()!.getExtent(), u));
+  if (!fl.length && !sma.length) {
     tile.setState(TOM);
     return;
   }
-  const s = 512 / (u[2] - u[0]),
-    maske = flislerret(),
+  const maske = flislerret(),
     mg = maske.getContext('2d')!;
   for (const f of fl) {
     geomSti(mg, f.getGeometry()!, u, s);
@@ -203,6 +177,19 @@ function tegnSkravurflis(t: Naturtema, tile: ImageTile) {
   g.lineJoin = 'round';
   for (const f of fl) {
     geomSti(g, f.getGeometry()!, u, s);
+    g.stroke();
+  }
+  for (const f of sma) {
+    const m = ol.extent.getCenter(f.getGeometry()!.getExtent()),
+      x = (m[0] - u[0]) * s,
+      y = (u[3] - m[1]) * s;
+    g.fillStyle = 'rgba(255,255,255,.92)';
+    g.beginPath();
+    g.arc(x, y, BUNN, 0, 2 * Math.PI);
+    g.fill();
+    g.lineWidth = 5.5;
+    g.beginPath();
+    g.arc(x, y, RING, 0, 2 * Math.PI);
     g.stroke();
   }
   tile.setImage(c);
@@ -330,7 +317,7 @@ abonner(() => {
     if (ny('data ' + t.id, O)) {
       kilde.clear();
       if (O) kilde.addFeatures(flater(O));
-      if (somFliser(t)) friskOpp(lag as Flislag);
+      friskOpp(lag);
     }
     lag.setVisible(paa && !!G && !!O && O.omrader.length > 0);
     if (t.dekning) {

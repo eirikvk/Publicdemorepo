@@ -239,7 +239,7 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
 | `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og oversiktsbildet zoomet ut |
 | `plan.ts` | Planlagt utbygging |
-| `naturtema.ts` | Verneområder (omriss), villrein (skravur, fordi områdene er store) og verdsatt natur (fylt), sløret over det som ikke er kartlagt, og markering av ett område |
+| `naturtema.ts` | Verneområder og villrein med skravur (områdene er ofte store, og små områder vises som ring), verdsatt natur fylt, sløret over det som ikke er kartlagt, og markering av ett område |
 | `kommunebilde.ts` | Felles for lagene som tegnes av et bilde av kommunen: masken, flisene og når laget vises |
 | `inon.ts` | Inngrepsfri natur: fargene for sonene |
 | `graa.ts` | Grått areal: fargene for trinnene, og fliser fra NIBIO når kartet er zoomet inn |

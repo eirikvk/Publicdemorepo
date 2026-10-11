@@ -34,7 +34,7 @@ import {
 import { inonLag } from './inon.ts';
 import { klippSist, settKlipp } from './klipping.ts';
 import { maalKartet, startMaaling, stoppMaaling } from './maaling.ts';
-import { dekLag, flateLag, markLag, omrissLag, slorSynlig, synligeTemaer } from './naturtema.ts';
+import { dekLag, flateLag, markLag, slorSynlig, synligeTemaer } from './naturtema.ts';
 import { planLag } from './plan.ts';
 import { beholdes, glemBehold, lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
 
@@ -209,20 +209,7 @@ abonner(() => {
 export function lagKart() {
   if (kart) return kart;
   kart = new ol.Map({
-    layers: [
-      bakgrunn,
-      oversiktLag,
-      tema,
-      inonLag,
-      graaLag,
-      dekLag,
-      ...flateLag,
-      planLag,
-      ...omrissLag,
-      grense,
-      egneLag,
-      markLag
-    ],
+    layers: [bakgrunn, oversiktLag, tema, inonLag, graaLag, dekLag, ...flateLag, planLag, grense, egneLag, markLag],
     view,
     pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [
@@ -268,9 +255,7 @@ export function lagKart() {
   klippSist(tema, [inonLag, graaLag]);
   klippSist(inonLag, [graaLag]);
   klippSist(graaLag, []);
-  [dekLag, ...flateLag, planLag, ...omrissLag].forEach((l, i, alle) =>
-    klippSist(l, alle.slice(i + 1))
-  ); /* disse deler lerret */
+  [dekLag, ...flateLag, planLag].forEach((l, i, alle) => klippSist(l, alle.slice(i + 1))); /* disse deler lerret */
   maalKartet(kart);
   kart.on('movestart', () => {
     kartflagg.iBevegelse = true;
