@@ -88,13 +88,19 @@ export interface Henter {
   (src: string): Promise<ArrayBuffer>;
   opptatt: () => boolean;
 }
-export function lagHenter(kilde: string, hva: string): Henter {
+/* bareVisning: kartbilder som bare vises, som bakgrunnskartet. De føres i kall-loggen, men tallene venter ikke på dem, og de teller
+   ikke med i det kartet viser om hentingen. samtidig er hvor mange kall som går om gangen. */
+export function lagHenter(
+  kilde: string,
+  hva: string,
+  { bareVisning = false, samtidig = SAMTIDIG }: { bareVisning?: boolean; samtidig?: number } = {}
+): Henter {
   const ko: (() => void)[] = [];
   let aktive = 0,
     timer: ReturnType<typeof setTimeout> | undefined,
     runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   const slipp = () => {
-    while (aktive < SAMTIDIG && ko.length) {
+    while (aktive < samtidig && ko.length) {
       aktive++;
       ko.shift()!();
     }
@@ -105,8 +111,10 @@ export function lagHenter(kilde: string, hva: string): Henter {
       ms = performance.now() - runde.t0;
     if (runde.n) logg(kilde, `${hva}, ${fliser(runde.n)}`, ms, runde.bytes);
     if (runde.feil) logg(kilde, `${hva}, ${fliser(runde.feil)}`, 0, 0, true);
-    if (runde.n || runde.feil) henteStatus.siste = { kilde, n: runde.n, ms, bytes: runde.bytes, feil: runde.feil };
-    henteStatus.laster = opptatt();
+    if (!bareVisning) {
+      if (runde.n || runde.feil) henteStatus.siste = { kilde, n: runde.n, ms, bytes: runde.bytes, feil: runde.feil };
+      henteStatus.laster = opptatt();
+    }
     melding();
     runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   }
@@ -117,10 +125,12 @@ export function lagHenter(kilde: string, hva: string): Henter {
     });
     clearTimeout(timer);
     if (!runde.t0) runde.t0 = performance.now();
-    henteStatus.startet++;
-    if (!henteStatus.laster) {
-      henteStatus.laster = true;
-      melding();
+    if (!bareVisning) {
+      henteStatus.startet++;
+      if (!henteStatus.laster) {
+        henteStatus.laster = true;
+        melding();
+      }
     }
     try {
       const r = await fetch(src);
@@ -132,7 +142,7 @@ export function lagHenter(kilde: string, hva: string): Henter {
       return buf;
     } catch (e) {
       runde.feil++;
-      henteStatus.feilet++;
+      if (!bareVisning) henteStatus.feilet++;
       throw e;
     } finally {
       aktive--;
@@ -141,6 +151,6 @@ export function lagHenter(kilde: string, hva: string): Henter {
     }
   };
   hent.opptatt = () => aktive > 0 || ko.length > 0;
-  hentere.push(hent);
+  if (!bareVisning) hentere.push(hent);
   return hent;
 }

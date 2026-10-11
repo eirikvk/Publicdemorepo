@@ -1,6 +1,7 @@
 /* Cachen: svarene fra ETL-funksjonene i katalogen (katalog.ts), lagret per tabell og nøkkel. Nøkkelen er som regel kommunenummeret.
-   Hver rad har status (henter, feil eller ok), verdien, utgaven og når den ble laget. Katalogen sier hvilke funksjoner som finnes,
-   cachen husker svarene. ETL-koden i bronse, sølv og gull vet ingenting om cachen: den kaller katalogen, og det er cachen som sier om
+   Hver rad har status (henter, feil eller ok), verdien, utgaven og når den ble laget. Katalogen og cachen er to ting: katalogen er
+   det interne API-et, som sier hvilke tabeller som finnes, hvordan de kalles og hvor ETL-funksjonen står. Cachen husker svarene, så
+   mange som tabellen sier (husk). En tabell med husk 0 går gjennom katalogen uten at noe lagres. ETL-koden i bronse, sølv og gull vet ingenting om cachen: den kaller katalogen, og det er cachen som sier om
    svaret allerede finnes.
 
    Les-gjennom: kaller man en tabell, gis verdien hvis den finnes. Ellers kjøres ETL-funksjonen, som selv kaller katalogen etter det
@@ -40,7 +41,7 @@ export interface Tabelldef<N, V> {
   navn: string /* det tekniske navnet, det samme som ETL-funksjonen */;
   tittel: string /* et kort, lesbart navn, til katalogen under Tekniske valg */;
   om: string /* hva tabellen er, til katalogen */;
-  husk: number /* hvor mange nøkler som huskes. Det som er brukt lengst siden, går ut først. */;
+  husk: number /* hvor mange nøkler som huskes. Det som er brukt lengst siden, går ut først. 0: ingenting lagres. */;
   nokkel?: (n: N) => string /* nøkkelen som tekst. Uten: n selv, eller tom tekst. */;
   etl?: (
     n: N
@@ -151,6 +152,7 @@ function settInn<N, V>(t: Tabelldef<N, V>, k: string, r: Rad<V>, v: V, bruker: n
 /* Les-gjennom, asynkront: gir verdien for n. Mangler den, er den utdatert, eller feilet den sist, lages den med ETL-funksjonen. Det
    er dette som skjer når man kaller en tabell. */
 export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
+  if (!t.husk && t.etl) return t.etl(n); /* lagres ikke: katalogen er bare veien til ETL-funksjonen */
   const m = rom(t),
     k = nokkelAv(t, n),
     har = m.get(k);

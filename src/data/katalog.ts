@@ -5,7 +5,8 @@
    Hvor dataene kommer fra, ser man i ETL-funksjonen selv: den kaller katalogen etter det den bygger på. Åpner man
    gull.verneomrader, ser man at den kaller solv.verneomrader, og der at den kaller bronse.verneomrader, og så videre ned til kilden.
 
-   Svarene huskes i cachen (cache.ts). Her står bare et kort, lesbart navn (tittel), hva tabellen er (om), og hvor mange nøkler som huskes (husk). Svar fra
+   Katalogen er det interne API-et. Svarene huskes i cachen (cache.ts), som er noe annet. Her står bare et kort, lesbart navn
+   (tittel), hva tabellen er (om), og hvor mange nøkler som huskes (husk). Med husk 0 går kallet gjennom katalogen uten at noe lagres. Svar fra
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
    Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne), og hjelpetabeller som
@@ -64,6 +65,15 @@ export const katalog = {
       om: 'kommunegrensen fra Kartverket som GeoJSON',
       husk: 6,
       etl: kartverket.kommunegrense
+    }),
+    bakgrunnsflis: tabell<Flis, ArrayBuffer>({
+      lag: 'bronse',
+      navn: 'bakgrunnsflis',
+      tittel: 'Bakgrunnskartet',
+      om: 'fliser av Kartverkets topografiske kart i gråtoner, kalt med flisen [z, x, y]. Lagres ikke: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.',
+      husk: 0,
+      nokkel: flisnavn,
+      etl: kartverket.bakgrunnsflis
     }),
     kommuneIPunkt: tabell<number[], { kommunenummer: string }>({
       lag: 'bronse',

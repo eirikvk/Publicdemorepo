@@ -2,12 +2,14 @@
    maaling.ts, og trykk i kartet og bytte av kommune i trykk.ts. Kartet lages av lagKart når alle filene er lastet, og settes inn på
    siden av ui/komponenter/Kartpanel.tsx. Hvert kartlag ligger i sin egen fil her, og følger tilstanden i datamotoren på samme måte
    som React-komponentene: ved hver endring sjekker laget om det det tegnes av, er nytt. Kartet kaller datamotoren når brukeren gjør noe (velger en annen kommune), men datamotoren kaller aldri kartet. */
+import type ImageTile from 'ol/ImageTile.js';
 import type OlMap from 'ol/Map.js';
+import type { LoadFunction } from 'ol/Tile.js';
 import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
 import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
 import { bakgrunnUrl } from '../../data/bronse/kartverket.ts';
-import { FLISNIVA, OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
+import { FLISNIVA, OPPLOSNINGER, ORIGO, UTM, type Flis } from '../../data/solv/felles.ts';
 import { kartetFlyttes, lagretUtsnitt, oversikt } from '../../data/motor/grunnkart.ts';
 import { katalog } from '../../data/katalog.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
@@ -16,7 +18,7 @@ import { farge } from '../farger.ts';
 import { kb, nf } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { egneLag, sluttTegning, tegner } from './egne.ts';
-import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden } from './felles.ts';
+import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden, type Flistegner } from './felles.ts';
 import { graaLag } from './graa.ts';
 import {
   etterVenter,
@@ -36,6 +38,19 @@ import { dekLag, flateLag, markLag, omrissLag } from './naturtema.ts';
 import { planLag } from './plan.ts';
 import { beholdes, glemBehold, lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
 
+/* Bakgrunnskartet hentes gjennom katalogen (bronse.bakgrunnsflis), som ikke lagrer det. Kartet holder de ferdige flisene selv. */
+function lastBakgrunn(tile: ImageTile) {
+  katalog.bronse
+    .bakgrunnsflis(tile.getTileCoord() as Flis)
+    .then(buf => {
+      const img = tile.getImage() as HTMLImageElement,
+        url = URL.createObjectURL(new Blob([buf]));
+      img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+      img.addEventListener('error', () => URL.revokeObjectURL(url), { once: true });
+      img.src = url;
+    })
+    .catch(() => tile.setState(3));
+}
 const bakgrunn = new ol.layer.Tile({
   className: 'bakgrunn',
   properties: { tittel: 'Bakgrunnskartet' },
@@ -44,7 +59,8 @@ const bakgrunn = new ol.layer.Tile({
     crossOrigin: 'anonymous',
     attributions: '© Kartverket, NIBIO, DiBK',
     tileGrid: new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256 }),
-    tileUrlFunction: bakgrunnUrl as (tc: TileCoord) => string
+    tileUrlFunction: bakgrunnUrl as (tc: TileCoord) => string,
+    tileLoadFunction: lastBakgrunn as Flistegner as LoadFunction
   })
 });
 const grenseKilde = new ol.source.Vector();

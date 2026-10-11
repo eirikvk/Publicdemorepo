@@ -169,7 +169,9 @@ function Info({ d }: { d: Tabellen }) {
       <p>
         {d.husk === Infinity
           ? 'Huskes for alle nøkler.'
-          : `Huskes for ${d.husk === 1 ? 'den siste nøkkelen' : `de ${d.husk} siste nøklene`}. Det som er brukt lengst siden, går ut først.`}
+          : !d.husk
+            ? 'Lagres ikke: kallet går gjennom katalogen rett til ETL-funksjonen.'
+            : `Huskes for ${d.husk === 1 ? 'den siste nøkkelen' : `de ${d.husk} siste nøklene`}. Det som er brukt lengst siden, går ut først.`}
         {d.voksende ? ' Fylles på etter at den er lagt inn.' : ''}
         {d.brukerstyrt
           ? ' Bygger på det brukeren gjør, og regnes ut på nytt når egne områder endres eller det er hentet mer kart.'
@@ -250,7 +252,7 @@ function Tabellrad({
       <tr>
         <th scope="row">{d.tittel}</th>
         <td className="tall">
-          {nf(r.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
+          {d.husk ? `${nf(r.length, 0)} av ${d.husk === Infinity ? 'alle' : nf(d.husk, 0)}` : 'lagres ikke'}
           {r.length > 0 && <small>{kb(sum(d))}</small>}
           {uferdige.length > 0 && (
             <small className="uferdig">{uferdige.map(x => `${nokkelen(x.nokkel)} ${statusen(x)}`).join(', ')}</small>

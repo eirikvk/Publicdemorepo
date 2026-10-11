@@ -160,7 +160,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 
 | Fil | Innhold |
 |---|---|
-| `henting.ts` | Henting, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `henting.ts` | Henting, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
@@ -303,6 +303,11 @@ export async function inon(nr: string): Promise<InonRuter> {
 
 Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.inon` kaller `solv.inon`, som kaller
 `bronse.inonbilde`, som henter bildet fra Miljødirektoratet. Slik kan man følge hvert tall fra siden ned til kilden.
+
+**Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
+ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes
+av svarene, og det står per tabell (`husk`). En tabell med `husk: 0` går gjennom katalogen uten at noe lagres. Bakgrunnskartet er
+slik: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 
