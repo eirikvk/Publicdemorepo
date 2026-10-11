@@ -1,9 +1,10 @@
-/* Sølv for grunnkartet fra NIBIO: det lagrede oversiktsbildet med utsnittet det dekker, det sammensatte kartet og dagens klasser i
-   én flis. Kartbildene fra NIBIO leses som de er (klassen leses av fargen, se klasser.ts). Det sammensatte kartet tegnes her, men
-   datamotoren bestemmer når en flis legges inn (data/motor/grunnkart.ts). */
-import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
+/* Sølv for grunnkartet fra NIBIO: dagens klasser for hele kommunen fra to kilder, side om side i samme datamodell (Oversikt): det
+   lagrede oversiktsbildet (solv.oversikt) og det sammensatte kartet av flisene som er hentet (solv.sammensatt). Gull velger mellom dem
+   (gull.dagensKlasser). Her er også dagens klasser i én flis. Kartbildene fra NIBIO leses som de er (klassen leses av fargen, se
+   klasser.ts). */
+import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { flisUtsnitt, flisnavn, type Flis } from './felles.ts';
+import { FLISNIVA, OPPLOSNINGER, flisAvNavn, flisUtsnitt, flisnavn, type Flis } from './felles.ts';
 import { flislerret, lesBilde, sti, tegneflate, tegnUtsnitt } from './raster.ts';
 
 /* Dagens klasser zoomet ut: det lagrede oversiktsbildet (buf, som PNG), eller det sammensatte kartet (lerret, dynamisk). ext er
@@ -38,9 +39,39 @@ export interface Samling {
   har: Set<string>;
   ov: Oversikt;
 }
-/* Et tomt sammensatt kart over utsnittet e: høyst 2048 piksler på den lengste siden, og ikke finere enn minRes meter per piksel */
-export function nySamling(e: Utsnitt, minRes: number): Samling {
-  const res = Math.max(minRes, Math.max(e[2] - e[0], e[3] - e[1]) / 2048),
+/* Tabellen solv.sammensatt: dagens klasser for kommunen nr, satt sammen av kartbildene fra NIBIO som er hentet. Kilden er det
+   brukeren har sett på: flisene som ligger i cachen (bronse.grunnkartflis). Det er et uttalt unntak fra regelen om å vente på det
+   man bygger på, for det som er hentet, er selve kilden. Tabellen er voksende: datamotoren legger inn nye fliser etter hvert som de
+   hentes (tegnISamling), uten å vente på at kartet står stille. Det sammensatte kartet dekker kommunens utsnitt. */
+export async function sammensatt(nr: string): Promise<Samling> {
+  const s = nySamling((await katalog.solv.grense(nr)).ext);
+  await fyllSamling(s);
+  return s;
+}
+/* Alle fliser cachen har som berører det sammensatte kartet s, og som ikke er lagt inn, legges inn, én om gangen og uten nye kall.
+   Det gjentas til det ikke er flere, for nye fliser kan komme mens bildene leses inn. Et bilde som ikke kan leses, hoppes over. */
+export async function fyllSamling(s: Samling) {
+  const provd = new Set<string>();
+  for (;;) {
+    const nye = katalog.bronse.grunnkartflis
+      .alle()
+      .filter(([n]) => !s.har.has(n) && !provd.has(n) && overlapper(flisUtsnitt(flisAvNavn(n)), s.ext));
+    if (!nye.length) return;
+    for (const [n, buf] of nye) {
+      provd.add(n);
+      try {
+        const bm = await lesBilde(buf);
+        if (!s.har.has(n)) tegnISamling(s, flisAvNavn(n), bm);
+        if (bm.close) bm.close();
+      } catch (e) {
+        /* hoppes over */
+      }
+    }
+  }
+}
+/* Et tomt sammensatt kart over utsnittet e: høyst 2048 piksler på den lengste siden, og ikke finere enn flisene fra NIBIO */
+export function nySamling(e: Utsnitt): Samling {
+  const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(e[2] - e[0], e[3] - e[1]) / 2048),
     g = tegneflate(Math.ceil((e[2] - e[0]) / res), Math.ceil((e[3] - e[1]) / res)),
     c = g.canvas;
   const ext: [number, number, number, number] = [e[0], e[3] - c.height * res, e[0] + c.width * res, e[3]];

@@ -57,6 +57,7 @@ export type Tabell<N, V> = Tabelldef<N, V> & {
   (n: N): Promise<V>;
   naa: (n: N) => V | null;
   straks: (n: N, lag: () => V) => V;
+  alle: () => [string, V][];
 };
 
 const ALLE: Tabell<any, any>[] = [];
@@ -94,7 +95,8 @@ const gyldig = <V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) =>
 export function tabell<N, V>(d: Tabelldef<N, V>): Tabell<N, V> {
   const t = Object.assign((n: N) => hent(t, n), d, {
     naa: (n: N) => ferdig(t, n),
-    straks: (n: N, lag: () => V) => hentStraks(t, n, lag)
+    straks: (n: N, lag: () => V) => hentStraks(t, n, lag),
+    alle: () => alle(t)
   }) as Tabell<N, V>;
   ALLE.push(t);
   innholdet.set(t, new Map());

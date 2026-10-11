@@ -8,7 +8,7 @@
 import { katalog } from '../katalog.ts';
 import { PLANNIVA, RUTE_M, fliserI, type Flis, type Plassering } from '../solv/felles.ts';
 import type { Egneruter } from '../solv/egne.ts';
-import { dagensKlasserIFlis, type Oversikt } from '../solv/grunnkart.ts';
+import { dagensKlasserIFlis } from '../solv/grunnkart.ts';
 import { JOR, NAT, klasserIFlis } from '../solv/klasser.ts';
 
 /* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
@@ -306,40 +306,32 @@ export function leggInnEgne(
 
 /* Tabellen gull.utbygging: utbyggingen i kommunen nr. null når det ikke finnes noe å regne på: uten kommuneplan og uten egne
    områder, eller før det er hentet kart i en kommune uten lagret oversiktsbilde.
-   Dagens klasser kommer fra det lagrede oversiktsbildet for hele kommunen, eller fra det sammensatte kartet av flisene som er hentet
-   (solv.sammensatt). Da gjelder utbyggingen bare den delen av kommunen nettleseren har hentet kart for (delvis), og den regnes ut på
-   nytt når datamotoren sier fra om mer kart. Egne områder kommer fra solv.egneruter.
+   Dagens klasser kommer fra gull.dagensKlasser: det lagrede oversiktsbildet for hele kommunen, eller det sammensatte kartet av flisene
+   som er hentet. Da gjelder utbyggingen bare den delen av kommunen nettleseren har hentet kart for (delvis), og den regnes ut på nytt
+   når datamotoren sier fra om mer kart. Egne områder kommer fra solv.egneruter.
    Utbyggingen bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
    kartfliser innenfor den, så mer kart koster én eller to blokker og ikke hele det hentede området. Blokkene huskes i
    gull.utbyggingsblokker. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 export async function utbygging(nr: string): Promise<Utbygging | null> {
-  const [g, info, E, reg] = await Promise.all([
-    katalog.solv.grense(nr),
+  const [info, E, D] = await Promise.all([
     katalog.solv.planinfo(nr).catch(() => null),
     katalog.solv.egneruter(nr),
-    katalog.bronse.oversiktsregister().catch(() => null)
+    katalog.gull.dagensKlasser(nr)
   ]);
   const ingenPlan = !!info && !info.finnes;
-  if (ingenPlan && !E) return null;
-  /* Dagens klasser: det lagrede oversiktsbildet, eller det sammensatte kartet hvis det ikke finnes eller ikke kan hentes */
-  const lagret = !!(reg && reg.kommuner && reg.kommuner[nr]),
-    ov: Oversikt | null = lagret ? await katalog.solv.oversikt(nr).catch(() => null) : null,
-    lest = ov ? await katalog.solv.oversiktLest(nr) : null,
-    sm = ov ? null : await katalog.solv.sammensatt(nr),
-    kilde = ov || (sm && sm.har.size ? sm.ov : null);
-  if (!kilde) return null;
-  const dyn = !ov,
+  if ((ingenPlan && !E) || !D) return null;
+  const lest = D.ov.buf ? await katalog.solv.oversiktLest(nr) : null,
+    dyn = D.delvis,
     Z = PLANNIVA,
     blokker = katalog.gull.utbyggingsblokker.straks(nr, () => new Map<string, Blokk>()),
     under = new Map<string, Flis[] | null>();
-  if (dyn)
-    for (const v of sm!.har) {
-      const [z, x, y] = v.split('/').map(Number),
-        k = `${x >> (z - Z)}/${y >> (z - Z)}`;
+  if (D.fliser)
+    for (const [z, x, y] of D.fliser) {
+      const k = `${x >> (z - Z)}/${y >> (z - Z)}`;
       if (!under.has(k)) under.set(k, []);
       under.get(k)!.push([z, x, y]);
     }
-  else fliserI(ov!.ext, Z).forEach(tc => under.set(`${tc[1]}/${tc[2]}`, null));
+  else fliserI(D.ov.ext, Z).forEach(tc => under.set(`${tc[1]}/${tc[2]}`, null));
   await Promise.all(
     [...under].map(async ([k, fliser]) => {
       const har = blokker.get(k),
@@ -348,7 +340,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
       const [x, y] = k.split('/').map(Number),
         tc: Flis = [Z, x, y];
       const [K, P] = await Promise.all([
-        dagensKlasserIFlis(tc, { ov: kilde, lest, koord: dyn ? g.koord : null }),
+        dagensKlasserIFlis(tc, { ...D, lest }),
         ingenPlan ? null : katalog.solv.kommuneplanruter(tc)
       ]);
       if (!K) throw new Error('mangler dagens klasser');
@@ -362,6 +354,6 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     blokker,
     dyn,
     E,
-    Math.round(dyn ? Math.max(m, sm!.res) : m)
+    Math.round(dyn ? Math.max(m, D.ov.res) : m)
   );
 }

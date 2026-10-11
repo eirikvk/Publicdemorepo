@@ -1,9 +1,8 @@
 /* Kartlaget for grått areal. Zoomet ut tegnes det av trinnene per rute i katalogen (solv.graa). Zoomet inn hentes laget som
    fliser fra NIBIO gjennom katalogen (bronse.graaflis), så små flater blir skarpe. I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd
    område: areal som er bebygd i grunnkartet, men ikke grått. Det som er felles med inngrepsfri natur, står i kommunebilde.ts. */
-import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { graaFlisUrl } from '../../data/bronse/nibio-graa.ts';
-import { HALV } from '../../data/solv/felles.ts';
+import { FLISNIVA, HALV } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
 import { BEB, klasserIFlis } from '../../data/solv/klasser.ts';
 import { bildePiksler } from '../../data/solv/raster.ts';

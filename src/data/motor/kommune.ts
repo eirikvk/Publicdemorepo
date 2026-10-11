@@ -4,7 +4,7 @@ import { nårBrukerEndret, se } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import type { Fylke, Kommune } from '../solv/felles.ts';
 import { oppdaterEgne } from './egne.ts';
-import { lagret, startSamling, stoppRegning } from './grunnkart.ts';
+import { stoppRegning } from './grunnkart.ts';
 import { valgtNr } from './valgt.ts';
 import { app, endret } from './tilstand.ts';
 
@@ -39,16 +39,6 @@ function regnGull(nr: string) {
 /* Når brukeren har endret noe (egne områder, eller kartet som er hentet), regnes det sidene viser ut på nytt med en gang */
 nårBrukerEndret(regnGull);
 
-/* Det sidene viser for kommunen nr. Utbyggingen (gull.utbygging) venter selv på det den bygger på. Datamotoren sørger bare for
-   kildene fra brukeren: det sammensatte kartet for kommuner uten lagret oversiktsbilde, eller når det ikke kan hentes. */
-function hentForSidene(nr: string) {
-  if (lagret(nr)) katalog.solv.oversikt(nr).catch(() => startSamling(nr).catch(stille));
-  katalog.solv.grense(nr).then(() => {
-    if (!lagret(nr)) startSamling(nr).catch(stille);
-  }, stille);
-  regnGull(nr);
-}
-
 /* Velger kommunen nr. Det som gjelder kommunen, leses fra katalogen med kommunenummeret, så ingenting fra forrige kommune kan vises
    for denne. */
 export function velgKommune(nr: string) {
@@ -58,7 +48,7 @@ export function velgKommune(nr: string) {
   stoppRegning();
   oppdaterEgne(t[1].nr);
   endret();
-  hentForSidene(t[1].nr);
+  regnGull(t[1].nr);
 }
 /* Første kommune i et fylke, når fylket byttes */
 export const velgFylke = (nr: string) => {

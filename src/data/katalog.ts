@@ -8,8 +8,9 @@
    Svarene huskes i cachen (cache.ts). Her står bare et kort, lesbart navn (tittel), hva tabellen er (om), og hvor mange nøkler som huskes (husk). Svar fra
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
-   Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne og solv.sammensatt), og hjelpetabeller som
-   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturmaske).
+   Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne), og hjelpetabeller som
+   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturmaske). Det sammensatte kartet (solv.sammensatt) har en
+   ETL-funksjon, men er voksende: datamotoren legger inn nye fliser etter hvert som de hentes.
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
@@ -36,6 +37,7 @@ import type { Samling } from './solv/grunnkart.ts';
 import type { Oversiktsregister } from './bronse/nibio-grunnkart.ts';
 import * as gullEgne from './gull/egne.ts';
 import * as gullGraa from './gull/graa.ts';
+import * as gullGrunnkart from './gull/grunnkart.ts';
 import * as gullInon from './gull/inon.ts';
 import * as gullPlan from './gull/planlagt.ts';
 import * as gullRegnskap from './gull/regnskap.ts';
@@ -104,12 +106,13 @@ export const katalog = {
       husk: 6,
       etl: nibioGrunnkart.oversiktsbilde
     }),
-    grunnkartflis: tabell({
+    grunnkartflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'grunnkartflis',
       tittel: 'Kartbilder av grunnkartet',
-      om: 'kartbilder av dagens arealklasser fra NIBIO, 512 x 512 piksler. ' + URL_NOKKEL,
+      om: 'kartbilder av dagens arealklasser fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       husk: 400,
+      nokkel: flisnavn,
       etl: nibioGrunnkart.grunnkartflis
     }),
     plandekning: tabell({
@@ -246,11 +249,11 @@ export const katalog = {
     sammensatt: tabell<string, Samling>({
       lag: 'solv',
       navn: 'sammensatt',
-      fil: 'motor/grunnkart.ts',
       tittel: 'Sammensatt kart',
-      om: 'dagens klasser satt sammen av kartbildene som er hentet, for kommuner uten lagret oversiktsbilde. En kilde fra brukeren: det er kartet brukeren har sett på, og datamotoren fyller det.',
+      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet: kartet brukeren har sett på. Brukes for kommuner uten lagret oversiktsbilde. Datamotoren legger inn nye fliser etter hvert som de hentes.',
       husk: 4,
-      voksende: true
+      voksende: true,
+      etl: solvGrunnkart.sammensatt
     }),
     egne: tabell({
       lag: 'solv',
@@ -365,6 +368,15 @@ export const katalog = {
     })
   },
   gull: {
+    dagensKlasser: tabell({
+      lag: 'gull',
+      navn: 'dagensKlasser',
+      tittel: 'Dagens klasser',
+      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: det lagrede oversiktsbildet der det finnes, ellers det sammensatte kartet av det som er hentet. Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullGrunnkart.dagensKlasser
+    }),
     utbredelse: tabell({
       lag: 'gull',
       navn: 'utbredelse',
@@ -610,6 +622,7 @@ const ETL_FILER: [string, object][] = [
   ['solv/egne.ts', solvEgne],
   ['gull/regnskap.ts', gullRegnskap],
   ['gull/planlagt.ts', gullPlan],
+  ['gull/grunnkart.ts', gullGrunnkart],
   ['gull/utbygging.ts', gullUtbygging],
   ['gull/inon.ts', gullInon],
   ['gull/graa.ts', gullGraa],

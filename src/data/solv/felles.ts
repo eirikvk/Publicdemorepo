@@ -61,6 +61,10 @@ export const fliserI = (e: Utsnitt, z: number): Flis[] => {
   return ut;
 };
 
+/* Groveste flisnivå NIBIO tegner grunnkartet i: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000.
+   Zoomet lenger ut brukes oversiktsbildet eller det sammensatte kartet. */
+export const FLISNIVA = 10;
+
 /* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. */
 export const PLANNIVA = 9,
   RUTE_M = OPPLOSNINGER[PLANNIVA] / 2 /* 21,16 meter */,
@@ -100,8 +104,9 @@ export const m2PerKm2 = (e: Utsnitt) => {
 /* Arealet av en flerflate i km² i terrenget. e er utsnittet målestokken regnes midt i, til vanlig flatens eget utsnitt. */
 export const arealKm2 = (koord: Flerflate, e: Utsnitt = utsnitt(koord)) => areal(koord) / m2PerKm2(e);
 
-/* Navnet på flisen [z, x, y], som «z/x/y» */
+/* Navnet på flisen [z, x, y], som «z/x/y», og flisen fra navnet */
 export const flisnavn = (tc: Flis) => tc.join('/');
+export const flisAvNavn = (n: string) => n.split('/').map(Number) as Flis;
 
 /* Plasseringen av et rutenett i flisnettet: nivå, første kolonne og rad, og bredden i ruter */
 export interface Plassering {

@@ -3,15 +3,12 @@
    (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
-import { OPPLOSNINGER, ORIGO, type Flis, type Kommune } from '../solv/felles.ts';
+import { flisUtsnitt, type Flis, type Kommune } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { wmsBilde } from './wms.ts';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
-/* Groveste flisnivå NIBIO tegner: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000. Zoomet lenger ut
-   brukes oversiktsbildet. */
-export const FLISNIVA = 10;
 /* Groveste oppløsning NIBIO tegner grunnkartet i (1:50 000), i meter per piksel. Oversiktsbildene hentes minst så tett. */
 export const GROVESTE_M = 17;
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
@@ -41,19 +38,6 @@ export const grunnkartUrl = (u: Utsnitt, w = 512, h = 512) =>
   });
 /* Kartbildene hentes gjennom en egen kø */
 export const hentGrunnkartFlis = lagHenter('NIBIO', 'Kart');
-/* Flisen [z, x, y] en adresse fra grunnkartUrl gjelder, lest av utsnittet i adressen, og utsnittet b. null for andre adresser. */
-export function flisIAdresse(url: string): { tc: Flis; b: number[] } | null {
-  let b: number[];
-  try {
-    b = new URL(url).searchParams.get('bbox')!.split(',').map(Number);
-  } catch (e) {
-    return null;
-  }
-  if (!b || b.length !== 4 || !(b[2] > b[0])) return null;
-  const z = FLISNIVA + Math.round(Math.log2((256 * OPPLOSNINGER[FLISNIVA]) / (b[2] - b[0]))),
-    side = 256 * OPPLOSNINGER[z];
-  return { tc: [z, Math.round((b[0] - ORIGO[0]) / side), Math.round((ORIGO[1] - b[3]) / side)], b };
-}
 
 /* Registeret over lagrede oversiktsbilder: hvilke kommuner som har et, og utsnittet bildet dekker */
 /* Registeret: årsversjonen av grunnkartet, når bildene er laget, og utsnittet hvert bilde dekker, per kommunenummer */
@@ -68,9 +52,9 @@ export const hentOversiktsregister = () =>
 export const hentOversiktsbilde = (k: Kommune) =>
   hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
 
-/* Tabellen bronse.grunnkartflis: et kartbilde av dagens klasser, med adressen som nøkkel */
-export async function grunnkartflis(url: string): Promise<ArrayBuffer> {
-  return hentGrunnkartFlis(url);
+/* Tabellen bronse.grunnkartflis: et kartbilde av dagens klasser for flisen tc [z, x, y] i flisnettet */
+export async function grunnkartflis(tc: Flis): Promise<ArrayBuffer> {
+  return hentGrunnkartFlis(grunnkartUrl(flisUtsnitt(tc)));
 }
 /* Tabellen bronse.oversiktsregister: registeret over lagrede oversiktsbilder, eller null når det ikke kan hentes. Uten registeret
    brukes det sammensatte kartet. */

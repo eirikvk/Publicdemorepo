@@ -198,10 +198,13 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
 - NIBIO tegner grunnkartet først fra 1:50 000. Zoomet ut brukes et ferdig bilde av hele kommunen. For 39 kommuner i Trøndelag og
   Bergen ligger det lagret sammen med siden (`verktoy/oversiktsbilde.ts`), med høyst 2048 piksler på lengste side. Det gir fra 11
   til rundt 45 meter per piksel, og opptil 65 meter i kystkommuner med mye sjø innenfor grensen. For andre kommuner setter
-  nettleseren sammen et bilde av flisene den har hentet.
+  nettleseren sammen et bilde av flisene den har hentet, med samme grense på 2048 piksler. Det lagrede bildet brukes der det finnes
+  og kan hentes, ellers det sammensatte (`gull.dagensKlasser`).
 
 **Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
-kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser i en flis: `dagensKlasser` i `src/data/motor/grunnkart.ts`.
+kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser for hele kommunen: `solv.oversikt` og `solv.sammensatt` i
+`src/data/solv/grunnkart.ts`, og valget mellom dem i `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis:
+`dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`.
 
 ## SSB-tallene og utbredelsesregnskapet
 
@@ -340,7 +343,7 @@ Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres p
 
 **Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/kommuneplan.ts` (planen) og `src/data/solv/grunnkart.ts`
 (dagens klasser). Gull: `src/data/gull/utbygging.ts` (planrutenettet) og `src/data/gull/planlagt.ts`. Tabellene i katalogen:
-`solv.planinfo`, `bronse.planflis`, `solv.kommuneplanruter`, `solv.oversikt`, `solv.sammensatt`, `bronse.egne`, `solv.egne`,
+`solv.planinfo`, `bronse.planflis`, `solv.kommuneplanruter`, `solv.oversikt`, `solv.sammensatt`, `gull.dagensKlasser`, `bronse.egne`, `solv.egne`,
 `solv.egneruter`, `gull.utbygging`, `gull.utbyggingsblokker`,
 `gull.planlagt` og `gull.plansum`. Kartlaget: `src/ui/kart/plan.ts`.
 
@@ -593,6 +596,15 @@ med én rad per tabell og kommune. Tabellene i gull huskes også, og regnes ut p
 er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Dagens klasser i gull, 11. oktober 2026.** Dagens klasser for hele kommunen har to kilder i sølv: det lagrede oversiktsbildet
+(`solv.oversikt`) og det sammensatte kartet av flisene som er hentet (`solv.sammensatt`). Det sammensatte kartet er nå en vanlig
+ETL-funksjon i sølv, og valget mellom kildene gjøres ett sted, i `gull.dagensKlasser`. Før ble det gjort både i datamotoren og i
+utbyggingen. Kartbildene fra NIBIO huskes nå med flisen som nøkkel i stedet for adressen. Nye fliser legges fortsatt inn i det
+sammensatte kartet med en gang de er hentet. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt
+eget testverktøy samme dag: tallene fra motoren, teksten på siden og kartbildene var like. I Surnadal ga zoom inn, bytte til Malvik
+og tilbake de samme tallene som utgaven før, uten nye kall. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene, og ingen
+nye kall mot kildene da Trondheim ble valgt igjen.
 
 **Planen i sølv, 11. oktober 2026.** Planen har to kilder, kommuneplanen fra DiBK og egne områder fra brukeren. Begge ligger nå
 uendret i sølv, i hver sin tabell med samme datamodell: planen per rute (`solv.kommuneplanruter` og `solv.egneruter`). Før ble

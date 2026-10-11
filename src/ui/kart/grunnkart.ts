@@ -10,22 +10,31 @@ import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
 import { grunnkartUrl } from '../../data/bronse/nibio-grunnkart.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
-import { UTM } from '../../data/solv/felles.ts';
+import { UTM, type Flis } from '../../data/solv/felles.ts';
 import { katalog } from '../../data/katalog.ts';
 import type { Oversikt } from '../../data/solv/grunnkart.ts';
 import { oversikt } from '../../data/motor/grunnkart.ts';
 import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
-import { MAKSRES, flisnett, friskOpp, kartflagg, nyttSiden, utdaterte, type Flislag } from './felles.ts';
+import {
+  MAKSRES,
+  flisnett,
+  friskOpp,
+  kartflagg,
+  nyttSiden,
+  utdaterte,
+  type Flislag,
+  type Flistegner
+} from './felles.ts';
 import { kartStatus, opplosning } from './kart.ts';
 import { tegnPlan } from './plan.ts';
 
 /* Flisene fra NIBIO, fargelagt i kartfargene */
 export const klare = new Set<string>(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
 const flisUrl = (tc: TileCoord) => grunnkartUrl(flisnett.getTileCoordExtent(tc));
-function lastFlis(tile: ImageTile, src: string) {
+function lastFlis(tile: ImageTile) {
   katalog.bronse
-    .grunnkartflis(src)
+    .grunnkartflis(tile.getTileCoord() as Flis)
     .then(fargeleggBlob)
     .then(blob => {
       const img = tile.getImage() as HTMLImageElement,
@@ -49,7 +58,7 @@ export const tema = new ol.layer.Tile({
     tileUrlFunction: flisUrl,
     tileGrid: flisnett,
     tilePixelRatio: 2,
-    tileLoadFunction: lastFlis as LoadFunction,
+    tileLoadFunction: lastFlis as Flistegner as LoadFunction,
     transition: 0,
     projection: UTM
   }),
