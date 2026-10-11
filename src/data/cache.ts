@@ -36,8 +36,9 @@ export interface Rad<V> {
    N er det nøkkelen lages av, og V verdien. */
 export interface Tabelldef<N, V> {
   lag: Lag;
-  navn: string;
-  om: string /* til oversikten under Tekniske valg */;
+  navn: string /* det tekniske navnet, det samme som ETL-funksjonen */;
+  tittel: string /* et kort, lesbart navn, til katalogen under Tekniske valg */;
+  om: string /* hva tabellen er, til katalogen */;
   husk: number /* hvor mange nøkler som huskes. Det som er brukt lengst siden, går ut først. */;
   nokkel?: (n: N) => string /* nøkkelen som tekst. Uten: n selv, eller tom tekst. */;
   etl?: (
@@ -293,7 +294,7 @@ function storrelse(v: unknown, sett: Set<unknown>, dybde = 0): number {
   else for (const x of Object.values(v)) sum += storrelse(x, sett, dybde + 1);
   return sum;
 }
-/* Det cachen inneholder nå, til oversikten under Tekniske valg: per tabell navnet, hva den er og grensen, og hver rad med status,
+/* Det cachen inneholder nå, til oversikten under Tekniske valg: per tabell navnet, tittelen, hva den er og grensen, og hver rad med status,
    om den er utdatert eller delvis, omtrentlig størrelse i byte, hvor lenge ETL-funksjonen brukte, og alder i sekunder. Tabellene
    står i den rekkefølgen katalogen har dem. */
 export function innhold() {
@@ -301,6 +302,7 @@ export function innhold() {
     na = Date.now();
   return ALLE.map(t => ({
     navn: fulltNavn(t),
+    tittel: t.tittel,
     lag: t.lag,
     om: t.om,
     husk: t.husk,

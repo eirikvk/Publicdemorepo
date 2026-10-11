@@ -5,7 +5,14 @@ import { brukerEndret, les, se, tabell, utgave } from '../src/data/cache.ts';
 
 test('les-gjennom: ETL-funksjonen kjøres én gang, også når to spør samtidig', async () => {
   let kjort = 0;
-  const T = tabell<string, string>({ lag: 'solv', navn: 'a', om: '', husk: 5, etl: async n => (kjort++, n + '!') });
+  const T = tabell<string, string>({
+    lag: 'solv',
+    navn: 'a',
+    tittel: '',
+    om: '',
+    husk: 5,
+    etl: async n => (kjort++, n + '!')
+  });
   const [a, b] = await Promise.all([T('x'), T('x')]);
   assert.equal(a, 'x!');
   assert.equal(b, 'x!');
@@ -18,6 +25,7 @@ test('grensen: det som er brukt lengst siden, går ut først', async () => {
   const T = tabell<string, string>({
     lag: 'solv',
     navn: 'b',
+    tittel: '',
     om: '',
     husk: 2,
     etl: async n => n,
@@ -36,6 +44,7 @@ test('feil: står som feil til noen kaller tabellen på nytt', async () => {
   const T = tabell<string, number>({
     lag: 'bronse',
     navn: 'c',
+    tittel: '',
     om: '',
     husk: 2,
     etl: async () => {
@@ -49,7 +58,7 @@ test('feil: står som feil til noen kaller tabellen på nytt', async () => {
 });
 
 test('utgave: en verdi som lages på nytt, får nytt nummer, også etter at den har gått ut', async () => {
-  const T = tabell<string, string>({ lag: 'solv', navn: 'd', om: '', husk: 1, etl: async n => n });
+  const T = tabell<string, string>({ lag: 'solv', navn: 'd', tittel: '', om: '', husk: 1, etl: async n => n });
   await T('a');
   const forst = utgave(T, 'a');
   await T('b'); /* a går ut */
@@ -63,12 +72,13 @@ test('brukerstyrt: utdatert gis til visningen mens det nye regnes ut, og regnes 
   const T = tabell<string, number>({
       lag: 'gull',
       navn: 'e',
+      tittel: '',
       om: '',
       husk: 2,
       brukerstyrt: true,
       etl: async () => ++n
     }),
-    U = tabell<string, number>({ lag: 'gull', navn: 'f', om: '', husk: 2, etl: async () => ++m });
+    U = tabell<string, number>({ lag: 'gull', navn: 'f', tittel: '', om: '', husk: 2, etl: async () => ++m });
   assert.equal(await T('5001'), 1);
   assert.equal(await U('5001'), 1);
   brukerEndret('5001');

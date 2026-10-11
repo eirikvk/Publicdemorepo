@@ -5,7 +5,7 @@
    Hvor dataene kommer fra, ser man i ETL-funksjonen selv: den kaller katalogen etter det den bygger på. Åpner man
    gull.verneomrader, ser man at den kaller solv.verneomrader, og der at den kaller bronse.verneomrader, og så videre ned til kilden.
 
-   Svarene huskes i cachen (cache.ts). Her står bare hvor mange nøkler som huskes for hver tabell (husk), og hva den er (om). Svar fra
+   Svarene huskes i cachen (cache.ts). Her står bare et kort, lesbart navn (tittel), hva tabellen er (om), og hvor mange nøkler som huskes (husk). Svar fra
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
    Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (solv.sammensatt og solv.egne), og hjelpetabeller som
@@ -59,6 +59,7 @@ export const katalog = {
     kommuner: tabell<void, Fylke[]>({
       lag: 'bronse',
       navn: 'kommuner',
+      tittel: 'Fylker og kommuner',
       om: 'fylkene og kommunene, sortert etter navn',
       husk: 1,
       etl: kartverket.kommuner
@@ -66,6 +67,7 @@ export const katalog = {
     kommunegrense: tabell({
       lag: 'bronse',
       navn: 'kommunegrense',
+      tittel: 'Kommunegrensen',
       om: 'kommunegrensen fra Kartverket som GeoJSON',
       husk: 6,
       etl: kartverket.kommunegrense
@@ -73,6 +75,7 @@ export const katalog = {
     arealtall: tabell({
       lag: 'bronse',
       navn: 'arealtall',
+      tittel: 'Arealtall fra SSB',
       om: 'arealet per klasse i nyeste år fra SSB, som JSON-stat',
       husk: 6,
       etl: ssb.arealtall
@@ -80,6 +83,7 @@ export const katalog = {
     arealtidsserie: tabell({
       lag: 'bronse',
       navn: 'arealtidsserie',
+      tittel: 'Arealtall fra SSB for 2017',
       om: 'arealet per klasse fra 2017 fra SSB, som JSON-stat',
       husk: 6,
       etl: ssb.arealtidsserie
@@ -87,6 +91,7 @@ export const katalog = {
     oversiktsregister: tabell<void, Oversiktsregister | null>({
       lag: 'bronse',
       navn: 'oversiktsregister',
+      tittel: 'Register over oversiktsbilder',
       om: 'kommunene som har lagret oversiktsbilde, og utsnittet hvert bilde dekker',
       husk: 1,
       etl: nibioGrunnkart.oversiktsregister
@@ -94,6 +99,7 @@ export const katalog = {
     oversiktsbilde: tabell({
       lag: 'bronse',
       navn: 'oversiktsbilde',
+      tittel: 'Oversiktsbilde av kommunen',
       om: 'det lagrede oversiktsbildet av kommunen, som PNG',
       husk: 6,
       etl: nibioGrunnkart.oversiktsbilde
@@ -101,6 +107,7 @@ export const katalog = {
     grunnkartflis: tabell({
       lag: 'bronse',
       navn: 'grunnkartflis',
+      tittel: 'Kartbilder av grunnkartet',
       om: 'kartbilder av dagens arealklasser fra NIBIO, 512 x 512 piksler. ' + URL_NOKKEL,
       husk: 400,
       etl: nibioGrunnkart.grunnkartflis
@@ -108,6 +115,7 @@ export const katalog = {
     plandekning: tabell({
       lag: 'bronse',
       navn: 'plandekning',
+      tittel: 'Bilde av kommuneplanen over kommunen',
       om: 'ett lite bilde av hele kommuneplanen fra DiBK over kommunen',
       husk: 6,
       etl: dibk.plandekning
@@ -115,6 +123,7 @@ export const katalog = {
     planopplysninger: tabell({
       lag: 'bronse',
       navn: 'planopplysninger',
+      tittel: 'Opplysninger om kommuneplanen',
       om: 'hvilken kommuneplan DiBK har, slått opp midt i det planen dekker',
       husk: 6,
       etl: dibk.planopplysninger
@@ -122,6 +131,7 @@ export const katalog = {
     planflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'planflis',
+      tittel: 'Kartbilder av kommuneplanen',
       om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. ' + URL_NOKKEL,
       husk: 400,
       nokkel: dibk.planflisAdresse,
@@ -130,6 +140,7 @@ export const katalog = {
     inonbilde: tabell({
       lag: 'bronse',
       navn: 'inonbilde',
+      tittel: 'Bilde av inngrepsfri natur',
       om: 'bildet av inngrepsfri natur over hele kommunen fra Miljødirektoratet, som PNG',
       husk: 6,
       etl: mdirInon.inonbilde
@@ -137,6 +148,7 @@ export const katalog = {
     graabilder: tabell({
       lag: 'bronse',
       navn: 'graabilder',
+      tittel: 'Bilder av grått areal',
       om: 'de to bildene av grått areal over hele kommunen fra NIBIO, som PNG',
       husk: 6,
       etl: nibioGraa.graabilder
@@ -144,6 +156,7 @@ export const katalog = {
     graaflis: tabell({
       lag: 'bronse',
       navn: 'graaflis',
+      tittel: 'Kartbilder av grått areal',
       om: 'kartbilder av grått areal fra NIBIO, 512 x 512 piksler. ' + URL_NOKKEL,
       husk: 400,
       etl: nibioGraa.graaflis
@@ -151,6 +164,7 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'bronse',
       navn: 'verneomrader',
+      tittel: 'Verneområder',
       om: 'verneområdene i kommunen fra Miljødirektoratet, som GeoJSON',
       husk: 6,
       etl: mdirNatur.verneomrader
@@ -158,6 +172,7 @@ export const katalog = {
     villrein: tabell({
       lag: 'bronse',
       navn: 'villrein',
+      tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen fra Miljødirektoratet, som GeoJSON',
       husk: 6,
       etl: mdirNatur.villrein
@@ -165,6 +180,7 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'bronse',
       navn: 'verdsattNatur',
+      tittel: 'Verdsatt natur',
       om: 'naturtyper med verdi i kommunen fra Miljødirektoratet, som GeoJSON',
       husk: 6,
       etl: mdirNatur.verdsattNatur
@@ -172,6 +188,7 @@ export const katalog = {
     kartlagt: tabell({
       lag: 'bronse',
       navn: 'kartlagt',
+      tittel: 'Kartlagt for naturtyper',
       om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON',
       husk: 6,
       etl: mdirNatur.kartlagt
@@ -181,6 +198,7 @@ export const katalog = {
     grense: tabell({
       lag: 'solv',
       navn: 'grense',
+      tittel: 'Kommunegrensen',
       om: 'kommunegrensen som flerflate i UTM33, med utsnitt og flate i km²',
       husk: 6,
       etl: solvKommune.grense
@@ -188,6 +206,7 @@ export const katalog = {
     arealtall: tabell({
       lag: 'solv',
       navn: 'arealtall',
+      tittel: 'Arealtall per klasse',
       om: 'arealet per klasse i nyeste år, med landareal, innsjø og elv',
       husk: 6,
       etl: solvSsb.arealtall
@@ -195,6 +214,7 @@ export const katalog = {
     historie: tabell({
       lag: 'solv',
       navn: 'historie',
+      tittel: 'Arealtall i 2017 og nå',
       om: 'arealet per klasse i 2017 og i nyeste år',
       husk: 6,
       etl: solvSsb.historie
@@ -202,6 +222,7 @@ export const katalog = {
     oversikt: tabell({
       lag: 'solv',
       navn: 'oversikt',
+      tittel: 'Oversiktsbildet',
       om: 'det lagrede oversiktsbildet med utsnittet det dekker og meter per piksel',
       husk: 6,
       etl: solvGrunnkart.oversikt
@@ -209,6 +230,7 @@ export const katalog = {
     oversiktLest: tabell({
       lag: 'solv',
       navn: 'oversiktLest',
+      tittel: 'Oversiktsbildet lest inn',
       om: 'det lagrede oversiktsbildet lest inn som bilde, til dagens klasser zoomet ut',
       husk: 1,
       etl: solvGrunnkart.oversiktLest
@@ -216,6 +238,7 @@ export const katalog = {
     sammensatt: tabell<string, Samling>({
       lag: 'solv',
       navn: 'sammensatt',
+      tittel: 'Sammensatt kart',
       om: 'dagens klasser satt sammen av kartbildene som er hentet, for kommuner uten lagret oversiktsbilde. En kilde fra brukeren: det er kartet brukeren har sett på, og datamotoren fyller det.',
       husk: 4,
       voksende: true
@@ -223,12 +246,14 @@ export const katalog = {
     egne: tabell<string, Egne>({
       lag: 'solv',
       navn: 'egne',
+      tittel: 'Egne områder',
       om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, med flatene i UTM33 og om de er utbygging. En kilde fra brukeren, som datamotoren fyller.',
       husk: 30
     }),
     plandekning: tabell({
       lag: 'solv',
       navn: 'plandekning',
+      tittel: 'Hvor mye planen dekker',
       om: 'hvor stor del av kommunen kommuneplanen dekker, og rutene med plan',
       husk: 6,
       etl: solvPlan.plandekning
@@ -236,6 +261,7 @@ export const katalog = {
     planinfo: tabell({
       lag: 'solv',
       navn: 'planinfo',
+      tittel: 'Kommuneplanen',
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
       husk: 6,
       etl: solvPlan.planinfo
@@ -243,6 +269,7 @@ export const katalog = {
     inon: tabell({
       lag: 'solv',
       navn: 'inon',
+      tittel: 'Inngrepsfri natur per rute',
       om: 'sonen per rute i bildet av kommunen, og antall ruter per sone innenfor kommunen',
       husk: 3,
       etl: solvInon.inon
@@ -250,6 +277,7 @@ export const katalog = {
     graa: tabell({
       lag: 'solv',
       navn: 'graa',
+      tittel: 'Grått areal per rute',
       om: 'trinnet per rute i bildet av kommunen, og antall ruter per trinn innenfor kommunen',
       husk: 3,
       etl: solvGraa.graa
@@ -257,6 +285,7 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'solv',
       navn: 'verneomrader',
+      tittel: 'Verneområder, klippet',
       om: 'verneområdene klippet mot kommunen, med areal og opplysninger',
       husk: 30,
       etl: solvTemaer.verneomrader,
@@ -265,6 +294,7 @@ export const katalog = {
     villrein: tabell({
       lag: 'solv',
       navn: 'villrein',
+      tittel: 'Villreinområder, klippet',
       om: 'villreinområdene klippet mot kommunen, med areal og opplysninger',
       husk: 30,
       etl: solvTemaer.villrein,
@@ -273,6 +303,7 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'solv',
       navn: 'verdsattNatur',
+      tittel: 'Lokaliteter med verdsatt natur',
       om: 'lokalitetene med verdsatt natur, uklippet, med areal, verdi og opplysninger',
       husk: 30,
       etl: solvTemaer.verdsattNatur,
@@ -281,6 +312,7 @@ export const katalog = {
     verdsattNaturAreal: tabell({
       lag: 'solv',
       navn: 'verdsattNaturAreal',
+      tittel: 'Arealet av verdsatt natur',
       om: 'arealet av verdsatt natur i kommunen, samlet og per verdikategori',
       husk: 30,
       etl: solvTemaer.verdsattNaturAreal
@@ -288,6 +320,7 @@ export const katalog = {
     kartlagt: tabell({
       lag: 'solv',
       navn: 'kartlagt',
+      tittel: 'Det kartlagte',
       om: 'det som er kartlagt for naturtyper etter Miljødirektoratets instruks, klippet mot kommunen',
       husk: 30,
       etl: solvTemaer.kartlagt,
@@ -296,6 +329,7 @@ export const katalog = {
     naturmaske: tabell<string, Maske | null>({
       lag: 'solv',
       navn: 'naturmaske',
+      tittel: 'Masker for områdene',
       om: 'hjelpetabell: områdene i naturtemaene og det kartlagte som masker i et rutenett, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området. Lages første gang en rute med planlagt utbygging treffer området.',
       husk: Infinity
     })
@@ -304,6 +338,7 @@ export const katalog = {
     utbredelse: tabell({
       lag: 'gull',
       navn: 'utbredelse',
+      tittel: 'Utbredelsen nå',
       om: 'utbredelsen nå: landarealet, og arealet og andelen for hver klasse',
       husk: 6,
       etl: gullRegnskap.utbredelse
@@ -311,6 +346,7 @@ export const katalog = {
     endring: tabell({
       lag: 'gull',
       navn: 'endring',
+      tittel: 'Endring fra 2017',
       om: 'forskjellen fra 2017 for hver klasse',
       husk: 6,
       etl: gullRegnskap.endring
@@ -318,6 +354,7 @@ export const katalog = {
     oppstilling: tabell({
       lag: 'gull',
       navn: 'oppstilling',
+      tittel: 'Regnskapsoppstillingen',
       om: 'regnskapsoppstillingen: areal ved start, netto endring og areal ved slutt',
       husk: 6,
       etl: gullRegnskap.oppstilling
@@ -325,6 +362,7 @@ export const katalog = {
     landOgVann: tabell({
       lag: 'gull',
       navn: 'landOgVann',
+      tittel: 'Land og vann',
       om: 'land, innsjø, elv og hav i kommunens flate',
       husk: 6,
       etl: gullRegnskap.landOgVann
@@ -332,6 +370,7 @@ export const katalog = {
     kommuneplan: tabell({
       lag: 'gull',
       navn: 'kommuneplan',
+      tittel: 'Kommuneplanen',
       om: 'om DiBK har kommuneplanen, og hvilken',
       husk: 6,
       etl: gullPlan.kommuneplan
@@ -339,6 +378,7 @@ export const katalog = {
     utbygging: tabell<string, Utbygging | null>({
       lag: 'gull',
       navn: 'utbygging',
+      tittel: 'Utbyggingen',
       om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
       husk: 1,
       brukerstyrt: true,
@@ -347,6 +387,7 @@ export const katalog = {
     utbyggingsblokker: tabell<string, Map<string, Blokk>>({
       lag: 'gull',
       navn: 'utbyggingsblokker',
+      tittel: 'Utbyggingen i blokker',
       om: 'hjelpetabell: utbyggingen i blokker på 512 x 512 ruter, én per flis på nivå 9, så bare blokker med nytt kart regnes ut på nytt',
       husk: 1,
       voksende: true
@@ -354,6 +395,7 @@ export const katalog = {
     planlagt: tabell({
       lag: 'gull',
       navn: 'planlagt',
+      tittel: 'Planlagt utbygging',
       om: 'natur og jordbruk som planen setter av, med andeler',
       husk: 6,
       brukerstyrt: true,
@@ -362,6 +404,7 @@ export const katalog = {
     plansum: tabell({
       lag: 'gull',
       navn: 'plansum',
+      tittel: 'Planlagt utbygging, kort',
       om: 'natur og jordbruk satt av i km², til oversikten og regnskapet',
       husk: 6,
       brukerstyrt: true,
@@ -370,6 +413,7 @@ export const katalog = {
     inon: tabell({
       lag: 'gull',
       navn: 'inon',
+      tittel: 'Inngrepsfri natur',
       om: 'inngrepsfri natur: arealet samlet og per sone, og andelen av landarealet',
       husk: 6,
       etl: gullInon.inon
@@ -377,6 +421,7 @@ export const katalog = {
     graakryss: tabell({
       lag: 'gull',
       navn: 'graakryss',
+      tittel: 'Grått areal krysset med utbyggingen',
       om: 'utbyggingen krysset med grått areal: planlagt utbygging på land, også der det alt er bebygd, og grønt i bebygd område',
       husk: 6,
       brukerstyrt: true,
@@ -385,6 +430,7 @@ export const katalog = {
     graa: tabell({
       lag: 'gull',
       navn: 'graa',
+      tittel: 'Grått areal',
       om: 'grått areal: arealet samlet og per trinn, og andelen av landarealet',
       husk: 6,
       etl: gullGraa.graa
@@ -392,6 +438,7 @@ export const katalog = {
     graaIPlan: tabell({
       lag: 'gull',
       navn: 'graaIPlan',
+      tittel: 'Grått areal i planen',
       om: 'planlagt utbygging på grått areal, og grønt i bebygd område',
       husk: 6,
       brukerstyrt: true,
@@ -400,6 +447,7 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'gull',
       navn: 'verneomrader',
+      tittel: 'Verneområder',
       om: 'verneområdene i kommunen: listen, arealet og andelen av landarealet',
       husk: 6,
       etl: gullTemaer.verneomrader
@@ -407,6 +455,7 @@ export const katalog = {
     utbyggingIVerneomrader: tabell({
       lag: 'gull',
       navn: 'utbyggingIVerneomrader',
+      tittel: 'Utbyggingen i verneområder',
       om: 'kolonnen for verneområdene i utbyggingen: hvilket område hver rad ligger i',
       husk: 1,
       brukerstyrt: true,
@@ -415,6 +464,7 @@ export const katalog = {
     verneomraderIPlan: tabell({
       lag: 'gull',
       navn: 'verneomraderIPlan',
+      tittel: 'Verneområder i planen',
       om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnen',
       husk: 6,
       brukerstyrt: true,
@@ -423,6 +473,7 @@ export const katalog = {
     villrein: tabell({
       lag: 'gull',
       navn: 'villrein',
+      tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen: listen, arealet og andelen av landarealet',
       husk: 6,
       etl: gullTemaer.villrein
@@ -430,6 +481,7 @@ export const katalog = {
     utbyggingIVillrein: tabell({
       lag: 'gull',
       navn: 'utbyggingIVillrein',
+      tittel: 'Utbyggingen i villreinområder',
       om: 'kolonnen for villreinområdene i utbyggingen: hvilket område hver rad ligger i',
       husk: 1,
       brukerstyrt: true,
@@ -438,6 +490,7 @@ export const katalog = {
     villreinIPlan: tabell({
       lag: 'gull',
       navn: 'villreinIPlan',
+      tittel: 'Villreinområder i planen',
       om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnen',
       husk: 6,
       brukerstyrt: true,
@@ -446,6 +499,7 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'gull',
       navn: 'verdsattNatur',
+      tittel: 'Verdsatt natur',
       om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, og andelen av landarealet',
       husk: 6,
       etl: gullTemaer.verdsattNatur
@@ -453,6 +507,7 @@ export const katalog = {
     verdsattNaturIKartlagt: tabell({
       lag: 'gull',
       navn: 'verdsattNaturIKartlagt',
+      tittel: 'Verdsatt natur i det kartlagte',
       om: 'verdsatt natur per verdikategori innenfor det kartlagte',
       husk: 30,
       etl: gullTemaer.verdsattNaturIKartlagt
@@ -460,6 +515,7 @@ export const katalog = {
     verdsattNaturKartlagt: tabell({
       lag: 'gull',
       navn: 'verdsattNaturKartlagt',
+      tittel: 'Kartleggingen',
       om: 'kartleggingen: hvor mye som er kartlagt, og helhetsbildet med verdsatt natur i det kartlagte og resten',
       husk: 6,
       etl: gullTemaer.verdsattNaturKartlagt
@@ -467,6 +523,7 @@ export const katalog = {
     utbyggingIVerdsattNatur: tabell({
       lag: 'gull',
       navn: 'utbyggingIVerdsattNatur',
+      tittel: 'Utbyggingen i verdsatt natur',
       om: 'kolonnen for verdsatt natur i utbyggingen: hvilket område hver rad ligger i',
       husk: 1,
       brukerstyrt: true,
@@ -475,6 +532,7 @@ export const katalog = {
     verdsattNaturIPlan: tabell({
       lag: 'gull',
       navn: 'verdsattNaturIPlan',
+      tittel: 'Verdsatt natur i planen',
       om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnen',
       husk: 6,
       brukerstyrt: true,
@@ -483,6 +541,7 @@ export const katalog = {
     utbyggingUtenforKartlagt: tabell({
       lag: 'gull',
       navn: 'utbyggingUtenforKartlagt',
+      tittel: 'Utbygging utenfor det kartlagte',
       om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper',
       husk: 6,
       brukerstyrt: true,
@@ -491,6 +550,7 @@ export const katalog = {
     egneRader: tabell({
       lag: 'gull',
       navn: 'egneRader',
+      tittel: 'Egne områder mot kommuneplanen',
       om: 'sammenligningen mellom kommuneplanen og egne områder, for hele kommunen og hvert område',
       husk: 6,
       brukerstyrt: true,

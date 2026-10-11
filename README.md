@@ -143,7 +143,7 @@ Katalogen og cachen, i `src/data/`. Se «Katalogen og cachen» under.
 
 | Fil | Innhold |
 |---|---|
-| `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og sier hvor mange kommuner som huskes. |
+| `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. |
 | `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok), tid og om svaret er delvis. Gjør kallene, deler kall som pågår, og glemmer det eldste. Importerer ingenting. |
 
 Generelt, i `src/data/generelt/`. Det som ikke vet noe om natur, kommuner eller kilder. Hver ting finnes bare her, så alle lagene
