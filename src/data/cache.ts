@@ -44,6 +44,7 @@ export interface Tabelldef<N, V> {
   etl?: (
     n: N
   ) => Promise<V> /* lager verdien. Uten: motoren legger verdiene inn selv (legg), eller en ETL-funksjon (straks). */;
+  fil?: string /* filen under src/data som ETL-funksjonen står i (settes av katalogen), eller som fyller tabellen */;
   voksende?: boolean /* verdien fylles på etter at den er lagt inn */;
   brukerstyrt?: boolean /* bygger på det brukeren gjør, og er utdatert når brukeren har endret noe i kommunen (nøkkelen) */;
   glemt?: (v: V, nokkel: string) => void /* kalles når en verdi går ut av cachen */;
@@ -304,6 +305,7 @@ export function innhold() {
     navn: fulltNavn(t),
     tittel: t.tittel,
     lag: t.lag,
+    fil: t.fil || '',
     om: t.om,
     husk: t.husk,
     etl: !!t.etl,

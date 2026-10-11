@@ -238,6 +238,7 @@ export const katalog = {
     sammensatt: tabell<string, Samling>({
       lag: 'solv',
       navn: 'sammensatt',
+      fil: 'motor/grunnkart.ts',
       tittel: 'Sammensatt kart',
       om: 'dagens klasser satt sammen av kartbildene som er hentet, for kommuner uten lagret oversiktsbilde. En kilde fra brukeren: det er kartet brukeren har sett på, og datamotoren fyller det.',
       husk: 4,
@@ -246,6 +247,7 @@ export const katalog = {
     egne: tabell<string, Egne>({
       lag: 'solv',
       navn: 'egne',
+      fil: 'motor/egne.ts',
       tittel: 'Egne områder',
       om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, med flatene i UTM33 og om de er utbygging. En kilde fra brukeren, som datamotoren fyller.',
       husk: 30
@@ -329,6 +331,7 @@ export const katalog = {
     naturmaske: tabell<string, Maske | null>({
       lag: 'solv',
       navn: 'naturmaske',
+      fil: 'solv/temaer.ts',
       tittel: 'Masker for områdene',
       om: 'hjelpetabell: områdene i naturtemaene og det kartlagte som masker i et rutenett, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området. Lages første gang en rute med planlagt utbygging treffer området.',
       husk: Infinity
@@ -387,6 +390,7 @@ export const katalog = {
     utbyggingsblokker: tabell<string, Map<string, Blokk>>({
       lag: 'gull',
       navn: 'utbyggingsblokker',
+      fil: 'gull/utbygging.ts',
       tittel: 'Utbyggingen i blokker',
       om: 'hjelpetabell: utbyggingen i blokker på 512 x 512 ruter, én per flis på nivå 9, så bare blokker med nytt kart regnes ut på nytt',
       husk: 1,
@@ -558,6 +562,40 @@ export const katalog = {
     })
   }
 };
+/* ETL-filene, med stien under src/data. Katalogen grupperer tabellene etter filen ETL-funksjonen står i: i bronse er det kilden, i sølv
+   og gull innholdet. ETL-funksjonen heter det samme som tabellen, så den slås opp med navnet (bare funksjonserklæringer finnes mens
+   filene lastes). Står den ikke i noen av filene her, eller heter den noe annet, stopper siden når den lastes. */
+const ETL_FILER: [string, object][] = [
+  ['bronse/kartverket.ts', kartverket],
+  ['bronse/ssb.ts', ssb],
+  ['bronse/nibio-grunnkart.ts', nibioGrunnkart],
+  ['bronse/nibio-graa.ts', nibioGraa],
+  ['bronse/dibk-kommuneplan.ts', dibk],
+  ['bronse/mdir-inon.ts', mdirInon],
+  ['bronse/mdir-naturtema.ts', mdirNatur],
+  ['solv/kommune.ts', solvKommune],
+  ['solv/ssb.ts', solvSsb],
+  ['solv/grunnkart.ts', solvGrunnkart],
+  ['solv/kommuneplan.ts', solvPlan],
+  ['solv/inon.ts', solvInon],
+  ['solv/graa.ts', solvGraa],
+  ['solv/temaer.ts', solvTemaer],
+  ['gull/regnskap.ts', gullRegnskap],
+  ['gull/planlagt.ts', gullPlan],
+  ['gull/utbygging.ts', gullUtbygging],
+  ['gull/inon.ts', gullInon],
+  ['gull/graa.ts', gullGraa],
+  ['gull/temaer.ts', gullTemaer],
+  ['gull/egne.ts', gullEgne]
+];
+for (const lag of Object.values(katalog))
+  for (const t of Object.values(lag) as Tabell<unknown, unknown>[]) {
+    if (!t.etl) continue;
+    const funnet = ETL_FILER.find(([, modul]) => (modul as Record<string, unknown>)[t.navn] === t.etl);
+    if (!funnet) throw new Error(`fant ikke ETL-funksjonen ${t.navn}() for ${t.lag}.${t.navn} i ETL-filene`);
+    t.fil = funnet[0];
+  }
+
 /* Maskene til et tema i en kommune glemmes når områdene glemmes */
 const glemMasker = (start: string) => glem(katalog.solv.naturmaske, k => k.startsWith(start));
 

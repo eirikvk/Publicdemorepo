@@ -263,7 +263,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
 | `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `Katalog.tsx` | Katalogen i teknisk visning: én kort tabell over tabellene med tittelen, og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
+| `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter ETL-filen, med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `Datavisning.tsx` | Innholdet i en rad i cachen, etter formen det har: bilder fra kildene slik de kom, rutenett som bilde med én farge per verdi, lister som tabell, flater som omriss, og de enkle feltene. Formen finnes ut fra dataene, uten oppsett per tabell. |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |
@@ -316,9 +316,11 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
   voksende: det sammensatte kartet og utbyggingens blokker.
 - **Grensene** står per tabell i katalogen (`husk`). Svar fra kildene er store og huskes for noen få kommuner. Gull er små tabeller
   og huskes for flere. Det som er brukt lengst siden, går ut først. Ingenting lagres i nettleseren etter at siden er lukket.
-- **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» hva som ligger i cachen akkurat nå, per lag, med
-  størrelse. «Info» på hver tabell sier hva den er og hvor ETL-funksjonen ligger, og «Data» viser radene, med status og innholdet:
-  bildene slik de kom fra kildene, rutenettene i sølv og gull som bilder, lister som tabeller og flater som omriss.
+- **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» hva som ligger i cachen akkurat nå, per lag og
+  gruppert etter ETL-filen (i bronse er det kilden, i sølv og gull innholdet), med
+  størrelse. «Info» på hver tabell sier hva den er og hvor ETL-funksjonen ligger. «Data» viser radene, delt i to: om dataene (status,
+  når de ble laget, og feltene som beskriver dataene, som kommune, utsnitt og størrelse) og dataene selv: bildene slik de kom fra
+  kildene, rutenettene i sølv og gull som bilder, lister som tabeller og flater som omriss.
 
 Noen tabeller har ingen ETL-funksjon. Kildene fra brukeren fyller datamotoren: det sammensatte kartet (`solv.sammensatt`) og egne
 områder (`solv.egne`). Hjelpetabellene fyller en ETL-funksjon underveis: utbyggingens blokker og maskene til områdene.
@@ -431,6 +433,7 @@ GitHub. Dette er brukt hvor:
 | `MdRadioGroup` | Om et tegnet område er utbygging eller ikke |
 | `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper og teknisk visning |
 | `MdLoadingSpinner` | Mens kartet hentes |
+| `MdAccordionItem` | Bronse, sølv og gull i katalogen under teknisk visning |
 | Ikoner | Tegn, last opp, sted, åpne i ny fane, slett og lukk |
 | Chips (stilen `md-chip` og `md-chip--active`) | Sidevelgeren |
 

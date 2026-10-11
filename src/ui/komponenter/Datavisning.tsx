@@ -20,6 +20,36 @@ export type Form =
   | { type: 'flater'; sti: string; flater: { navn: string; koord: Flerflate }[]; antall: number }
   | { type: 'felt'; felt: [string, string][] };
 
+/* Felt som beskriver dataene i stedet for å være dem: hvilken kommune, hvor og hvor stort (utsnitt, oppløsning, bredde og høyde,
+   plassering i flisnettet, målestokk), hvor mye som er med (delvis, ufullstendig, fliser, rutestørrelse, egne områder), og
+   formatet (GeoJSON). De vises under «Om dataene». Et felt med et annet navn er data, også når det er et enkelt tall: i gull er
+   tallene selve svaret. */
+const METADATA = new Set([
+  'nr',
+  'u',
+  'ext',
+  'res',
+  'w',
+  'h',
+  'z',
+  'cx0',
+  'cy0',
+  'skala',
+  'delvis',
+  'ufullstendig',
+  'fliser',
+  'rute',
+  'sig',
+  'utenPlan',
+  'antallEgne',
+  'egneIder',
+  'tilstand',
+  'type',
+  'crs',
+  'exceededTransferLimit'
+]);
+const erMetadata = (sti: string) => METADATA.has(sti.split('.').pop()!) || METADATA.has(sti.split('.')[0]);
+
 const MAKS_FORMER = 8,
   MAKS_RADER = 50,
   MAKS_KOLONNER = 8,
@@ -69,8 +99,9 @@ const navnAv = (o: Record<string, unknown>) => {
   return typeof n === 'string' ? n : '';
 };
 
-/* Formene i verdien v, høyst MAKS_FORMER. Feltene øverst (og ett nivå ned) kommer først. */
-export function finnFormer(v: unknown): Form[] {
+/* Metadataene (om) og formene (former) i verdien v, høyst MAKS_FORMER former. De enkle feltene øverst (og ett nivå ned) som er data,
+   kommer først. */
+export function finnFormer(v: unknown): { om: [string, string][]; former: Form[] } {
   const ut: Form[] = [],
     felt: [string, string][] = [],
     sett = new Set<unknown>();
@@ -129,7 +160,9 @@ export function finnFormer(v: unknown): Form[] {
     }
   };
   gaa(v, '', 0);
-  return felt.length ? [{ type: 'felt', felt: felt.slice(0, 40) }, ...ut] : ut;
+  const om = felt.filter(([k]) => erMetadata(k)),
+    data = felt.filter(([k]) => !erMetadata(k)).slice(0, 40);
+  return { om, former: data.length ? [{ type: 'felt', felt: data }, ...ut] : ut };
 }
 
 /* Fargene i rutenettene. Få verdier (høyst tre) får de tre første kategorifargene, som kan skilles fra hverandre også med nedsatt

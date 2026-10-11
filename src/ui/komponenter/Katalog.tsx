@@ -1,12 +1,12 @@
-/* Katalogen og cachen, i teknisk visning på siden Om og metode: én kort tabell over tabellene i bronse, sølv og gull, med tittelen
-   og hvor mye cachen har lagret i hver. Det tekniske navnet står under «Info». «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
+/* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
+   etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Det tekniske navnet står under «Info». «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
    kan åpnes for å se innholdet: bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Innholdet leses
    når man ber om det, så det ikke regnes ut på nytt hver gang siden tegnes. */
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { innhold, verdiI } from '../../data/cache.ts';
 import { kb, nf, tid } from '../tekst.ts';
 import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
-import { MdButton } from './md.ts';
+import { MdAccordionItem, MdButton } from './md.ts';
 import './Katalog.css';
 
 type Innhold = ReturnType<typeof innhold>;
@@ -94,39 +94,55 @@ function somTekst(v: unknown): string {
   return linjer.join('\n');
 }
 
-/* Én rad i cachen. Verdien vises først når raden åpnes, og leses da fra cachen: innholdet etter formen det har, og alle feltene som
-   tre. */
+/* Én rad i cachen. Verdien vises først når raden åpnes, og leses da fra cachen. Den deles i to: om dataene (det cachen vet, og feltene
+   som beskriver dataene) og dataene selv, etter formen de har. Alle feltene står også som tre. */
 function Rad({ navn, r }: { navn: string; r: Raden }) {
-  const [vist, settVist] = useState<{ former: Form[]; tekst: string } | null>(null);
+  const [vist, settVist] = useState<{ om: [string, string][]; former: Form[]; tekst: string } | null>(null);
   const vis = (apen: boolean) => {
     if (!apen) return settVist(null);
     const v = verdiI(navn, r.nokkel);
     settVist(
       v === undefined
-        ? { former: [], tekst: 'Ingen verdi ennå, eller ikke lenger i cachen.' }
-        : { former: finnFormer(v), tekst: somTekst(v) }
+        ? { om: [], former: [], tekst: 'Ingen verdi ennå, eller ikke lenger i cachen.' }
+        : { ...finnFormer(v), tekst: somTekst(v) }
     );
   };
   return (
     <details onToggle={e => vis(e.currentTarget.open)}>
       <summary>
         <b>{nokkelen(r.nokkel)}</b> · {statusen(r)}
-        {r.delvis ? ', delvis' : ''}
         {r.byte ? ` · ${kb(r.byte)}` : ''}
-        {r.ms ? ` · laget på ${tid(r.ms)}` : ''} · {alder(r.sekunder)} siden
       </summary>
-      {vist &&
-        (vist.former.length ? (
-          <>
-            <Datavisning former={vist.former} />
+      {vist && (
+        <>
+          <h4 className="md-typography-label-s">Om dataene</h4>
+          <div className="rullbar">
+            <table className="talltabell">
+              <tbody>
+                {[
+                  ['Status', statusen(r) + (r.delvis ? ', gjelder bare en del av kommunen' : '')],
+                  ...(r.ms ? [['Laget på', tid(r.ms)]] : []),
+                  ['Lagret', alder(r.sekunder) + ' siden'],
+                  ...vist.om
+                ].map(([k, v], i) => (
+                  <tr key={k}>
+                    <th scope="row">{i < (r.ms ? 3 : 2) ? k : <code>{k}</code>}</th>
+                    <td>{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <h4 className="md-typography-label-s">Dataene</h4>
+          {vist.former.length ? <Datavisning former={vist.former} /> : <pre>{vist.tekst}</pre>}
+          {vist.former.length > 0 && (
             <details className="tre">
               <summary>Alle feltene som tre</summary>
               <pre>{vist.tekst}</pre>
             </details>
-          </>
-        ) : (
-          <pre>{vist.tekst}</pre>
-        ))}
+          )}
+        </>
+      )}
     </details>
   );
 }
@@ -140,10 +156,12 @@ function Info({ d }: { d: Tabellen }) {
         Kalles som <code>katalog.{d.navn}(nøkkel)</code>.{' '}
         {d.etl ? (
           <>
-            ETL-funksjonen er <code>{d.navn.split('.')[1]}()</code> i <code>src/data/{d.lag}/</code>.
+            ETL-funksjonen er <code>{d.navn.split('.')[1]}()</code> i <code>src/data/{d.fil}</code>.
           </>
         ) : (
-          <>Har ingen ETL-funksjon, se over.</>
+          <>
+            Har ingen ETL-funksjon. Den fylles i <code>src/data/{d.fil}</code>.
+          </>
         )}
       </p>
       <p>
@@ -159,12 +177,83 @@ function Info({ d }: { d: Tabellen }) {
   );
 }
 
+const sum = (d: Tabellen) => d.rader.reduce((s, x) => s + x.byte, 0);
+type Apen = { navn: string; hva: 'info' | 'data' } | null;
+
+/* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under */
+function Tabellrad({
+  d,
+  apen,
+  veksle
+}: {
+  d: Tabellen;
+  apen: Apen;
+  veksle: (navn: string, hva: 'info' | 'data') => void;
+}) {
+  const r = d.rader,
+    uferdige = r.filter(x => x.status !== 'ok' || x.utdatert),
+    her = apen && apen.navn === d.navn ? apen.hva : null,
+    id = 'katalog-' + d.navn.replace('.', '-');
+  return (
+    <>
+      <tr>
+        <th scope="row">{d.tittel}</th>
+        <td className="tall">
+          {nf(r.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
+          {r.length > 0 && <small>{kb(sum(d))}</small>}
+          {uferdige.length > 0 && (
+            <small className="uferdig">{uferdige.map(x => `${nokkelen(x.nokkel)} ${statusen(x)}`).join(', ')}</small>
+          )}
+        </td>
+        <td className="handling">
+          <div className="knapper">
+            <MdButton
+              theme="tertiary"
+              mode="small"
+              aria-expanded={her === 'info'}
+              aria-controls={her === 'info' ? id : undefined}
+              aria-label={`Info om ${d.tittel} (${d.navn})`}
+              onClick={() => veksle(d.navn, 'info')}
+            >
+              Info
+            </MdButton>
+            <MdButton
+              theme="tertiary"
+              mode="small"
+              aria-expanded={her === 'data'}
+              aria-controls={her === 'data' ? id : undefined}
+              aria-label={`Data i ${d.tittel} (${d.navn})`}
+              onClick={() => veksle(d.navn, 'data')}
+            >
+              Data
+            </MdButton>
+          </div>
+        </td>
+      </tr>
+      {her && (
+        <tr className="detalj" id={id}>
+          <td colSpan={3}>
+            <div>
+              {her === 'info' ? (
+                <Info d={d} />
+              ) : r.length ? (
+                r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} />)
+              ) : (
+                <p>Ingenting lagret ennå.</p>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 export default function Katalog() {
   const [K, settK] = useState<Innhold | null>(null),
-    [apen, settApen] = useState<{ navn: string; hva: 'info' | 'data' } | null>(null);
+    [apen, settApen] = useState<Apen>(null);
   const veksle = (navn: string, hva: 'info' | 'data') =>
     settApen(apen && apen.navn === navn && apen.hva === hva ? null : { navn, hva });
-  const sum = (d: Tabellen) => d.rader.reduce((s, x) => s + x.byte, 0);
   return (
     <section className="prosa katalog">
       <h2 className="md-typography-heading-s">Katalogen</h2>
@@ -176,103 +265,58 @@ export default function Katalog() {
       <MdButton theme="secondary" mode="small" onClick={() => settK(innhold())}>
         {K ? 'Oppdater' : 'Vis innholdet nå'}
       </MdButton>
-      {K && (
-        <div className="tabellramme">
-          <table className="talltabell">
-            <thead>
-              <tr>
-                <th scope="col">Tabell</th>
-                <th scope="col" className="tall">
-                  Lagret
-                </th>
-                <td />
-              </tr>
-            </thead>
-            {(['bronse', 'solv', 'gull'] as const).map(lag => (
-              <tbody key={lag}>
-                <tr className="gruppe">
-                  <th colSpan={3} scope="colgroup">
-                    {LAGNAVN[lag]}
-                  </th>
-                </tr>
-                {K.filter(d => d.lag === lag).map(d => {
-                  const r = d.rader,
-                    uferdige = r.filter(x => x.status !== 'ok' || x.utdatert),
-                    her = apen && apen.navn === d.navn ? apen.hva : null,
-                    id = 'katalog-' + d.navn.replace('.', '-');
-                  return (
-                    <Fragment key={d.navn}>
-                      <tr>
-                        <th scope="row">{d.tittel}</th>
-                        <td className="tall">
-                          {nf(r.length, 0)} av {d.husk === Infinity ? 'alle' : nf(d.husk, 0)}
-                          {r.length > 0 && <small>{kb(sum(d))}</small>}
-                          {uferdige.length > 0 && (
-                            <small className="uferdig">
-                              {uferdige.map(x => `${nokkelen(x.nokkel)} ${statusen(x)}`).join(', ')}
-                            </small>
-                          )}
-                        </td>
-                        <td className="handling">
-                          <div className="knapper">
-                            <MdButton
-                              theme="tertiary"
-                              mode="small"
-                              aria-expanded={her === 'info'}
-                              aria-controls={her === 'info' ? id : undefined}
-                              aria-label={`Info om ${d.tittel} (${d.navn})`}
-                              onClick={() => veksle(d.navn, 'info')}
-                            >
-                              Info
-                            </MdButton>
-                            <MdButton
-                              theme="tertiary"
-                              mode="small"
-                              aria-expanded={her === 'data'}
-                              aria-controls={her === 'data' ? id : undefined}
-                              aria-label={`Data i ${d.tittel} (${d.navn})`}
-                              onClick={() => veksle(d.navn, 'data')}
-                            >
-                              Data
-                            </MdButton>
-                          </div>
-                        </td>
+      {K &&
+        (['bronse', 'solv', 'gull'] as const).map(lag => {
+          const T = K.filter(d => d.lag === lag),
+            filer = [...new Set(T.map(d => d.fil))];
+          return (
+            <MdAccordionItem
+              key={lag}
+              label={LAGNAVN[lag]}
+              headerContent={`${nf(T.length, 0)} tabeller · ${kb(T.reduce((s, d) => s + sum(d), 0))}`.replace(
+                / /g,
+                '\u00a0'
+              )}
+              hideCloseButton
+              className="lag"
+            >
+              <div className="tabellramme">
+                <table className="talltabell">
+                  <thead>
+                    <tr>
+                      <th scope="col">Tabell</th>
+                      <th scope="col" className="tall">
+                        Lagret
+                      </th>
+                      <td />
+                    </tr>
+                  </thead>
+                  {filer.map(fil => (
+                    <tbody key={fil}>
+                      <tr className="gruppe">
+                        <th colSpan={3} scope="colgroup">
+                          <code>{fil.startsWith(lag + '/') ? fil.slice(lag.length + 1) : fil}</code>
+                        </th>
                       </tr>
-                      {her && (
-                        <tr className="detalj" id={id}>
-                          <td colSpan={3}>
-                            <div>
-                              {her === 'info' ? (
-                                <Info d={d} />
-                              ) : r.length ? (
-                                r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} />)
-                              ) : (
-                                <p>Ingenting lagret ennå.</p>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            ))}
-            <tbody>
-              <tr className="sum">
-                <th scope="row">Til sammen</th>
-                <td className="tall">
-                  {nf(
-                    K.reduce((s, d) => s + d.rader.length, 0),
-                    0
-                  )}
-                  <small>{kb(K.reduce((s, d) => s + sum(d), 0))}</small>
-                </td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                      {T.filter(d => d.fil === fil).map(d => (
+                        <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} />
+                      ))}
+                    </tbody>
+                  ))}
+                </table>
+              </div>
+            </MdAccordionItem>
+          );
+        })}
+      {K && (
+        <p>
+          Til sammen{' '}
+          {nf(
+            K.reduce((s, d) => s + d.rader.length, 0),
+            0
+          )}{' '}
+          rader, {kb(K.reduce((s, d) => s + sum(d), 0))}.
+        </p>
       )}
     </section>
   );

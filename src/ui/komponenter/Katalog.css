@@ -115,14 +115,33 @@
 .datavisning .forklaring button[aria-pressed='true'] {
   font-weight: var(--md-typography-weight-medium);
 }
-.datavisning .rullbar {
+.katalog .rullbar {
   overflow: auto;
   max-height: 360px;
 }
-.datavisning .rullbar .talltabell th,
-.datavisning .rullbar .talltabell td {
+.katalog .rullbar .talltabell th,
+.katalog .rullbar .talltabell td {
   white-space: nowrap;
 }
 .katalog details.tre {
   margin-top: var(--md-spacing-12);
+}
+
+/* Lagene som trekkspill (MdAccordionItem). Designsystemet har mye luft rundt innholdet. Her er innholdet en tabell, så luften er
+   mindre, og tabellen får plass på smal skjerm. */
+.katalog .lag {
+  margin-top: var(--md-spacing-12);
+}
+.katalog .lag > .md-accordion-item__header {
+  padding: var(--md-spacing-12);
+}
+.katalog .lag > .md-accordion-item__content {
+  padding: 0 var(--md-spacing-8) var(--md-spacing-12);
+}
+.katalog .lag .md-accordion-item__header-label {
+  margin-left: var(--md-spacing-8);
+}
+/* Om dataene og Dataene i en åpnet rad */
+.katalog tr.detalj h4 {
+  margin: var(--md-spacing-12) 0 var(--md-spacing-4);
 }

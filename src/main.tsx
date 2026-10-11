@@ -5,6 +5,7 @@ import '@fontsource/open-sans/600.css';
 import '@miljodirektoratet/md-css/src/tokens/index.css';
 import '@miljodirektoratet/md-css/src/typography.css';
 import '@miljodirektoratet/md-css/src/utils.css';
+import '@miljodirektoratet/md-css/src/accordionitem/accordionitem.css';
 import '@miljodirektoratet/md-css/src/button/button.css';
 import '@miljodirektoratet/md-css/src/chips/chips.css';
 import '@miljodirektoratet/md-css/src/formElements/checkbox/checkbox.css';
