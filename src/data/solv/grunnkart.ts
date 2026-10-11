@@ -3,7 +3,7 @@
    datamotoren bestemmer når en flis legges inn (data/motor/grunnkart.ts). */
 import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { flisUtsnitt, type Flis } from './felles.ts';
+import { flisUtsnitt, flisnavn, type Flis } from './felles.ts';
 import { flislerret, lesBilde, sti, tegneflate, tegnUtsnitt } from './raster.ts';
 
 /* Dagens klasser zoomet ut: det lagrede oversiktsbildet (buf, som PNG), eller det sammensatte kartet (lerret, dynamisk). ext er
@@ -38,7 +38,6 @@ export interface Samling {
   har: Set<string>;
   ov: Oversikt;
 }
-export const flisnavn = (tc: Flis) => tc.join('/');
 /* Et tomt sammensatt kart over utsnittet e: høyst 2048 piksler på den lengste siden, og ikke finere enn minRes meter per piksel */
 export function nySamling(e: Utsnitt, minRes: number): Samling {
   const res = Math.max(minRes, Math.max(e[2] - e[0], e[3] - e[1]) / 2048),

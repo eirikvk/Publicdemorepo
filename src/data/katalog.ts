@@ -28,7 +28,7 @@ import * as solvKommune from './solv/kommune.ts';
 import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvSsb from './solv/ssb.ts';
 import * as solvTemaer from './solv/temaer.ts';
-import type { Fylke, Flis } from './solv/felles.ts';
+import { flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
 import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
 import type { Maske } from './solv/temaer.ts';
@@ -261,6 +261,15 @@ export const katalog = {
       brukerstyrt: true,
       etl: solvEgne.egne
     }),
+    egneruter: tabell({
+      lag: 'solv',
+      navn: 'egneruter',
+      tittel: 'Egne områder per rute',
+      om: 'de egne områdene i kommunen som planen per rute, i samme datamodell som kommuneplanen: utbygging eller ikke, og hvilket område ruta hører til. Over utsnittet rundt alle områdene.',
+      husk: 6,
+      brukerstyrt: true,
+      etl: solvEgne.egneruter
+    }),
     plandekning: tabell({
       lag: 'solv',
       navn: 'plandekning',
@@ -276,6 +285,15 @@ export const katalog = {
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
       husk: 6,
       etl: solvPlan.planinfo
+    }),
+    kommuneplanruter: tabell<Flis, Planruter>({
+      lag: 'solv',
+      navn: 'kommuneplanruter',
+      tittel: 'Kommuneplanen per rute',
+      om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y].',
+      husk: 40,
+      nokkel: flisnavn,
+      etl: solvPlan.kommuneplanruter
     }),
     inon: tabell({
       lag: 'solv',

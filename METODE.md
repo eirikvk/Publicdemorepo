@@ -266,7 +266,7 @@ eller mindre natur enn i 2017?
 1. For hver flis på nivå 9 som dekker kommunen, legges planen oppå dagens klasser, rute for rute. Hver kilde tolkes for seg i sølv,
    og så settes de sammen i gull (`kombinerBlokk`):
    - En piksel i grunnkartet brukes når den er minst 100 av 255 dekket, og får klassen det er mest av (`klasserIFlis`, sølv).
-   - En rute er planlagt utbygging når planen dekker minst halve ruta (`planIFlis`, sølv).
+   - En rute er planlagt utbygging når planen dekker minst halve ruta (`solv.kommuneplanruter`, sølv).
    - Ruter som i dag er natur eller jordbruk, og som er planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke.
 2. Flisene settes sammen til ett rutenett for kommunen (`byggUtbygging`, gull). Egne områder legges inn her, se Egne områder.
 3. Smale striper tas ut (`ryddStriper`, gull). Først finnes kjernene: ruter med planlagt utbygging på alle fire sider. Så beholdes alt
@@ -340,7 +340,8 @@ Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres p
 
 **Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/kommuneplan.ts` (planen) og `src/data/solv/grunnkart.ts`
 (dagens klasser). Gull: `src/data/gull/utbygging.ts` (planrutenettet) og `src/data/gull/planlagt.ts`. Tabellene i katalogen:
-`solv.planinfo`, `bronse.planflis`, `solv.oversikt`, `solv.sammensatt`, `bronse.egne`, `solv.egne`, `gull.utbygging`, `gull.utbyggingsblokker`,
+`solv.planinfo`, `bronse.planflis`, `solv.kommuneplanruter`, `solv.oversikt`, `solv.sammensatt`, `bronse.egne`, `solv.egne`,
+`solv.egneruter`, `gull.utbygging`, `gull.utbyggingsblokker`,
 `gull.planlagt` og `gull.plansum`. Kartlaget: `src/ui/kart/plan.ts`.
 
 ## Egne områder og opplastet plan
@@ -360,11 +361,12 @@ nettleseren og sendes ingen steder.
    arealformål, er alle flatene utbygging. Et tegnet område er utbygging, og kan settes til ikke utbygging.
 2. Projeksjonen leses fra filen. Mangler den, gjettes grader eller den UTM-sonen som legger planen nærmest kommunen (`lesPlanfil`,
    bronse).
-3. Flatene legges i planrutenettet etter halvregelen (`leggInnEget`, gull). Innenfor flatene erstatter de kommuneplanen: som utbygging
-   tar de all natur og alt jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Der flater overlapper, vinner
-   utbygging.
-4. Planrutenettet regnes ut både med og uten egne områder, og regelen om smale striper brukes på begge (`byggUtbygging`, gull).
-5. For hvert område telles hva som ligger der i dag, hva planen alene tar, og hva som tas med egne områder (`byggEgetOmrade`, gull).
+3. Flatene legges i planrutenettet etter halvregelen, i samme datamodell som kommuneplanen (`solv.egneruter`, sølv). Der flater i
+   samme område overlapper, vinner utbygging. Der områder overlapper, gjelder det siste.
+4. Innenfor flatene erstatter de kommuneplanen: som utbygging tar de all natur og alt jordbruk i ruta, og som ikke utbygging
+   fjerner de det planen setter av der (`leggInnEgne`, gull).
+5. Planrutenettet regnes ut både med og uten egne områder, og regelen om smale striper brukes på begge (`byggUtbygging`, gull).
+6. For hvert område telles hva som ligger der i dag, hva planen alene tar, og hva som tas med egne områder (`byggEgetOmrade`, gull).
    Radene i sammenligningen viser kommuneplanen alene, tallet med egne områder og forskjellen, for natur, jordbruk, grått areal,
    verneområder, villreinområder, verdsatt natur per verdi og natur som ikke er kartlagt (`byggEgneRader`, gull).
 
@@ -380,7 +382,7 @@ nettleseren og sendes ingen steder.
 
 **Kode.** Bronse: `src/data/bronse/planfil.ts`. Sølv: `src/data/solv/egne.ts`. Gull: `src/data/gull/egne.ts`. Opplasting:
 `src/data/motor/egne.ts`. Tabellene: `bronse.egne` (det brukeren har tegnet eller lastet opp), `solv.egne` (hvilke flater som er
-utbygging) og `gull.egneRader` (radene). Tegning i kartet: `src/ui/kart/egne.ts`.
+utbygging), `solv.egneruter` (områdene per rute, i samme datamodell som kommuneplanen) og `gull.egneRader` (radene). Tegning i kartet: `src/ui/kart/egne.ts`.
 
 ## Naturtemaene
 
@@ -591,6 +593,13 @@ med én rad per tabell og kommune. Tabellene i gull huskes også, og regnes ut p
 er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Planen i sølv, 11. oktober 2026.** Planen har to kilder, kommuneplanen fra DiBK og egne områder fra brukeren. Begge ligger nå
+uendret i sølv, i hver sin tabell med samme datamodell: planen per rute (`solv.kommuneplanruter` og `solv.egneruter`). Før ble
+egne områder lagt i rutenettet først i gull. Gull avgjør som før at et eget område erstatter kommuneplanen der det ligger. Metoden
+ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme dag: tallene fra motoren,
+teksten på siden og kartbildene var like, også med egne områder tegnet, lastet opp og slettet, og i Surnadal. Trondheim, så Malvik
+og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
 **Kildene fra brukeren og kartlagene, 11. oktober 2026.** Egne områder ligger nå slik brukeren laget dem i `bronse.egne`, og
 hvilke flater som er utbygging, avgjøres i sølv (`solv.egne`) i stedet for når filen lastes opp. Tegningen av det sammensatte kartet

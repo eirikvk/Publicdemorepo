@@ -2,16 +2,14 @@
    rutenett med ruter på 21 meter, med smale striper tatt bort. Svarer på hvor det er planlagt utbygging, og hva som er der i dag.
    Alle kryssinger med planlagt utbygging går gjennom utbyggingen: temaene (gull/temaer.ts), grått areal (gull/graa.ts), tallene for
    planlagt utbygging (gull/planlagt.ts) og egne områder (gull/egne.ts).
-   Hver kilde tolkes per rute i sølv: kommuneplanen (planIFlis i solv/kommuneplan.ts), dagens klasser (dagensKlasserIFlis og
-   klasserIFlis i solv/grunnkart.ts og solv/klasser.ts) og egne områder (solv/egne.ts). Her settes de sammen. Én rute er RUTE km². */
-import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
+   Hver kilde tolkes per rute i sølv: planen, med kommuneplanen (solv.kommuneplanruter) og egne områder (solv.egneruter) i samme
+   datamodell, og dagens klasser (dagensKlasserIFlis og klasserIFlis i solv/grunnkart.ts og solv/klasser.ts). Her settes de sammen:
+   et eget område erstatter kommuneplanen der det ligger, og planen legges oppå dagens klasser. Én rute er RUTE km². */
 import { katalog } from '../katalog.ts';
-import { HALV, ORIGO, PLANNIVA, RUTE_M, flisUtsnitt, fliserI, type Flis, type Plassering } from '../solv/felles.ts';
-import type { Flater } from '../solv/egne.ts';
+import { PLANNIVA, RUTE_M, fliserI, type Flis, type Plassering } from '../solv/felles.ts';
+import type { Egneruter } from '../solv/egne.ts';
 import { dagensKlasserIFlis, type Oversikt } from '../solv/grunnkart.ts';
 import { JOR, NAT, klasserIFlis } from '../solv/klasser.ts';
-import { planIFlis } from '../solv/kommuneplan.ts';
-import { bildePiksler, sti, tegneflate } from '../solv/raster.ts';
 
 /* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
 export interface Antall {
@@ -79,7 +77,7 @@ export interface Utbygging extends Plassering {
 }
 
 /* Én flis: kommuneplanen lagt oppå dagens klasser. kl er dagens klasse per rute fra klasserIFlis (0 ukjent), plan planlagt
-   utbygging per rute fra planIFlis (null uten kommuneplan), og tc flisen [z, x, y]. fliser er kartflisene som er hentet innenfor,
+   utbygging per rute fra solv.kommuneplanruter (null uten kommuneplan), og tc flisen [z, x, y]. fliser er kartflisene som er hentet innenfor,
    eller null når hele kommunen er kjent. Uten hentet kart er ruta ukjent (3).
    Gir per rute:
      d:  0 ingenting, 1 natur og 2 jordbruk satt av til utbygging, 3 ukjent
@@ -103,7 +101,7 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
   for (let q = 0; q < 262144; q++) {
     if (!kl[q]) continue;
     const k = kl[q] - 1,
-      p = !!plan && plan[q] === 1; /* halvregelen er brukt i planIFlis */
+      p = !!plan && plan[q] === 1; /* halvregelen er brukt i sølv */
     if (p && k <= NAT) pl[q] = 1;
     if (!k) {
       n.beb++;
@@ -167,7 +165,8 @@ export function ryddStriper(d: Uint8Array, w: number): Rydding {
 
 /* Setter flisene sammen til ett rutenett for kommunen, legger inn egne områder og rydder bort smale striper. nr er kommunen,
    nokler er [x, y] for flisene på nivå 9, blokker resultatene fra kombinerBlokk per flis («x/y»), delvis sier at bare en del av
-   kommunen er hentet, E er de egne områdene (med id i egneIder), og rute er rutestørrelsen i meter slik den skal oppgis.
+   kommunen er hentet, E er de egne områdene per rute fra solv.egneruter (null uten), og rute er rutestørrelsen i meter slik den
+   skal oppgis.
    Med egne områder regnes også kommuneplanen alene (basis), så forskjellen kan vises. For hvert eget område telles hva som ligger
    der i dag, hva planen alene tar (fnat, fjor) og hva som går med nå (nnat, njor). */
 export function byggUtbygging(
@@ -175,9 +174,8 @@ export function byggUtbygging(
   nokler: number[][],
   blokker: Map<string, Blokk>,
   delvis: boolean,
-  E: Flater[],
-  rute: number,
-  egneIder: number[]
+  E: Egneruter | null,
+  rute: number
 ): Utbygging {
   const Z = PLANNIVA,
     kant = delvis ? 1 : 0,
@@ -206,15 +204,16 @@ export function byggUtbygging(
   let basis: Rydding | null = null,
     eget: Uint8Array | null = null,
     egetType: Uint8Array | null = null;
-  if (E.length) {
+  const egneIder = E ? E.ider : [];
+  if (E) {
     basis = ryddStriper(d, w);
     d = d.slice();
     eget = new Uint8Array(w * h);
     egetType = new Uint8Array(w * h);
-    E.forEach((g, i) => leggInnEget(g, i + 1, d, kl, eget!, { cx0, cy0, w, h, m: RUTE_M, type: egetType! }));
+    leggInnEgne(E, d, kl, eget, egetType, { cx0, cy0, w, h });
   }
   const { celler, ryddet, rn, rj } = ryddStriper(d, w);
-  const egneTall: EgetTall[] = E.map(() => ({
+  const egneTall: EgetTall[] = egneIder.map(() => ({
     nat: 0,
     jor: 0,
     beb: 0,
@@ -259,7 +258,7 @@ export function byggUtbygging(
     egetType,
     kl,
     pl,
-    antallEgne: E.length,
+    antallEgne: egneIder.length,
     basis,
     sum: { rn, rj },
     iDag: { nat: n.nat, jor: n.jor },
@@ -273,80 +272,55 @@ export function byggUtbygging(
   };
 }
 
-/* Et eget område eller en opplastet plan inn i utbyggingen. g har delene { koord, ext, type }, merke er områdets nummer, d er
-   rutenettet for planlagt utbygging, kl dagens klasser og eget hvilket område hver rute hører til. G er rutenettets plassering
-   { cx0, cy0, w, h, m } og typen per rute (G.type: 1 utbygging, 2 ikke utbygging).
-   En rute hører til området når området dekker minst halve ruta. Som utbygging tar området all natur og alt jordbruk i ruta. Som
-   ikke utbygging fjerner det planlagt utbygging der. Der flater overlapper, vinner utbygging. Endrer d, eget og G.type. */
-export function leggInnEget(
-  g: Flater,
-  merke: number,
+/* Egne områder inn i utbyggingen: innenfor et eget område erstatter det kommuneplanen. E er områdene per rute fra solv.egneruter, d
+   rutenettet for planlagt utbygging, kl dagens klasser, og G rutenettets plassering. Som utbygging tar området all natur og alt
+   jordbruk i ruta. Som ikke utbygging fjerner det planlagt utbygging der. Fyller eget (hvilket område ruta hører til) og egetType
+   (1 utbygging, 2 ikke utbygging), og endrer d. */
+export function leggInnEgne(
+  E: Egneruter,
   d: Uint8Array,
   kl: Uint8Array,
   eget: Uint8Array,
-  G: { cx0: number; cy0: number; w: number; h: number; m: number; type: Uint8Array }
+  egetType: Uint8Array,
+  G: { cx0: number; cy0: number; w: number; h: number }
 ) {
-  const u = g.ext,
-    m = G.m,
-    X0 = Math.max(0, Math.floor((u[0] - ORIGO[0]) / m) - G.cx0),
-    X1 = Math.min(G.w - 1, Math.floor((u[2] - ORIGO[0]) / m) - G.cx0),
-    Y0 = Math.max(0, Math.floor((ORIGO[1] - u[3]) / m) - G.cy0),
-    Y1 = Math.min(G.h - 1, Math.floor((ORIGO[1] - u[1]) / m) - G.cy0);
-  if (X1 < X0 || Y1 < Y0) return;
-  const B = 1024; /* området tegnes i biter på høyst 1024 x 1024 ruter */
-  for (let y0 = Y0; y0 <= Y1; y0 += B)
-    for (let x0 = X0; x0 <= X1; x0 += B) {
-      const cw = Math.min(B, X1 - x0 + 1),
-        ch = Math.min(B, Y1 - y0 + 1),
-        vx = ORIGO[0] + (G.cx0 + x0) * m,
-        oy = ORIGO[1] - (G.cy0 + y0) * m,
-        bit: Utsnitt = [vx, oy - ch * m, vx + cw * m, oy];
-      const deler = g.deler.filter(del => overlapper(del.ext, bit));
-      if (!deler.length) continue;
-      const k = tegneflate(cw, ch);
-      for (const type of ['fri', 'bygg']) {
-        k.fillStyle = type === 'bygg' ? '#f00' : '#0f0';
-        for (const del of deler)
-          if (del.type === type) {
-            sti(k, del.koord, bit, 1 / m);
-            k.fill('evenodd');
-          }
-      } /* utbygging tegnes sist og vinner der flater overlapper */
-      const a = k.getImageData(0, 0, cw, ch).data;
-      for (let y = 0; y < ch; y++)
-        for (let x = 0; x < cw; x++) {
-          const q = 4 * (y * cw + x);
-          if (a[q + 3] < HALV) continue;
-          const i = (y0 + y) * G.w + x0 + x,
-            kls = kl[i];
-          eget[i] = merke;
-          G.type[i] = a[q] > a[q + 1] ? 1 : 2;
-          if (a[q] > a[q + 1]) {
-            if (kls === 3) d[i] = 1;
-            else if (kls === 2) d[i] = 2;
-          } else if (d[i] === 1 || d[i] === 2) d[i] = 0;
-        }
+  for (let y = 0; y < E.h; y++) {
+    const Y = E.cy0 + y - G.cy0;
+    if (Y < 0 || Y >= G.h) continue;
+    for (let x = 0; x < E.w; x++) {
+      const X = E.cx0 + x - G.cx0,
+        q = y * E.w + x,
+        o = E.omrade[q];
+      if (!o || X < 0 || X >= G.w) continue;
+      const i = Y * G.w + X,
+        t = E.plan[q];
+      eget[i] = o;
+      egetType[i] = t;
+      if (t === 1) {
+        if (kl[i] === 3) d[i] = 1;
+        else if (kl[i] === 2) d[i] = 2;
+      } else if (d[i] === 1 || d[i] === 2) d[i] = 0;
     }
+  }
 }
 
 /* Tabellen gull.utbygging: utbyggingen i kommunen nr. null når det ikke finnes noe å regne på: uten kommuneplan og uten egne
    områder, eller før det er hentet kart i en kommune uten lagret oversiktsbilde.
    Dagens klasser kommer fra det lagrede oversiktsbildet for hele kommunen, eller fra det sammensatte kartet av flisene som er hentet
    (solv.sammensatt). Da gjelder utbyggingen bare den delen av kommunen nettleseren har hentet kart for (delvis), og den regnes ut på
-   nytt når datamotoren sier fra om mer kart. Egne områder kommer fra solv.egne.
+   nytt når datamotoren sier fra om mer kart. Egne områder kommer fra solv.egneruter.
    Utbyggingen bygges av blokker på 512 x 512 ruter, én per flis på nivå 9. En blokk regnes bare ut på nytt når det har kommet nye
    kartfliser innenfor den, så mer kart koster én eller to blokker og ikke hele det hentede området. Blokkene huskes i
    gull.utbyggingsblokker. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 export async function utbygging(nr: string): Promise<Utbygging | null> {
-  const [g, info, egne, reg] = await Promise.all([
+  const [g, info, E, reg] = await Promise.all([
     katalog.solv.grense(nr),
     katalog.solv.planinfo(nr).catch(() => null),
-    katalog.solv.egne(nr),
+    katalog.solv.egneruter(nr),
     katalog.bronse.oversiktsregister().catch(() => null)
   ]);
-  const E = egne ? egne.flater : [],
-    ingenPlan = !!info && !info.finnes;
-  if (ingenPlan && !E.length) return null;
+  const ingenPlan = !!info && !info.finnes;
+  if (ingenPlan && !E) return null;
   /* Dagens klasser: det lagrede oversiktsbildet, eller det sammensatte kartet hvis det ikke finnes eller ikke kan hentes */
   const lagret = !!(reg && reg.kommuner && reg.kommuner[nr]),
     ov: Oversikt | null = lagret ? await katalog.solv.oversikt(nr).catch(() => null) : null,
@@ -373,13 +347,12 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
       if (har && har.sig === sig && har.kl && har.pl && har.utenPlan === ingenPlan) return;
       const [x, y] = k.split('/').map(Number),
         tc: Flis = [Z, x, y];
-      const [K, buf] = await Promise.all([
+      const [K, P] = await Promise.all([
         dagensKlasserIFlis(tc, { ov: kilde, lest, koord: dyn ? g.koord : null }),
-        ingenPlan ? null : katalog.bronse.planflis(tc)
+        ingenPlan ? null : katalog.solv.kommuneplanruter(tc)
       ]);
       if (!K) throw new Error('mangler dagens klasser');
-      const plan = buf ? planIFlis(await bildePiksler(buf, 512, 512)) : null;
-      blokker.set(k, { ...kombinerBlokk(klasserIFlis(K), plan, tc, fliser), utenPlan: !buf });
+      blokker.set(k, { ...kombinerBlokk(klasserIFlis(K), P ? P.plan : null, tc, fliser), utenPlan: !P });
     })
   );
   const m = RUTE_M;
@@ -389,7 +362,6 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     blokker,
     dyn,
     E,
-    Math.round(dyn ? Math.max(m, sm!.res) : m),
-    egne ? egne.ider : []
+    Math.round(dyn ? Math.max(m, sm!.res) : m)
   );
 }

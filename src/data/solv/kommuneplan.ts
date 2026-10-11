@@ -1,8 +1,17 @@
-/* Sølv for kommuneplanen fra DiBK: planlagt utbygging per rute i en flis, og om kommunen har kommuneplan hos DiBK og hvilken.
-   Bare kommuneplanen: den legges oppå dagens klasser og egne områder i gull (gull/utbygging.ts). */
+/* Sølv for kommuneplanen fra DiBK: planlagt utbygging per rute i en flis (solv.kommuneplanruter), og om kommunen har kommuneplan hos
+   DiBK og hvilken. Bare kommuneplanen: den legges oppå dagens klasser og egne områder i gull (gull/utbygging.ts). */
 import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { BILDE_PLANDEKNING, HALV, PLAN_FINNES, SYNLIG, rutenett, type Piksler } from './felles.ts';
+import {
+  BILDE_PLANDEKNING,
+  HALV,
+  PLAN_FINNES,
+  SYNLIG,
+  rutenett,
+  type Flis,
+  type Piksler,
+  type Planruter
+} from './felles.ts';
 import { bildePiksler, flatePiksler } from './raster.ts';
 
 /* Planlagt utbygging per rute i en flis, fra kartbildet P fra DiBK (piksler): 1 der minst halve ruta ligger i en planflate
@@ -11,6 +20,12 @@ export function planIFlis(P: Piksler): Uint8Array {
   const pl = new Uint8Array(P.length / 4);
   for (let i = 3, q = 0; i < P.length; i += 4, q++) if (P[i] >= HALV) pl[q] = 1;
   return pl;
+}
+/* Tabellen solv.kommuneplanruter: kommuneplanen fra DiBK i flisen tc, som planen per rute (Planruter i felles.ts). plan er 1 der
+   minst halve ruta ligger i en flate for framtidig utbygging, ellers 0. Kommuneplanen har ingen områder. */
+export async function kommuneplanruter(tc: Flis): Promise<Planruter> {
+  const P = await bildePiksler(await katalog.bronse.planflis(tc), 512, 512);
+  return { z: tc[0], cx0: tc[1] * 512, cy0: tc[2] * 512, w: 512, h: 512, plan: planIFlis(P) };
 }
 
 /* Har kommunen kommuneplan hos DiBK? P er et lite bilde av planlaget over kommunen og M kommunens flate, begge som piksler (RGBA) i

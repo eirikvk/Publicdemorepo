@@ -175,15 +175,15 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 
 | Fil | Innhold |
 |---|---|
-| `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, og målestokken i UTM: arealet av en flate i km² i terrenget |
+| `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
 | `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, nettet for bilder av hele kommunen, og et slikt bilde tolket til ruter |
 | `grunnkart.ts` | Grunnkartet fra NIBIO: det lagrede oversiktsbildet av dagens klasser, det sammensatte kartet av flisene som er hentet, og dagens klasser i én flis |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Den eneste filen i sølv og gull som bruker nettleseren. |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, tolking av fargene i kartbildene, og dagens klasse per rute i en flis |
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017 |
-| `kommuneplan.ts` | Kommuneplanen fra DiBK: planlagt utbygging per rute i en flis, og om kommunen har plan og hvilken |
-| `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging |
+| `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), og om kommunen har plan og hvilken |
+| `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
 | `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
 | `inon.ts` | Inngrepsfri natur: sone per rute |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon |
@@ -194,7 +194,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | Fil | Innhold |
 |---|---|
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes som ett bilde |
-| `utbygging.ts` | Utbyggingen, midtpunktet: kommuneplanen og egne områder lagt oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. |
+| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
@@ -336,8 +336,9 @@ Noen tabeller har ingen ETL-funksjon. Kildene fra brukeren fyller datamotoren: e
    skilles. Planen har to: kommuneplanen fra DiBK og egne områder fra brukeren. Sølv velger ikke mellom kildene og setter ikke
    ulike ting sammen. Det gjør gull: at et eget område erstatter kommuneplanen der det ligger, planen lagt oppå dagens klasser,
    verneområdene krysset med utbyggingen, verdsatt natur innenfor det kartlagte. Kommunegrensen og rutenettet er rammen, ikke en
-   kilde, så å klippe verneområdene mot kommunen er sølv. Koden følger ikke dette helt ennå: egne områder legges i rutenettet først
-   i gull, og det sammensatte kartet fylles av datamotoren.
+   kilde, så å klippe verneområdene mot kommunen er sølv. Planen ligger i to tabeller, én per kilde, med samme datamodell (`Planruter`):
+   `solv.kommuneplanruter` og `solv.egneruter`. Koden følger ikke prinsippet helt ennå: det sammensatte kartet fylles av
+   datamotoren.
 2. **Gull deles der det kommer inn en ny eller tregere kilde.** Hver tabell i gull svarer på ett spørsmål. Trenger en del av svaret
    noe som kommer senere, som utbyggingen, blir den delen en egen tabell som kaller den første. `gull.verneomrader` er
    verneområdene i kommunen, og `gull.verneomraderIPlan` er planlagt utbygging innenfor dem. Gull kan kalle gull.
@@ -358,13 +359,14 @@ utbygging. For hvert tema er det en kolonne som sier hvor hver rad ligger (`gull
 sidene viser, er summer over radene. Slik kunne det vært en faktatabell i Databricks:
 
 ```
-bronse.planflis (DiBK)              ─┐
-solv.oversikt / solv.sammensatt     ─┼─→ gull.utbygging ─┐
-bronse.egne (brukeren) → solv.egne  ─┘                   ├─→ gull.utbyggingIVerneomrader ─→ gull.verneomraderIPlan
-solv.verneomrader                   ─────────────────────┘
+bronse.planflis (DiBK) → solv.kommuneplanruter          ─┐
+bronse.egne (brukeren) → solv.egne → solv.egneruter     ─┼─→ gull.utbygging ─┐
+solv.oversikt / solv.sammensatt (dagens klasser)        ─┘                   ├─→ gull.utbyggingIVerneomrader ─→ gull.verneomraderIPlan
+solv.verneomrader                                       ─────────────────────┘
 ```
 
-Kommuneplanen og dagens klasser tolkes per rute i sølv (`planIFlis` og `klasserIFlis`), og settes sammen i gull. Kartlagene for
+Planen og dagens klasser tolkes per rute i sølv (`solv.kommuneplanruter`, `solv.egneruter` og `klasserIFlis`), og settes sammen i
+gull. Kartlagene for
 planen, inngrepsfri natur og grått areal bruker de samme funksjonene når de tegner per piksel. Grått areal er
 krysset med utbyggingen for seg (`gull.graakryss`), fordi det også teller planlagt utbygging der det alt er bebygd, og grønt i
 bebygd område.

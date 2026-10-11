@@ -1,9 +1,10 @@
-/* Sølv for egne områder og opplastet plan: hvilke flater som regnes som utbygging (tabellen solv.egne). Kilden er bronse.egne, det
-   brukeren har tegnet eller lastet opp, som datamotoren fyller. Flatene legges oppå kommuneplanen og dagens klasser i gull
-   (gull/utbygging.ts). */
-import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
+/* Sølv for egne områder og opplastet plan: hvilke flater som regnes som utbygging (solv.egne), og de samme områdene som planen per
+   rute (solv.egneruter), i samme datamodell som kommuneplanen. Kilden er bronse.egne, det brukeren har tegnet eller lastet opp, som
+   datamotoren fyller. Gull avgjør at et eget område erstatter kommuneplanen der det ligger (gull/utbygging.ts). */
+import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { arealKm2 } from './felles.ts';
+import { HALV, ORIGO, PLANNIVA, RUTE_M, arealKm2, type Planruter } from './felles.ts';
+import { sti, tegneflate } from './raster.ts';
 
 /* Utbygging ('bygg') eller ikke utbygging ('fri') */
 export type Type = 'bygg' | 'fri';
@@ -65,4 +66,75 @@ export async function egne(nr: string): Promise<Egne> {
             }))
     }))
   };
+}
+
+/* Tabellen solv.egneruter: de egne områdene i kommunen nr som planen per rute (Planruter i felles.ts), i rutenettet for planen og
+   over utsnittet rundt alle områdene. plan er 1 utbygging og 2 ikke utbygging, og omrade hvilket område ruta hører til (1 er det
+   første i ider). null uten egne områder. */
+export type Egneruter = Planruter & { omrade: Uint8Array; ider: number[] };
+export async function egneruter(nr: string): Promise<Egneruter | null> {
+  const E = await katalog.solv.egne(nr);
+  if (!E.flater.length) return null;
+  const m = RUTE_M,
+    x0 = Math.min(...E.flater.map(g => g.ext[0])),
+    y0 = Math.min(...E.flater.map(g => g.ext[1])),
+    x1 = Math.max(...E.flater.map(g => g.ext[2])),
+    y1 = Math.max(...E.flater.map(g => g.ext[3]));
+  const cx0 = Math.floor((x0 - ORIGO[0]) / m),
+    cy0 = Math.floor((ORIGO[1] - y1) / m),
+    w = Math.floor((x1 - ORIGO[0]) / m) - cx0 + 1,
+    h = Math.floor((ORIGO[1] - y0) / m) - cy0 + 1;
+  const R: Egneruter = {
+    z: PLANNIVA,
+    cx0,
+    cy0,
+    w,
+    h,
+    plan: new Uint8Array(w * h),
+    omrade: new Uint8Array(w * h),
+    ider: E.ider
+  };
+  E.flater.forEach((g, i) => tegnEget(g, i + 1, R));
+  return R;
+}
+
+/* Et eget område g med nummeret merke inn i rutenettet R. En rute hører til området når området dekker minst halve ruta. Der
+   flater i samme område overlapper, vinner utbygging. Der områder overlapper, gjelder det siste. */
+function tegnEget(g: Flater, merke: number, R: Egneruter) {
+  const u = g.ext,
+    m = RUTE_M,
+    X0 = Math.max(0, Math.floor((u[0] - ORIGO[0]) / m) - R.cx0),
+    X1 = Math.min(R.w - 1, Math.floor((u[2] - ORIGO[0]) / m) - R.cx0),
+    Y0 = Math.max(0, Math.floor((ORIGO[1] - u[3]) / m) - R.cy0),
+    Y1 = Math.min(R.h - 1, Math.floor((ORIGO[1] - u[1]) / m) - R.cy0);
+  if (X1 < X0 || Y1 < Y0) return;
+  const B = 1024; /* området tegnes i biter på høyst 1024 x 1024 ruter */
+  for (let y0 = Y0; y0 <= Y1; y0 += B)
+    for (let x0 = X0; x0 <= X1; x0 += B) {
+      const cw = Math.min(B, X1 - x0 + 1),
+        ch = Math.min(B, Y1 - y0 + 1),
+        vx = ORIGO[0] + (R.cx0 + x0) * m,
+        oy = ORIGO[1] - (R.cy0 + y0) * m,
+        bit: Utsnitt = [vx, oy - ch * m, vx + cw * m, oy];
+      const deler = g.deler.filter(del => overlapper(del.ext, bit));
+      if (!deler.length) continue;
+      const k = tegneflate(cw, ch);
+      for (const type of ['fri', 'bygg']) {
+        k.fillStyle = type === 'bygg' ? '#f00' : '#0f0';
+        for (const del of deler)
+          if (del.type === type) {
+            sti(k, del.koord, bit, 1 / m);
+            k.fill('evenodd');
+          }
+      } /* utbygging tegnes sist og vinner der flater overlapper */
+      const a = k.getImageData(0, 0, cw, ch).data;
+      for (let y = 0; y < ch; y++)
+        for (let x = 0; x < cw; x++) {
+          const q = 4 * (y * cw + x);
+          if (a[q + 3] < HALV) continue;
+          const i = (y0 + y) * R.w + x0 + x;
+          R.omrade[i] = merke;
+          R.plan[i] = a[q] > a[q + 1] ? 1 : 2;
+        }
+    }
 }

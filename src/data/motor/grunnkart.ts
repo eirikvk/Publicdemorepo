@@ -13,15 +13,8 @@ import { opptatt } from '../bronse/henting.ts';
 import { alle, brukerEndret, se, vedGlemt, vedNy } from '../cache.ts';
 import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { OPPLOSNINGER, flisUtsnitt, type Flis } from '../solv/felles.ts';
-import {
-  dagensKlasserIFlis,
-  flisnavn,
-  nySamling,
-  tegnISamling,
-  type Oversikt,
-  type Samling
-} from '../solv/grunnkart.ts';
+import { OPPLOSNINGER, flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
+import { dagensKlasserIFlis, nySamling, tegnISamling, type Oversikt, type Samling } from '../solv/grunnkart.ts';
 import { lesBilde } from '../solv/raster.ts';
 import { valgtNr } from './valgt.ts';
 import { app, endret, tidSlutt, varsle } from './tilstand.ts';

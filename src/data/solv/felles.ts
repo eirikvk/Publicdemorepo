@@ -100,12 +100,25 @@ export const m2PerKm2 = (e: Utsnitt) => {
 /* Arealet av en flerflate i km² i terrenget. e er utsnittet målestokken regnes midt i, til vanlig flatens eget utsnitt. */
 export const arealKm2 = (koord: Flerflate, e: Utsnitt = utsnitt(koord)) => areal(koord) / m2PerKm2(e);
 
+/* Navnet på flisen [z, x, y], som «z/x/y» */
+export const flisnavn = (tc: Flis) => tc.join('/');
+
 /* Plasseringen av et rutenett i flisnettet: nivå, første kolonne og rad, og bredden i ruter */
 export interface Plassering {
   z: number;
   cx0: number;
   cy0: number;
   w: number;
+}
+/* Planen per rute, datamodellen i sølv for begge kildene til planen: kommuneplanen fra DiBK (solv.kommuneplanruter) og egne
+   områder fra brukeren (solv.egneruter). Kildene står uendret og hver for seg. Gull avgjør hvilken som gjelder hvor
+   (gull/utbygging.ts). Et rutenett plassert i flisnettet med høyden h, og per rute:
+     plan:   0 ingenting, 1 utbygging, 2 ikke utbygging
+     omrade: hvilket område ruta hører til (1, 2 og så videre), når kilden har områder */
+export interface Planruter extends Plassering {
+  h: number;
+  plan: Uint8Array;
+  omrade?: Uint8Array;
 }
 /* Midtpunktet av rute i i utbyggingen R, i meter */
 export const ruteX = (R: Plassering, i: number) => ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * (OPPLOSNINGER[R.z] / 2);
