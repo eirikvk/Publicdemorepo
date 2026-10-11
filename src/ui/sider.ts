@@ -37,12 +37,33 @@ export function velgSide(id: string) {
 
 /* Kommunen og siden står i adressen, for eksempel #5001/verdi, så en lenke åpner samme kommune og side. Oversikten står ikke. */
 export const adresse = (id = ui.side) => '#' + (app.valgt ? app.valgt.nr : '') + (id !== SIDER[0][0] ? '/' + id : '');
+/* Kommunen og siden i adressen nå */
+const iAdressen = () => (location.hash || '').replace('#', '').split('/') as [nr?: string, side?: string];
+
+/* Adressen følger valgt kommune og side. Hvert nytt valg blir et nytt steg i nettleserens historikk, så Tilbake og Frem går mellom
+   dem. Den første adressen erstatter den siden ble åpnet med, så Tilbake ikke går til en adresse uten kommune. */
+let forste = true;
 abonner(() => {
-  if (!app.valgt || location.hash === adresse()) return;
-  try {
-    history.replaceState(null, '', location.pathname + location.search + adresse());
-  } catch (e) {}
+  if (!app.valgt) return;
+  const ny = adresse();
+  if (location.hash !== ny)
+    try {
+      const url = location.pathname + location.search + ny;
+      if (forste) history.replaceState(null, '', url);
+      else history.pushState(null, '', url);
+    } catch (e) {}
+  forste = false;
 });
+/* Tilbake og Frem, eller en adresse skrevet inn: kommunen og siden i adressen velges. Det gir samme adresse, så ingenting nytt legges
+   i historikken. */
+function fraAdressen() {
+  const [nr, side] = iAdressen(),
+    s = side && SIDER.some(x => x[0] === side) ? side : SIDER[0][0];
+  if (nr && finn(nr) && (!app.valgt || app.valgt.nr !== nr)) velgKommune(nr);
+  if (ui.side !== s) velgSide(s);
+}
+window.addEventListener('popstate', fraAdressen);
+window.addEventListener('hashchange', fraAdressen);
 
 /* Oppstart: listen over kommuner hentes, og kommunen og siden i adressen velges (eller Trondheim). Kalles av siden når kartet har
    fått plassen sin, så kartet kan zoome til kommunen med en gang. */
@@ -50,10 +71,10 @@ let startet = false;
 export function startOpp() {
   if (startet) return;
   startet = true;
-  let [forst, side] = (location.hash || '').replace('#', '').split('/');
+  let [forst, side] = iAdressen();
   hentKommuner().then(ok => {
     if (!ok) return;
-    if (!finn(forst)) forst = finn('5001') ? '5001' : kommuner()[0].kommuner[0].nr;
+    if (!forst || !finn(forst)) forst = finn('5001') ? '5001' : kommuner()[0].kommuner[0].nr;
     velgKommune(forst);
     if (side) velgSide(side);
   });

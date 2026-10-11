@@ -221,13 +221,33 @@
 .kartflate .ol-attribution:not(.ol-collapsed) {
   right: 10px;
   bottom: 10px;
-  font-size: 11px;
-  max-width: calc(100% - 150px); /* bryter heller over to linjer enn å dekke målestokken på en smal skjerm */
+  max-width: calc(100% - 150px); /* ved siden av målestokken når det er plass */
   text-align: right;
 }
+/* På en smal skjerm får kildene hele bredden, og målestokken står over dem. Da står kildene på én linje i stedet for å brytes. */
+@media (max-width: 600px) {
+  .kartflate .ol-attribution,
+  .kartflate .ol-attribution:not(.ol-collapsed) {
+    max-width: calc(100% - 20px);
+  }
+  .kartflate .ol-scale-line {
+    bottom: 38px;
+  }
+  .merkelapp.nede {
+    bottom: 68px; /* over målestokken */
+  }
+}
+/* De minste telefonene: litt mindre skrift, så også fem kilder står på én linje */
+@media (max-width: 360px) {
+  .kartflate .ol-attribution ul {
+    font-size: 10px;
+  }
+}
+/* Skriften settes på lista: OpenLayers gir lista sin egen størrelse (12 px) */
 .kartflate .ol-attribution ul {
   color: var(--dempet);
   text-shadow: none;
+  font-size: 11px;
 }
 /* Kildene for lagene som vises, som «© Kartverket, NIBIO, DiBK» */
 .kartflate .ol-attribution ul::before {
