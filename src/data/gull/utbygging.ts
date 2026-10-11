@@ -135,7 +135,10 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
     }
     if (p) d[q] = jor ? 2 : 1;
   }
-  const noe = (a: Uint8Array) => a.some(v => v !== 0);
+  const noe = (a: Uint8Array) => {
+    for (let q = 0; q < a.length; q++) if (a[q]) return true;
+    return false;
+  }; /* en vanlig løkke: some() med en funksjon per rute tok flere sekunder i store kommuner */
   return { sig: fliser ? fliser.length : -1, d: noe(d) ? d : null, kl, pl: noe(pl) ? pl : null, n };
 }
 

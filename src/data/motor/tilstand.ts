@@ -51,8 +51,10 @@ export const app: Tilstand = {
   sisteKall: null /* siste runde med kartbilder fra én kilde, fra bronse */
 };
 
-/* Lageret: den som endrer noe i app (eller i ui/tilstand.ts) som vises, kaller endret(). Varslene samles og sendes én gang når
-   nettleseren er ferdig med det den holder på med, så mange endringer etter hverandre gir én ny tegning. */
+/* Lageret: den som endrer noe i app (eller i ui/tilstand.ts) som vises, kaller endret(). Varslene samles og sendes høyst én gang per
+   skjermbilde (requestAnimationFrame), så mange endringer etter hverandre gir én ny tegning. Før ble de sendt etter hver oppgave i
+   nettleseren, og når hundrevis av filer kom inn én etter én, ble siden tegnet på nytt for hver av dem. Er fanen skjult, tegner
+   nettleseren ingen skjermbilder, og da sendes de etter 100 ms i stedet. */
 let utgave = 0,
   planlagt = false;
 const lyttere = new Set<() => void>();
@@ -61,14 +63,17 @@ export const abonner = (f: () => void) => {
   return () => lyttere.delete(f);
 };
 export const tilstandsutgave = () => utgave;
+const send = () => {
+  if (!planlagt) return;
+  planlagt = false;
+  utgave++;
+  lyttere.forEach(f => f());
+};
 export function endret() {
   if (planlagt) return;
   planlagt = true;
-  queueMicrotask(() => {
-    planlagt = false;
-    utgave++;
-    lyttere.forEach(f => f());
-  });
+  requestAnimationFrame(send);
+  setTimeout(send, 100);
 }
 
 /* Hendelser som ikke er tilstand: for eksempel at det er lagt en ny flis inn i det sammensatte kartet, og hvor. Kartet lytter. */
