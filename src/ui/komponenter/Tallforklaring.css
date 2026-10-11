@@ -66,3 +66,13 @@
   flex-wrap: wrap;
   gap: var(--md-spacing-16);
 }
+/* Lenkene til andre kort (Sidelenke) har lenkestilen fra designsystemet, som er laget for lys bakgrunn. Her følger de teksten. */
+.tallforklaring .md-link:not(.md-button),
+.tallforklaring .md-link:not(.md-button):hover,
+.tallforklaring .md-link.sidelenke:visited {
+  display: inline;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  text-decoration-color: currentColor;
+}

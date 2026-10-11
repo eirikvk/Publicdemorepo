@@ -124,7 +124,9 @@ const feil: string[] = [];
 const gammelAvh = fs.existsSync(AVH_FIL) ? fs.readFileSync(AVH_FIL, 'utf8') : '';
 if (SJEKK && gammelAvh !== avhKode) feil.push('src/data/avhengigheter.ts er ikke oppdatert');
 if (!SJEKK) fs.writeFileSync(AVH_FIL, avhKode);
-const { KORT, stegFor, tabellen, usikkerhetFor } = await import('../src/ui/forklaringer.ts');
+const { GRUPPER, KORT, ankerFor, stegFor, tabellen, tekniskeFor, usikkerhetFor } =
+  await import('../src/ui/forklaringer.ts');
+type Steg = ReturnType<typeof stegFor>[number];
 
 /* Bryter teksten t i linjer på høyst 130 tegn. Første linje starter med forran, de neste med like mange mellomrom. */
 function bryt(t: string, forran = '', bredde = 130) {
@@ -140,42 +142,90 @@ function bryt(t: string, forran = '', bredde = 130) {
   ut.push(linje);
   return ut.join('\n');
 }
-/* Kapitlet for en gruppe kort: hvert kort med spørsmålet, kort fortalt og tabellene det viser, så stegene fra kilde til tall for
-   alle kortene, forbeholdene og koden. Stegene og forbeholdene står én gang, selv om flere kort bygger på dem. */
+/* «a, b og c» */
+const ramse = (d: string[]) => (d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0] || '');
+/* Kapitlet for en gruppe kort: hvert kort med spørsmålet, kort fortalt og tabellene det viser (med egen overskrift når kapitlet har
+   flere kort), så stegene fra kilde til tall for alle kortene, hjelpetabellene, forbeholdene og koden. Stegene og forbeholdene står
+   én gang, selv om flere kort bygger på dem, og steg med samme forklaring står sammen. Et steg et kort i et annet kapittel forklarer,
+   står som en henvisning dit. */
 function kapittel(gruppe: string) {
   const kort = KORT.filter(x => x.gruppe === gruppe),
+    flere = kort.length > 1,
     deler: string[] = [
       '<!-- Laget av verktoy/forklaringer.ts fra kortene i src/ui/forklaringer.ts og tabellene i katalogen. Endre teksten der. -->'
     ];
   for (const k of kort) {
-    deler.push(`### ${k.tittel}`);
+    if (flere) deler.push(`### ${k.tittel}`);
     deler.push(bryt(`**Spørsmål.** ${k.sporsmal}`));
     deler.push(bryt(`**Kort fortalt.** ${k.kortFortalt}`));
-    deler.push(bryt(`**Tabeller.** ${k.tabeller.map(t => `\`${t}\``).join(', ')}. Kortet står i \`${k.komponent}\`.`));
+    const kode = (t: string[]) => ramse(t.map(x => `\`${x}\``));
+    deler.push(
+      bryt(
+        `**Tabeller.** Kortet viser ${kode(k.tabeller)}${k.forklarer ? `, og forklarer også ${kode(k.forklarer)}` : ''}. Det står i \`${k.komponent}\`.`
+      )
+    );
+  }
+  /* Stegene for alle kortene, hvert én gang. Er et steg en henvisning for ett kort og forklart av et annet i kapitlet, forklares det. */
+  const steg = new Map<string, Steg>();
+  for (const s of kort.flatMap(stegFor)) {
+    const f = steg.get(s.navn);
+    if (!f || (f.se && !s.se)) steg.set(s.navn, s.se && s.se.gruppe === gruppe ? { ...s, se: undefined } : s);
   }
   const lagrekke = (n: string) => LAG.indexOf(n.split('.')[0] as (typeof LAG)[number]),
-    steg = [...new Set(kort.flatMap(stegFor))].sort((a, b) => lagrekke(a) - lagrekke(b));
+    rekke = [...steg.values()].sort((a, b) => lagrekke(a.navn) - lagrekke(b.navn));
+  /* Steg med samme tekst og kilde slås sammen */
+  const punkter = new Map<string, Steg[]>();
+  for (const s of rekke) {
+    if (!s.se && !s.tabell.forklaring) feil.push(`${s.navn} mangler forklaring (kapitlet ${gruppe})`);
+    const nokkel = s.se ? 'se:' + s.navn : `${s.tabell.forklaring}|${s.tabell.kilde ? s.tabell.kilde.adresse : ''}`;
+    punkter.set(nokkel, [...(punkter.get(nokkel) || []), s]);
+  }
   deler.push('### Fra kilde til tall');
   deler.push(
-    steg
-      .map((n, i) => {
-        const t = tabellen(n);
-        if (!t.forklaring) feil.push(`${n} mangler forklaring (kapitlet ${gruppe})`);
+    [...punkter.values()]
+      .map((S, i) => {
+        const navn = ramse(S.map(s => `**${s.tabell.tittel}** (\`${s.navn}\`)`)),
+          t = S[0].tabell,
+          se = S[0].se;
+        if (se) return bryt(`${navn}. Forklart under [${se.tittel}](#${ankerFor(se)}).`, `${i + 1}. `);
         const kilde = t.kilde
           ? ` Kilde: [${t.kilde.navn}, ${t.kilde.datasett}](${t.kilde.adresse}), ${t.kilde.lisens}.`
           : '';
-        return bryt(`**${t.tittel}** (\`${n}\`). ${t.forklaring || ''}${kilde}`, `${i + 1}. `);
+        return bryt(`${navn}. ${t.forklaring || ''}${kilde}`, `${i + 1}. `);
       })
       .join('\n')
   );
+  const tekniske = [...new Set(kort.flatMap(tekniskeFor))].sort((a, b) => lagrekke(a) - lagrekke(b));
+  if (tekniske.length) {
+    deler.push('Underveis brukes også hjelpetabeller som ikke endrer tallene:');
+    deler.push(
+      tekniske
+        .map(n => {
+          const t = tabellen(n);
+          if (!t.forklaring) feil.push(`${n} mangler forklaring (kapitlet ${gruppe})`);
+          return bryt(`**${t.tittel}** (\`${n}\`). ${t.forklaring || ''}`, '- ');
+        })
+        .join('\n')
+    );
+  }
   const U = [...new Set(kort.flatMap(usikkerhetFor))];
   if (U.length) {
     deler.push('### Usikkerhet');
     deler.push(U.map(u => bryt(u, '- ')).join('\n'));
   }
-  const filer = [...new Set(steg.map(n => `\`src/data/${tabellen(n).fil}\``))];
+  const filer = [
+    ...new Set(
+      [...rekke.filter(s => !s.se).map(s => s.navn), ...tekniske]
+        .filter(n => tabellen(n).fil)
+        .map(n => `\`src/data/${tabellen(n).fil}\``)
+    )
+  ];
   deler.push('### Kode');
-  deler.push(bryt(`${filer.join(', ')}. Kortene: ${[...new Set(kort.map(k => `\`${k.komponent}\``))].join(', ')}.`));
+  deler.push(
+    bryt(
+      `${filer.join(', ')}. ${flere ? 'Kortene' : 'Kortet'}: ${[...new Set(kort.map(k => `\`${k.komponent}\``))].join(', ')}.`
+    )
+  );
   return deler.join('\n\n');
 }
 let metode = fs.readFileSync(METODE_FIL, 'utf8');
@@ -194,8 +244,11 @@ for (const gruppe of [...new Set(KORT.map(k => k.gruppe))]) {
   metode = metode.slice(0, a) + ny + metode.slice(b + slutt.length);
 }
 if (!SJEKK) fs.writeFileSync(METODE_FIL, metode);
-for (const k of KORT)
-  for (const t of k.tabeller) if (!AVH[t]) feil.push(`kortet ${k.id} viser ${t}, som ikke finnes i katalogen`);
+for (const k of KORT) {
+  for (const t of [...k.tabeller, ...(k.forklarer || [])])
+    if (!AVH[t]) feil.push(`kortet ${k.id} viser ${t}, som ikke finnes i katalogen`);
+  if (!GRUPPER[k.gruppe]) feil.push(`kortet ${k.id} har gruppen ${k.gruppe}, som mangler i GRUPPER`);
+}
 
 if (feil.length) {
   console.log(feil.join('\n') + (SJEKK ? '\nKjør npm run forklaringer.' : ''));

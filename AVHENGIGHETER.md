@@ -79,7 +79,12 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
 - NIBIOs grunnkart for arealanalyse er lisensiert «Norge digitalt begrenset». Det gjelder både kartflisene og de lagrede
   klassene. Dette må avklares før siden brukes utenfor en prototype.
 - Kart over grå arealer er en testversjon.
-- Vilkårene for de andre tjenestene er ikke kontrollert i dette arbeidet. Kartet krediterer kildene til lagene som vises:
+- Lisensene for de andre dataene er kontrollert mot Geonorge og data.norge.no 11. oktober 2026: arealtallene fra SSB og
+  kommunegrensene fra Kartverket har CC BY 4.0. Verneområder, villreinområder, verdsatte naturtyper, dekningskartet for
+  naturtypekartlegging (Naturtyper på land, NiN) og inngrepsfri natur fra Miljødirektoratet har NLOD 2.0. Kart over grå arealer
+  (NIBIO) og kommuneplanene fra DiBK har Norge digitalt-lisensen. Lisensen og lenken til beskrivelsen står ved hver kilde i
+  katalogen (`KILDE` i `src/data/katalog.ts`), og vises i infoknappene og i METODE.md.
+- Kartet krediterer kildene til lagene som vises:
   Kartverket, NIBIO og DiBK, Miljødirektoratet når et naturtema eller inngrepsfri natur vises, og Miljødirektoratet og SSB for
   grått areal. Hvert lag oppgir sine kilder (`KILDER` i `src/ui/kart/felles.ts`), og OpenLayers viser dem for lagene som er
   synlige. Teksten på siden nevner alle kildene.

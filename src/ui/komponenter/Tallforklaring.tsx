@@ -4,7 +4,8 @@
 import { useId, useState, type ReactNode } from 'react';
 import { valgtNr, verdi } from '../../data/motor/valgt.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { anker, kortet, REPO, stegFor, tabellen, usikkerhetFor } from '../forklaringer.ts';
+import { ankerFor, kortet, REPO, stegFor, usikkerhetFor } from '../forklaringer.ts';
+import { Sidelenke } from './deler.tsx';
 import { MdHelpButton, MdHelpText } from './md.ts';
 import './Tallforklaring.css';
 
@@ -58,25 +59,29 @@ function Innhold({ kort }: { kort: string }) {
       <details>
         <summary>Fra kilde til tall</summary>
         <ol>
-          {stegFor(k).map(n => {
-            const t = tabellen(n);
-            return (
-              <li key={n}>
-                <b>{t.tittel}.</b> {t.forklaring}
-                {t.kilde && (
-                  <>
-                    {' '}
-                    Kilde:{' '}
-                    <a href={t.kilde.adresse}>
-                      {t.kilde.navn}, {t.kilde.datasett}
-                    </a>
-                    , {t.kilde.lisens}.
-                  </>
-                )}{' '}
-                <code>{n}</code>
-              </li>
-            );
-          })}
+          {stegFor(k).map(({ navn, tabell: t, se }) => (
+            <li key={navn}>
+              <b>{t.tittel}.</b>{' '}
+              {se ? (
+                <>
+                  Forklart under <Sidelenke id={se.side}>{se.tittel}</Sidelenke>.
+                </>
+              ) : (
+                t.forklaring
+              )}
+              {!se && t.kilde && (
+                <>
+                  {' '}
+                  Kilde:{' '}
+                  <a href={t.kilde.adresse}>
+                    {t.kilde.navn}, {t.kilde.datasett}
+                  </a>
+                  , {t.kilde.lisens}.
+                </>
+              )}{' '}
+              <code>{navn}</code>
+            </li>
+          ))}
         </ol>
       </details>
       {U.length > 0 && (
@@ -90,7 +95,7 @@ function Innhold({ kort }: { kort: string }) {
         </details>
       )}
       <p className="lenker">
-        <a href={REPO + 'METODE.md#' + anker(k.tittel)}>Metoden</a>
+        <a href={REPO + 'METODE.md#' + ankerFor(k)}>Metoden</a>
         <a href={REPO + k.komponent}>Koden for kortet</a>
       </p>
     </>

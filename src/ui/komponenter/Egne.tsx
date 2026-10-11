@@ -11,6 +11,7 @@ import { verdi } from '../../data/motor/valgt.ts';
 import { app, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
 import { Talltabell, type Tabellrad } from './deler.tsx';
+import { Korttittel } from './Tallforklaring.tsx';
 import {
   MdAlertMessage,
   MdButton,
@@ -179,9 +180,7 @@ export default function Egne() {
     s = m && { tekst: m[0], type: m[1] };
   return (
     <section className="egne" aria-labelledby="egne-tittel">
-      <h2 className="md-typography-heading-s" id="egne-tittel">
-        Egne områder
-      </h2>
+      <Korttittel kort="egne" id="egne-tittel" />
       <div className="knapper">
         {!t ? (
           <>

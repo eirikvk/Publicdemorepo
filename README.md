@@ -143,7 +143,7 @@ Katalogen og cachen, i `src/data/`. Se «Katalogen og cachen» under.
 
 | Fil | Innhold |
 |---|---|
-| `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. Tabellene bak tallene har også forklaringen, usikkerheten og kilden (`forklaring`, `usikkerhet`, `kilde`). |
+| `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. Tabellene bak tallene har også forklaringen, usikkerheten og kilden (`forklaring`, `usikkerhet`, `kilde`), og oppslag, lagrede svar og hjelpetabeller er merket som tekniske (`teknisk`). Kildene står samlet øverst (`KILDE`), med lisensen. |
 | `avhengigheter.ts` | Hvilke tabeller i katalogen hver tabell bygger på, lest ut av koden. Laget av `verktoy/forklaringer.ts`, ikke rediger for hånd. |
 | `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok), tid og om svaret er delvis. Gjør kallene, deler kall som pågår, og glemmer det eldste. Importerer ingenting. |
 
@@ -226,7 +226,7 @@ Felles, i `src/ui/`:
 | `sider.ts` | Sidene, valg av side, adressen, og oppstarten |
 | `farger.ts` | Fargene i kartet og i tegnforklaringene |
 | `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
-| `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser og regnestykket for valgt kommune, og stegene fra kilde til tall. Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
+| `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser (og andre det forklarer) og regnestykket for valgt kommune, og stegene fra kilde til tall. Et steg et annet kort forklarer, blir en henvisning dit. Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
 | `teknisk.ts` | Formen på `window.motor`: det siden gjør tilgjengelig med `?teknisk`, til feilsøking og regresjonstesten |
 
 Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
@@ -280,7 +280,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 - [KOM-I-GANG.md](KOM-I-GANG.md) viser hvordan man kjører, bygger og tester siden lokalt.
 - [METODE.md](METODE.md) forklarer hver analyse med samme oppsett (spørsmål, data inn, steg, resultat, usikkerhet, kontroll og
   kode), i samme inndeling som `src/data/`. Den er en sammenstilling: de generelle delene skrives for hånd, og kapitlene om tallene
-  på kortene lages av katalogen og kortene (foreløpig SSB-tallene). Katalogen og kortene har ansvaret for sin egen forklaring:
+  på kortene lages av katalogen og kortene. Kontrollene skrives for hånd under hvert kapittel. Katalogen og kortene har ansvaret for sin egen forklaring:
   tabellene i katalogen har forklaringen, usikkerheten og kilden, kortene i `src/ui/forklaringer.ts` har spørsmålet, kort fortalt
   og regnestykket, og hvilke tabeller hver tabell bygger på, leses ut av koden. Infoknappene på kortene viser det samme.
 - [AVHENGIGHETER.md](AVHENGIGHETER.md) lister biblioteker, tjenester og verktøy, med lisenser og det som gjelder sikkerhet og

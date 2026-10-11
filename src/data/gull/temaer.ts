@@ -276,23 +276,28 @@ export interface TemaIPlan {
 const [VERN, REIN, VERDI] = NATURTEMA;
 const ikke = () => null; /* det kartlagte kan mangle uten at svaret er feil: da er det ikke med */
 
-/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet. Arealet per
-   verdikategori kommer fra sølv for verdsatt natur, og er summen av områdene for de andre. */
-async function temaet(tema: Naturtema, nr: string, O: Temaomrader): Promise<Temaet> {
-  const [land, A] = await Promise.all([
-    landareal(nr),
-    tema.samlet ? katalog.solv.verdsattNaturAreal(nr) : { sum: samletAreal(O.omrader) }
-  ]);
-  return byggTemaet(tema, nr, O, A, land);
+/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A. Arealet per
+   verdikategori kommer fra sølv for verdsatt natur, og er summen av områdene for de andre. Hver tabell gir sitt eget areal, så
+   koden viser hva hver av dem bygger på (verktoy/forklaringer.ts leser det). */
+async function temaet(
+  tema: Naturtema,
+  nr: string,
+  O: Temaomrader,
+  A: Promise<{ sum: number; klasser?: number[] }> | { sum: number }
+): Promise<Temaet> {
+  const [land, a] = await Promise.all([landareal(nr), A]);
+  return byggTemaet(tema, nr, O, a, land);
 }
 export async function verneomrader(nr: string): Promise<Temaet> {
-  return temaet(VERN, nr, await katalog.solv.verneomrader(nr));
+  const O = await katalog.solv.verneomrader(nr);
+  return temaet(VERN, nr, O, { sum: samletAreal(O.omrader) });
 }
 export async function villrein(nr: string): Promise<Temaet> {
-  return temaet(REIN, nr, await katalog.solv.villrein(nr));
+  const O = await katalog.solv.villrein(nr);
+  return temaet(REIN, nr, O, { sum: samletAreal(O.omrader) });
 }
 export async function verdsattNatur(nr: string): Promise<Temaet> {
-  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr));
+  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr), katalog.solv.verdsattNaturAreal(nr));
 }
 
 /* Tabellen gull.verdsattNaturKartlagt: kartleggingen av verdsatt natur i kommunen nr. Uten det kartlagte er det ingen kartlegging å

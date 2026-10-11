@@ -65,6 +65,8 @@ export interface Tabelldef<N, V> {
   forklaring?: string /* hva tabellen gjør, på klarspråk, til infoknappene og metodebeskrivelsen (verktoy/forklaringer.ts) */;
   usikkerhet?: string[] /* forbehold ved tallene som kommer fra dette steget */;
   kilde?: Kildeinfo /* i bronse: hvor dataene hentes fra */;
+  teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i
+     infoknappene, bare i en liste for seg i metodebeskrivelsen. */;
   eksempel?: (
     u: Utgangspunkt
   ) => N | null /* til tabeller som ikke lagres: nøkkelen katalogvisningen spør med. null når det tabellen bygger på, ikke finnes,

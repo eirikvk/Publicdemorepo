@@ -10,6 +10,7 @@ import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
 import { antallOrd, iTekst, nf, pst } from '../tekst.ts';
 import { MdAlertMessage } from './md.ts';
+import { Korttittel } from './Tallforklaring.tsx';
 
 /* Hvilken plan DiBK har, i tekst: plan-id, hvem som har levert den, og når den ble kopiert til DiBK */
 export const planKilde = (p: Planinfo['plan']) =>
@@ -61,10 +62,10 @@ function Planlagt() {
   }
   return (
     <section className="planlagt" aria-labelledby="plan-tittel">
-      <h2 className="md-typography-heading-s" id="plan-tittel">
+      <Korttittel kort="planlagt" id="plan-tittel">
         <Rute id="plan" />
         Planlagt utbygging
-      </h2>
+      </Korttittel>
       {ingen ? (
         <MdAlertMessage
           theme="warning"
