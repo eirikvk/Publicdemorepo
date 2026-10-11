@@ -119,7 +119,7 @@ export const KORT: Kort[] = [
     komponent: 'src/ui/komponenter/Regnskap.tsx',
     sporsmal: 'Hvor mye areal hadde hver klasse i 2017 og nå, satt opp som et regnskap?',
     kortFortalt:
-      'Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år.',
+      'Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år. Regnskapet gjelder landarealet, så vann er ikke med.',
     tabeller: ['gull.oppstilling'],
     usikkerhet: [
       'Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.'
@@ -172,6 +172,7 @@ export const KORT: Kort[] = [
       'Kommuneplanen fra DiBK legges oppå dagens arealklasser fra NIBIO i et rutenett, med ruter på 21 meter. Ruter som i dag er natur eller jordbruk, og som planen setter av til bebyggelse, anlegg eller samferdsel, telles. Smale striper, som oftest kommer av at grensene ikke er tegnet helt likt, tas bort.',
     tabeller: ['gull.kommuneplan', 'gull.planlagt'],
     forklarer: ['gull.utbygging', 'gull.dagensKlasser', 'solv.planinfo'],
+    usikkerhet: ['Tallene er anslag til illustrasjon, ikke offisiell statistikk.'],
     regnestykke: hent => {
       const R = hent(katalog.gull.utbygging);
       if (!R) return null;

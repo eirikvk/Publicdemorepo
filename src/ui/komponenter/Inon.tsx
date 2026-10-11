@@ -16,22 +16,8 @@ export default function Inon() {
       : I.tilstand !== 'ok'
         ? 'Kommunen har ingen inngrepsfri natur: alt ligger nærmere enn én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.'
         : `Ca. ${iTekst(I.sum)} av kommunen${I.andelLand !== null ? `, ${pst(I.andelLand)} % av landarealet,` : ''} ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag.`;
-  const kilde = (
-    <p className="hint">
-      Kilde: Miljødirektoratet, inngrepsfrie naturområder, nyeste status (2023). Sonene hentes som ett bilde av hele
-      kommunen når kommunen velges, og både kartlaget og arealet lages av det i nettleseren. Arealet gjelder alt
-      innenfor sonene, også innsjøer, så andelen av landarealet er et omtrentlig mål. I kartet er det bare klassen natur
-      som får sonefarge.
-    </p>
-  );
   return (
-    <Temaside
-      id="inon"
-      navn="Inngrepsfri natur"
-      tall={I}
-      under={har ? 'krysses ikke med planlagt utbygging' : ''}
-      kilde={kilde}
-    >
+    <Temaside id="inon" navn="Inngrepsfri natur" tall={I} under={har ? 'krysses ikke med planlagt utbygging' : ''}>
       <p>{tekst}</p>
       {har && (
         <>

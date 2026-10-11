@@ -23,33 +23,27 @@ export const ETT: Record<string, string> = {
   rein: 'ett',
   verdi: 'én'
 }; /* ett verneområde, én lokalitet */
-/* Ordene sidene bruker om hvert naturtema: entall, flertall og bestemt form, og kilden. vann: temaet kan ligge i vann. */
+/* Ordene sidene bruker om hvert naturtema: entall, flertall og bestemt form. Kilden står i infoknappen ved overskriften. */
 interface Temaord {
   en: string;
   fl: string;
   best: string;
-  vann?: boolean;
-  kildetekst: string;
 }
 export const TEMAORD: Record<string, Temaord> = {
   vern: {
     en: 'verneområde',
     fl: 'verneområder',
-    best: 'verneområdene',
-    vann: true,
-    kildetekst: 'Miljødirektoratet, naturvernområder'
+    best: 'verneområdene'
   },
   rein: {
     en: 'villreinområde',
     fl: 'villreinområder',
-    best: 'villreinområdene',
-    kildetekst: 'Miljødirektoratet, leveområder for villrein'
+    best: 'villreinområdene'
   },
   verdi: {
     en: 'verdsatt lokalitet',
     fl: 'verdsatte lokaliteter',
-    best: 'lokalitetene',
-    kildetekst: 'Miljødirektoratet, naturtyper med KU-verdi og dekningskart for naturtypekartlegging'
+    best: 'lokalitetene'
   }
 };
 
@@ -120,18 +114,10 @@ export function Naturtema({ t: tema }: { t: Tema }) {
     T = valgt(tab.tall),
     I = valgt(tab.iPlan),
     B = tab.kartlagt ? valgt(tab.kartlagt) : null;
-  const kilde = (
-    <p className="hint">
-      Kilde: {t.kildetekst}. Arealet gjelder den delen av hvert område som ligger i kommunen, og er regnet ut i
-      nettleseren.
-      {t.vann ? ' Verneområder kan også ligge i sjø og innsjøer, så andelen av landarealet er et omtrentlig mål.' : ''}
-    </p>
-  );
-  if (!T || T.status === 'henter')
-    return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} kilde={kilde} />;
+  if (!T || T.status === 'henter') return <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'henter' }} />;
   if (T.status === 'feil')
     return (
-      <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'feil' }} kilde={kilde}>
+      <Temaside id={t.id} navn={t.navn} tall={{ tilstand: 'feil' }}>
         <p>{t.navn} kunne ikke hentes fra Miljødirektoratet.</p>
       </Temaside>
     );
@@ -201,7 +187,6 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       navn={t.navn}
       tall={N.antall ? { tilstand: 'ok', sum: N.sum, andelLand: N.andelLand } : { tilstand: 'ingen' }}
       under={under}
-      kilde={kilde}
     >
       <p>{sumTekst}</p>
       {N.perKlasse && (

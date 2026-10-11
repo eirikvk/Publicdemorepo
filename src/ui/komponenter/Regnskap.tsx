@@ -127,12 +127,6 @@ function Oppstilling() {
           : ''}{' '}
         Se <Sidelenke id="framtid">Utvikling fremover</Sidelenke>.
       </p>
-      <p className="hint">
-        Kilde: Statistisk sentralbyrå (SSB), tabell 09594. Oppstillingen følger mønsteret fra FNs standard for
-        naturregnskap (SEEA EA): areal ved start, netto endring og areal ved slutt. SSB skriver at tabellen ikke kan
-        brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. SSB har
-        varslet egne tabeller for arealendringer. Vann er ikke med.
-      </p>
     </section>
   );
 }
@@ -149,11 +143,6 @@ function LandOgVann() {
           <Forklaring
             deler={V.deler.map(([id, navn, v]) => [navn, '--' + id, `${id === 'hav' ? 'ca. ' : ''}${dekar(v)}`])}
           />
-          <p className="hint">
-            {V.hav
-              ? 'Land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate (grensen fra Kartverket) minus land og ferskvann.'
-              : 'Land, innsjø og elv er SSBs tall. Kommunen har ikke hav.'}
-          </p>
         </>
       )}
     </section>

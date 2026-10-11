@@ -38,16 +38,7 @@ export default function Graa() {
         ? 'Kommunen har ingen kommuneplan hos DiBK å krysse med.'
         : 'Planlagt utbygging på grått areal regnes ut når kartet er hentet.';
   }
-  const kilde = (
-    <p className="hint">
-      Kilde: Kart over grå arealer, Miljødirektoratet, Kartverket, NIBIO og SSB (testversjon 1, 2025), hentet fra NIBIO
-      som to bilder av hele kommunen, og som fliser når kartet er zoomet inn. Arealene er regnet ut i nettleseren. Andel
-      bygninger er ikke med, fordi tjenesten foreløpig oppgir 0 for alle flater vi har slått opp. I kartet er lysere
-      grått mer vegetasjon, og blågrønt er grønt i bebygd område. Det blågrønne er regnet ut som bebygd areal i
-      grunnkartet som ikke er grått. I en stikkprøve på 140 punkter i Trondheim var 133 det grunnkartet kaller grønne
-      arealer.
-    </p>
-  );
+  const kilde = <p className="hint">I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd område.</p>;
   return (
     <Temaside
       id="graa"

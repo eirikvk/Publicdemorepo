@@ -85,21 +85,6 @@ rutenett med ruter på 21 meter, og hver rute med planlagt utbygging slås opp i
 navet i analysene. Hver kilde tolkes først per rute i sølv (planen, dagens klasser og egne områder hver for seg), og planrutenettet
 setter dem sammen i gull. I koden heter det utbyggingen (`gull.utbygging` i `src/data/gull/utbygging.ts`).
 
-### Tallene på siden
-
-| Tall på siden | Sølv | Gull | Kilde | Hentet eller regnet |
-|---|---|---|---|---|
-| Bebygd, jordbruk, natur og landareal | `ssb.ts` | `regnskap.ts` | SSB | Hentet, summert i tre klasser |
-| Innsjø, elv og hav | `ssb.ts` | `regnskap.ts` | SSB og Kartverket | Innsjø og elv hentet, hav regnet ut |
-| Utbredelsesregnskap fra 2017 | `ssb.ts` | `regnskap.ts` | SSB | Hentet, forskjellen mellom årgangene regnet ut |
-| Planlagt utbygging på natur og jordbruk | `kommuneplan.ts` og `grunnkart.ts` | `utbygging.ts` og `planlagt.ts` | DiBK og NIBIO | Regnet ut i nettleseren |
-| Verneområder og villreinområder | `temaer.ts` | `temaer.ts` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
-| Verdsatt natur og kartleggingsgrad | `temaer.ts` | `temaer.ts` | Miljødirektoratet | Flatene hentet, arealet regnet ut |
-| Planlagt utbygging i hvert tema | `temaer.ts` | `utbygging.ts` og `temaer.ts` | Som over, og planrutenettet | Regnet ut i nettleseren |
-| Inngrepsfri natur | `inon.ts` | `inon.ts` | Miljødirektoratet | Regnet ut fra ett bilde av kommunen |
-| Grått areal og grønt i bebygd område | `graa.ts` | `graa.ts` | NIBIO | Regnet ut fra to bilder av kommunen |
-| Egne områder og opplastet plan | `egne.ts` | `utbygging.ts` og `egne.ts` | Brukeren | Regnet ut i planrutenettet |
-
 ## Felles grunnlag
 
 `src/data/solv/felles.ts`, `src/data/solv/raster.ts` og `src/data/generelt/geometri.ts`
@@ -245,7 +230,7 @@ andelen er regnet av landarealet. Forskjellen fra 2017 er forskjellen mellom to 
 **Spørsmål.** Hvor mye areal hadde hver klasse i 2017 og nå, satt opp som et regnskap?
 
 **Kort fortalt.** Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og
-areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år.
+areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år. Regnskapet gjelder landarealet, så vann er ikke med.
 
 **Tabeller.** Kortet viser `gull.oppstilling`. Det står i `src/ui/komponenter/Regnskap.tsx`.
 
@@ -402,6 +387,7 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Usikkerhet
 
+- Tallene er anslag til illustrasjon, ikke offisiell statistikk.
 - Kommuneplanens arealdel viser hva som er satt av, ikke hva som blir bygd. Reguleringsplaner er ikke med.
 - Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.
 - Kan ikke blokkene hentes fra NIBIO, er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte
@@ -758,7 +744,7 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 De to bildene hentes hver for seg. Hentet i ett bilde blandes fargene langs kantene, og det ga 11 % for mye grått
 areal i Trondheim. I en gjennomgang av Trondheim på 10 meters ruter var 98,9 % av det som er bebygd, men ikke grått, det
-grunnkartet kaller grønne arealer.
+grunnkartet kaller grønne arealer. I en stikkprøve på 140 slike punkter i Trondheim var 133 det.
 
 ## Utenfor analysene: trykk i kartet
 
@@ -908,6 +894,13 @@ Kontrollen viser at oversikten fant alle blokkene med plan i disse kommunene, me
 kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m² borte i oversikten. De er for små til å gi en rute
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
+
+**Mindre metodetekst på sidene, 12. oktober 2026.** Kilde- og metodetekst som nå står i infoknappene, er tatt bort fra sidene:
+kildelinjene på temasidene, den grå teksten under regnskapsoppstillingen og under land og vann, hvordan smale striper defineres
+under planlagt utbygging, og avsnittet om kommuneplanen på siden Om og metode. Det leseren trenger for å forstå tallet der det står,
+er beholdt, som at forskjellen fra 2017 ikke er målt endring, og at grått ikke betyr ledig. «Vann er ikke med» står nå i
+infoknappen for regnskapsoppstillingen, og «anslag til illustrasjon» i infoknappen for planlagt utbygging. Tabellen «Tallene på
+siden» i dette dokumentet er tatt bort, fordi kapitlene om analysene viser det samme. Metoden er ikke endret.
 
 **Hele kommunen også uten lagrede klasser, 12. oktober 2026.** Før ble dagens klasser for kommuner uten lagrede klasser satt
 sammen av kartbildene brukeren hadde zoomet inn på, og tallene gjaldt bare den delen. Nå henter siden kartbildene fra NIBIO for hele

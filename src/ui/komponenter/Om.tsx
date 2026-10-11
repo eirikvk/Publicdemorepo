@@ -100,13 +100,6 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
           grunnkartets egen tegnforklaring: bebygd og opparbeidet areal, dyrket mark og skog, og grunnkartets tre farger
           for vann.
         </p>
-        <p>
-          Planlagt endring hentes fra kommuneplanens arealdel hos Direktoratet for byggkvalitet (DiBK): arealformål i
-          1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig.
-          Nettleseren legger dette oppå dagens klasser og viser bare det som i dag er natur eller jordbruk, med koksgrå
-          for natur og brun for jordbruk. Finnes det ingen kommuneplan for kommunen hos DiBK, står det på siden
-          Utvikling fremover.
-        </p>
       </section>
       <section className="prosa">
         <h2 className="md-typography-heading-s">Om siden</h2>

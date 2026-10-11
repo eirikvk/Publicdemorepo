@@ -1,5 +1,5 @@
 /* Toppen og rammen for hver temaside: navnet, arealet i kommunen og andelen av landarealet, en linje om planlagt utbygging, og
-   kilden nederst. Infoknappen ved overskriften forklarer tallene (kortet med temaets id i forklaringer.ts). Temasidene er Naturtema.tsx (verneområder, villrein og verdsatt natur), Inon.tsx og Graa.tsx. Tallene kommer ferdig
+   en linje nederst (kilde) når siden trenger det. Infoknappen ved overskriften forklarer tallene og har kilden (kortet med temaets id i forklaringer.ts). Temasidene er Naturtema.tsx (verneområder, villrein og verdsatt natur), Inon.tsx og Graa.tsx. Tallene kommer ferdig
    regnet ut fra gull. */
 import type { ReactNode } from 'react';
 import type { Bildetall } from '../../data/gull/felles.ts';
@@ -10,7 +10,7 @@ import { andelTekst, dekar } from '../tekst.ts';
 import './Temaside.css';
 
 /* Toppen av en temaside: navnet, arealet i kommunen og andelen av landarealet (null når landarealet mangler), og en linje om
-   planlagt utbygging. status er henter, feil, ingen eller ok. Detaljene står under, med kilden nederst. Mens temaet hentes, står det
+   planlagt utbygging. status er henter, feil, ingen eller ok. Detaljene står under, og kilde nederst når den er gitt. Mens temaet hentes, står det
    bare det. */
 export function Temaside({
   id,
@@ -24,7 +24,7 @@ export function Temaside({
   navn: string;
   tall: Bildetall<{ sum: number; andelLand: number | null }>;
   under?: ReactNode;
-  kilde: ReactNode;
+  kilde?: ReactNode;
   children?: ReactNode;
 }) {
   return (
