@@ -47,6 +47,10 @@ export const DATAFARGE: Record<KlasseId, number[]> = {
   elv: [255, 128, 128]
 };
 
+/* Fargetabellen for dagens klasser per rute (klasserIFlis): plass 0 er ukjent og gjennomsiktig, og plass 1–6 er klassene i ALLE i de
+   rene fargene. De lagrede klassene er bilder med denne fargetabellen (solv.klasser). */
+export const KLASSETABELL = [[0, 0, 0], ...ALLE.map(([id]) => DATAFARGE[id])];
+
 /* Tolking av fargene. I kanten mellom to flater blander tjenesten fargene. Hver farge tolkes derfor som en blanding av de to klassene
    den ligger nærmest linjen mellom: klasse A, klasse B og hvor mye av A (0–255). Oppslaget regnes ut én gang, for 32 nivåer per
    fargekanal. */

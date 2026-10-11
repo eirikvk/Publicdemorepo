@@ -1,7 +1,7 @@
-/* Kartlaget med dagens arealklasser: flisene fra NIBIO når kartet er zoomet inn, og oversiktsbildet når det er zoomet ut, i
-   kartfargene. Flisene hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn i det sammensatte kartet.
-   Oversiktsbildet er det lagrede, eller det sammensatte kartet datamotoren lager av flisene som er hentet
-   (data/motor/grunnkart.ts). Kartet har sin egen kopi av det i kartfargene. */
+/* Kartlaget med dagens arealklasser: flisene fra NIBIO når kartet er zoomet inn, og dagens klasser zoomet ut når det er zoomet ut,
+   i kartfargene. Flisene hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn i det sammensatte kartet.
+   Zoomet ut vises blokkene satt sammen (for kommunene med lagrede klasser), eller det sammensatte kartet datamotoren lager av flisene
+   som er hentet (data/motor/grunnkart.ts). Begge er et lerret, og kartet har sin egen kopi av det i kartfargene. */
 import type ImageWrapper from 'ol/Image.js';
 import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
@@ -12,7 +12,6 @@ import { grunnkartUrl } from '../../data/bronse/nibio-grunnkart.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
 import { UTM, type Flis } from '../../data/solv/felles.ts';
 import { katalog } from '../../data/katalog.ts';
-import type { Oversikt } from '../../data/solv/grunnkart.ts';
 import { oversikt } from '../../data/motor/grunnkart.ts';
 import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
@@ -77,7 +76,7 @@ export function friskOppGamle() {
 const oppaa: Flislag[] = [];
 export const tegnesOppaa = (lag: Flislag) => oppaa.push(lag);
 
-/* Oversiktsbildet. Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når
+/* Bildet zoomet ut. Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når
    det forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
    zoombevegelse rekker ikke å laste bildet sitt, og da blinket bakgrunnskartet gjennom første gang man zoomet inn. */
 export const oversiktLag = new ol.layer.Image({ className: 'tema' });
@@ -92,25 +91,11 @@ oversiktLag.on('postrender', e => {
   (e.context as CanvasRenderingContext2D).imageSmoothingEnabled = true;
 });
 /* Uten bilde holdes laget skjult. Et synlig lag uten kilde får OpenLayers til å feile midt i en kartbevegelse,
-   for eksempel når man bytter fra en kommune med oversiktsbilde til en uten. */
+   for eksempel når man bytter fra en kommune med lagrede klasser til en uten. */
 export const oversiktSynlig = (v: boolean) => oversiktLag.setVisible(v && !!oversiktLag.getSource());
 
-/* Det lagrede oversiktsbildet, fargelagt */
-let ovUrl: string | null = null;
-async function visLagret(denne: Oversikt) {
-  const blob = await fargeleggBlob(denne.buf!);
-  if (denne !== oversikt()) return;
-  const url = URL.createObjectURL(blob!),
-    gammel = ovUrl;
-  ovUrl = url;
-  const forste = !oversiktLag.getSource();
-  oversiktLag.setSource(new ol.source.ImageStatic({ url, imageExtent: denne.ext, projection: UTM }));
-  if (forste) oversiktSynlig(true);
-  if (gammel) setTimeout(() => URL.revokeObjectURL(gammel), 5000);
-}
-
-/* Det sammensatte kartet i kartfargene. Kilden er et lerret som fylles på flis for flis, og kartlaget får en kopi av det som bilde.
-   Det sparer å pakke hele lerretet som PNG og lese det inn igjen hver gang det kommer nye fliser. */
+/* Dagens klasser zoomet ut i kartfargene. Kilden er et lerret (for det sammensatte kartet fylt på flis for flis), og kartlaget får
+   en kopi av det som bilde. Det sparer å pakke hele lerretet som PNG og lese det inn igjen hver gang det kommer nye fliser. */
 class LerretKilde extends ol.source.Image {
   declare bilde_: ImageWrapper;
   declare nr_: number;
@@ -269,7 +254,7 @@ export const fargeleggAltSomVenter = () => {
   fargeleggVentende(ov && ov.lerret ? kopier.get(ov.lerret) : null);
 };
 
-/* Laget følger tilstanden: nytt oversiktsbilde for valgt kommune */
+/* Laget følger tilstanden: nytt bilde zoomet ut for valgt kommune */
 const ny = nyttSiden();
 abonner(() => {
   const denne = oversikt();
@@ -277,14 +262,12 @@ abonner(() => {
   if (!denne) {
     oversiktLag.setSource(null);
     oversiktSynlig(true);
-  } else if (denne.buf) {
-    visLagret(denne);
-    tegnPlan(); /* planlaget tegnes oppå dagens klasser, som nå finnes for hele kommunen */
   } else {
-    const k = kopi(denne.lerret!);
+    const k = kopi(denne.lerret);
     k.venter.length = 0;
     fargeleggSamling(k);
     visSamling(k, denne.ext);
+    if (!denne.dynamisk) tegnPlan(); /* planlaget tegnes oppå dagens klasser, som nå finnes for hele kommunen */
   }
   kartStatus();
 });

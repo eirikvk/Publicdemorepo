@@ -187,24 +187,30 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
    Fargen tolkes derfor som en blanding av de to klassene den ligger nærmest linjen mellom. De seks rene fargene er valgt slik at
    en blanding av to klasser ikke kan forveksles med en blanding av to andre. Oppslaget regnes ut én gang, for 32 nivåer per
    fargekanal (`BLANDING`).
+3. Til analysene regnes klassen per rute på 21 meter, i blokker på 512 × 512 ruter (flisene på nivå 9, `solv.klasser`). Én blokk
+   lages av de fire kartbildene fra NIBIO på nivå 10, 1:50 000, som dekker den. Der er én piksel 10,6 meter, så én rute er 2 × 2
+   piksler. Fargen i ruta er snittet av de fire, vektet med dekningen, og klassen leses av fargen som i steg 2. Ruta regnes som
+   tegnet når snittet av dekningen er minst 100 av 255.
 
-**Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv.
+**Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 21 meter i hver blokk.
 
 **Usikkerhet.**
 
 - Kartet og SSBs tall bygger på to ulike inndelinger. Kartet følger grunnkartets økosystemtyper, tallene følger SSBs
   arealklasser. Tallene på siden blander derfor offisielle tall fra SSB med tall regnet ut fra grunnkartet.
 - Grønne områder og idrettsområder er bebygd i begge inndelingene.
-- NIBIO tegner grunnkartet først fra 1:50 000. Zoomet ut brukes et ferdig bilde av hele kommunen. For 39 kommuner i Trøndelag og
-  Bergen ligger det lagret sammen med siden (`verktoy/oversiktsbilde.ts`), med høyst 2048 piksler på lengste side. Det gir fra 11
-  til rundt 45 meter per piksel, og opptil 65 meter i kystkommuner med mye sjø innenfor grensen. For andre kommuner setter
-  nettleseren sammen et bilde av flisene den har hentet, med samme grense på 2048 piksler. Det lagrede bildet brukes der det finnes
-  og kan hentes, ellers det sammensatte (`gull.dagensKlasser`).
+- NIBIO tegner grunnkartet først fra 1:50 000. For 39 kommuner i Trøndelag og Bergen ligger klassene per blokk lagret sammen med
+  siden (`public/klasser/`, laget med `verktoy/klasser.ts`). De er laget av den samme funksjonen som siden bruker (`solv.klasser`),
+  så svaret er det samme som om siden hadde hentet kartbildene selv. Da regnes alt for hele kommunen på 21 meter, og zoomet ut viser
+  kartet blokkene satt sammen (`solv.klassekart`). For andre kommuner setter nettleseren sammen et bilde av flisene den har hentet,
+  med høyst 2048 piksler på lengste side, og regner bare den delen (`solv.sammensatt`). Hvilken av de to som brukes, avgjøres i
+  `gull.dagensKlasser`.
 
 **Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
-kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser for hele kommunen: `solv.oversikt` og `solv.sammensatt` i
-`src/data/solv/grunnkart.ts`, og valget mellom dem i `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis:
-`dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`.
+kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser per blokk og for hele kommunen: `solv.klasser`, `solv.blokker`,
+`solv.klassekart` og `solv.sammensatt` i `src/data/solv/grunnkart.ts`, de lagrede blokkene i `bronse.klassefil` og
+`bronse.klasseregister`, og valget mellom kildene i `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis til
+kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`.
 
 ## SSB-tallene og utbredelsesregnskapet
 
@@ -262,13 +268,16 @@ eller mindre natur enn i 2017?
 - DiBKs nasjonale tjeneste for kommuneplaner (WMS), laget `kparealformalomrade`. Bare flater med arealformål i 1000- og
   2000-serien (bebyggelse og anlegg, samferdselsanlegg og teknisk infrastruktur) og arealbruksstatus 2 (framtidig). Siden ber om
   flatene fylt og uten kantstrek, som bilder på 512 × 512 piksler per flis på nivå 9.
-- Dagens klasser for de samme flisene, fra oversiktsbildet av kommunen (se Arealklassene).
+- Dagens klasser for de samme flisene, per rute på 21 meter (`solv.klasser`, se Arealklassene), eller fra det sammensatte kartet
+  for kommuner uten lagrede klasser.
 
 **Steg.**
 
 1. For hver flis på nivå 9 som dekker kommunen, legges planen oppå dagens klasser, rute for rute. Hver kilde tolkes for seg i sølv,
    og så settes de sammen i gull (`kombinerBlokk`):
-   - En piksel i grunnkartet brukes når den er minst 100 av 255 dekket, og får klassen det er mest av (`klasserIFlis`, sølv).
+   - Dagens klasse per rute kommer fra `solv.klasser` (sølv, se Arealklassene) og klippes til kommunen etter halvregelen: ruter
+     kommunen dekker mindre enn halvparten av, er ikke med (`klasserIFlate`). For kommuner uten lagrede klasser leses en piksel
+     i det sammensatte kartet når den er minst 100 av 255 dekket, og får klassen det er mest av (`klasserIFlis`, sølv).
    - En rute er planlagt utbygging når planen dekker minst halve ruta (`solv.kommuneplanruter`, sølv).
    - Ruter som i dag er natur eller jordbruk, og som er planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke.
 2. Flisene settes sammen til ett rutenett for kommunen (`byggUtbygging`, gull). Egne områder legges inn her, se Egne områder.
@@ -278,7 +287,7 @@ eller mindre natur enn i 2017?
 4. De beholdte rutene telles for natur og jordbruk og regnes om til areal (`byggPlanlagt`, gull). Prosenten er andel av rutene som
    i dag er natur, eller jordbruk, i det samme rutenettet.
 
-Har kommunen ikke noe lagret oversiktsbilde, regnes bare den delen nettleseren har hentet kart for, og siden sier det. Ruter som
+Har kommunen ikke lagrede klasser, regnes bare den delen nettleseren har hentet kart for, og siden sier det. Ruter som
 ikke er hentet, regnes som naboer i regelen om smale striper, så felt ikke skrelles av langs kanten av det som er hentet.
 
 **Har kommunen plan?** Et lite bilde av planlaget over hele kommunen viser hvor stor del av kommunen planen dekker (`planDekning`, sølv).
@@ -291,7 +300,8 @@ og plan per rute, som de andre analysene krysser med.
 
 - Kommuneplanens arealdel viser hva som er satt av, ikke hva som blir bygd. Reguleringsplaner er ikke med.
 - Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.
-- Dagens klasser kommer fra oversiktsbildet, som er grovere enn rutene på 21 meter i mange kommuner.
+- For kommuner uten lagrede klasser kommer dagens klasser fra det sammensatte kartet, som er grovere enn rutene på 21 meter i store
+  kommuner.
 - Rutenettet overser bebygde flater som er smalere enn en rute, særlig veier. Regelen om smale striper tar bort det meste av dette,
   men også noe som er reelt: smale felt og nye veier.
 - Tallet for natur og jordbruk er uten smale striper. Tallet med smale striper står i parentes på siden.
@@ -343,7 +353,7 @@ Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres p
 
 **Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/kommuneplan.ts` (planen) og `src/data/solv/grunnkart.ts`
 (dagens klasser). Gull: `src/data/gull/utbygging.ts` (planrutenettet) og `src/data/gull/planlagt.ts`. Tabellene i katalogen:
-`solv.planinfo`, `bronse.planflis`, `solv.kommuneplanruter`, `solv.oversikt`, `solv.sammensatt`, `gull.dagensKlasser`, `bronse.egne`, `solv.egne`,
+`solv.planinfo`, `bronse.planflis`, `solv.kommuneplanruter`, `solv.klasser`, `solv.blokker`, `solv.sammensatt`, `gull.dagensKlasser`, `bronse.egne`, `solv.egne`,
 `solv.egneruter`, `gull.utbygging`, `gull.utbyggingsblokker`,
 `gull.planlagt` og `gull.plansum`. Kartlaget: `src/ui/kart/plan.ts`.
 
@@ -656,6 +666,29 @@ kartleggingen (venter på det kartlagte). Siden setter delene sammen. Metoden bl
 før, hver kjørt med sitt eget testverktøy samme kveld: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så
 Malvik og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
+**Dagens klasser på 21 meter for 39 kommuner, 11. oktober 2026.** De lagrede oversiktsbildene er byttet ut med dagens klasser per
+blokk på 21 meter (`solv.klasser`), laget av de fire kartbildene fra NIBIO på 1:50 000 som dekker hver blokk. For de 39 kommunene
+ligger svaret lagret sammen med siden, laget med den samme ETL-funksjonen som siden bruker (`verktoy/klasser.ts`), og cachen starter
+med det (`lagret` i katalogen). Oversiktsbildene var regnet ned til høyst 2048 piksler for hele kommunen, fra 11 til 65 meter per
+piksel. Nå er oppløsningen 21 meter i alle de 39 kommunene, og dagens klasser klippes til kommunen etter halvregelen. Det tok 607
+blokker og 2 428 kall mot NIBIO, én gang. Filene er 3,9 MB til sammen, mot 5,3 MB for oversiktsbildene. Andre kommuner er uendret.
+
+Metoden er endret, og tallene for de 39 kommunene endret seg. Hver utgave ble kjørt samme dag, med en fersk side per kommune:
+
+- Natur satt av til utbygging: i 28 av 36 kommuner med kommuneplan er endringen under 2 %, og i 23 under 1 %. Størst er Heim
+  (−6,6 %), Leka (−6,0 %) og Bergen (+3,5 %). Til sammen 82 650 dekar før og 82 020 dekar nå (−0,8 %).
+- Jordbruk satt av til utbygging: til sammen nesten uendret (−0,1 %). Små tall gir store prosenter i noen kommuner.
+- Natur i dag i rutenettet: som regel 0,5 % lavere, høyst 1,3 % (Nærøysund). Jordbruk i dag: som regel 1 % lavere, men 30 % høyere
+  på Frøya, 13 % i Nærøysund og 8 % på Hitra. Der var oversiktsbildet grovest, og små jorder forsvant.
+- Kontroll av klippingen: arealet av rutene som er med, er nå likt arealet av kommunens flate (0,00 % avvik for Trondheim, Steinkjer
+  og Frøya). Med oversiktsbildet var det 0,10–0,25 % for stort, fordi kanten ble glattet da bildet ble forstørret.
+- Tid til tallene er ferdige er omtrent den samme (for eksempel 7,0 mot 7,1 sekunder i Trondheim og 8,1 mot 7,0 på Frøya). Det som
+  lastes ned fra siden selv, er 59–331 kB per kommune, mot 37–231 kB før: mindre for små kommuner og mer for store. Minnet i cachen
+  gikk ned for alle kommunene med kommuneplan, fra 3 230 MB til 2 720 MB for alle 36 til sammen, fordi bare blokkene kommunen har
+  ruter i, er med. For de tre kommunene uten kommuneplan gikk det fra 7–8 MB til 6–17 MB.
+- Regresjonstesten: Trondheim og Malvik har nye tall, som ventet. Surnadal og Oslo er uendret. Trondheim, så Malvik og så Trondheim
+  igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
 **Katalogen, 10. oktober 2026, første utgave.** Alt som hentes og regnes ut, huskes nå i én katalog i datamotoren
 (`src/data/motor/katalog.ts`), og hvert datasett står i `src/data/motor/datasett.ts` med navn, nøkkel, grense og oppskrift. Bronse,
 sølv og gull husker ingenting selv, og sidene og kartet leser alt med nummeret til valgt kommune. Metoden ble ikke endret. Noen ting
@@ -686,15 +719,17 @@ se over.
 Svakheter:
 
 - Kartet og tallene bygger på to ulike inndelinger: grunnkartets økosystemtyper og SSBs arealklasser.
-- Alt som krysses med planlagt utbygging, har en oppløsning på 21 meter, og grovere der oversiktsbildet er grovere.
+- Alt som krysses med planlagt utbygging, har en oppløsning på 21 meter. For kommuner uten lagrede klasser er det grovere der det
+  sammensatte kartet er grovere, i store kommuner.
 - Prosent av landarealet er misvisende for tema som også ligger i vann: verneområder, inngrepsfri natur og kartleggingsgrad.
 - Tallene kommer fra tjenester som kan endre seg.
 - Siden er testet i Chromium med mobilvisning. Den er ikke testet systematisk på andre nettlesere.
 
 Åpne spørsmål om metoden:
 
-- **Halvregelen gjelder ikke overalt.** Grunnkartet og plansjekken bruker 100 av 255, og verdsatt natur regnes av dekningen. Skal
-  det gjøres likt, endres tallene for planlagt utbygging litt.
+- **Halvregelen gjelder ikke overalt.** Grunnkartet og plansjekken bruker 100 av 255, og verdsatt natur regnes av dekningen.
+  Klippingen til kommunen bruker halvregelen for kommunene med lagrede klasser, og 100 av 255 for det sammensatte kartet. Skal det
+  gjøres likt, endres tallene for planlagt utbygging litt.
 - **Avrundingen er ulik.** Inngrepsfri natur og grått areal rundes til 10 dekar i gull, de andre først på siden.
 - **Enhetene er ulike inni beregningene.** Planlagt utbygging og kryssingene telles i ruter, de andre i km². Gull regner alt om til
   km² før det går til siden.

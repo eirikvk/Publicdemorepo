@@ -73,5 +73,22 @@ export function dekketM2(d: Piksler, res: number) {
   return (sum / 255) * res * res;
 }
 
+/* Et lerret på w x h piksler fra plassen i en fargetabell per piksel (indeks), med fargene [rød, grønn, blå] per plass. Plass 0 er
+   gjennomsiktig. */
+export function palettLerret(indeks: Uint8Array, w: number, h: number, farger: number[][]): HTMLCanvasElement {
+  const g = tegneflate(w, h),
+    d = g.createImageData(w, h),
+    o = d.data;
+  for (let q = 0; q < indeks.length; q++) {
+    const v = indeks[q];
+    if (!v) continue;
+    const f = farger[v];
+    o.set(f, 4 * q);
+    o[4 * q + 3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  return g.canvas;
+}
+
 /* Et bilde fra en kilde (PNG) lest inn, så det kan tegnes i et lerret */
 export const lesBilde = (buf: ArrayBuffer) => createImageBitmap(new Blob([buf]));

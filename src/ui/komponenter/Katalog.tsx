@@ -228,6 +228,9 @@ function Info({ d }: { d: Tabellen }) {
           : !d.husk
             ? 'Lagres ikke: kallet går gjennom katalogen rett til ETL-funksjonen.'
             : `Huskes for ${d.husk === 1 ? 'den siste nøkkelen' : `de ${d.husk} siste nøklene`}. Det som er brukt lengst siden, går ut først.`}
+        {d.lagret
+          ? ' Har ferdige svar lagret sammen med siden. Finnes svaret der, brukes det, og ETL-funksjonen kjøres ikke.'
+          : ''}
         {d.voksende ? ' Fylles på etter at den er lagt inn.' : ''}
         {d.brukerstyrt
           ? ' Bygger på det brukeren gjør, og regnes ut på nytt når egne områder endres eller det er hentet mer kart.'

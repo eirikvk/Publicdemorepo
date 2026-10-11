@@ -30,7 +30,7 @@ export const ui: Visning = {
   slorPaa: true /* om det som ikke er kartlagt, får et slør når verdsatt natur vises */,
   vist: null /* området som er valgt fra en liste og markert i kartet: { id, navn, liId } */,
   /* Det som vises over og under kartet */
-  ute: false /* kartet er zoomet ut forbi det NIBIO tegner, uten oversiktsbilde */,
+  ute: false /* kartet er zoomet ut forbi det NIBIO tegner, uten dagens klasser zoomet ut */,
   sidezoom: false /* selve siden er forstørret, så kartet slipper bevegelsene igjennom */,
   probe: null /* svaret på et trykk i kartet: { tekst } eller { punkt } */,
   bytt: null /* kommunen i punktet man trykket på utenfor valgt kommune: { nr, navn } */,

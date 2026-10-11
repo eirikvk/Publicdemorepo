@@ -189,7 +189,7 @@ interface Kjoring {
 }
 type Scenario = (p: Testside, R: Kjoring, S: Siden) => Promise<void>;
 export const SCENARIER: Record<string, Scenario> = {
-  /* Kommune med lagret oversiktsbilde: alt regnes ut for hele kommunen når siden åpnes. */
+  /* Kommune med lagrede klasser: alt regnes ut for hele kommunen når siden åpnes. */
   async trondheim(p, R, S) {
     await p.goto('http://demo.test/' + S.adresse('5001'));
     await vent(p, R, 'trondheim', () => {
@@ -268,7 +268,7 @@ export const SCENARIER: Record<string, Scenario> = {
     await p.locator(S.kart).scrollIntoViewIfNeeded();
     await R.bilde('10-vist');
   },
-  /* Kommune uten lagret oversiktsbilde: kartet og tallene bygges av det som hentes når man zoomer inn. */
+  /* Kommune uten lagrede klasser: kartet og tallene bygges av det som hentes når man zoomer inn. */
   async surnadal(p, R, S) {
     await p.goto('http://demo.test/' + S.adresse('1566'));
     await vent(p, R, 'surnadal', () => {

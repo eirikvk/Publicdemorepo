@@ -35,7 +35,7 @@ import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
 import type { Maske } from './solv/temaer.ts';
 import type { Samling } from './solv/grunnkart.ts';
-import type { Oversiktsregister } from './bronse/nibio-grunnkart.ts';
+import type { Klasseregister } from './bronse/nibio-grunnkart.ts';
 import * as gullEgne from './gull/egne.ts';
 import * as gullGraa from './gull/graa.ts';
 import * as gullGrunnkart from './gull/grunnkart.ts';
@@ -106,22 +106,6 @@ export const katalog = {
       husk: 6,
       etl: ssb.arealtidsserie
     }),
-    oversiktsregister: tabell<void, Oversiktsregister | null>({
-      lag: 'bronse',
-      navn: 'oversiktsregister',
-      tittel: 'Register over oversiktsbilder',
-      om: 'kommunene som har lagret oversiktsbilde, og utsnittet hvert bilde dekker',
-      husk: 1,
-      etl: nibioGrunnkart.oversiktsregister
-    }),
-    oversiktsbilde: tabell({
-      lag: 'bronse',
-      navn: 'oversiktsbilde',
-      tittel: 'Oversiktsbilde av kommunen',
-      om: 'det lagrede oversiktsbildet av kommunen, som PNG',
-      husk: 6,
-      etl: nibioGrunnkart.oversiktsbilde
-    }),
     grunnkartflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'grunnkartflis',
@@ -130,6 +114,23 @@ export const katalog = {
       husk: 400,
       nokkel: flisnavn,
       etl: nibioGrunnkart.grunnkartflis
+    }),
+    klasseregister: tabell<void, Klasseregister | null>({
+      lag: 'bronse',
+      navn: 'klasseregister',
+      tittel: 'Register over lagrede klasser',
+      om: 'kommunene som har dagens klasser lagret sammen med siden, og blokkene på nivå 9 for hver',
+      husk: 1,
+      etl: nibioGrunnkart.klasseregister
+    }),
+    klassefil: tabell<Flis, ArrayBuffer | null>({
+      lag: 'bronse',
+      navn: 'klassefil',
+      tittel: 'Lagrede klasser per blokk',
+      om: 'dagens klasser i en blokk på nivå 9 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [9, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
+      husk: 256,
+      nokkel: flisnavn,
+      etl: nibioGrunnkart.klassefil
     }),
     plandekning: tabell({
       lag: 'bronse',
@@ -247,27 +248,39 @@ export const katalog = {
       husk: 6,
       etl: solvSsb.historie
     }),
-    oversikt: tabell({
+    klasser: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
-      navn: 'oversikt',
-      tittel: 'Oversiktsbildet',
-      om: 'det lagrede oversiktsbildet med utsnittet det dekker og meter per piksel',
-      husk: 6,
-      etl: solvGrunnkart.oversikt
+      navn: 'klasser',
+      tittel: 'Dagens klasser per blokk',
+      om: 'dagens klasse per rute på 21 meter i en blokk på nivå 9, kalt med blokken [9, x, y]. Laget av de fire kartbildene fra NIBIO som dekker blokken. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
+      husk: 0,
+      nokkel: flisnavn,
+      etl: solvGrunnkart.klasser,
+      lagret: solvGrunnkart.lagredeKlasser,
+      eksempel: flisMidt(PLANNIVA)
     }),
-    oversiktLest: tabell({
+    blokker: tabell<string, Flis[]>({
       lag: 'solv',
-      navn: 'oversiktLest',
-      tittel: 'Oversiktsbildet lest inn',
-      om: 'det lagrede oversiktsbildet lest inn som bilde, til dagens klasser zoomet ut',
+      navn: 'blokker',
+      tittel: 'Blokkene i kommunen',
+      om: 'blokkene på nivå 9 der kommunen har minst én rute, etter halvregelen. For kommunene med lagrede klasser står listen i registeret (bronse.klasseregister).',
+      husk: 6,
+      etl: solvGrunnkart.blokker,
+      lagret: solvGrunnkart.lagredeBlokker
+    }),
+    klassekart: tabell<string, solvGrunnkart.Oversikt>({
+      lag: 'solv',
+      navn: 'klassekart',
+      tittel: 'Dagens klasser satt sammen av blokkene',
+      om: 'dagens klasser for kommunen zoomet ut, satt sammen av blokkene (solv.klasser), med høyst 2048 piksler på lengste side. Brukes for kommunene med lagrede klasser.',
       husk: 1,
-      etl: solvGrunnkart.oversiktLest
+      etl: solvGrunnkart.klassekart
     }),
     sammensatt: tabell<string, Samling>({
       lag: 'solv',
       navn: 'sammensatt',
       tittel: 'Sammensatt kart',
-      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet: kartet brukeren har sett på. Brukes for kommuner uten lagret oversiktsbilde. Datamotoren legger inn nye fliser etter hvert som de hentes.',
+      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet: kartet brukeren har sett på. Brukes for kommuner uten lagrede klasser. Datamotoren legger inn nye fliser etter hvert som de hentes.',
       husk: 4,
       voksende: true,
       etl: solvGrunnkart.sammensatt
@@ -390,7 +403,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'dagensKlasser',
       tittel: 'Dagens klasser',
-      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: det lagrede oversiktsbildet der det finnes, ellers det sammensatte kartet av det som er hentet. Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
+      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: blokkene der kommunen har lagrede klasser, ellers det sammensatte kartet av det som er hentet. Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
       husk: 1,
       brukerstyrt: true,
       etl: gullGrunnkart.dagensKlasser

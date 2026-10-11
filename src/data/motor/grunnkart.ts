@@ -1,7 +1,8 @@
 /* Datamotoren, dagens klasser: hvilken arealklasse hver piksel har i dag, fra grunnkartet til NIBIO. Kartlagene for planlagt
    utbygging, inngrepsfri natur og grått areal tegnes oppå det.
-   Dagens klasser for kommunen står i gull.dagensKlasser: det lagrede oversiktsbildet (solv.oversikt), eller det sammensatte kartet av
-   flisene som er hentet (solv.sammensatt). Zoomet inn brukes kartbildene fra NIBIO, én flis om gangen (bronse.grunnkartflis).
+   Dagens klasser for kommunen står i gull.dagensKlasser: blokkene for kommunene med lagrede klasser (solv.klassekart), eller det
+   sammensatte kartet av flisene som er hentet (solv.sammensatt). Zoomet inn brukes kartbildene fra NIBIO, én flis om gangen
+   (bronse.grunnkartflis).
    Det sammensatte kartet er en kilde fra brukeren: det er kartet brukeren har sett på. Datamotoren bestemmer bare når: hver ny flis
    legges inn med en gang, og når kartet har stått stille med nye fliser, sier datamotoren fra (brukerEndret), så gull regnes ut på
    nytt. Selve tegningen står i sølv (solv/grunnkart.ts).
@@ -9,7 +10,7 @@
    visningsfargene, se ui/kart/grunnkart.ts. */
 import { opptatt } from '../bronse/henting.ts';
 import { alle, brukerEndret, se, vedGlemt, vedNy } from '../cache.ts';
-import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
+import { overlapper } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, flisAvNavn, flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
 import { dagensKlasserIFlis, tegnISamling, type Oversikt, type Samling } from '../solv/grunnkart.ts';
@@ -17,18 +18,15 @@ import { lesBilde } from '../solv/raster.ts';
 import { valgtNr, verdi } from './valgt.ts';
 import { app, tidSlutt, varsle } from './tilstand.ts';
 
-/* Utsnittet det lagrede oversiktsbildet for kommunen nr dekker, når kommunen står i registeret og bildet ikke har feilet */
-export function lagretUtsnitt(nr: string): Utsnitt | null {
-  const reg = katalog.bronse.oversiktsregister.naa(),
-    ext = reg && reg.kommuner && reg.kommuner[nr];
-  if (!ext) return null;
-  const r = se(katalog.solv.oversikt, nr);
-  return r && r.status === 'feil' ? null : ext;
+/* Om kommunen nr har lagrede klasser: den står i registeret, og blokkene har ikke feilet */
+export function lagret(nr: string) {
+  const reg = katalog.bronse.klasseregister.naa();
+  if (!(reg && reg.kommuner && reg.kommuner[nr])) return false;
+  const r = se(katalog.solv.klassekart, nr);
+  return !(r && r.status === 'feil');
 }
-export const lagret = (nr: string) => !!lagretUtsnitt(nr);
 
-/* Dagens klasser for valgt kommune, fra gull. oversikt er bildet zoomet ut: det lagrede oversiktsbildet, eller det sammensatte
-   kartet. bareHentetKart sier at tallene bare gjelder den delen av kommunen nettleseren har hentet kart for. */
+/* Dagens klasser for valgt kommune, fra gull. oversikt er bildet zoomet ut: blokkene satt sammen, eller det sammensatte kartet. bareHentetKart sier at tallene bare gjelder den delen av kommunen nettleseren har hentet kart for. */
 const dagensKlasserNaa = () => verdi(katalog.gull.dagensKlasser);
 export function oversikt(): Oversikt | null {
   const D = dagensKlasserNaa();
@@ -45,10 +43,15 @@ export function samlingen(): Samling | null {
     r = nr ? se(katalog.solv.sammensatt, nr) : null;
   return r && r.status === 'ok' ? r.verdi! : null;
 }
-/* Et sammensatt kart som går ut av cachen, frigjøres, og kartet får beskjed så det kan kaste sin kopi */
+/* Et sammensatt kart eller et kart satt sammen av blokkene som går ut av cachen, frigjøres, og kartet får beskjed så det kan kaste
+   sin kopi */
 vedGlemt(katalog.solv.sammensatt, s => {
   s.c.width = 0;
   varsle('samlingFjernet', s.c);
+});
+vedGlemt(katalog.solv.klassekart, ov => {
+  ov.lerret.width = 0;
+  varsle('samlingFjernet', ov.lerret);
 });
 /* Hver ny flis fra NIBIO legges inn med en gang i de sammensatte kartene den berører. Det hentes ingenting nytt for dette. */
 vedNy(katalog.bronse.grunnkartflis, (buf, n) => {
@@ -108,16 +111,14 @@ export const stoppRegning = () => {
 };
 
 /* Dagens klasser i flisen tc på 512 x 512 piksler for valgt kommune, i de rene fargene fra NIBIO, til kartlagene. Zoomet inn fra
-   kartbildet fra NIBIO, ellers fra gull.dagensKlasser: det lagrede oversiktsbildet, eller det sammensatte kartet. null hvis de ikke
+   kartbildet fra NIBIO, ellers fra gull.dagensKlasser: blokkene satt sammen, eller det sammensatte kartet. null hvis de ikke
    finnes ennå. Selve tegningen står i sølv (dagensKlasserIFlis). */
 export async function dagensKlasser(tc: Flis): Promise<Uint8ClampedArray | null> {
-  const nr = valgtNr(),
-    D = dagensKlasserNaa(),
+  const D = dagensKlasserNaa(),
     t0 = performance.now();
   const K = await dagensKlasserIFlis(tc, {
     flis: tc[0] >= FLISNIVA ? await katalog.bronse.grunnkartflis(tc) : undefined,
     ov: D && D.ov,
-    lest: D && D.ov.buf && nr ? await katalog.solv.oversiktLest(nr) : null,
     koord: D && D.koord
   });
   tidSlutt('dagens klasser', t0);

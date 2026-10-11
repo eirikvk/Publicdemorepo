@@ -1,7 +1,8 @@
 /* Cachen: svarene fra ETL-funksjonene i katalogen (katalog.ts), lagret per tabell og nøkkel. Nøkkelen er som regel kommunenummeret.
    Hver rad har status (henter, feil eller ok), verdien, utgaven og når den ble laget. Katalogen og cachen er to ting: katalogen er
    det interne API-et, som sier hvilke tabeller som finnes, hvordan de kalles og hvor ETL-funksjonen står. Cachen husker svarene, så
-   mange som tabellen sier (husk). En tabell med husk 0 går gjennom katalogen uten at noe lagres. ETL-koden i bronse, sølv og gull vet ingenting om cachen: den kaller katalogen, og det er cachen som sier om
+   mange som tabellen sier (husk). En tabell med husk 0 går gjennom katalogen uten at noe lagres. En tabell kan også ha et ferdig svar
+   som ligger lagret sammen med siden (lagret), og da kjøres ikke ETL-funksjonen for det. ETL-koden i bronse, sølv og gull vet ingenting om cachen: den kaller katalogen, og det er cachen som sier om
    svaret allerede finnes.
 
    Les-gjennom: kaller man en tabell, gis verdien hvis den finnes. Ellers kjøres ETL-funksjonen, som selv kaller katalogen etter det
@@ -50,6 +51,10 @@ export interface Tabelldef<N, V> {
   voksende?: boolean /* verdien fylles på etter at den er lagt inn */;
   brukerstyrt?: boolean /* bygger på det brukeren gjør, og er utdatert når brukeren har endret noe i kommunen (nøkkelen) */;
   glemt?: (v: V, nokkel: string) => void /* kalles når en verdi går ut av cachen */;
+  lagret?: (
+    n: N
+  ) => Promise<V | null> /* et ferdig svar som ligger lagret sammen med siden. Finnes det, brukes det, og ETL-funksjonen kjøres
+                            ikke. null eller feil: ETL-funksjonen kjøres som vanlig. Slik kan cachen starte utfylt. */;
   eksempel?: (
     u: Utgangspunkt
   ) => N | null /* til tabeller som ikke lagres: nøkkelen katalogvisningen spør med. null når det tabellen bygger på, ikke finnes,
@@ -103,6 +108,14 @@ export const nårBrukerEndret = (f: (nr: string) => void) => {
 const rom = <N, V>(t: Tabelldef<N, V>) => innholdet.get(t) as Map<string, Rad<V>>;
 const nokkelAv = <N, V>(t: Tabelldef<N, V>, n: N) => (t.nokkel ? t.nokkel(n) : n === undefined ? '' : String(n));
 export const fulltNavn = (t: Tabelldef<any, any>) => `${t.lag}.${t.navn}`;
+/* Svaret for n: det lagrede når tabellen har et, ellers fra ETL-funksjonen */
+const lagSvar = <N, V>(t: Tabelldef<N, V>, n: N): Promise<V> =>
+  t.lagret
+    ? t
+        .lagret(n)
+        .catch(() => null)
+        .then(v => (v === null ? t.etl!(n) : v))
+    : t.etl!(n);
 const gyldig = <V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) =>
   r.status === 'ok' && (!t.brukerstyrt || r.bruker === (brukerUtgave.get(k) || 0));
 
@@ -163,8 +176,8 @@ function settInn<N, V>(t: Tabelldef<N, V>, k: string, r: Rad<V>, v: V, bruker: n
   kroker.endret();
 }
 
-/* Les-gjennom, asynkront: gir verdien for n. Mangler den, er den utdatert, eller feilet den sist, lages den med ETL-funksjonen. Det
-   er dette som skjer når man kaller en tabell. */
+/* Les-gjennom, asynkront: gir verdien for n. Mangler den, er den utdatert, eller feilet den sist, lages den med ETL-funksjonen, eller
+   hentes fra det lagrede svaret når tabellen har et. Det er dette som skjer når man kaller en tabell. */
 export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
   if (!t.husk && t.etl) return gaaGjennom(t, n);
   const m = rom(t),
@@ -180,12 +193,12 @@ export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
   if (!t.etl)
     /* tabeller uten ETL-funksjon: verdien som den er, eller null */
     return Promise.resolve((har && har.status === 'ok' ? har.verdi : null) as V);
-  const etl = t.etl,
-    r = har && (har.status === 'ok' || har.underveis) ? har : ny(har) /* et utdatert svar vises til det nye er klart */,
+  const r =
+      har && (har.status === 'ok' || har.underveis) ? har : ny(har) /* et utdatert svar vises til det nye er klart */,
     p: Promise<V> = Promise.resolve()
       .then(() => {
         const t0 = performance.now();
-        return etl(n).then(v => {
+        return lagSvar(t, n).then(v => {
           r.ms = performance.now() - t0;
           if (t.lag !== 'bronse') kroker.kjort(fulltNavn(t), r.ms);
           return v;
@@ -224,7 +237,7 @@ function gaaGjennom<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
     har = u.get(k);
   if (har) return har;
   const t0 = performance.now(),
-    p = t.etl!(n)
+    p = lagSvar(t, n)
       .then(v => {
         if (t.lag !== 'bronse') kroker.kjort(fulltNavn(t), performance.now() - t0);
         return v;
@@ -349,6 +362,7 @@ export function innhold() {
     etl: !!t.etl,
     voksende: !!t.voksende,
     brukerstyrt: !!t.brukerstyrt,
+    lagret: !!t.lagret,
     sporbar: !t.husk && !!t.etl,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,

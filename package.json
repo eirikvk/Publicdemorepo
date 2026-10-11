@@ -15,7 +15,7 @@
     "test": "node --test test/*.test.ts",
     "regresjon": "node verktoy/regresjon.ts ut/ny",
     "utgave": "node verktoy/utgave.ts",
-    "oversiktsbilde": "node verktoy/oversiktsbilde.ts",
+    "klasser": "node verktoy/klasser.ts",
     "sjekk": "tsc -p . && tsc -p verktoy && node verktoy/sjekk-lag.ts"
   },
   "dependencies": {

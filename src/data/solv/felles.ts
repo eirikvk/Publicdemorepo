@@ -62,7 +62,7 @@ export const fliserI = (e: Utsnitt, z: number): Flis[] => {
 };
 
 /* Groveste flisnivå NIBIO tegner grunnkartet i: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000.
-   Zoomet lenger ut brukes oversiktsbildet eller det sammensatte kartet. */
+   Zoomet lenger ut brukes blokkene satt sammen eller det sammensatte kartet. */
 export const FLISNIVA = 10;
 
 /* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. */

@@ -18,8 +18,8 @@ export interface Tekniskvalg {
 }
 
 export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
-  const reg = katalog.bronse.oversiktsregister.naa(),
-    medBilde = Object.keys((reg && reg.kommuner) || {}).filter(nr => finn(nr));
+  const reg = katalog.bronse.klasseregister.naa(),
+    medKlasser = Object.keys((reg && reg.kommuner) || {}).filter(nr => finn(nr));
   return (
     <>
       {teknisk && (
@@ -114,11 +114,12 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
           Alt hentes direkte i nettleseren når du velger kommune: grensen fra Kartverket, arealtallene fra Statistisk
           sentralbyrå (SSB) og kartet fra NIBIO. Bare listen over fylker og kommuner ligger lagret sammen med siden.
         </p>
-        {medBilde.length > 0 && reg && (
+        {medKlasser.length > 0 && reg && (
           <p>
-            For {medBilde.length === 1 ? finn(medBilde[0])![1].navn : medBilde.length + ' kommuner'} ligger også et
-            ferdig oversiktsbilde lagret ({reg.versjon}, hentet {reg.hentet}). Det vises når kartet er zoomet ut, og
-            fliser fra NIBIO tar over når du zoomer inn.
+            For {medKlasser.length === 1 ? finn(medKlasser[0])![1].navn : medKlasser.length + ' kommuner'} ligger også
+            dagens arealklasser lagret, i ruter på 21 meter laget av kartet fra NIBIO ({reg.versjon}, hentet{' '}
+            {reg.hentet}). Da regnes tallene for hele kommunen med en gang, og kartet bruker dem når det er zoomet ut.
+            Fliser fra NIBIO tar over når du zoomer inn.
           </p>
         )}
         <p>

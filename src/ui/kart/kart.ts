@@ -10,7 +10,7 @@ import { ol } from './ol.ts';
 import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
 import { bakgrunnUrl } from '../../data/bronse/kartverket.ts';
 import { FLISNIVA, OPPLOSNINGER, ORIGO, UTM, type Flis } from '../../data/solv/felles.ts';
-import { kartetFlyttes, lagretUtsnitt, oversikt } from '../../data/motor/grunnkart.ts';
+import { kartetFlyttes, lagret, oversikt } from '../../data/motor/grunnkart.ts';
 import { katalog } from '../../data/katalog.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret } from '../../data/motor/tilstand.ts';
@@ -86,7 +86,7 @@ export const tilKartet = (mykt?: boolean) => {
   const k = document.querySelector('.kartscene');
   if (k) k.scrollIntoView({ behavior: mykt && !rolig() ? 'smooth' : 'auto', block: 'nearest' });
 };
-/* Der en flis er ferdig lastet, fjernes oversiktsbildet under den før flisen tegnes. Ellers ville det grove
+/* Der en flis er ferdig lastet, fjernes bildet zoomet ut under den før flisen tegnes. Ellers ville det grove
    bildet stikke fram som en uskarp kant rundt alt som er gjennomsiktig i flisen, for eksempel langs sjøen. */
 const dekket = ([z, x, y]: TileCoord) => {
   for (let d = 0; z - d >= FLISNIVA; d++) if (klare.has(`${z - d}/${x >> d}/${y >> d}`)) return true;
@@ -144,15 +144,12 @@ export function kartStatus() {
   if (opplosning() < MAKSRES) ui.ute = false;
   else {
     const ov = oversikt(),
-      o = (ov && ov.ext) || (app.valgt && lagretUtsnitt(app.valgt.nr)),
+      G = app.valgt && lagret(app.valgt.nr) ? verdi(katalog.solv.grense) : null,
+      o = (ov && ov.ext) || (G && G.ext),
       treff = !!o && !!kart && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
     oversiktSynlig(true);
     ui.ute = !treff && !!app.valgt;
-    ui.siste = !treff
-      ? ''
-      : ov && ov.dynamisk
-        ? 'Viser kart nettleseren allerede har hentet'
-        : 'Viser lagret oversiktsbilde';
+    ui.siste = !treff ? '' : ov && ov.dynamisk ? 'Viser kart nettleseren allerede har hentet' : 'Viser lagrede klasser';
   }
   if (ui.ute !== varUte || ui.siste !== varSiste) endret();
 }
@@ -194,7 +191,7 @@ abonner(() => {
     tema.setVisible(true);
     endret();
   }
-  if (ny('oversikt', app.valgt && lagretUtsnitt(app.valgt.nr))) kartStatus();
+  if (ny('lagret', !!app.valgt && lagret(app.valgt.nr))) kartStatus();
   if (ny('sisteKall', app.sisteKall) && app.sisteKall) {
     const s = app.sisteKall,
       fliser = (n: number) => `${n} ${n === 1 ? 'flis' : 'fliser'}`;

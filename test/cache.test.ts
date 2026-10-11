@@ -1,4 +1,4 @@
-/* Tester for cachen: les-gjennom, grensen for hvor mye som huskes, feil, utgaver og brukerstyrte tabeller. Kjør: npm test */
+/* Tester for cachen: les-gjennom, grensen for hvor mye som huskes, feil, utgaver, brukerstyrte tabeller og lagrede svar. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { brukerEndret, les, se, tabell, utgave } from '../src/data/cache.ts';
@@ -85,4 +85,20 @@ test('brukerstyrt: utdatert gis til visningen mens det nye regnes ut, og regnes 
   assert.equal(les(T, '5001')!.verdi, 1); /* det gamle, mens det nye regnes ut */
   assert.equal(await T('5001'), 2);
   assert.equal(await U('5001'), 1); /* bygger ikke på det brukeren gjør */
+});
+
+test('lagret: det lagrede svaret brukes, og ETL-funksjonen kjøres bare der det mangler', async () => {
+  let kjort = 0;
+  const T = tabell<string, string>({
+    lag: 'solv',
+    navn: 'e',
+    tittel: '',
+    om: '',
+    husk: 0,
+    etl: async n => (kjort++, n + '!'),
+    lagret: async n => (n === 'x' ? 'lagret' : null)
+  });
+  assert.equal(await T('x'), 'lagret');
+  assert.equal(await T('y'), 'y!');
+  assert.equal(kjort, 1);
 });

@@ -15,14 +15,14 @@ export const listeFeil = () => {
   const r = se(katalog.bronse.kommuner, undefined);
   return !!r && r.status === 'feil';
 };
-/* Listen over fylker og kommuner, og registeret over lagrede oversiktsbilder. Kalles én gang når siden åpnes. */
+/* Listen over fylker og kommuner, og registeret over lagrede klasser. Kalles én gang når siden åpnes. */
 export async function hentKommuner() {
   try {
     await katalog.bronse.kommuner();
   } catch (e) {
     return false;
   }
-  await katalog.bronse.oversiktsregister();
+  await katalog.bronse.klasseregister();
   return true;
 }
 

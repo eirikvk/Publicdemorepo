@@ -1,16 +1,15 @@
-/* Bronse for NIBIO, Nasjonalt grunnkart for arealanalyse (WMS): kartbilder av dagens arealklasser, og de lagrede oversiktsbildene
-   av hele kommuner som er laget av samme tjeneste (verktoy/oversiktsbilde.ts). Siden ber NIBIO tegne seks klasser i rene farger
-   (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. */
+/* Bronse for NIBIO, Nasjonalt grunnkart for arealanalyse (WMS): kartbilder av dagens arealklasser. Siden ber NIBIO tegne seks
+   klasser i rene farger (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. Her er også de lagrede klassene: dagens
+   klasser per blokk på nivå 9 for noen kommuner, laget av de samme kartbildene og lagret sammen med siden (verktoy/klasser.ts). De
+   er det ferdige svaret for solv.klasser. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
-import { flisUtsnitt, type Flis, type Kommune } from '../solv/felles.ts';
+import { katalog } from '../katalog.ts';
+import { flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
-import { kommunen } from './kartverket.ts';
 import { wmsBilde } from './wms.ts';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
-/* Groveste oppløsning NIBIO tegner grunnkartet i (1:50 000), i meter per piksel. Oversiktsbildene hentes minst så tett. */
-export const GROVESTE_M = 17;
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
 const SLD = (() => {
   const hex = (f: number[]) => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
@@ -39,29 +38,29 @@ export const grunnkartUrl = (u: Utsnitt, w = 512, h = 512) =>
 /* Kartbildene hentes gjennom en egen kø */
 export const hentGrunnkartFlis = lagHenter('NIBIO', 'Kart');
 
-/* Registeret over lagrede oversiktsbilder: hvilke kommuner som har et, og utsnittet bildet dekker */
-/* Registeret: årsversjonen av grunnkartet, når bildene er laget, og utsnittet hvert bilde dekker, per kommunenummer */
-export interface Oversiktsregister {
+/* Registeret over de lagrede klassene: årsversjonen av grunnkartet, når de er laget, og blokkene [x, y] på nivå 9 per kommune */
+export interface Klasseregister {
   versjon?: string;
   hentet?: string;
-  kommuner?: Record<string, Utsnitt>;
+  kommuner?: Record<string, number[][]>;
 }
-export const hentOversiktsregister = () =>
-  hent('Egen fil', 'Register over oversiktsbilder', 'oversikt.json', true) as Promise<Oversiktsregister>;
-/* Det lagrede oversiktsbildet for kommunen k, som PNG */
-export const hentOversiktsbilde = (k: Kommune) =>
-  hent('Egen fil', `Oversiktsbilde for ${k.navn}`, `oversikt/${k.nr}.png`, false, true);
 
 /* Tabellen bronse.grunnkartflis: et kartbilde av dagens klasser for flisen tc [z, x, y] i flisnettet */
 export async function grunnkartflis(tc: Flis): Promise<ArrayBuffer> {
   return hentGrunnkartFlis(grunnkartUrl(flisUtsnitt(tc)));
 }
-/* Tabellen bronse.oversiktsregister: registeret over lagrede oversiktsbilder, eller null når det ikke kan hentes. Uten registeret
-   brukes det sammensatte kartet. */
-export async function oversiktsregister(): Promise<Oversiktsregister | null> {
-  return hentOversiktsregister().catch(() => null);
+/* Tabellen bronse.klasseregister: registeret over de lagrede klassene, eller null når det ikke kan hentes. Uten registeret brukes
+   det sammensatte kartet av det som er hentet. */
+export async function klasseregister(): Promise<Klasseregister | null> {
+  return (hent('Egen fil', 'Register over lagrede klasser', 'klasser.json', true) as Promise<Klasseregister>).catch(
+    () => null
+  );
 }
-/* Tabellen bronse.oversiktsbilde: det lagrede oversiktsbildet av kommunen, som PNG */
-export async function oversiktsbilde(nr: string): Promise<ArrayBuffer> {
-  return hentOversiktsbilde(await kommunen(nr));
+/* Tabellen bronse.klassefil: dagens klasser i blokken tc [9, x, y] slik de er lagret, som PNG med fargetabell. null når blokken ikke
+   står i registeret. */
+export async function klassefil(tc: Flis): Promise<ArrayBuffer | null> {
+  const reg = await katalog.bronse.klasseregister(),
+    finnes = Object.values((reg && reg.kommuner) || {}).some(L => L.some(([x, y]) => x === tc[1] && y === tc[2]));
+  if (!finnes) return null;
+  return hent('Egen fil', `Lagrede klasser ${flisnavn(tc)}`, `klasser/${flisnavn(tc)}.png`, false, true);
 }

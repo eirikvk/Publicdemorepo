@@ -1,6 +1,6 @@
 /* Generelt: PNG-filer, slik standarden beskriver dem. En fil er en fast start og så biter (IHDR, PLTE, tRNS, IDAT, IEND), hver med
    lengde, type, innhold og kontrollsum. Siden bytter fargetabellen i kartbildene uten å pakke ut bildet (ui/kart/fargelegging.ts), og
-   verktøyet for oversiktsbilder lager bilder med fargetabell (verktoy/oversiktsbilde.ts). */
+   verktøyet for lagrede klasser lager bilder med fargetabell (verktoy/klasser.ts). */
 
 export const PNG_START = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 

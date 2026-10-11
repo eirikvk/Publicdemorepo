@@ -55,8 +55,8 @@ Alle kall går direkte fra nettleseren til tjenesten. Ingen av dem krever innlog
 | Miljødirektoratet | Naturvernområder, villrein, naturtyper med KU-verdi, dekningskart | kart.miljodirektoratet.no/arcgis/rest/services | ArcGIS REST | Naturtema som flater |
 | Miljødirektoratet | Inngrepsfrie naturområder | kart.miljodirektoratet.no/geoserver/inngrepsfrinatur | WMS | Inngrepsfri natur |
 
-Lagret sammen med siden ligger listen over fylker og kommuner (`public/kommuner.json`, fra Kartverket) og oversiktsbildene for
-39 kommuner (`public/oversikt/`, laget fra NIBIOs grunnkart).
+Lagret sammen med siden ligger listen over fylker og kommuner (`public/kommuner.json`, fra Kartverket) og dagens klasser per blokk
+på 21 meter for 39 kommuner (`public/klasser/` og `public/klasser.json`, laget fra NIBIOs grunnkart med `verktoy/klasser.ts`).
 
 ## Drift
 
@@ -77,7 +77,7 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
 ## Vilkår for dataene
 
 - NIBIOs grunnkart for arealanalyse er lisensiert «Norge digitalt begrenset». Det gjelder både kartflisene og de lagrede
-  oversiktsbildene. Dette må avklares før siden brukes utenfor en prototype.
+  klassene. Dette må avklares før siden brukes utenfor en prototype.
 - Kart over grå arealer er en testversjon.
 - Vilkårene for de andre tjenestene er ikke kontrollert i dette arbeidet. Siden krediterer Kartverket, NIBIO og DiBK i kartet
   og alle kildene i teksten.
@@ -103,12 +103,12 @@ Ingen av disse følger med siden til brukeren.
 
 | Verktøy | Versjon | Lisens | Brukes til |
 |---|---|---|---|
-| Vite | 8.3.0 | MIT | Utviklingsserver og bygg, og koden til verktøyet for oversiktsbilder |
+| Vite | 8.3.0 | MIT | Utviklingsserver og bygg, og koden til verktøyet for lagrede klasser |
 | `@vitejs/plugin-react` | 6.1.1 | MIT | JSX og oppdatering av komponenter under utvikling |
 | TypeScript | 7.0.2 | Apache 2.0 | Typesjekken (`tsc`) |
 | `@types/node`, `@types/react`, `@types/react-dom` | 22.20.4, 19.3.0, 19.3.0 | MIT | Typene for Node og React |
 | oxc-parser | 0.151.0 | MIT | Sjekken av lagene: leser koden og finner importene |
-| Playwright | 1.56.0 | Apache 2.0 | Regresjonstesten og verktøyet for oversiktsbilder, som kjører i Chromium |
+| Playwright | 1.56.0 | Apache 2.0 | Regresjonstesten og verktøyet for lagrede klasser, som kjører i Chromium |
 | Prettier | 3.9.9 | MIT | Formatering av koden |
 
 Node-versjonen står i `.nvmrc` (22), og kravet i `package.json` (22.18 eller nyere): fra den versjonen kjører Node verktøyene i TypeScript direkte.
