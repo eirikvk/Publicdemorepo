@@ -10,7 +10,7 @@ import { katalog } from '../../data/katalog.ts';
 import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
 import { tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
-import { fargPiksel } from './felles.ts';
+import { KILDER, fargPiksel } from './felles.ts';
 import { bildelag } from './kommunebilde.ts';
 
 /* Sonene som tre masker i hver sin fargekanal: rød er minst 1 km, grønn minst 3 km og blå minst 5 km fra inngrep. Når en flis
@@ -20,6 +20,7 @@ import { bildelag } from './kommunebilde.ts';
 export const inonLag = bildelag({
   side: 'inon',
   tittel: 'Inngrepsfri natur',
+  kilder: [KILDER.mdir],
   data: () => verdi(katalog.solv.inon),
   noe: () => bildetallet(valgt(katalog.gull.inon)).tilstand === 'ok',
   jevninger: 2,

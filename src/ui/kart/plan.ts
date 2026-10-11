@@ -22,7 +22,7 @@ import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
-import { SVAKEST, TOM, fargPiksel, friskOpp, nyttSiden, plannett, type Flistegner } from './felles.ts';
+import { KILDER, SVAKEST, TOM, fargPiksel, friskOpp, nyttSiden, plannett, type Flistegner } from './felles.ts';
 
 const planUrl = (tc: TileCoord) => kommuneplanUrl(plannett.getTileCoordExtent(tc));
 
@@ -192,6 +192,7 @@ async function lastPlanFlis(tile: ImageTile) {
 }
 const nyPlanKilde = () =>
   new ol.source.XYZ({
+    attributions: [KILDER.dibk],
     tileUrlFunction: planUrl,
     tileGrid: plannett,
     tilePixelRatio: 2,

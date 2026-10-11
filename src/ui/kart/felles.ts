@@ -78,9 +78,20 @@ export type Flislag = TileLayer<XYZ>;
 /* Tegner én flis: setter bildet eller tilstanden til tile. src er adressen, for lagene som har en. OpenLayers beskriver flisen bare
    som Tile, men i disse lagene er den alltid et ImageTile. */
 export type Flistegner = (tile: ImageTile, src: string) => void | Promise<void>;
-/* Kilde for et lag som tegnes i nettleseren. Flisene har ingen adresse, bare plass i rutenettet. */
-export const tegnetKilde = (tegnFlis: Flistegner) =>
+/* Krediteringen nederst i kartet: hvert lag oppgir hvem dataene kommer fra, og OpenLayers viser bare kildene til lagene som er
+   synlige, én gang hver og i rekkefølgen lagene ligger i */
+export const KILDER = {
+  kartverket: 'Kartverket',
+  nibio: 'NIBIO',
+  dibk: 'DiBK',
+  mdir: 'Miljødirektoratet',
+  ssb: 'SSB'
+};
+/* Kilde for et lag som tegnes i nettleseren. Flisene har ingen adresse, bare plass i rutenettet. kilder er hvem dataene kommer fra,
+   til krediteringen nederst i kartet (se KILDER). */
+export const tegnetKilde = (tegnFlis: Flistegner, kilder: string[]) =>
   new ol.source.XYZ({
+    attributions: kilder,
     tileUrlFunction: tc => tc.join('/'),
     tileGrid: plannett,
     tilePixelRatio: 2,

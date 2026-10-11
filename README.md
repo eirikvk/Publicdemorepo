@@ -232,7 +232,7 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | Fil | Innhold |
 |---|---|
 | `ol.ts` | Delene av OpenLayers som brukes, samlet som `ol` |
-| `felles.ts` | Flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren |
+| `felles.ts` | Flisnettene, hva kartet holder på med, hjelpere for lag som tegnes i nettleseren, og kildene hvert lag krediterer (`KILDER`) |
 | `kart.ts` | Selve kartet: bakgrunn, grense og status, hvordan lagene settes sammen, og kartets minne til katalogen |
 | `klipping.ts` | Klipping mot kommunen: utenfor valgt kommune vises bare bakgrunnskartet |
 | `trykk.ts` | Trykk i kartet: hva som er i punktet, og bytte til kommunen man trykket i |

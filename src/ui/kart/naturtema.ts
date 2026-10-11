@@ -19,7 +19,7 @@ import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
 import { farge, rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
-import { TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
+import { KILDER, TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
 import { rolig, tilKartet, view } from './kart.ts';
 
 /* Hvordan hvert tema tegnes. Alle tegnes om til kartfliser i nettleseren, slik planlaget gjør: tusen flater som vektor måtte tegnes
@@ -48,7 +48,7 @@ for (const t of NATURTEMA) {
     className: 'plan',
     properties: { tittel: t.navn },
     visible: false,
-    source: tegnetKilde((tile: ImageTile) => (SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile))
+    source: tegnetKilde((tile: ImageTile) => (SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile), [KILDER.mdir])
   });
   LAG.set(t.id, { lag, kilde });
 }
@@ -100,7 +100,7 @@ export const dekLag = new ol.layer.Tile({
   className: 'plan',
   properties: { tittel: 'Slør over det som ikke er kartlagt' },
   visible: false,
-  source: tegnetKilde(tegnSlorflis)
+  source: tegnetKilde(tegnSlorflis, [KILDER.mdir])
 });
 const kartlagteFlater = new WeakMap<Kartlagt, Feature<Polygon>[]>();
 function settDekning(E: Kartlagt | null | undefined) {

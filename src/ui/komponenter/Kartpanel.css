@@ -222,10 +222,19 @@
   right: 10px;
   bottom: 10px;
   font-size: 11px;
+  max-width: calc(100% - 150px); /* bryter heller over to linjer enn å dekke målestokken på en smal skjerm */
+  text-align: right;
 }
 .kartflate .ol-attribution ul {
   color: var(--dempet);
   text-shadow: none;
+}
+/* Kildene for lagene som vises, som «© Kartverket, NIBIO, DiBK» */
+.kartflate .ol-attribution ul::before {
+  content: '© ';
+}
+.kartflate .ol-attribution li:not(:last-child)::after {
+  content: ', ';
 }
 .kartflate .ol-attribution button {
   display: none;

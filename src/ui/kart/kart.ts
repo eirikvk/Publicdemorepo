@@ -18,7 +18,7 @@ import { farge } from '../farger.ts';
 import { kb, nf } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { egneLag, sluttTegning, tegner } from './egne.ts';
-import { MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden, plannett, type Flistegner } from './felles.ts';
+import { KILDER, MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden, plannett, type Flistegner } from './felles.ts';
 import { graaLag } from './graa.ts';
 import {
   etterVenter,
@@ -57,7 +57,7 @@ const bakgrunn = new ol.layer.Tile({
   source: new ol.source.XYZ({
     projection: UTM,
     crossOrigin: 'anonymous',
-    attributions: '© Kartverket, NIBIO, DiBK',
+    attributions: [KILDER.kartverket],
     tileGrid: new ol.tilegrid.TileGrid({ origin: ORIGO, resolutions: OPPLOSNINGER, tileSize: 256 }),
     tileUrlFunction: bakgrunnUrl as (tc: TileCoord) => string,
     tileLoadFunction: lastBakgrunn as Flistegner as LoadFunction

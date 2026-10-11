@@ -79,8 +79,10 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
 - NIBIOs grunnkart for arealanalyse er lisensiert «Norge digitalt begrenset». Det gjelder både kartflisene og de lagrede
   klassene. Dette må avklares før siden brukes utenfor en prototype.
 - Kart over grå arealer er en testversjon.
-- Vilkårene for de andre tjenestene er ikke kontrollert i dette arbeidet. Siden krediterer Kartverket, NIBIO og DiBK i kartet
-  og alle kildene i teksten.
+- Vilkårene for de andre tjenestene er ikke kontrollert i dette arbeidet. Kartet krediterer kildene til lagene som vises:
+  Kartverket, NIBIO og DiBK, Miljødirektoratet når et naturtema eller inngrepsfri natur vises, og Miljødirektoratet og SSB for
+  grått areal. Hvert lag oppgir sine kilder (`KILDER` i `src/ui/kart/felles.ts`), og OpenLayers viser dem for lagene som er
+  synlige. Teksten på siden nevner alle kildene.
 - Siden belaster tjenestene direkte fra hver brukers nettleser. Kall mot NIBIO og DiBK går i kø med høyst fire om gangen per
   kilde, og svar huskes i cachen så lenge siden er åpen.
 

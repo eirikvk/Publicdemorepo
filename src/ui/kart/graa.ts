@@ -10,7 +10,7 @@ import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
 import { tidSlutt } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
-import { fargPiksel } from './felles.ts';
+import { KILDER, fargPiksel } from './felles.ts';
 import { bildelag } from './kommunebilde.ts';
 
 /* Kartets egne terskler for grått areal. Arealet regnes med halvregelen (HALV). I flisene fra NIBIO er en piksel grå fra en
@@ -31,6 +31,7 @@ const gront = (kl: Uint8Array | null, i: number) => !!kl && kl[i >> 2] === BEB +
 export const graaLag = bildelag({
   side: 'graa',
   tittel: 'Grått areal',
+  kilder: [KILDER.mdir, KILDER.kartverket, KILDER.nibio, KILDER.ssb] /* kart over grå arealer */,
   data: () => verdi(katalog.solv.graa),
   noe: () => bildetallet(valgt(katalog.gull.graa)).tilstand === 'ok',
   folgOgsaa: () => verdi(katalog.gull.graakryss),

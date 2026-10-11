@@ -16,6 +16,7 @@ import { oversikt } from '../../data/motor/grunnkart.ts';
 import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
 import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
 import {
+  KILDER,
   MAKSRES,
   flisnett,
   friskOpp,
@@ -54,6 +55,7 @@ export const tema = new ol.layer.Tile({
   className: 'tema',
   properties: { tittel: 'Dagens arealklasser' },
   source: new ol.source.XYZ({
+    attributions: [KILDER.nibio],
     tileUrlFunction: flisUrl,
     tileGrid: flisnett,
     tilePixelRatio: 2,
@@ -100,7 +102,7 @@ class LerretKilde extends ol.source.Image {
   declare bilde_: ImageWrapper;
   declare nr_: number;
   constructor(lerret: HTMLCanvasElement, ext: Utsnitt) {
-    super({ projection: UTM });
+    super({ projection: UTM, attributions: [KILDER.nibio] });
     this.bilde_ = new ol.Image(ext, (ext[3] - ext[1]) / lerret.height, 1, 2 /* ferdig lastet */);
     this.bilde_.setImage(lerret);
     this.nr_ = 0;

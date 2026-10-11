@@ -20,6 +20,7 @@ import { friskOppGamle, tegnesOppaa } from './grunnkart.ts';
 export interface Bildelag<E> {
   side: string /* siden laget vises på */;
   tittel: string /* navnet på laget, i kartets minne i katalogen */;
+  kilder: string[] /* hvem dataene kommer fra, til krediteringen i kartet */;
   data: () => Kommuneruter<E> | null /* rutene for valgt kommune, fra katalogen */;
   noe: () => boolean /* kommunen har noe av temaet, fra gull */;
   fyll: (P: Uint8ClampedArray, D: Kommuneruter<E>) => void /* fyller masken: rød, grønn, blå og dekning per rute */;
@@ -80,7 +81,7 @@ export function bildelag<E>(o: Bildelag<E>): Flislag {
     className: 'tema',
     properties: { tittel: o.tittel },
     visible: false,
-    source: tegnetKilde(last)
+    source: tegnetKilde(last, o.kilder)
   });
   tegnesOppaa(lag);
 
