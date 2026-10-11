@@ -2,9 +2,9 @@
    gir ingen flere kall når kartet flyttes eller zoomes. Nettleseren legger sonene oppå dagens klasser og fargelegger bare det som er
    natur, i tre mørkere grønntoner. Natur utenfor sonene beholder den vanlige grønnfargen. Laget deler lerret med klassene, så det får
    samme gjennomsiktighet og ser ut som en del av naturfargen. Det som er felles med grått areal, står i kommunebilde.ts. */
-import { HALV, SYNLIG } from '../../data/solv/felles.ts';
+import { HALV } from '../../data/solv/felles.ts';
 import { UTENFOR } from '../../data/solv/inon.ts';
-import { NAT, klasseAv } from '../../data/solv/klasser.ts';
+import { NAT, klasserIFlis } from '../../data/solv/klasser.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { katalog } from '../../data/katalog.ts';
 import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
@@ -19,6 +19,7 @@ import { bildelag } from './kommunebilde.ts';
    eller mer. */
 export const inonLag = bildelag({
   side: 'inon',
+  tittel: 'Inngrepsfri natur',
   data: () => verdi(katalog.solv.inon),
   noe: () => bildetallet(valgt(katalog.gull.inon)).tilstand === 'ok',
   jevninger: 2,
@@ -47,10 +48,11 @@ export const inonLag = bildelag({
     if (!K) return false; /* klassene er ikke hentet ennå. Laget friskes opp når de er det. */
     const ut = g.createImageData(512, 512),
       o = ut.data,
-      F = [rgb('inon2'), rgb('inon1'), rgb('inonv')];
+      F = [rgb('inon2'), rgb('inon1'), rgb('inonv')],
+      kl = klasserIFlis(K); /* dagens klasser med samme regel som tallene */
     let tegnet = false;
-    for (let i = 0; i < P.length; i += 4) {
-      if (P[i] < HALV || P[i + 3] < HALV || K[i + 3] < SYNLIG || klasseAv(K[i], K[i + 1], K[i + 2]) !== NAT) continue;
+    for (let i = 0, q = 0; i < P.length; i += 4, q++) {
+      if (P[i] < HALV || P[i + 3] < HALV || kl[q] !== NAT + 1) continue;
       fargPiksel(o, i, F[P[i + 2] >= HALV ? 2 : P[i + 1] >= HALV ? 1 : 0]);
       tegnet = true;
     }

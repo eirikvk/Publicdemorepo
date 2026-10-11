@@ -4,7 +4,7 @@ import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
 import type Overlay from 'ol/Overlay.js';
 import type { Coordinate } from 'ol/coordinate.js';
 import { ol } from './ol.ts';
-import { hentKommuneIPunkt } from '../../data/bronse/kartverket.ts';
+import { katalog } from '../../data/katalog.ts';
 import { naermesteFarge } from '../../data/generelt/farge.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
 import { oversikt } from '../../data/motor/grunnkart.ts';
@@ -79,7 +79,7 @@ async function finnKommune(koord: Coordinate) {
   const mitt = byttSok;
   settProbe({ tekst: 'Slår opp kommunen …' });
   try {
-    const j = await hentKommuneIPunkt(koord);
+    const j = await katalog.bronse.kommuneIPunkt(koord);
     if (mitt !== byttSok) return;
     const t = finn(j.kommunenummer);
     if (!t || (app.valgt && t[1].nr === app.valgt.nr)) throw new Error('ingen annen kommune');

@@ -86,7 +86,8 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
 
 ## Sikkerhet og personvern
 
-- Siden setter ingen informasjonskapsler og lagrer ingenting i nettleseren. Valg som teknisk visning og kommune står i adressen.
+- Siden setter ingen informasjonskapsler og lagrer ingenting selv i nettleseren (ingen lokal lagring). Valg som teknisk visning og
+  kommune står i adressen. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik hver tjeneste bestemmer.
 - Det er ingen måling av bruk og ingen sporing i sidens kode.
 - Filer brukeren laster opp, og områder brukeren tegner, leses og regnes i nettleseren og sendes ingen steder.
 - Bibliotekene og skriften følger med siden og hentes fra samme sted som den. Nettleseren kontakter seks verter utenfor siden,

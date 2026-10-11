@@ -69,8 +69,16 @@ function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: s
   return <Talltabell tittel="Planlagt utbygging, daa" kolonner={['På', navnPlan, navnNy, 'Endring']} rader={ut} />;
 }
 
+/* Hvor mange av flatene i et eget område som regnes som utbygging, fra solv.egne. null til området er tolket. */
+function antallBygg(id: number) {
+  const E = verdi(katalog.solv.egne),
+    i = E ? E.ider.indexOf(id) : -1;
+  return i < 0 ? null : E!.flater[i].deler.filter(d => d.type === 'bygg').length;
+}
+
 function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
-  const her = rader && rader.omrader.find(x => x.id === g.id),
+  const bygg = g.kilde === 'fil' ? antallBygg(g.id) : null,
+    her = rader && rader.omrader.find(x => x.id === g.id),
     O = her ? her.omrade : null,
     tekster: string[] = [];
   let tabell: ReactNode = null;
@@ -126,9 +134,13 @@ function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
         />
       ) : (
         <p>
-          {g.utenFormal
+          {!g.harFormal
             ? `Opplastet fil med ${flater(g.deler.length)}. Filen har ingen arealformål, så ${g.deler.length === 1 ? 'flaten' : 'alle flatene'} regnes som utbygging.`
-            : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${flater(g.deler.length)}: ${g.bygg ? antallOrd(g.bygg) : 'ingen'} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${g.annet ? antallOrd(g.annet) : 'ingen'} som ikke utbygging. Innenfor flatene erstatter filen kommuneplanen.`}
+            : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${flater(g.deler.length)}` +
+              (bygg === null
+                ? '.'
+                : `: ${bygg ? antallOrd(bygg) : 'ingen'} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${g.deler.length - bygg ? antallOrd(g.deler.length - bygg) : 'ingen'} som ikke utbygging.`) +
+              ' Innenfor flatene erstatter filen kommuneplanen.'}
         </p>
       )}
       {tekster.map(t => (

@@ -7,13 +7,14 @@ import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
 import { kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
-import { HALV, SYNLIG, UTM, type Flis } from '../../data/solv/felles.ts';
-import { JOR, NAT, klasseAv } from '../../data/solv/klasser.ts';
+import { HALV, UTM, type Flis } from '../../data/solv/felles.ts';
+import { JOR, NAT, klasserIFlis } from '../../data/solv/klasser.ts';
+import { planIFlis } from '../../data/solv/kommuneplan.ts';
 import type { Del } from '../../data/solv/egne.ts';
 import type { Utbygging } from '../../data/gull/utbygging.ts';
-import { flislerret, sti } from '../../data/solv/raster.ts';
+import { bildePiksler, flislerret, sti } from '../../data/solv/raster.ts';
 import { katalog } from '../../data/katalog.ts';
-import { mine, utenPlan } from '../../data/motor/egne.ts';
+import { utenPlan } from '../../data/motor/egne.ts';
 import { dagensKlasser, lagret } from '../../data/motor/grunnkart.ts';
 import { utbyggingen } from '../../data/motor/plan.ts';
 import { verdi } from '../../data/motor/valgt.ts';
@@ -24,10 +25,12 @@ import { SVAKEST, TOM, fargPiksel, friskOpp, nyttSiden, plannett, type Flistegne
 
 const planUrl = (tc: TileCoord) => kommuneplanUrl(plannett.getTileCoordExtent(tc));
 
-/* Egne områder i flisen med utsnittet u, som én verdi per piksel: 1 utbygging, 2 ikke utbygging. null hvis ingen ligger der. */
+/* Egne områder i flisen med utsnittet u, som én verdi per piksel: 1 utbygging, 2 ikke utbygging. null hvis ingen ligger der. Flatene
+   og typen deres kommer fra solv.egne. */
 function egenMaske(u: Utsnitt) {
-  const deler: Del[] = [];
-  for (const x of mine())
+  const deler: Del[] = [],
+    E = verdi(katalog.solv.egne);
+  for (const x of E ? E.flater : [])
     if (ol.extent.intersects(x.ext, u))
       for (const del of x.deler) if (ol.extent.intersects(del.ext, u)) deler.push(del);
   if (!deler.length) return null;
@@ -127,12 +130,11 @@ async function lastPlanFlis(tile: ImageTile) {
       katalog.bronse.planflis(tile.getTileCoord() as Flis)
     ]);
     if (!K) throw new Error('mangler dagens klasser');
-    const c = flislerret(),
-      g = c.getContext('2d', { willReadFrequently: true })!,
-      bm = await createImageBitmap(new Blob([planBuf])),
-      t0 = performance.now();
-    g.drawImage(bm, 0, 0, 512, 512);
-    const P = g.getImageData(0, 0, 512, 512).data,
+    /* Planen og dagens klasser leses per piksel med de samme reglene som tallene (planIFlis og klasserIFlis i sølv) */
+    const P = await bildePiksler(planBuf, 512, 512),
+      t0 = performance.now(),
+      c = flislerret(),
+      g = c.getContext('2d')!,
       ut = g.createImageData(512, 512),
       o = ut.data;
     const pjor = rgb('pjor'),
@@ -150,20 +152,22 @@ async function lastPlanFlis(tile: ImageTile) {
     const EM = egenMaske(
       plannett.getTileCoordExtent(tile.getTileCoord())
     ); /* egne områder i flisen: 1 utbygging, 2 ikke utbygging */
-    if (!vent)
-      for (let py = 0, i = 0, q = 0; py < 512; py++)
-        for (let px = 0; px < 512; px++, i += 4, q++) {
-          const e = EM ? EM[q] : 0;
-          if (e === 2 || K[i + 3] < SYNLIG || (e !== 1 && P[i + 3] < HALV))
+    if (!vent) {
+      const kl = klasserIFlis(K),
+        pl = planIFlis(P);
+      for (let py = 0, q = 0; py < 512; py++)
+        for (let px = 0; px < 512; px++, q++) {
+          const e = EM ? EM[q] : 0,
+            k = kl[q] - 1;
+          if (e === 2 || k < 0 || (e !== 1 && !pl[q]))
             continue; /* tatt ut av planen, hav, eller utenfor planområdene */
-          const k = klasseAv(K[i], K[i + 1], K[i + 2]);
           if (k !== JOR && k !== NAT) continue; /* allerede bebygd i dag, eller vann */
           if (e !== 1 && R && !iEllerInntil(R, ((tx * 512 + px) >> sh) - R.cx0, ((ty * 512 + py) >> sh) - R.cy0))
             continue;
-          const f = k === JOR ? pjor : pnat;
-          fargPiksel(o, i, f);
+          fargPiksel(o, 4 * q, k === JOR ? pjor : pnat);
           tegnet = true;
         }
+    }
     if (!tegnet) {
       tile.setState(TOM);
       tidSlutt('planfliser', t0);
@@ -185,7 +189,12 @@ const nyPlanKilde = () =>
     transition: 0,
     projection: UTM
   });
-export const planLag = new ol.layer.Tile({ className: 'plan', source: nyPlanKilde(), visible: false });
+export const planLag = new ol.layer.Tile({
+  className: 'plan',
+  properties: { tittel: 'Planlagt utbygging' },
+  source: nyPlanKilde(),
+  visible: false
+});
 /* Ny kilde: alle flisene tegnes på nytt, også de som ikke kunne tegnes før dagens klasser fantes */
 export const tegnPlan = () => planLag.setSource(nyPlanKilde());
 

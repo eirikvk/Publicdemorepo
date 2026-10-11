@@ -6,28 +6,21 @@
 import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse/henting.ts';
 import { nårEndret, nårKjort } from '../cache.ts';
 import type { Planfeil } from '../bronse/planfil.ts';
-import type { Del } from '../solv/egne.ts';
+import type { Egetinn } from '../solv/egne.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
 import type { Kommune } from '../solv/felles.ts';
 
-/* Et eget område, tegnet i kartet eller lastet opp som fil, i kommunen nr. En opplastet plan har også antall flater som er
-   utbygging (bygg) og ikke (annet), plan-id, om den mangler arealformål, og projeksjonen den var i. Hva som ligger i området, står i
-   utbyggingen, se egetTall i motor/egne.ts. */
-export interface EgetOmrade {
-  id: number;
+/* Et eget område, tegnet i kartet eller lastet opp som fil, i kommunen nr: det brukeren laget (Egetinn, se solv/egne.ts), med navn,
+   løpenummer for tegnede områder og areal. En opplastet plan har også plan-id og projeksjonen den var i. Hvilke flater som er
+   utbygging, står i solv.egne, og hva som ligger i området, i utbyggingen (se egetTall i motor/egne.ts). */
+export type EgetOmrade = Egetinn & {
   nr: string;
   lopenr?: number;
   navn: string;
-  kilde: 'tegnet' | 'fil';
-  deler: Del[];
-  ext: Utsnitt;
   km2: number;
-  bygg?: number;
-  annet?: number;
   planid?: string;
-  utenFormal?: boolean;
   proj?: string;
-}
+};
 /* Hvordan siste tegning eller opplasting gikk. Siden skriver meldingen, se Egne.tsx. */
 export interface EgneStatus {
   hva: 'forLite' | 'forStor' | 'leser' | 'lest' | 'ikkeGeoJSON' | Planfeil;

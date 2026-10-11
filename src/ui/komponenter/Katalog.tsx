@@ -1,9 +1,11 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
    etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Det tekniske navnet står under «Info». «Info» viser hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser radene i cachen, og hver rad
-   kan åpnes for å se innholdet: bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Innholdet leses
-   når man ber om det, så det ikke regnes ut på nytt hver gang siden tegnes. */
+   kan åpnes for å se innholdet: bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
+   minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
+   siden tegnes. */
 import { useState } from 'react';
 import { innhold, verdiI } from '../../data/cache.ts';
+import { kartetsMinne } from '../kart/kart.ts';
 import { kb, nf, tid } from '../tekst.ts';
 import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
 import { MdAccordionItem, MdButton } from './md.ts';
@@ -179,6 +181,55 @@ function Info({ d }: { d: Tabellen }) {
 
 const sum = (d: Tabellen) => d.rader.reduce((s, x) => s + x.byte, 0);
 type Apen = { navn: string; hva: 'info' | 'data' } | null;
+type Minne = ReturnType<typeof kartetsMinne>;
+const mellomrom = (s: string) => s.replace(/ /g, '\u00a0');
+
+/* Kartets minne: flisene OpenLayers holder på per kartlag, ved siden av cachen. Dataene ligger i cachen; dette er bildene kartet har
+   tegnet av dem. */
+function KartetsMinne({ M }: { M: Minne }) {
+  const byte = M.reduce((s, x) => s + x.byte, 0);
+  return (
+    <MdAccordionItem
+      label="Kartets minne: ferdige kartfliser"
+      headerContent={mellomrom(`${nf(M.length, 0)} lag · ${kb(byte)}`)}
+      hideCloseButton
+      className="lag"
+    >
+      <p>
+        OpenLayers, som tegner kartet, holder på flisene det har tegnet ferdig i hvert kartlag, så kartet kan flyttes
+        fram og tilbake uten å tegne dem på nytt. Når det er fullt, går flisen som er brukt lengst siden, ut først.
+        Dataene selv ligger i cachen over; dette er bildene av dem. Minnet er regnet som bredde × høyde × 4 byte per
+        flis.
+      </p>
+      <div className="tabellramme">
+        <table className="talltabell">
+          <thead>
+            <tr>
+              <th scope="col">Kartlag</th>
+              <th scope="col" className="tall">
+                Fliser
+              </th>
+              <th scope="col" className="tall">
+                Minne
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {M.map(x => (
+              <tr key={x.tittel}>
+                <th scope="row">{x.tittel}</th>
+                <td className="tall">
+                  {nf(x.fliser, 0)} av {nf(x.plass, 0)}
+                </td>
+                <td className="tall">{x.fliser ? kb(x.byte) : '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </MdAccordionItem>
+  );
+}
 
 /* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under */
 function Tabellrad({
@@ -251,6 +302,7 @@ function Tabellrad({
 
 export default function Katalog() {
   const [K, settK] = useState<Innhold | null>(null),
+    [M, settM] = useState<Minne>([]),
     [apen, settApen] = useState<Apen>(null);
   const veksle = (navn: string, hva: 'info' | 'data') =>
     settApen(apen && apen.navn === navn && apen.hva === hva ? null : { navn, hva });
@@ -259,10 +311,18 @@ export default function Katalog() {
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
         Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. «Info» sier hva tabellen er og hvor
-        ETL-funksjonen ligger. «Data» viser radene, som regel én per kommune. Ingenting lagres i nettleseren etter at
-        siden er lukket.
+        ETL-funksjonen ligger. «Data» viser radene, som regel én per kommune. Alt ligger i minnet og er borte når siden
+        lukkes: siden lagrer ingenting selv i nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar
+        fra tjenestene, slik tjenestene selv bestemmer.
       </p>
-      <MdButton theme="secondary" mode="small" onClick={() => settK(innhold())}>
+      <MdButton
+        theme="secondary"
+        mode="small"
+        onClick={() => {
+          settK(innhold());
+          settM(kartetsMinne());
+        }}
+      >
         {K ? 'Oppdater' : 'Vis innholdet nå'}
       </MdButton>
       {K &&
@@ -273,10 +333,7 @@ export default function Katalog() {
             <MdAccordionItem
               key={lag}
               label={LAGNAVN[lag]}
-              headerContent={`${nf(T.length, 0)} tabeller · ${kb(T.reduce((s, d) => s + sum(d), 0))}`.replace(
-                / /g,
-                '\u00a0'
-              )}
+              headerContent={mellomrom(`${nf(T.length, 0)} tabeller · ${kb(T.reduce((s, d) => s + sum(d), 0))}`)}
               hideCloseButton
               className="lag"
             >
@@ -315,9 +372,10 @@ export default function Katalog() {
             K.reduce((s, d) => s + d.rader.length, 0),
             0
           )}{' '}
-          rader, {kb(K.reduce((s, d) => s + sum(d), 0))}.
+          rader i cachen, {kb(K.reduce((s, d) => s + sum(d), 0))}.
         </p>
       )}
+      {K && M.length > 0 && <KartetsMinne M={M} />}
     </section>
   );
 }

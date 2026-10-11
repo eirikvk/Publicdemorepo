@@ -67,6 +67,7 @@ for (const t of NATURTEMA) {
   const lag = FYLT[t.id]
     ? new ol.layer.Tile({
         className: 'plan',
+        properties: { tittel: t.navn },
         visible: false,
         source: tegnetKilde((tile: ImageTile) => tegnFlateflis(t, tile))
       })
@@ -126,7 +127,12 @@ function tegnSlorflis(tile: ImageTile) {
   tile.setImage(c);
   tidSlutt('slør, fliser', t0);
 }
-export const dekLag = new ol.layer.Tile({ className: 'plan', visible: false, source: tegnetKilde(tegnSlorflis) });
+export const dekLag = new ol.layer.Tile({
+  className: 'plan',
+  properties: { tittel: 'Slør over det som ikke er kartlagt' },
+  visible: false,
+  source: tegnetKilde(tegnSlorflis)
+});
 const kartlagteFlater = new WeakMap<Kartlagt, Feature<Polygon>[]>();
 function settDekning(E: Kartlagt | null | undefined) {
   /* de kartlagte flatene for valgt kommune inn i sløret */

@@ -14,7 +14,8 @@
 
    Verdiene lagres som de er, uten å kopieres eller gjøres om til tekst. Det som ligger i cachen, endres derfor ikke etterpå: et nytt
    svar erstatter det gamle. Unntaket er tabeller merket voksende (det sammensatte kartet og utbyggingens blokker), som fylles på
-   etter hvert. Ingenting lagres varig i nettleseren: cachen finnes så lenge siden er åpen. Filen importerer ingenting. */
+   etter hvert. Siden lagrer ingenting varig i nettleseren: cachen finnes så lenge siden er åpen. (Nettleserens vanlige hurtigbuffer
+   for svar fra tjenestene er noe annet, og styres av tjenestene.) Filen importerer ingenting. */
 
 export type Lag = 'bronse' | 'solv' | 'gull';
 export type Status = 'henter' | 'feil' | 'ok';

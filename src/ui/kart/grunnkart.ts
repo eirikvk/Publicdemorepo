@@ -44,6 +44,7 @@ function lastFlis(tile: ImageTile, src: string) {
 }
 export const tema = new ol.layer.Tile({
   className: 'tema',
+  properties: { tittel: 'Dagens arealklasser' },
   source: new ol.source.XYZ({
     tileUrlFunction: flisUrl,
     tileGrid: flisnett,

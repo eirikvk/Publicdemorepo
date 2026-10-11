@@ -61,6 +61,13 @@ export const hentKommuneIPunkt = (p: number[]) =>
     true
   ) as Promise<{ kommunenummer: string }>;
 
+/* Nøkkelen til et punkt [øst, nord]: hele meter, slik punktet slås opp */
+export const punktNokkel = (p: number[]) => `${p[0].toFixed(0)},${p[1].toFixed(0)}`;
+/* Tabellen bronse.kommuneIPunkt: hvilken kommune punktet p [øst, nord] i UTM33 ligger i */
+export async function kommuneIPunkt(p: number[]): Promise<{ kommunenummer: string }> {
+  return hentKommuneIPunkt(p);
+}
+
 /* Bakgrunnskartet: Kartverkets topografiske kart i gråtoner, som fliser i UTM33 */
 export const bakgrunnUrl = ([z, x, y]: Flis) =>
   `https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/utm33n/${String(z).padStart(2, '0')}/${y}/${x}.png`;

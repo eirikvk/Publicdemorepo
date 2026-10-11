@@ -1,10 +1,10 @@
-/* Sølv for grunnkartet fra NIBIO: det lagrede oversiktsbildet med utsnittet det dekker, og dagens klasser i én flis. Kartbildene fra
-   NIBIO leses som de er (klassen leses av fargen, se klasser.ts), og det sammensatte kartet lager datamotoren av flisene som er
-   hentet (data/motor/grunnkart.ts). */
+/* Sølv for grunnkartet fra NIBIO: det lagrede oversiktsbildet med utsnittet det dekker, det sammensatte kartet og dagens klasser i
+   én flis. Kartbildene fra NIBIO leses som de er (klassen leses av fargen, se klasser.ts). Det sammensatte kartet tegnes her, men
+   datamotoren bestemmer når en flis legges inn (data/motor/grunnkart.ts). */
 import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { flisUtsnitt, type Flis } from './felles.ts';
-import { flislerret, lesBilde, sti, tegnUtsnitt } from './raster.ts';
+import { flislerret, lesBilde, sti, tegneflate, tegnUtsnitt } from './raster.ts';
 
 /* Dagens klasser zoomet ut: det lagrede oversiktsbildet (buf, som PNG), eller det sammensatte kartet (lerret, dynamisk). ext er
    utsnittet bildet dekker, og res meter per piksel. */
@@ -26,6 +26,40 @@ export async function oversikt(nr: string): Promise<Oversikt> {
 /* Tabellen solv.oversiktLest: det lagrede oversiktsbildet lest inn som bilde, til dagens klasser zoomet ut */
 export async function oversiktLest(nr: string): Promise<ImageBitmap> {
   return lesBilde((await katalog.solv.oversikt(nr)).buf!);
+}
+
+/* Det sammensatte kartet: lerretet (c) med klassene i rene farger, meter per piksel, utsnittet det dekker, flisene som er lagt inn
+   (som «nivå/x/y», se flisnavn), og det samme som Oversikt (ov), til kartet og utregningene */
+export interface Samling {
+  c: HTMLCanvasElement;
+  g: CanvasRenderingContext2D;
+  res: number;
+  ext: [number, number, number, number];
+  har: Set<string>;
+  ov: Oversikt;
+}
+export const flisnavn = (tc: Flis) => tc.join('/');
+/* Et tomt sammensatt kart over utsnittet e: høyst 2048 piksler på den lengste siden, og ikke finere enn minRes meter per piksel */
+export function nySamling(e: Utsnitt, minRes: number): Samling {
+  const res = Math.max(minRes, Math.max(e[2] - e[0], e[3] - e[1]) / 2048),
+    g = tegneflate(Math.ceil((e[2] - e[0]) / res), Math.ceil((e[3] - e[1]) / res)),
+    c = g.canvas;
+  const ext: [number, number, number, number] = [e[0], e[3] - c.height * res, e[0] + c.width * res, e[3]];
+  return { c, g, res, ext, har: new Set<string>(), ov: { lerret: c, ext, res, dynamisk: true } };
+}
+/* Flisen tc, lest inn som bilde bm, inn i det sammensatte kartet s. Gir stedet i lerretet [x, y, b, h] der den ble lagt. Flisen legges
+   på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
+export function tegnISamling(s: Samling, tc: Flis, bm: ImageBitmap): [number, number, number, number] {
+  s.har.add(flisnavn(tc));
+  const u = flisUtsnitt(tc),
+    px = (v: number) => Math.round((v - s.ext[0]) / s.res),
+    py = (v: number) => Math.round((s.ext[3] - v) / s.res);
+  const X = px(u[0]),
+    Y = py(u[3]),
+    W = px(u[2]) - X,
+    H = py(u[1]) - Y;
+  s.g.drawImage(bm, X, Y, W, H);
+  return [X, Y, W, H];
 }
 
 /* Hvor dagens klasser i en flis tegnes fra: kartbildet fra NIBIO for flisen (flis), det lagrede oversiktsbildet (ov med buf, lest inn

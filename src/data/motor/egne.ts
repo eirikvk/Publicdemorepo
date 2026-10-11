@@ -1,12 +1,12 @@
-/* Datamotoren, egne områder: tegnede områder og opplastede planer. Hvilke flater som er utbygging, står i solv/egne.ts, hvordan de
-   legges inn i utbyggingen i gull/utbygging.ts, og radene i sammenligningen med kommuneplanen i gull/egne.ts (tabellen
-   gull.egneRader). Selve tegningen i kartet ligger i ui/kart/egne.ts. Egne områder er valg brukeren har gjort, og ligger i app.egne.
-   De finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. De er også en kilde for utbyggingen: datamotoren
-   legger dem i solv.egne (oppdaterEgne). */
+/* Datamotoren, egne områder: tegnede områder og opplastede planer. Egne områder er valg brukeren har gjort, og ligger i app.egne. De
+   finnes bare så lenge siden er åpen, og hører til kommunen de ble tegnet i. De er også en kilde: datamotoren legger dem slik brukeren
+   laget dem i bronse.egne (oppdaterEgne). Hvilke flater som er utbygging, står i solv/egne.ts (solv.egne), hvordan de legges inn i
+   utbyggingen i gull/utbygging.ts, og radene i sammenligningen med kommuneplanen i gull/egne.ts (gull.egneRader). Selve tegningen i
+   kartet ligger i ui/kart/egne.ts. */
 import { lesPlanfil } from '../bronse/planfil.ts';
 import { areal, utsnitt, type Flerflate } from '../generelt/geometri.ts';
 import { EGET_MIN_M2, arealKm2 } from '../solv/felles.ts';
-import { planflater, type Egne, type Type } from '../solv/egne.ts';
+import { samletKm2, type Egetinn, type Type } from '../solv/egne.ts';
 import { tilUTM } from '../solv/projeksjoner.ts';
 import { brukerEndret, legg, se } from '../cache.ts';
 import { katalog } from '../katalog.ts';
@@ -20,17 +20,23 @@ export const mine = () => app.egne.filter(g => !!app.valgt && g.nr === app.valgt
 /* Uten kommuneplan og uten egne områder finnes det ingen planlagt utbygging å regne på */
 export const utenPlan = () => ingenPlan() && !mine().length;
 
-/* Egne områder er en kilde fra brukeren: de legges i solv.egne for kommunen nr. Har de endret seg, sier datamotoren fra
-   (brukerEndret), så utbyggingen og alt som bygger på den, regnes ut på nytt. Flatene kopieres, så det som ligger i cachen, ikke
-   endres etterpå. */
-const merke = (E: Egne) => E.ider.join() + '|' + E.flater.map(f => f.deler.map(d => d.type).join()).join(';');
+/* Egne områder er en kilde fra brukeren: de legges slik brukeren laget dem i bronse.egne for kommunen nr. Har de endret seg, sier
+   datamotoren fra (brukerEndret), så solv.egne, utbyggingen og alt som bygger på den, regnes ut på nytt. Flatene i tegnede områder
+   kopieres, så det som ligger i cachen, ikke endres når brukeren bytter type. En opplastet plan endres ikke. */
+const merke = (B: Egetinn[]) =>
+  B.map(g => g.id + (g.kilde === 'tegnet' ? ':' + g.deler.map(d => d.type).join() : '')).join(';');
 export function oppdaterEgne(nr: string) {
-  const G = app.egne.filter(g => g.nr === nr),
-    ny: Egne = { ider: G.map(g => g.id), flater: G.map(g => ({ ext: g.ext, deler: g.deler.map(d => ({ ...d })) })) },
-    har = se(katalog.solv.egne, nr),
-    fra = har && har.status === 'ok' ? har.verdi! : { ider: [], flater: [] };
+  const ny = app.egne
+      .filter(g => g.nr === nr)
+      .map((g): Egetinn =>
+        g.kilde === 'tegnet'
+          ? { id: g.id, ext: g.ext, kilde: g.kilde, deler: g.deler.map(d => ({ ...d })) }
+          : { id: g.id, ext: g.ext, kilde: g.kilde, deler: g.deler, harFormal: g.harFormal }
+      ),
+    har = se(katalog.bronse.egne, nr),
+    fra = har && har.status === 'ok' ? har.verdi! : [];
   if (har && merke(fra) === merke(ny)) return;
-  legg(katalog.solv.egne, nr, ny);
+  legg(katalog.bronse.egne, nr, ny);
   if (merke(fra) !== merke(ny)) brukerEndret(nr);
 }
 function egneEndret() {
@@ -87,18 +93,22 @@ export async function lastOppPlan(fil: File | null | undefined) {
     };
     const P = lesPlanfil(JSON.parse(await fil.text()), app.valgt ? app.valgt.nr : null, nr => !!finn(nr), midtAv);
     if (P.feil) return melding(P.feil);
-    const { nr, funnet, ...resten } = P,
-      plan = { ...resten, ...planflater(P.deler, !P.utenFormal) },
+    const { nr, funnet } = P,
       k = finn(nr)![1];
     app.egne.push({
       id: ++egenTeller,
       nr,
       navn: fil.name.replace(/\.(geo)?json$/i, ''),
       kilde: 'fil',
-      ...plan
+      deler: P.deler,
+      harFormal: !P.utenFormal,
+      ext: P.ext,
+      km2: samletKm2(P.deler),
+      planid: P.planid,
+      proj: P.proj
     });
     melding('lest', {
-      antall: plan.deler.length,
+      antall: P.deler.length,
       byttetTil: funnet && (!app.valgt || app.valgt.nr !== nr) ? k.navn : null
     });
     if (!app.valgt || app.valgt.nr !== nr) velgKommune(nr);
@@ -110,7 +120,7 @@ export async function lastOppPlan(fil: File | null | undefined) {
 
 /* Et tegnet område byttes mellom utbygging og ikke utbygging. */
 export function settType(g: EgetOmrade, type: Type) {
-  if (g.deler[0].type === type) return;
+  if (g.kilde !== 'tegnet' || g.deler[0].type === type) return;
   g.deler[0].type = type;
   egneEndret();
 }

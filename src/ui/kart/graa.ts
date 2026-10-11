@@ -3,9 +3,9 @@
    område: areal som er bebygd i grunnkartet, men ikke grått. Det som er felles med inngrepsfri natur, står i kommunebilde.ts. */
 import { FLISNIVA } from '../../data/bronse/nibio-grunnkart.ts';
 import { graaFlisUrl } from '../../data/bronse/nibio-graa.ts';
-import { HALV, SYNLIG } from '../../data/solv/felles.ts';
+import { HALV } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaTrinn } from '../../data/solv/graa.ts';
-import { klasseAv } from '../../data/solv/klasser.ts';
+import { BEB, klasserIFlis } from '../../data/solv/klasser.ts';
 import { bildePiksler } from '../../data/solv/raster.ts';
 import { katalog } from '../../data/katalog.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
@@ -23,14 +23,16 @@ const KART_GRAA = 64,
 
 /* Fargene per trinn (plass 1–6), og grønt i bebygd område */
 const trinnfarger = () => [null, ...GRAATRINN.map(x => rgb(x[0])), rgb('graa0')];
-/* Grønt i bebygd område: bebygd i dagens klasser K (klasse 0), men ikke grått */
-const gront = (K: Uint8ClampedArray | null, i: number) =>
-  !!K && K[i + 3] >= SYNLIG && klasseAv(K[i], K[i + 1], K[i + 2]) === 0;
+/* Bebygd per piksel i dagens klasser K, med samme regel som tallene (klasserIFlis). Grønt i bebygd område er bebygd, men ikke
+   grått. */
+const klasser = (K: Uint8ClampedArray | null) => (K ? klasserIFlis(K) : null);
+const gront = (kl: Uint8Array | null, i: number) => !!kl && kl[i >> 2] === BEB + 1;
 
 /* Masken er det grå: hvitt der det er grått, jevnet ut én gang så kanten blir glatt når kartet er zoomet inn. Laget tegnes på nytt
    også når kryssingen med planen endres. */
 export const graaLag = bildelag({
   side: 'graa',
+  tittel: 'Grått areal',
   data: () => verdi(katalog.solv.graa),
   noe: () => bildetallet(valgt(katalog.gull.graa)).tilstand === 'ok',
   folgOgsaa: () => verdi(katalog.gull.graakryss),
@@ -47,8 +49,8 @@ export const graaLag = bildelag({
     if (tc[0] >= FLISNIVA) {
       /* zoomet inn: flisen hentes fra tjenesten, så små flater blir skarpe. Zoomet ut holder kommunebildet. */
       const o = await bildePiksler(await katalog.bronse.graaflis(graaFlisUrl(u)), 512, 512);
-      const K = await dagensKlasser(tc).catch(
-        () => null
+      const K = klasser(
+        await dagensKlasser(tc).catch(() => null)
       ); /* dagens klasser: bebygd som ikke er grått, tegnes som grønt i bebygd område */
       const t1 = performance.now();
       let noe = false;
@@ -67,7 +69,7 @@ export const graaLag = bildelag({
       tidSlutt('grått areal, fliser', t1);
       return true;
     }
-    const K = await dagensKlasser(tc).catch(() => null),
+    const K = klasser(await dagensKlasser(tc).catch(() => null)),
       t0 = performance.now();
     tegnMaske(); /* utjevnet maske: glatt kant rundt det grå */
     const P = g.getImageData(0, 0, 512, 512).data,

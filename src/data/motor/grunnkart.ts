@@ -3,18 +3,26 @@
    Dagens klasser kommer fra tre steder i katalogen:
    - Zoomet inn: kartbildene fra NIBIO, én flis om gangen (bronse.grunnkartflis).
    - Zoomet ut, i kommuner med lagret oversiktsbilde: bildet av hele kommunen (solv.oversikt).
-   - Zoomet ut ellers: det sammensatte kartet, som datamotoren setter sammen av flisene som er hentet (solv.sammensatt). Det er en
-     kilde fra brukeren: det er kartet brukeren har sett på. Når kartet har stått stille med nye fliser, sier datamotoren fra
+   - Zoomet ut ellers: det sammensatte kartet, som datamotoren fyller med flisene som er hentet (solv.sammensatt). Det er en
+     kilde fra brukeren: det er kartet brukeren har sett på. Tegningen står i sølv (solv/grunnkart.ts); her bestemmes bare når. Når kartet har stått stille med nye fliser, sier datamotoren fra
      (brukerEndret), og utbyggingen regnes ut på nytt (gull/utbygging.ts).
    Bildene har klassene i rene farger (DATAFARGE i solv/klasser.ts). Klassen leses av fargen med klasseAv. Kartet får egne kopier i
    visningsfargene, se ui/kart/grunnkart.ts. */
-import { FLISNIVA, grunnkartUrl } from '../bronse/nibio-grunnkart.ts';
+import { FLISNIVA, flisIAdresse, grunnkartUrl } from '../bronse/nibio-grunnkart.ts';
 import { opptatt } from '../bronse/henting.ts';
 import { alle, brukerEndret, se, vedGlemt, vedNy } from '../cache.ts';
 import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
-import { katalog, type Samling } from '../katalog.ts';
-import { OPPLOSNINGER, ORIGO, flisUtsnitt, type Flis } from '../solv/felles.ts';
-import { dagensKlasserIFlis, type Oversikt } from '../solv/grunnkart.ts';
+import { katalog } from '../katalog.ts';
+import { OPPLOSNINGER, flisUtsnitt, type Flis } from '../solv/felles.ts';
+import {
+  dagensKlasserIFlis,
+  flisnavn,
+  nySamling,
+  tegnISamling,
+  type Oversikt,
+  type Samling
+} from '../solv/grunnkart.ts';
+import { lesBilde } from '../solv/raster.ts';
 import { valgtNr } from './valgt.ts';
 import { app, endret, tidSlutt, varsle } from './tilstand.ts';
 
@@ -53,84 +61,49 @@ export function oversikt(): Oversikt | null {
    nytt for dette. Velges kommunen igjen, brukes samlingen fra sist, og alle fliser cachen har som berører kommunen, legges inn. */
 export async function startSamling(nr: string) {
   const e = (await katalog.solv.grense(nr)).ext,
-    s = katalog.solv.sammensatt.straks(nr, () => nySamling(e));
+    s = katalog.solv.sammensatt.straks(nr, () =>
+      nySamling(e, OPPLOSNINGER[FLISNIVA] / 2)
+    ); /* ikke finere enn flisene */
   if (s !== samlingen()) return;
   if (s.har.size) endret();
   fyllSamling(s);
-}
-/* Et tomt sammensatt kart over utsnittet e */
-function nySamling(e: Utsnitt): Samling {
-  const res = Math.max(OPPLOSNINGER[FLISNIVA] / 2, Math.max(e[2] - e[0], e[3] - e[1]) / 2048),
-    c = document.createElement('canvas');
-  c.width = Math.ceil((e[2] - e[0]) / res);
-  c.height = Math.ceil((e[3] - e[1]) / res);
-  const ext: [number, number, number, number] = [e[0], e[3] - c.height * res, e[0] + c.width * res, e[3]];
-  return {
-    c,
-    g: c.getContext('2d', { willReadFrequently: true })!,
-    res,
-    ext,
-    har: new Set<string>(),
-    ov: { lerret: c, ext, res, dynamisk: true }
-  };
 }
 /* Et sammensatt kart som går ut av cachen, frigjøres, og kartet får beskjed så det kan kaste sin kopi */
 vedGlemt(katalog.solv.sammensatt, s => {
   s.c.width = 0;
   varsle('samlingFjernet', s.c);
 });
-/* Flisen [z, x, y] en adresse til NIBIO gjelder, lest av utsnittet i adressen, og utsnittet */
-function flisAv(url: string): { tc: Flis; b: number[] } | null {
-  let b: number[];
-  try {
-    b = new URL(url).searchParams.get('bbox')!.split(',').map(Number);
-  } catch (e) {
-    return null;
-  }
-  if (!b || b.length !== 4 || !(b[2] > b[0])) return null;
-  const z = FLISNIVA + Math.round(Math.log2((256 * OPPLOSNINGER[FLISNIVA]) / (b[2] - b[0]))),
-    side = 256 * OPPLOSNINGER[z];
-  return { tc: [z, Math.round((b[0] - ORIGO[0]) / side), Math.round((ORIGO[1] - b[3]) / side)], b };
-}
 /* Alle fliser cachen har som berører samlingen, legges inn, én om gangen og uten nye kall */
 async function fyllSamling(s: Samling) {
   for (const [url, buf] of alle(katalog.bronse.grunnkartflis)) {
     if (s !== samlingen()) return;
-    const f = flisAv(url);
+    const f = flisIAdresse(url);
     if (f && overlapper(f.b, s.ext)) await leggISamling(f.tc, buf);
   }
 }
 /* Hver ny flis fra NIBIO legges inn i det sammensatte kartet for valgt kommune */
 vedNy(katalog.bronse.grunnkartflis, (buf, url) => {
-  const f = flisAv(url);
+  const f = flisIAdresse(url);
   if (f) leggISamling(f.tc, buf);
 });
-/* En flis inn i det sammensatte kartet. Kartet får beskjed (hendelsen nyFlis) om hvor flisen ble lagt, så det kan fargelegge sin
-   kopi. */
+/* En flis inn i det sammensatte kartet for valgt kommune, hvis den ikke er der fra før og kommunen fortsatt er valgt når bildet er lest
+   inn. Selve tegningen står i sølv (tegnISamling). Kartet får beskjed (hendelsen nyFlis) om hvor flisen ble lagt, så det kan
+   fargelegge sin kopi. */
 function leggISamling(tc: Flis, buf: ArrayBuffer): Promise<void> {
   const s = samlingen(),
-    n = tc.join('/');
+    n = flisnavn(tc);
   if (!s || s.har.has(n)) return Promise.resolve();
-  return createImageBitmap(new Blob([buf]))
+  return lesBilde(buf)
     .then(bm => {
       if (s !== samlingen() || s.har.has(n)) {
         if (bm.close) bm.close();
         return;
       }
-      const t0 = performance.now();
-      s.har.add(n);
-      /* Flisen legges på hele piksler. Ellers blir kantpikselen halvt gjennomsiktig fra begge naboflisene, og skjøten vises som en lys stripe. */
-      const u = flisUtsnitt(tc),
-        px = (v: number) => Math.round((v - s.ext[0]) / s.res),
-        py = (v: number) => Math.round((s.ext[3] - v) / s.res);
-      const X = px(u[0]),
-        Y = py(u[3]),
-        W = px(u[2]) - X,
-        H = py(u[1]) - Y;
-      s.g.drawImage(bm, X, Y, W, H);
+      const t0 = performance.now(),
+        sted = tegnISamling(s, tc, bm);
       if (bm.close) bm.close();
       if (s.har.size === 1) endret(); /* det sammensatte kartet finnes nå */
-      varsle('nyFlis', s.c, [X, Y, W, H]);
+      varsle('nyFlis', s.c, sted);
       planleggRegning();
       tidSlutt('sammensatt kart', t0);
     })

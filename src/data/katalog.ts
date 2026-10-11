@@ -8,7 +8,7 @@
    Svarene huskes i cachen (cache.ts). Her står bare et kort, lesbart navn (tittel), hva tabellen er (om), og hvor mange nøkler som huskes (husk). Svar fra
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
-   Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (solv.sammensatt og solv.egne), og hjelpetabeller som
+   Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne og solv.sammensatt), og hjelpetabeller som
    en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturmaske).
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
@@ -29,9 +29,10 @@ import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvSsb from './solv/ssb.ts';
 import * as solvTemaer from './solv/temaer.ts';
 import type { Fylke, Flis } from './solv/felles.ts';
-import type { Egne } from './solv/egne.ts';
+import * as solvEgne from './solv/egne.ts';
+import type { Egetinn } from './solv/egne.ts';
 import type { Maske } from './solv/temaer.ts';
-import type { Oversikt } from './solv/grunnkart.ts';
+import type { Samling } from './solv/grunnkart.ts';
 import type { Oversiktsregister } from './bronse/nibio-grunnkart.ts';
 import * as gullEgne from './gull/egne.ts';
 import * as gullGraa from './gull/graa.ts';
@@ -42,16 +43,6 @@ import * as gullTemaer from './gull/temaer.ts';
 import * as gullUtbygging from './gull/utbygging.ts';
 import type { Blokk, Utbygging } from './gull/utbygging.ts';
 
-/* Det sammensatte kartet: lerretet (c) med klassene i rene farger, meter per piksel, utsnittet det dekker, flisene som er lagt inn
-   (som «nivå/x/y»), og det samme som Oversikt (ov), til kartet og utregningene */
-export interface Samling {
-  c: HTMLCanvasElement;
-  g: CanvasRenderingContext2D;
-  res: number;
-  ext: [number, number, number, number];
-  har: Set<string>;
-  ov: Oversikt;
-}
 const URL_NOKKEL = 'Nøkkel: adressen.';
 
 export const katalog = {
@@ -71,6 +62,15 @@ export const katalog = {
       om: 'kommunegrensen fra Kartverket som GeoJSON',
       husk: 6,
       etl: kartverket.kommunegrense
+    }),
+    kommuneIPunkt: tabell<number[], { kommunenummer: string }>({
+      lag: 'bronse',
+      navn: 'kommuneIPunkt',
+      tittel: 'Kommune i et punkt',
+      om: 'hvilken kommune et punkt i kartet ligger i, fra Kartverket, når man trykker utenfor valgt kommune. Nøkkel: punktet i hele meter.',
+      husk: 20,
+      nokkel: kartverket.punktNokkel,
+      etl: kartverket.kommuneIPunkt
     }),
     arealtall: tabell({
       lag: 'bronse',
@@ -192,6 +192,14 @@ export const katalog = {
       om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON',
       husk: 6,
       etl: mdirNatur.kartlagt
+    }),
+    egne: tabell<string, Egetinn[]>({
+      lag: 'bronse',
+      navn: 'egne',
+      fil: 'motor/egne.ts',
+      tittel: 'Egne områder',
+      om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, slik brukeren laget dem: tegnede områder med typen brukeren valgte, og opplastede planer med arealformål og status per flate, i UTM33. En kilde fra brukeren, som datamotoren fyller.',
+      husk: 30
     })
   },
   solv: {
@@ -244,13 +252,14 @@ export const katalog = {
       husk: 4,
       voksende: true
     }),
-    egne: tabell<string, Egne>({
+    egne: tabell({
       lag: 'solv',
       navn: 'egne',
-      fil: 'motor/egne.ts',
-      tittel: 'Egne områder',
-      om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, med flatene i UTM33 og om de er utbygging. En kilde fra brukeren, som datamotoren fyller.',
-      husk: 30
+      tittel: 'Egne områder, tolket',
+      om: 'de egne områdene i kommunen med om hver flate er utbygging. Tegnede områder har typen brukeren valgte, og flatene i en opplastet plan får typen etter arealformål og status.',
+      husk: 30,
+      brukerstyrt: true,
+      etl: solvEgne.egne
     }),
     plandekning: tabell({
       lag: 'solv',
@@ -580,6 +589,7 @@ const ETL_FILER: [string, object][] = [
   ['solv/inon.ts', solvInon],
   ['solv/graa.ts', solvGraa],
   ['solv/temaer.ts', solvTemaer],
+  ['solv/egne.ts', solvEgne],
   ['gull/regnskap.ts', gullRegnskap],
   ['gull/planlagt.ts', gullPlan],
   ['gull/utbygging.ts', gullUtbygging],

@@ -154,8 +154,9 @@ planrutenettet, og regnes om med 0,448 dekar per rute i gull. Inngrepsfri natur 
 De andre tallene rundes først på siden: hele dekar fra 100 og oppover, én desimal under 100, og «under 0,1» for det minste. Tall som
 er regnet ut i nettleseren, står med «ca.» i setninger.
 
-**Ingenting lagres.** Svar fra kildene og det som er regnet ut av dem, huskes i cachen så lenge siden er åpen
-(`src/data/cache.ts`), og hentes på nytt neste gang. Tallene kan derfor endre seg fra dag til dag når kildene oppdateres.
+**Siden lagrer ingenting.** Svar fra kildene og det som er regnet ut av dem, huskes i cachen så lenge siden er åpen
+(`src/data/cache.ts`), og spørres etter på nytt neste gang. Nettleserens vanlige hurtigbuffer kan da svare i stedet for tjenesten,
+slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når kildene oppdateres.
 
 ## Arealklassene
 
@@ -339,7 +340,7 @@ Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres p
 
 **Kode.** Bronse: `src/data/bronse/dibk-kommuneplan.ts`. Sølv: `src/data/solv/kommuneplan.ts` (planen) og `src/data/solv/grunnkart.ts`
 (dagens klasser). Gull: `src/data/gull/utbygging.ts` (planrutenettet) og `src/data/gull/planlagt.ts`. Tabellene i katalogen:
-`solv.planinfo`, `bronse.planflis`, `solv.oversikt`, `solv.sammensatt`, `solv.egne`, `gull.utbygging`, `gull.utbyggingsblokker`,
+`solv.planinfo`, `bronse.planflis`, `solv.oversikt`, `solv.sammensatt`, `bronse.egne`, `solv.egne`, `gull.utbygging`, `gull.utbyggingsblokker`,
 `gull.planlagt` og `gull.plansum`. Kartlaget: `src/ui/kart/plan.ts`.
 
 ## Egne områder og opplastet plan
@@ -378,7 +379,8 @@ nettleseren og sendes ingen steder.
   måte enn bildene fra DiBK.
 
 **Kode.** Bronse: `src/data/bronse/planfil.ts`. Sølv: `src/data/solv/egne.ts`. Gull: `src/data/gull/egne.ts`. Opplasting:
-`src/data/motor/egne.ts`. Radene: tabellen `gull.egneRader`. Tegning i kartet: `src/ui/kart/egne.ts`.
+`src/data/motor/egne.ts`. Tabellene: `bronse.egne` (det brukeren har tegnet eller lastet opp), `solv.egne` (hvilke flater som er
+utbygging) og `gull.egneRader` (radene). Tegning i kartet: `src/ui/kart/egne.ts`.
 
 ## Naturtemaene
 
@@ -527,7 +529,8 @@ tolkingen i `tolketBilde` (`src/data/solv/kommune.ts`), som er felles med inngre
 
 Trykker man i kartet, leser siden fargen i punktet og oppgir den synlige klassen fargen ligger nærmest. Ligger det planlagt
 utbygging der, sier siden om det er natur eller jordbruk som er satt av. Er et naturtema slått på, slås punktet også opp i flatene.
-Utenfor valgt kommune slås kommunen opp hos Kartverket. Dette er ikke en analyse og ligger i `trykkIKartet` i `src/ui/kart/trykk.ts`.
+Utenfor valgt kommune slås kommunen opp hos Kartverket (tabellen `bronse.kommuneIPunkt`). Dette er ikke en analyse og ligger i
+`trykkIKartet` i `src/ui/kart/trykk.ts`.
 
 ## Kontroller
 
@@ -588,6 +591,15 @@ med én rad per tabell og kommune. Tabellene i gull huskes også, og regnes ut p
 er nytt for kommunen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven før, hver kjørt med sitt eget testverktøy samme
 dag: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene,
 og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Kildene fra brukeren og kartlagene, 11. oktober 2026.** Egne områder ligger nå slik brukeren laget dem i `bronse.egne`, og
+hvilke flater som er utbygging, avgjøres i sølv (`solv.egne`) i stedet for når filen lastes opp. Tegningen av det sammensatte kartet
+er flyttet fra datamotoren til sølv, så datamotoren bare bestemmer når en flis legges inn. Kartlagene for planen, inngrepsfri natur
+og grått areal leser dagens klasser og planen per piksel med de samme funksjonene som tallene (`klasserIFlis` og `planIFlis`).
+Oppslaget av kommune i et punkt går gjennom katalogen (`bronse.kommuneIPunkt`). Metoden ble ikke endret. Utgaven ble sammenlignet
+med utgaven før, hver kjørt med sitt eget testverktøy samme dag: tallene fra motoren, teksten på siden og kartbildene var like, også
+med egne områder tegnet, lastet opp og slettet, og i Surnadal. Trondheim, så Malvik og så Trondheim igjen ga de samme tallene, og
+ingen nye kall mot kildene da Trondheim ble valgt igjen.
 
 **Utbyggingen i gull, 11. oktober 2026.** Regelen er nå at sølv bygger på én kilde, og at gull setter kilder sammen. Planrutenettet
 setter sammen kommuneplanen, dagens klasser og egne områder, og er flyttet fra sølv og datamotoren til gull, som tabellen

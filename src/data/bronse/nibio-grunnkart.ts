@@ -3,7 +3,7 @@
    (DATAFARGE i solv/klasser.ts), så klassen kan leses av fargen. */
 import { ALLE, DATAFARGE } from '../solv/klasser.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
-import type { Kommune } from '../solv/felles.ts';
+import { OPPLOSNINGER, ORIGO, type Flis, type Kommune } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { wmsBilde } from './wms.ts';
@@ -41,6 +41,19 @@ export const grunnkartUrl = (u: Utsnitt, w = 512, h = 512) =>
   });
 /* Kartbildene hentes gjennom en egen kø */
 export const hentGrunnkartFlis = lagHenter('NIBIO', 'Kart');
+/* Flisen [z, x, y] en adresse fra grunnkartUrl gjelder, lest av utsnittet i adressen, og utsnittet b. null for andre adresser. */
+export function flisIAdresse(url: string): { tc: Flis; b: number[] } | null {
+  let b: number[];
+  try {
+    b = new URL(url).searchParams.get('bbox')!.split(',').map(Number);
+  } catch (e) {
+    return null;
+  }
+  if (!b || b.length !== 4 || !(b[2] > b[0])) return null;
+  const z = FLISNIVA + Math.round(Math.log2((256 * OPPLOSNINGER[FLISNIVA]) / (b[2] - b[0]))),
+    side = 256 * OPPLOSNINGER[z];
+  return { tc: [z, Math.round((b[0] - ORIGO[0]) / side), Math.round((ORIGO[1] - b[3]) / side)], b };
+}
 
 /* Registeret over lagrede oversiktsbilder: hvilke kommuner som har et, og utsnittet bildet dekker */
 /* Registeret: årsversjonen av grunnkartet, når bildene er laget, og utsnittet hvert bilde dekker, per kommunenummer */

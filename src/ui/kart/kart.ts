@@ -39,6 +39,7 @@ import { beholdes, glemBehold, lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet
 
 const bakgrunn = new ol.layer.Tile({
   className: 'bakgrunn',
+  properties: { tittel: 'Bakgrunnskartet' },
   source: new ol.source.XYZ({
     projection: UTM,
     crossOrigin: 'anonymous',
@@ -76,6 +77,29 @@ const dekket = ([z, x, y]: TileCoord) => {
   for (let d = 0; z - d >= FLISNIVA; d++) if (klare.has(`${z - d}/${x >> d}/${y >> d}`)) return true;
   return false;
 };
+/* Kartets minne, til katalogen: hvert fliselag i OpenLayers holder på flisene det har tegnet ferdig, så kartet kan flyttes fram og
+   tilbake uten å tegne dem på nytt. Gir per lag hvor mange fliser som holdes, hvor mange det er plass til, og omtrent hvor mye
+   minne bildene tar (bredde × høyde × 4 byte). Lag som ikke er fliser (grensen, omrissene og egne områder), er ikke med. */
+export function kartetsMinne() {
+  if (!kart) return [];
+  return kart.getAllLayers().flatMap(l => {
+    if (!(l instanceof ol.layer.Tile)) return [];
+    const C = l.getRenderer()?.getTileCache();
+    if (!C) return [];
+    let fliser = 0,
+      byte = 0;
+    C.forEach((t: { getState(): number; getImage?: () => unknown }) => {
+      const b = t.getState() === 2 && t.getImage ? (t.getImage() as { width: number; height: number } | null) : null;
+      if (!b || !b.width) return;
+      const w = b instanceof HTMLImageElement ? b.naturalWidth : b.width,
+        h = b instanceof HTMLImageElement ? b.naturalHeight : b.height;
+      fliser++;
+      byte += w * h * 4;
+    });
+    return [{ tittel: String(l.get('tittel') ?? l.getClassName()), fliser, plass: C.highWaterMark, byte }];
+  });
+}
+
 /* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
    alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
 export function kartStatus() {
