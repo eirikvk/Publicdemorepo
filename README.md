@@ -329,8 +329,8 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 - **Se innholdet.** Under Tekniske valg på siden Om og metode viser «Katalogen» alle tabellene, per lag og gruppert etter
   ETL-filen (i bronse er det kilden, i sølv og gull innholdet), og hvor mye cachen har lagret i hver. «Info» på hver tabell sier
   hva den er og hvor ETL-funksjonen ligger. «Data» viser radene som ligger i cachen. En tabell som ikke lagrer, kan spørres i
-  stedet («Spør»), men bare når svaret kan lages av det som alt er hentet, så det ikke gir nye kall til kildene. Nøkkelen velges
-  blant det som er hentet, nærmest midten av kartet (`eksempel` i katalogen). Innholdet vises i to deler: om dataene (status, tiden, og feltene som beskriver dataene, som kommune,
+  stedet («Spør»), med valgt kommune eller flisen midt i kartet som nøkkel (`eksempel` i katalogen). Det kan hente fra kildene,
+  men spør ikke etter noe som ikke finnes, som egne områder som ikke er tegnet. Innholdet vises i to deler: om dataene (status, tiden, og feltene som beskriver dataene, som kommune,
   utsnitt og størrelse) og dataene selv: bildene slik de kom fra kildene, rutenettene i sølv og gull som bilder, lister som tabeller
   og flater som omriss. Til slutt viser «Kartets minne» hvor
   mange ferdige fliser OpenLayers holder på i hvert kartlag (opptil 512 per lag), og omtrent hvor mye minne de tar.
