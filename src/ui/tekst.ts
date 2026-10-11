@@ -52,3 +52,6 @@ export const henteTekst = (h: { ferdig: number; av: number }) =>
   h.av
     ? `Henter kartet fra NIBIO for hele kommunen: ${nf(h.ferdig, 0)} av ${nf(h.av, 0)} fliser`
     : 'Finner kartflisene som dekker kommunen …';
+/* Det samme kort, til merkelappen i kartet */
+export const henteKort = (h: { ferdig: number; av: number }) =>
+  h.av ? `Henter kart: ${nf(h.ferdig, 0)} av ${nf(h.av, 0)}` : 'Henter kart …';

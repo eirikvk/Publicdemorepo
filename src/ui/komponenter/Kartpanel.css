@@ -224,25 +224,6 @@
   max-width: calc(100% - 150px); /* ved siden av målestokken når det er plass */
   text-align: right;
 }
-/* På en smal skjerm får kildene hele bredden, og målestokken står over dem. Da står kildene på én linje i stedet for å brytes. */
-@media (max-width: 600px) {
-  .kartflate .ol-attribution,
-  .kartflate .ol-attribution:not(.ol-collapsed) {
-    max-width: calc(100% - 20px);
-  }
-  .kartflate .ol-scale-line {
-    bottom: 38px;
-  }
-  .merkelapp.nede {
-    bottom: 68px; /* over målestokken */
-  }
-}
-/* De minste telefonene: litt mindre skrift, så også fem kilder står på én linje */
-@media (max-width: 360px) {
-  .kartflate .ol-attribution ul {
-    font-size: 10px;
-  }
-}
 /* Skriften settes på lista: OpenLayers gir lista sin egen størrelse (12 px) */
 .kartflate .ol-attribution ul {
   color: var(--dempet);
@@ -261,6 +242,23 @@
 }
 .kartflate .ol-attribution.ol-collapsed ul {
   display: inline;
+}
+/* På en smal skjerm står kildene i to linjer når det er fire eller flere: grunnkartet (Kartverket og NIBIO) på første linje og
+   temaene på andre. Linjeskiftet er tvunget, så boksen blir så bred som den lengste linjen, og ingen kilde deles. */
+@media (max-width: 600px) {
+  .kartflate .ol-attribution li {
+    white-space: nowrap;
+  }
+  .kartflate .ol-attribution li:nth-child(2):nth-last-child(n + 3)::after {
+    content: '\A';
+    white-space: pre;
+  }
+}
+/* De minste telefonene: litt mindre skrift, så linjene får plass ved siden av målestokken */
+@media (max-width: 360px) {
+  .kartflate .ol-attribution ul {
+    font-size: 10px;
+  }
 }
 .kartfot {
   display: flex;

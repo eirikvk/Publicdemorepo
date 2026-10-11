@@ -8,7 +8,7 @@ import { lagKart, rolig } from '../kart/kart.ts';
 import { byttTilValgt, plasserBytt, settByttKnapp } from '../kart/trykk.ts';
 import { fjernMerket } from '../kart/naturtema.ts';
 import { velgSide } from '../sider.ts';
-import { henteTekst } from '../tekst.ts';
+import { henteKort } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.ts';
 import Tegnforklaring from './Tegnforklaring.tsx';
@@ -81,10 +81,10 @@ export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
       >
         <Kart />
         <Tegnforklaring />
-        {app.laster && (
-          <div className="merkelapp oppe">
+        {(app.laster || henting) && (
+          <div className="merkelapp oppe" role="status">
             <MdLoadingSpinner size={16} />
-            Henter kart …
+            {henting ? henteKort(henting) : 'Henter kart …'}
           </div>
         )}
         <Bytt />
@@ -104,11 +104,6 @@ export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
             </MdIconButton>
           </div>
         )}
-        {henting ? (
-          <div className="merkelapp nede" role="status">
-            {henteTekst(henting)}
-          </div>
-        ) : null}
         {ui.ute && !henting && (
           <div className="merkelapp nede">
             Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.
