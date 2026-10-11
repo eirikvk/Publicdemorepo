@@ -254,6 +254,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Topp.tsx` | Valg av fylke og kommune, og overskriften |
 | `Sidevelger.tsx` | Knappene for sidene, over kart og innhold, i grupper |
 | `Kartpanel.tsx` | Kartet med merkelappene oppå, og linjen under kartet |
+| `Tegnforklaring.tsx` | Tegnforklaringen i kartet: fargene som vises nå, ut fra hvilke kartlag som er synlige. Kan lukkes. |
 | `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
 | `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |

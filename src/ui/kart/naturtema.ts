@@ -151,6 +151,9 @@ export function settSlor(paa: boolean) {
 }
 
 /* Rekkefølge i kartet: fylte flater ligger under planlaget, så planlagt utbygging oppå verdifull natur synes. Omriss ligger øverst. */
+/* Temaene som vises i kartet nå, og om sløret over det som ikke er kartlagt vises, til tegnforklaringen */
+export const synligeTemaer = () => NATURTEMA.filter(t => lagFor(t).lag.getVisible());
+export const slorSynlig = () => dekLag.getVisible();
 export const flateLag = NATURTEMA.filter(t => FYLT[t.id]).map(t => lagFor(t).lag),
   omrissLag = NATURTEMA.filter(t => !FYLT[t.id]).map(t => lagFor(t).lag);
 function tegnFlateflis(t: Naturtema, tile: ImageTile) {

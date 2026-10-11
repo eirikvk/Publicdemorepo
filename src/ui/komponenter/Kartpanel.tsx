@@ -9,6 +9,7 @@ import { fjernMerket } from '../kart/naturtema.ts';
 import { velgSide } from '../sider.ts';
 import { ui } from '../tilstand.ts';
 import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.ts';
+import Tegnforklaring from './Tegnforklaring.tsx';
 import './Kartpanel.css';
 
 function Kart() {
@@ -76,6 +77,7 @@ export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
         onDrop={slipp}
       >
         <Kart />
+        <Tegnforklaring />
         {app.laster && (
           <div className="merkelapp oppe">
             <MdLoadingSpinner size={16} />

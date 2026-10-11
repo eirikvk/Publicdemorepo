@@ -34,7 +34,7 @@ import {
 import { inonLag } from './inon.ts';
 import { klippSist, settKlipp } from './klipping.ts';
 import { maalKartet, startMaaling, stoppMaaling } from './maaling.ts';
-import { dekLag, flateLag, markLag, omrissLag } from './naturtema.ts';
+import { dekLag, flateLag, markLag, omrissLag, slorSynlig, synligeTemaer } from './naturtema.ts';
 import { planLag } from './plan.ts';
 import { beholdes, glemBehold, lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
 
@@ -92,6 +92,20 @@ const dekket = ([z, x, y]: TileCoord) => {
   for (let d = 0; z - d >= FLISNIVA; d++) if (klare.has(`${z - d}/${x >> d}/${y >> d}`)) return true;
   return false;
 };
+/* Hva kartet viser nå, til tegnforklaringen: dagens klasser (ikke zoomet ut forbi det som finnes), planlagt utbygging, temaet for
+   siden, sløret over det som ikke er kartlagt, og egne områder */
+export function synligeLag() {
+  return {
+    klasser: !!kart && tema.getVisible() && !ui.ute,
+    plan: planLag.getVisible(),
+    inon: inonLag.getVisible(),
+    graa: graaLag.getVisible(),
+    temaer: synligeTemaer(),
+    slor: slorSynlig(),
+    egne: egneLag.getVisible() && egneLag.getSource()!.getFeatures().length > 0
+  };
+}
+
 /* Kartets minne, til katalogen: hvert fliselag i OpenLayers holder på flisene det har tegnet ferdig, så kartet kan flyttes fram og
    tilbake uten å tegne dem på nytt. Gir per lag hvor mange fliser som holdes, hvor mange det er plass til, og omtrent hvor mye
    minne bildene tar (bredde × høyde × 4 byte). Lag som ikke er fliser (grensen, omrissene og egne områder), er ikke med. */
