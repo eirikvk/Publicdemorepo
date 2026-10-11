@@ -178,32 +178,32 @@ export const katalog = {
       lag: 'bronse',
       navn: 'verneomrader',
       tittel: 'Verneområder',
-      om: 'verneområdene i kommunen fra Miljødirektoratet, som GeoJSON',
-      husk: 6,
+      om: 'verneområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      husk: 0,
       etl: mdirNatur.verneomrader
     }),
     villrein: tabell({
       lag: 'bronse',
       navn: 'villrein',
       tittel: 'Villreinområder',
-      om: 'villreinområdene i kommunen fra Miljødirektoratet, som GeoJSON',
-      husk: 6,
+      om: 'villreinområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      husk: 0,
       etl: mdirNatur.villrein
     }),
     verdsattNatur: tabell({
       lag: 'bronse',
       navn: 'verdsattNatur',
       tittel: 'Verdsatt natur',
-      om: 'naturtyper med verdi i kommunen fra Miljødirektoratet, som GeoJSON',
-      husk: 6,
+      om: 'naturtyper med verdi i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      husk: 0,
       etl: mdirNatur.verdsattNatur
     }),
     kartlagt: tabell({
       lag: 'bronse',
       navn: 'kartlagt',
       tittel: 'Kartlagt for naturtyper',
-      om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON',
-      husk: 6,
+      om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      husk: 0,
       etl: mdirNatur.kartlagt
     }),
     egne: tabell<string, Egetinn[]>({
@@ -303,8 +303,8 @@ export const katalog = {
       lag: 'solv',
       navn: 'kommuneplanruter',
       tittel: 'Kommuneplanen per rute',
-      om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y].',
-      husk: 40,
+      om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y]. Lagres ikke: blokkene i utbyggingen lagres, og kartbildet i bronse holder for å lage den på nytt.',
+      husk: 0,
       nokkel: flisnavn,
       etl: solvPlan.kommuneplanruter
     }),

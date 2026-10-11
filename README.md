@@ -307,7 +307,8 @@ Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.
 **Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
 ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes
 av svarene, og det står per tabell (`husk`). En tabell med `husk: 0` går gjennom katalogen uten at noe lagres. Bakgrunnskartet er
-slik: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.
+slik: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer. Et kall som er underveis, deles også når
+svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som lagres, følger prinsipp 6 under.
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 
@@ -360,6 +361,9 @@ kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren leg
    uttalt unntak fra prinsipp 3, for det som er hentet, er selve kilden. Nye fliser legger datamotoren inn med en gang. Ellers
    bestemmer datamotoren bare når: når egne områder endres, eller kartet har stått stille med nye fliser, er gull for kommunen
    utdatert og regnes ut på nytt.
+6. **Gull lagres, sølv og bronse bare når noen vil spørre etter dem igjen.** Det er når gull regnes ut på nytt fordi brukeren
+   har gjort noe, når kartet spør, og når mange bruker det samme, som kommunegrensen. Ellers hentes sølv og bronse rett før de
+   trengs (`husk: 0`). Svarene fra Miljødirektoratet lagres for eksempel ikke, for sølv lagrer det som trengs av dem.
 
 **Utbyggingen er midtpunktet.** Siden handler om ett spørsmål: hvor er det planlagt utbygging, og hva treffer den?
 `gull.utbygging` er svaret i rutenettform: kommuneplanen og egne områder lagt oppå dagens klasser, med én rad per rute med planlagt

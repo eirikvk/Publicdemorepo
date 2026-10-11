@@ -66,6 +66,10 @@ const innholdet = new Map<Tabelldef<any, any>, Map<string, Rad<any>>>();
 const lyttere = new Map<Tabelldef<any, any>, ((v: any, nokkel: string) => void)[]>(),
   glemtLyttere = new Map<Tabelldef<any, any>, ((v: any, nokkel: string) => void)[]>();
 const brukerUtgave = new Map<string, number>(); /* hvor mange ganger brukeren har endret noe, per kommune */
+const gjennom = new Map<
+  Tabelldef<any, any>,
+  Map<string, Promise<any>>
+>(); /* kall underveis i tabeller som ikke lagres */
 let lopenr = 0; /* siste utgave som er gitt */
 const kroker = {
   endret: () => {},
@@ -152,7 +156,7 @@ function settInn<N, V>(t: Tabelldef<N, V>, k: string, r: Rad<V>, v: V, bruker: n
 /* Les-gjennom, asynkront: gir verdien for n. Mangler den, er den utdatert, eller feilet den sist, lages den med ETL-funksjonen. Det
    er dette som skjer når man kaller en tabell. */
 export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
-  if (!t.husk && t.etl) return t.etl(n); /* lagres ikke: katalogen er bare veien til ETL-funksjonen */
+  if (!t.husk && t.etl) return gaaGjennom(t, n);
   const m = rom(t),
     k = nokkelAv(t, n),
     har = m.get(k);
@@ -198,6 +202,25 @@ export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
     rydd(t, m);
   }
   kroker.endret();
+  return p;
+}
+
+/* Tabeller som ikke lagres (husk 0): katalogen er bare veien til ETL-funksjonen. Et kall som alt er underveis, deles likevel, så to
+   som spør samtidig, gir ett kall til kilden. */
+function gaaGjennom<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
+  let u = gjennom.get(t);
+  if (!u) gjennom.set(t, (u = new Map()));
+  const k = nokkelAv(t, n),
+    har = u.get(k);
+  if (har) return har;
+  const t0 = performance.now(),
+    p = t.etl!(n)
+      .then(v => {
+        if (t.lag !== 'bronse') kroker.kjort(fulltNavn(t), performance.now() - t0);
+        return v;
+      })
+      .finally(() => u!.delete(k));
+  u.set(k, p);
   return p;
 }
 
