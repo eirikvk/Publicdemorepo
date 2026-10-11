@@ -5,8 +5,11 @@ import { katalog } from '../katalog.ts';
 import {
   BILDE_PLANDEKNING,
   HALV,
+  PLANNIVA,
+  PLANOVERSIKT,
   PLAN_FINNES,
   SYNLIG,
+  flisrammen,
   rutenett,
   type Flis,
   type Piksler,
@@ -26,6 +29,42 @@ export function planIFlis(P: Piksler): Uint8Array {
 export async function kommuneplanruter(tc: Flis): Promise<Planruter> {
   const P = await bildePiksler(await katalog.bronse.planflis(tc), 512, 512);
   return { z: tc[0], cx0: tc[1] * 512, cy0: tc[2] * 512, w: 512, h: 512, plan: planIFlis(P) };
+}
+
+/* Hvor kommuneplanen ligger i kommunen, grovt: for hver piksel i oversiktsbildet (bronse.planoversikt) om noe av planen ligger der.
+   x0 og y0 er den første flisen på nivå 9 bildet dekker, w og h bredden og høyden, og s piksler per flis på nivå 9. */
+export interface Planoversikt {
+  x0: number;
+  y0: number;
+  w: number;
+  h: number;
+  s: number;
+  noe: Uint8Array;
+}
+/* Tabellen solv.planoversikt: hvor kommuneplanen ligger i kommunen nr. En piksel har noe når dekningen er over 0, så også en flate
+   som bare dekker en liten bit av pikselen, er med. */
+export async function planoversikt(nr: string): Promise<Planoversikt> {
+  const [g, buf] = await Promise.all([katalog.solv.grense(nr), katalog.bronse.planoversikt(nr)]);
+  const R = flisrammen(g.ext, PLANNIVA),
+    s = 512 / PLANOVERSIKT,
+    w = R.nx * s,
+    h = R.ny * s,
+    P = await bildePiksler(buf, w, h),
+    noe = new Uint8Array(w * h);
+  for (let q = 0; q < noe.length; q++) if (P[4 * q + 3] > 0) noe[q] = 1;
+  return { x0: R.x0, y0: R.y0, w, h, s, noe };
+}
+/* Om flisen tc (nivå 9 eller 10) kan ha kommuneplan etter oversikten O: om en piksel i flisen, eller én piksel rundt den, har noe.
+   Kanten på én piksel er med for sikkerhets skyld. En flis utenfor oversikten kan ha plan. */
+export function kanHaPlan(O: Planoversikt, tc: Flis): boolean {
+  const f = 2 ** (tc[0] - PLANNIVA),
+    n = O.s / f,
+    px = tc[1] * n - O.x0 * O.s,
+    py = tc[2] * n - O.y0 * O.s;
+  if (px < 0 || py < 0 || px + n > O.w || py + n > O.h) return true;
+  for (let y = Math.max(0, py - 1); y < Math.min(O.h, py + n + 1); y++)
+    for (let x = Math.max(0, px - 1); x < Math.min(O.w, px + n + 1); x++) if (O.noe[y * O.w + x]) return true;
+  return false;
 }
 
 /* Har kommunen kommuneplan hos DiBK? P er et lite bilde av planlaget over kommunen og M kommunens flate, begge som piksler (RGBA) i

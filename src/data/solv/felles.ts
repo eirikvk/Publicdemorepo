@@ -86,6 +86,7 @@ export const EGET_MIN_M2 = 400; /* minste tegnede område som regnes ut */
 /* Rutenett for bildene som hentes for hele kommunen: [høyst antall ruter på lengste side, minste rute i meter] */
 export const BILDE_TEMA: [number, number] = [2048, 20]; /* inngrepsfri natur og grått areal */
 export const BILDE_PLANDEKNING: [number, number] = [256, 0]; /* sjekken av om kommunen har kommuneplan */
+export const PLANOVERSIKT = 4; /* oversikten over hvor kommuneplanen ligger: én piksel per 4 x 4 ruter på 21 meter (85 meter) */
 export const RUTENETT_VERDI: [number, number] = [1536, 10]; /* arealet av verdsatt natur per verdikategori */
 export const RUTENETT_MASKE: [number, number] = [1500, 10]; /* ett område i et naturtema, til oppslag fra utbyggingen */
 
@@ -139,3 +140,16 @@ export interface Planruter extends Plassering {
 export const ruteX = (R: Plassering, i: number) => ORIGO[0] + (R.cx0 + (i % R.w) + 0.5) * (OPPLOSNINGER[R.z] / 2);
 export const ruteY = (R: Plassering, i: number) =>
   ORIGO[1] - (R.cy0 + Math.floor(i / R.w) + 0.5) * (OPPLOSNINGER[R.z] / 2);
+
+/* Utsnittet til flisene på nivå z som dekker utsnittet e: første kolonne og rad (x0, y0), antall (nx, ny), og utsnittet de dekker
+   til sammen (u) */
+export function flisrammen(e: Utsnitt, z: number) {
+  const F = fliserI(e, z),
+    x0 = Math.min(...F.map(t => t[1])),
+    y0 = Math.min(...F.map(t => t[2])),
+    nx = Math.max(...F.map(t => t[1])) - x0 + 1,
+    ny = Math.max(...F.map(t => t[2])) - y0 + 1,
+    a = flisUtsnitt([z, x0, y0]),
+    b = flisUtsnitt([z, x0 + nx - 1, y0 + ny - 1]);
+  return { x0, y0, nx, ny, u: [a[0], b[1], b[2], a[3]] as Utsnitt };
+}

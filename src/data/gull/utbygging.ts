@@ -23,6 +23,7 @@ import { PLANNIVA, ruteM, type Flis, type Plassering } from '../solv/felles.ts';
 import type { Egneruter } from '../solv/egne.ts';
 import { dagensKlasserIFlis, klasserIFlate } from '../solv/grunnkart.ts';
 import { JOR, NAT, klasserIFlis } from '../solv/klasser.ts';
+import { kanHaPlan } from '../solv/kommuneplan.ts';
 
 /* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
 export interface Antall {
@@ -333,6 +334,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
   const ingenPlan = !!info && !info.finnes;
   if ((ingenPlan && !E) || !D) return null;
   const dyn = D.delvis,
+    O = ingenPlan ? null : await katalog.solv.planoversikt(nr).catch(() => null) /* uten oversikt hentes alle */,
     Z = (await katalog.bronse.planniva()) || PLANNIVA,
     blokker = katalog.gull.utbyggingsblokker.straks(nr, () => new Map<string, Blokk>()),
     under = new Map<string, Flis[] | null>();
@@ -355,10 +357,10 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
         D.lagret
           ? katalog.solv.klasser(tc).then(K => klasserIFlate(K, D.koord))
           : dagensKlasserIFlis(tc, D).then(K => K && klasserIFlis(K)),
-        ingenPlan ? null : katalog.solv.kommuneplanruter(tc)
+        ingenPlan || (O && !kanHaPlan(O, tc)) ? null : katalog.solv.kommuneplanruter(tc)
       ]);
       if (!kl) throw new Error('mangler dagens klasser');
-      blokker.set(`${Z}/${k}`, { ...kombinerBlokk(kl, P ? P.plan : null, tc, fliser), utenPlan: !P });
+      blokker.set(`${Z}/${k}`, { ...kombinerBlokk(kl, P ? P.plan : null, tc, fliser), utenPlan: ingenPlan });
     })
   );
   if (E && E.z !== Z) throw new Error('egne områder er regnet på et annet nivå');

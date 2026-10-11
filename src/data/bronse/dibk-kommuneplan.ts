@@ -3,7 +3,16 @@
    (framtidig), som kartbilder. */
 import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { BILDE_PLANDEKNING, flisUtsnitt, rutenett, type Flis, type Kommune } from '../solv/felles.ts';
+import {
+  BILDE_PLANDEKNING,
+  PLANNIVA,
+  PLANOVERSIKT,
+  flisUtsnitt,
+  flisrammen,
+  rutenett,
+  type Flis,
+  type Kommune
+} from '../solv/felles.ts';
 import type { Planopplysninger } from '../solv/kommuneplan.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
@@ -17,12 +26,13 @@ const PLANFILTER = `<Filter xmlns="http://www.opengis.net/ogc"><And><PropertyIsE
    er like bred i piksler uansett målestokk. Med ruter på 21 meter la streken rundt en fjerdedel til arealet i et testområde. */
 const PLANSTIL =
   '<?xml version="1.0" encoding="UTF-8"?><StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld"><NamedLayer><Name>kparealformalomrade</Name><UserStyle><FeatureTypeStyle><Rule><PolygonSymbolizer><Fill><CssParameter name="fill">#000000</CssParameter></Fill></PolygonSymbolizer></Rule></FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>';
-/* Adressen til et kartbilde på 512 x 512 piksler av utsnittet u i UTM33, med de planlagte flatene fylt i svart */
-export const kommuneplanUrl = (u: Utsnitt) =>
-  wmsBilde(PLAN, u, 512, 512, {
+/* Adressen til et kartbilde på w x h piksler av utsnittet u i UTM33, med de planlagte flatene fylt i svart. Kartflisene er 512 x 512
+   med fargetabell (png8). Oversikten er et vanlig PNG, for i png8 forsvinner piksler som en liten flate bare dekker en bit av. */
+export const kommuneplanUrl = (u: Utsnitt, w = 512, h = 512, format = 'image/png8') =>
+  wmsBilde(PLAN, u, w, h, {
     layers: 'kparealformalomrade',
     sld_body: PLANSTIL,
-    format: 'image/png8',
+    format,
     transparent: 'true',
     filter: PLANFILTER
   });
@@ -80,6 +90,19 @@ export const hentPlaninfo = (
 /* Tabellen bronse.planflis: kartbildet av kommuneplanen for flisen tc [z, x, y] i flisnettet */
 export async function planflis(tc: Flis): Promise<ArrayBuffer> {
   return hentKommuneplanFlis(kommuneplanUrl(flisUtsnitt(tc)));
+}
+/* Tabellen bronse.planoversikt: ett bilde av kommuneplanen med samme utvalg og stil som kartbildene, over flisene på nivå 9 som
+   dekker kommunen nr, med én piksel per PLANOVERSIKT x PLANOVERSIKT ruter. Brukes til å hente kartbildene bare der det er plan. */
+export async function planoversikt(nr: string): Promise<ArrayBuffer> {
+  const R = flisrammen((await katalog.solv.grense(nr)).ext, PLANNIVA),
+    s = 512 / PLANOVERSIKT;
+  return hent(
+    'DiBK',
+    `Oversikt over kommuneplanen for ${(await kommunen(nr)).navn}`,
+    kommuneplanUrl(R.u, R.nx * s, R.ny * s, 'image/png'),
+    false,
+    true
+  );
 }
 /* Tabellen bronse.plandekning: ett lite bilde av hele planlaget over kommunen */
 export async function plandekning(nr: string): Promise<ArrayBuffer> {

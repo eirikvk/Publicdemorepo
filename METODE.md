@@ -272,7 +272,10 @@ eller mindre natur enn i 2017?
 
 - DiBKs nasjonale tjeneste for kommuneplaner (WMS), laget `kparealformalomrade`. Bare flater med arealformål i 1000- og
   2000-serien (bebyggelse og anlegg, samferdselsanlegg og teknisk infrastruktur) og arealbruksstatus 2 (framtidig). Siden ber om
-  flatene fylt og uten kantstrek, som bilder på 512 × 512 piksler per flis på nivå 9.
+  flatene fylt og uten kantstrek, som bilder på 512 × 512 piksler per flis på nivå 9. Først hentes én oversikt over kommunen med
+  samme utvalg og stil, med én piksel per 85 meter (`solv.planoversikt`). Kartbildene hentes bare for blokkene der oversikten har
+  noe, i blokken eller én piksel utenfor. Oversikten er et vanlig PNG, ikke med fargetabell, for der forsvinner piksler som en liten
+  flate bare dekker en bit av. Se kontrollen under.
 - Dagens klasser for de samme flisene, per rute på 21 meter (`solv.klasser`, se Arealklassene), eller fra det sammensatte kartet
   for kommuner uten lagrede klasser.
 
@@ -676,6 +679,24 @@ inn en ny kilde: temaet (områdene og arealet), planlagt utbygging i temaet (ven
 kartleggingen (venter på det kartlagte). Siden setter delene sammen. Metoden ble ikke endret. Utgaven ble sammenlignet med utgaven
 før, hver kjørt med sitt eget testverktøy samme kveld: tallene fra motoren, teksten på siden og kartbildene var like. Trondheim, så
 Malvik og så Trondheim igjen ga de samme tallene, og ingen nye kall mot kildene da Trondheim ble valgt igjen.
+
+**Bare blokker med plan hentes fra DiBK, 11. oktober 2026.** Siden spurte DiBK om hver blokk i kommunen, også der det ikke er plan.
+I Kautokeino hadde 9 av 109 blokker plan på 21 meter, og 10 av 393 på 10 meter. Nå hentes først en oversikt over kommuneplanen
+(85 meter per piksel), og blokker uten noe i oversikten, heller ikke én piksel utenfor, hoppes over. Kontrollen for alle de 42
+kommunene med lagrede klasser, på både 21 og 10 meter, mot planen hentet for hver blokk:
+
+- Med oversikten som vanlig PNG ble ingen blokk med plan hoppet over, med én piksel per 42, 85 eller 169 meter. Med én piksel per
+  338 meter ble tre blokker hoppet over.
+- Med oversikten som PNG med fargetabell (png8), som kartbildene, ble én blokk hoppet over på 85 meter (Alta, 10 meter). En liten
+  flate ga en piksel med svært lav dekning, som forsvant i fargetabellen. Derfor brukes vanlig PNG, og 85 meter gir god margin.
+- Tallene for alle de 42 kommunene var like, på 21 og 10 meter, og regresjonstesten ga ingen avvik.
+- Kallene mot DiBK for de 38 kommunene med plan gikk fra rundt 1 160 til 581 på 21 meter, og fra rundt 3 420 til 979 på 10 meter.
+  På 10 meter gikk tiden til tallene er ferdige fra 8,7 til 6,7 sekunder i median, og Frøya fra 27 til 14 sekunder.
+
+Kontrollen viser at oversikten fant alle blokkene med plan i disse kommunene, men den er ikke et bevis for alle kommuner. Tegner DiBK
+kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m² borte i oversikten. De er for små til å gi en rute
+med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
+direkte.
 
 **Ruter på 10 meter som valg, 11. oktober 2026.** Dagens klasser er nå lagret på både 21 og 10,6 meter for de 42 kommunene
 (3 844 filer, 19 MB), og under Tekniske valg kan utbyggingen regnes på 10 meter. 21 meter er standard og uendret: regresjonstesten

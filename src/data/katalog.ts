@@ -155,6 +155,14 @@ export const katalog = {
       husk: 6,
       etl: dibk.planopplysninger
     }),
+    planoversikt: tabell({
+      lag: 'bronse',
+      navn: 'planoversikt',
+      tittel: 'Oversikt over kommuneplanen',
+      om: 'ett bilde av kommuneplanen fra DiBK over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Brukes til å hente kartbildene bare der det er plan.',
+      husk: 6,
+      etl: dibk.planoversikt
+    }),
     planflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'planflis',
@@ -326,6 +334,14 @@ export const katalog = {
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
       husk: 6,
       etl: solvPlan.planinfo
+    }),
+    planoversikt: tabell({
+      lag: 'solv',
+      navn: 'planoversikt',
+      tittel: 'Hvor kommuneplanen ligger',
+      om: 'for hver piksel i oversikten over kommuneplanen (85 meter) om noe av planen ligger der. Utbyggingen henter kartbildene fra DiBK bare for blokkene der oversikten har noe, eller rett ved.',
+      husk: 2,
+      etl: solvPlan.planoversikt
     }),
     kommuneplanruter: tabell<Flis, Planruter>({
       lag: 'solv',
