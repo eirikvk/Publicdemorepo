@@ -546,21 +546,24 @@ Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
    brukes først, og det eldre (v0) hvis det nye ikke svarer. De to gir samme tall. Kilde: [Statistisk sentralbyrå (SSB), tabell
    09594, Arealbruk og arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0.
 2. **Verneområder** (`bronse.verneomrader`). Verneområdene fra tjenesten vern, lag 0, der kommunenummeret står i egenskapen for
-   kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter. Kilde: [Miljødirektoratet,
+   kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for
+   side. Kilde: [Miljødirektoratet,
    Naturvernområder](https://kartkatalog.geonorge.no/metadata/uuid/5857ec0a-8d2c-4cd8-baa2-0dc54ae213b4), NLOD 2.0.
 3. **Kommunegrensen** (`bronse.kommunegrense`). Kommunegrensen fra Kartverket. Kilde: [Kartverket, Administrative enheter,
    kommuner (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0.
 4. **Villreinområder** (`bronse.villrein`). Leveområdene for villrein fra tjenesten villrein, lag 1, der kommunenummeret står i
-   egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 20 meter. Kilde: [Miljødirektoratet,
+   egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 20 meter. Gir tjenesten ikke alle i ett svar, hentes
+   resten side for side. Kilde: [Miljødirektoratet,
    Villreinområder](https://kartkatalog.geonorge.no/metadata/uuid/fc59e9a4-59df-4eb3-978a-1c173b84bf4e), NLOD 2.0.
 5. **Verdsatt natur** (`bronse.verdsattNatur`). Naturtyper med verdikategori svært stor, stor, middels eller noe verdi fra
    tjenesten naturtyper_kuverdi, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33,
-   forenklet med 5 meter. Kilde: [Miljødirektoratet, Naturtyper – verdsatte (naturtyper med
-   KU-verdi)](https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314), NLOD 2.0.
+   forenklet med 5 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side. Kilde: [Miljødirektoratet, Naturtyper –
+   verdsatte (naturtyper med KU-verdi)](https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314), NLOD
+   2.0.
 6. **Kartlagt for naturtyper** (`bronse.kartlagt`). Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks fra
-   tjenesten naturtyper_nin, lag 1: alt innenfor utsnittet rundt kommunen, forenklet med 10 meter. Kilde: [Miljødirektoratet,
-   Naturtyper på land (NiN), dekningskartet](https://kartkatalog.geonorge.no/metadata/uuid/eb48dd19-03da-41e1-afd9-7ebc3079265c),
-   NLOD 2.0.
+   tjenesten naturtyper_nin, lag 1: alt innenfor utsnittet rundt kommunen, forenklet med 10 meter. Gir tjenesten ikke alle i ett
+   svar, hentes resten side for side. Kilde: [Miljødirektoratet, Naturtyper på land (NiN),
+   dekningskartet](https://kartkatalog.geonorge.no/metadata/uuid/eb48dd19-03da-41e1-afd9-7ebc3079265c), NLOD 2.0.
 7. **Arealtall per klasse** (`solv.arealtall`). SSBs arealklasser summeres til bebygd, jordbruk og natur (se Arealklassene), og
    innsjø og elv tas ut for seg. Landarealet er summen av de tre klassene på land.
 8. **Kommunegrensen** (`solv.grense`). Kommunegrensen i UTM sone 33, og kommunens flate i km², rettet for målestokken i UTM (se
@@ -608,7 +611,6 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - Verneområder kan ligge i sjø og innsjøer, men andelen regnes av landarealet. I kystkommuner kan den bli høy, og over 100 %, for
   eksempel på Frøya.
 - Overlapper to områder, telles overlappet to ganger i summen.
-- Tjenesten for verdsatt natur gir et begrenset antall flater per svar. Får siden ikke alle, sier den at tallet er for lavt.
 - Arealet per lokalitet i listen er arealet av hele lokaliteten, også en del som ligger utenfor kommunen. Summene per
   verdikategori er klippet mot kommunen.
 - Dekningsflatene kan ligge delvis i vann, mens kartleggingsgraden regnes av landarealet.
@@ -894,6 +896,13 @@ Kontrollen viser at oversikten fant alle blokkene med plan i disse kommunene, me
 kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m² borte i oversikten. De er for små til å gi en rute
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
+
+**Alle flatene fra Miljødirektoratet, side for side, 12. oktober 2026.** Karttjenestene gir høyst et visst antall flater per svar:
+1000 for villrein, 2000 for verneområder og 5000 for naturtypene og det kartlagte. Før ble bare verdsatt natur merket som for lav
+når grensen ble nådd, og de andre ble kuttet uten at det ble sagt fra. Nå hentes resten side for side, sortert etter OBJECTID. Ingen
+kommune var over grensene i stikkprøven (mest var Oslo med 4078 lokaliteter med verdsatt natur), så tallene ble ikke endret.
+Regresjonstesten ga like tall og kart. Listene over områder har fått knappen «Vis alle», så alle kan åpnes i kartet. Før stod det
+bare «… og N til».
 
 **Mindre metodetekst på sidene, 12. oktober 2026.** Kilde- og metodetekst som nå står i infoknappene, er tatt bort fra sidene:
 kildelinjene på temasidene, den grå teksten under regnskapsoppstillingen og under land og vann, hvordan smale striper defineres

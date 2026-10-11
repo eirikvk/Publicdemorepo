@@ -4,6 +4,7 @@
    (katalog.gull.verneomrader), planlagt utbygging i det (katalog.gull.verneomraderIPlan), og for verdsatt natur kartleggingen
    (katalog.gull.verdsattNaturKartlagt). Temaet vises med en gang, og planen og kartleggingen legges til når de er klare. Siden
    setter bare tallene sammen: planlagt utbygging per område står på samme plass som området i listen. */
+import { useState } from 'react';
 import { TEMATABELLER } from '../../data/katalog.ts';
 import type { Kartleggingen, TemaIPlan, Temaet } from '../../data/gull/temaer.ts';
 import type { Rad } from '../../data/cache.ts';
@@ -109,6 +110,8 @@ function Helhet({
 
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
 export function Naturtema({ t: tema }: { t: Tema }) {
+  /* Kommunen der hele listen er åpnet. Bytter man kommune, vises den korte listen igjen. */
+  const [alleFor, settAlleFor] = useState<string | null>(null);
   const t = { ...tema, ...TEMAORD[tema.id] },
     tab = TEMATABELLER[tema.id],
     T = valgt(tab.tall),
@@ -143,7 +146,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
             (hentet ? ', i hentet kart' : ''));
   const sumTekst = !N.antall
     ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
-    : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${N.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene i ett svar, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
+    : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${N.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
   const merk =
     !E || helhet
       ? ''
@@ -174,8 +177,11 @@ export function Naturtema({ t: tema }: { t: Tema }) {
   /* Planlagt utbygging på natur utenfor det kartlagte, for temaet med kartlegging */
   const U = tab.utenforKartlagt ? verdi(tab.utenforKartlagt) : null,
     G = t.dekning && U && U.nat && !utenPlan() ? U : null;
-  /* Områdene i listen: for verdsatt natur bare de som berøres av planlagt utbygging, med mest først, ellers alle */
-  const maks = t.samlet ? 15 : 40,
+  /* Områdene i listen: for verdsatt natur bare de som berøres av planlagt utbygging, med mest først, ellers alle. De første vises,
+     og resten med knappen under listen. */
+  const grense = t.samlet ? 15 : 40,
+    alle = alleFor === N.nr,
+    maks = alle ? Infinity : grense,
     vises = (t.samlet ? (C ? C.berorte : []) : N.omrader.map((_, i) => i)).map(i => ({
       omr: N.omrader[i],
       nr: i,
@@ -266,8 +272,12 @@ export function Naturtema({ t: tema }: { t: Tema }) {
               </li>
             );
           })}
-          {vises.length > maks && <li>… og {vises.length - maks} til</li>}
         </ul>
+      )}
+      {vises.length > grense && (
+        <MdButton theme="secondary" mode="small" onClick={() => settAlleFor(alle ? null : N.nr)}>
+          {alle ? 'Vis færre' : `Vis alle ${nf(vises.length, 0)} ${t.samlet ? 'berørte lokaliteter' : t.fl}`}
+        </MdButton>
       )}
     </Temaside>
   );

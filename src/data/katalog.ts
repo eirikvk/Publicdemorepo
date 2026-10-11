@@ -316,7 +316,7 @@ export const katalog = {
       tittel: 'Verneområder',
       om: 'verneområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Verneområdene fra tjenesten vern, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter.',
+        'Verneområdene fra tjenesten vern, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
       kilde: KILDE.vern,
       husk: 0,
       etl: mdirNatur.verneomrader
@@ -327,7 +327,7 @@ export const katalog = {
       tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Leveområdene for villrein fra tjenesten villrein, lag 1, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 20 meter.',
+        'Leveområdene for villrein fra tjenesten villrein, lag 1, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 20 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
       kilde: KILDE.villrein,
       husk: 0,
       etl: mdirNatur.villrein
@@ -338,10 +338,7 @@ export const katalog = {
       tittel: 'Verdsatt natur',
       om: 'naturtyper med verdi i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Naturtyper med verdikategori svært stor, stor, middels eller noe verdi fra tjenesten naturtyper_kuverdi, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter.',
-      usikkerhet: [
-        'Tjenesten for verdsatt natur gir et begrenset antall flater per svar. Får siden ikke alle, sier den at tallet er for lavt.'
-      ],
+        'Naturtyper med verdikategori svært stor, stor, middels eller noe verdi fra tjenesten naturtyper_kuverdi, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
       kilde: KILDE.verdsatt,
       husk: 0,
       etl: mdirNatur.verdsattNatur
@@ -352,7 +349,7 @@ export const katalog = {
       tittel: 'Kartlagt for naturtyper',
       om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks fra tjenesten naturtyper_nin, lag 1: alt innenfor utsnittet rundt kommunen, forenklet med 10 meter.',
+        'Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks fra tjenesten naturtyper_nin, lag 1: alt innenfor utsnittet rundt kommunen, forenklet med 10 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
       kilde: KILDE.nin,
       husk: 0,
       etl: mdirNatur.kartlagt

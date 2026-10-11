@@ -168,7 +168,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
 | `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, per flis, og de lagrede klassene per blokk med registeret |
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, og hvilken plan det er |
-| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området |
+| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som ett bilde av kommunen |
 | `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
