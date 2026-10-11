@@ -36,7 +36,7 @@ import { klippSist, settKlipp } from './klipping.ts';
 import { maalKartet, startMaaling, stoppMaaling } from './maaling.ts';
 import { dekLag, flateLag, markLag, slorSynlig, synligeTemaer } from './naturtema.ts';
 import { planLag } from './plan.ts';
-import { beholdes, glemBehold, lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
+import { lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
 
 /* Bakgrunnskartet hentes gjennom katalogen (bronse.bakgrunnsflis), som ikke lagrer det. Kartet holder de ferdige flisene selv. */
 function lastBakgrunn(tile: ImageTile) {
@@ -157,8 +157,7 @@ export function kartStatus() {
 const ny = nyttSiden();
 abonner(() => {
   if (ny('valgt', app.valgt) && app.valgt) {
-    const k = app.valgt,
-      behold = beholdes(k.nr);
+    const k = app.valgt;
     lukkBytt();
     ui.probe = null;
     ui.siste = '';
@@ -166,7 +165,7 @@ abonner(() => {
     settKlipp(null);
     tema.setVisible(false);
     tema.setExtent(undefined);
-    if (k.boks && !behold)
+    if (k.boks)
       view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
     kartStatus();
     endret();
@@ -181,8 +180,7 @@ abonner(() => {
     grenseKilde.addFeature(new ol.Feature(flate));
     tema.setExtent(ext);
     tema.setVisible(true);
-    if (k && !k.boks && !beholdes(k.nr)) view.fit(ext, { padding: [16, 16, 16, 16], duration: 350 });
-    glemBehold();
+    if (k && !k.boks) view.fit(ext, { padding: [16, 16, 16, 16], duration: 350 });
   }
   const g = valgt(katalog.solv.grense),
     feil = !!g && g.status === 'feil';

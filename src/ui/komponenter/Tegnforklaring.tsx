@@ -60,8 +60,8 @@ function grupper(): Gruppe[] {
     ut.push({
       tittel: 'Planlagt utbygging',
       linjer: [
-        { navn: 'natur', farger: ['pnat'] },
-        { navn: 'jordbruk', farger: ['pjor'] }
+        { navn: 'på natur', farger: ['pnat'] },
+        { navn: 'på jordbruk', farger: ['pjor'] }
       ]
     });
   if (S.klasser)

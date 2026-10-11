@@ -26,13 +26,7 @@ import { planLag } from './plan.ts';
 let byttLag: Overlay | null = null,
   byttEl: HTMLElement | null = null,
   byttSok = 0,
-  byttKoord: Coordinate | null = null,
-  beholdFor: string | null = null; /* kommunen som ble valgt i kartet: kartet blir stående der det er */
-/* Kommunen som ble valgt i kartet, og om kartet skal bli stående der det er for kommunen nr */
-export const beholdes = (nr: string) => beholdFor === nr;
-export const glemBehold = () => {
-  beholdFor = null;
-};
+  byttKoord: Coordinate | null = null;
 export const settByttKnapp = (el: HTMLElement | null) => {
   byttEl = el;
 };
@@ -65,10 +59,7 @@ export function plasserBytt() {
 export function byttTilValgt() {
   const nr = ui.bytt && ui.bytt.nr;
   lukkBytt();
-  if (nr) {
-    beholdFor = nr;
-    velgKommune(nr);
-  }
+  if (nr) velgKommune(nr); /* som et valg i listen: kartet flytter seg til kommunen */
 }
 const settProbe = (probe: Probe) => {
   ui.probe = probe;
@@ -103,7 +94,7 @@ export function trykkIKartet(e: MapBrowserEvent) {
   const pl = (planLag.getVisible() ? planLag.getData(e.pixel) : null) as Uint8ClampedArray | null;
   if (pl && pl[3] > 40) {
     const jordbruk = naermesteFarge(pl[0], pl[1], pl[2], [rgb('pnat'), rgb('pjor')]) === 1;
-    settProbe({ punkt: (jordbruk ? 'Jordbruk' : 'Natur') + ', satt av til framtidig utbygging' + iTema });
+    settProbe({ punkt: 'Planlagt utbygging på ' + (jordbruk ? 'jordbruk' : 'natur') + iTema });
     return;
   }
   let d = (tema.getVisible() ? tema.getData(e.pixel) : null) as Uint8ClampedArray | null;
