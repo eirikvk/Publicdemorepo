@@ -28,8 +28,6 @@ import {
 import {
   GK_SKOG,
   GK_VATMARK,
-  SKOG,
-  arealklasser,
   detaljer,
   detaljsum,
   iGrunnkartet,
@@ -120,9 +118,7 @@ const GRUNNKART_KILDE = (
 );
 
 function Skog({ tema }: { tema: Tema }) {
-  const A = arealklasser(),
-    typer = A.s === 'ok' ? A.v.klasser.filter(SKOG) : [],
-    D = detaljer(),
+  const D = detaljer(),
     skog = D.s === 'ok' ? iGrunnkartet(D.v, GK_SKOG) : null;
   return (
     <Temaside
@@ -130,9 +126,8 @@ function Skog({ tema }: { tema: Tema }) {
       trekkspill={
         <Trekkspill tittel="Mer om skog">
           <p>
-            Tallene er skog i grunnkartet fra NIBIO: økosystemtypen skog, også skog på myr og på innmarksbeite. Figuren
-            med treslag er SSBs arealklasse skog. Kartet viser dagens arealklasser fra NIBIO, der skog er en del av
-            naturen.
+            Tallene er skog i grunnkartet fra NIBIO: økosystemtypen skog, også skog på myr og på innmarksbeite, delt
+            etter treslaget som dominerer. Kartet viser dagens arealklasser fra NIBIO, der skog er en del av naturen.
           </p>
         </Trekkspill>
       }
@@ -150,10 +145,10 @@ function Skog({ tema }: { tema: Tema }) {
       }
       sporsmal={[
         [
-          'Hvorfor er tallene for skog ikke de samme overalt?',
+          'Hvorfor er ikke tallene for skog de samme som hos SSB?',
           <p>
-            Figuren med treslag er SSBs arealklasser. Resten er NIBIOs grunnkart for arealanalyse, med økosystemtyper.
-            De to deler arealet inn på ulike måter, så de gir ikke helt samme areal.
+            SSB har egne arealklasser, mens tallene her er NIBIOs grunnkart for arealanalyse, med økosystemtyper. De to
+            deler arealet inn på ulike måter, så de gir ikke helt samme areal for skog.
           </p>
         ]
       ]}
@@ -171,16 +166,16 @@ function Skog({ tema }: { tema: Tema }) {
             lauvskog. I barskogen er gran og furu de viktigste treslagene. Der begge vokser, er det blandingsskog.
           </p>
         }
-        kilder={['ssb']}
+        kilder={['grunnkart']}
       >
-        {svar(A, () => (
+        {svar(D, d => (
           <Stolper
             hva="Skog etter treslag"
-            data={typer.map((k, i) => ({
-              navn: k.navn.replace(' skog', ''),
-              km2: k.km2[k.km2.length - 1],
-              farge: ['skog-bar', 'skog-bland', 'skog-lauv', 'skog-ukjent'][i]
-            }))}
+            data={[
+              ['bar', 'Barskog', 'skog-bar'],
+              ['bland', 'Blandingsskog', 'skog-bland'],
+              ['lauv', 'Lauvskog', 'skog-lauv']
+            ].map(([t, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.treslag === t), farge }))}
           />
         ))}
       </Figur>
@@ -188,31 +183,25 @@ function Skog({ tema }: { tema: Tema }) {
         tittel={`Dette dekker skogen i ${kommunen()}`}
         tekst={
           <p>
-            Skogen i grunnkartet fra NIBIO, etter treslaget som dominerer. Noe av skogen står på myr eller på
-            innmarksbeite. Den er med i tallene for treslagene, og vises også for seg under.
+            Skogen i grunnkartet fra NIBIO står på fastmark, på myr eller på innmarksbeite. Myr og beite med trær er
+            skog i grunnkartet, og er med i tallene for skog over.
           </p>
         }
         kilder={['grunnkart']}
       >
-        {svar(D, d => {
-          const tresatt = (u: string) => detaljsum(d, k => k.underlag === u);
-          return (
-            <>
-              <Liggende
-                hva="Skog i grunnkartet etter treslag"
-                data={[
-                  ['bar', 'Barskog', 'skog-bar'],
-                  ['lauv', 'Lauvskog', 'skog-lauv'],
-                  ['bland', 'Blandingsskog', 'skog-bland']
-                ].map(([t, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.treslag === t), farge }))}
-              />
-              <p>
-                Til sammen {iTekst(detaljsum(d, k => !!k.treslag))} skog. Av den er {iTekst(tresatt('myr'))} tresatt myr
-                og {iTekst(tresatt('beite'))} tresatt innmarksbeite.
-              </p>
-            </>
-          );
-        })}
+        {svar(D, d => (
+          <>
+            <Liggende
+              hva="Skog i grunnkartet etter underlag"
+              data={[
+                ['vanlig', 'Skog på fastmark', 'skog-bar'],
+                ['myr', 'Tresatt myr', 'myr-tresatt'],
+                ['beite', 'Tresatt innmarksbeite', 'beite-tresatt']
+              ].map(([u, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.underlag === u), farge }))}
+            />
+            <p>Til sammen {iTekst(detaljsum(d, GK_SKOG))} skog.</p>
+          </>
+        ))}
       </Figur>
     </Temaside>
   );

@@ -21,6 +21,7 @@
   /* Våtmarken i figuren for våtmark: åpen våtmark og tresatt myr */
   --myr-apen: #5b9bc4;
   --myr-tresatt: #4f7f5f;
+  --beite-tresatt: #a89a4e;
   --luft: 24px;
   color-scheme: light;
 }
