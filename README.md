@@ -295,11 +295,17 @@ med ekte tall, uten å endre hovedsiden.
   bronse), kartet (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet og kroken som tegner siden på nytt).
   Hovedsidens sider og adresse (`src/ui/sider.ts`) bruker den ikke. `verktoy/sjekk-lag.ts` passer på dette.
 - Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`).
-- Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Foreløpig er det to tabeller bare tvillingen bruker,
-  og hovedsiden henter dem ikke:
-  - SSBs arealklasser hver for seg (`solv.arealdetaljer`), til skog per treslag og bebygd per formål.
-  - Arealet per detaljklasse i grunnkartet (`gull.detaljareal`), til alle tallene for skog og våtmark utenom figuren med treslag
-    fra SSB. Den finnes bare for kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md, Arealklassene).
+- Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Noen tabeller bruker foreløpig bare tvillingen, og
+  hovedsiden henter dem ikke:
+  - SSBs arealklasser hver for seg (`solv.arealdetaljer`), til bebygd per formål på oversikten.
+  - Arealet per detaljklasse i grunnkartet (`gull.detaljareal`), til tallene for skog og våtmark.
+  - Det samme i verneområdene (`gull.detaljerIVerneomrader`), til naturen som er vernet og skog som er vernet.
+  - Planlagt utbygging per detaljklasse (`gull.planlagtPerDetaljklasse`), til våtmark som er planlagt nedbygget og tabellen per
+    økosystemtype på oversikten.
+  - Inngrepsfri natur i villreinområdene (`gull.inonIVillrein`).
+
+  De tre som bygger på detaljklassene, finnes bare for kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md,
+  Arealklassene).
 - Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra

@@ -198,6 +198,12 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
    stå i adressen (NIBIO svarer 414), så kartbildene hentes med POST. Klassen leses som i steg 2: den nærmeste blandingen av to av
    de 19 fargene, regnet ut én gang per farge i bildet (`detaljklasserIFlis`). Blokkene er på nivå 10 (10,6 meter), ett kartbilde
    per blokk (`solv.detaljklasser`). Arealet per klasse i kommunen telles med halvregelen (`gull.detaljareal`).
+6. Detaljklassene krysses med to andre kilder:
+   - **Verneområdene** (`gull.detaljerIVerneomrader`). Verneområdene tegnes i hver blokk, hvert for seg, så der de overlapper, telles
+     ruta én gang. En rute teller når verneområdene dekker minst halve ruta.
+   - **Planlagt utbygging** (`gull.planlagtPerDetaljklasse`). Hver rute med planlagt utbygging på natur får den naturklassen det er
+     mest av i ruta, og hver rute på jordbruk den jordbruksklassen det er mest av. En rute på 21 meter er 2 × 2 detaljruter. Slik
+     blir summen den samme som natur og jordbruk satt av. Finnes ingen klasse av riktig slag i ruta, telles den som ukjent.
 
 **Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 21 meter (eller 10,6
 meter) i hver blokk. For kommuner med lagrede detaljklasser: arealet per detaljklasse i kommunen.
@@ -948,6 +954,15 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Kryssinger for tvillingen, 13. oktober 2026.** Tre nye kryssinger, som bare tvillingen bruker foreløpig:
+- Detaljklassene i verneområdene: Trondheim har 27 000 dekar vernet i grunnkartet, mot 27 035 dekar regnet av flatene.
+- Planlagt utbygging per detaljklasse: i Trondheim er summen 1 955 dekar natur og 774 dekar jordbruk, som i `gull.plansum`.
+- Inngrepsfri natur i villreinområdene (`gull.inonIVillrein`): villreinområdene tegnes i rutenettet for inngrepsfri natur, og begge
+  arealene telles der. I Oppdal er 72,6 % av villreinområdene inngrepsfri natur, og villreinområdene i rutenettet er innenfor
+  0,1 % av arealet regnet av flatene.
+
+Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
 
 **Mer fra kildene i detaljene, 12. oktober 2026.** Når detaljene for punktet vises, slås punktet nå opp hos NIBIO, DiBK og
 Miljødirektoratet, og områdene i naturtemaene får alle feltene fra kilden. Feltene har lesbare navn, med et valg for å se alle med
