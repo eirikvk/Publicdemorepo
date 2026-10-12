@@ -523,7 +523,7 @@ export const katalog = {
       om: 'detaljklassen per rute i en blokk på nivå 10 (10,6 meter), kalt med blokken [10, x, y], laget av ett kartbilde fra NIBIO (bronse.detaljflis). For noen kommuner ligger svaret lagret sammen med siden (bronse.detaljfil). Nøkkel: blokken som «z/x/y».',
       forklaring:
         'Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er mest av, når fargen er en blanding. Foreløpig lagret bare for Trondheim.',
-      husk: 0,
+      husk: 64,
       nokkel: flisnavn,
       etl: solvGrunnkart.detaljklasser,
       lagret: solvGrunnkart.lagredeDetaljklasser,
@@ -774,6 +774,16 @@ export const katalog = {
       ],
       husk: 12,
       etl: gullGrunnkart.detaljareal
+    }),
+    detaljerIVerneomrader: tabell({
+      lag: 'gull',
+      navn: 'detaljerIVerneomrader',
+      tittel: 'Areal per detaljklasse i verneområdene',
+      om: 'arealet i km² per detaljklasse innenfor verneområdene i kommunen, av blokkene på 10,6 meter. Ruter teller når verneområdene dekker minst halve ruta. Bare for kommunene med lagrede detaljklasser, ellers null. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Grunnkartets økosystemtyper i verneområdene: hvor mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Bare for kommuner der detaljklassene er lagret.',
+      husk: 12,
+      etl: gullGrunnkart.detaljerIVerneomrader
     }),
     dagensKlasser: tabell({
       lag: 'gull',

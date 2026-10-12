@@ -29,14 +29,12 @@ export function summer(D: Arealdetaljer, passer: (k: Klasse) => boolean, t = -1)
 }
 export const SKOG = (k: Klasse) => k.kode.startsWith('17.');
 
-/* Arealet per detaljklasse fra grunnkartet (gull.detaljareal). Mangler når kommunen ikke har lagrede detaljklasser. */
-export function detaljer(): Svar<Detaljareal> {
-  const S = fraRad(valgt(katalog.gull.detaljareal));
-  return S.s !== 'ok'
-    ? S
-    : S.v
-      ? { s: 'ok', v: S.v }
-      : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
+/* Arealet per detaljklasse fra grunnkartet, i hele kommunen (gull.detaljareal) eller i verneområdene
+   (gull.detaljerIVerneomrader). Mangler når kommunen ikke har lagrede detaljklasser. */
+export function detaljer(i: 'kommunen' | 'vern' = 'kommunen'): Svar<Detaljareal> {
+  const S = fraRad(valgt(i === 'vern' ? katalog.gull.detaljerIVerneomrader : katalog.gull.detaljareal));
+  if (S.s !== 'ok') return S;
+  return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
 }
 /* Arealet av detaljklassene som passer */
 export const detaljsum = (D: Detaljareal, passer: (k: Detaljklasse) => boolean) =>
@@ -45,11 +43,22 @@ export const detaljsum = (D: Detaljareal, passer: (k: Detaljklasse) => boolean) 
    våtmark) og tresatt myr. */
 export const GK_SKOG = (k: Detaljklasse) => !!k.treslag;
 export const GK_VATMARK = (k: Detaljklasse) => k.id === 'vat' || k.underlag === 'myr';
-/* Et areal i grunnkartet med andelen av landarealet i grunnkartet: alt unntatt hav, innsjøer og elver */
-export function iGrunnkartet(D: Detaljareal, passer: (k: Detaljklasse) => boolean) {
+/* Land i grunnkartet er alt unntatt hav, innsjøer og elver */
+export const GK_LAND = (k: Detaljklasse) => k.gruppe === 'beb' || k.gruppe === 'jor' || k.gruppe === 'nat';
+/* Et areal i grunnkartet med andelen av landarealet i grunnkartet. land er detaljarealet for hele kommunen, når D er en del av den. */
+export function iGrunnkartet(D: Detaljareal, passer: (k: Detaljklasse) => boolean, land: Detaljareal = D) {
   const km2 = detaljsum(D, passer),
-    land = detaljsum(D, k => k.gruppe === 'beb' || k.gruppe === 'jor' || k.gruppe === 'nat');
-  return { km2, andel: land > 0 ? (km2 / land) * 100 : null };
+    L = detaljsum(land, GK_LAND);
+  return { km2, andel: L > 0 ? (km2 / L) * 100 : null };
+}
+/* Arealet per økosystemtype på nivå 1 i grunnkartet, med skogen samlet, størst først og uten de som er 0 */
+export function perOkosystem(D: Detaljareal): [navn: string, km2: number][] {
+  const m = new Map<string, number>();
+  DETALJKLASSER.forEach((k, i) => {
+    const navn = k.treslag ? 'Skog' : k.navn;
+    m.set(navn, (m.get(navn) || 0) + D.km2[i]);
+  });
+  return [...m].filter(([, km2]) => km2 > 0).sort((a, b) => b[1] - a[1]);
 }
 
 /* Naturtemaene fra Miljødirektoratet: temaet (gull) og planlagt utbygging i det, når planen er regnet ut for de samme områdene */

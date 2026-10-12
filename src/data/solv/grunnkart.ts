@@ -25,6 +25,7 @@ import { KLASSETABELL, detaljklasserIFlis, klasserIFlis } from './klasser.ts';
 import {
   bildePiksler,
   flatePiksler,
+  flaterPiksler,
   flislerret,
   lesBilde,
   palettLerret,
@@ -134,9 +135,13 @@ export function klasserIFlate(K: Klasser, koord: Flerflate): Uint8Array {
   return kl;
 }
 /* Antall ruter per klasse i K innenfor flaten koord (kommunen), etter halvregelen. Plass 0 er ruter innenfor uten klasse, og klasse k
-   er plass k. antall er antall klasser pluss én. */
-export function tellIFlate(K: Klasser, koord: Flerflate, antall: number): number[] {
-  const M = flateIBlokk(koord, [K.z, K.cx0 / 512, K.cy0 / 512]),
+   er plass k. antall er antall klasser pluss én. Med flater telles bare rutene innenfor dem også (unionen av dem, klippet mot
+   kommunen), for eksempel verneområdene. */
+export function tellIFlate(K: Klasser, koord: Flerflate, antall: number, flater?: Flerflate[]): number[] {
+  const tc: Flis = [K.z, K.cx0 / 512, K.cy0 / 512],
+    M = flater
+      ? flaterPiksler(flater, { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 }, koord)
+      : flateIBlokk(koord, tc),
     n = new Array<number>(antall).fill(0);
   for (let q = 0; q < K.kl.length; q++) if (M[4 * q + 3] >= HALV) n[K.kl[q]]++;
   return n;

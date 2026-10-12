@@ -60,6 +60,19 @@ export function flatePiksler(koord: Flerflate, R: Rutebilde) {
   g.fill('evenodd');
   return g.getImageData(0, 0, R.w, R.h).data;
 }
+/* Flere flerflater tegnet i rutenettet R, hver for seg, så der de overlapper, er dekningen den samme som for én (unionen). Klippet
+   mot flaten innenfor (kommunen). Dekningen av hver rute står i alfa. */
+export function flaterPiksler(flater: Flerflate[], R: Rutebilde, innenfor: Flerflate) {
+  const g = tegneflate(R.w, R.h);
+  for (const koord of flater) {
+    sti(g, koord, R.u, 1 / R.res);
+    g.fill('evenodd');
+  }
+  g.globalCompositeOperation = 'destination-in';
+  sti(g, innenfor, R.u, 1 / R.res);
+  g.fill('evenodd');
+  return g.getImageData(0, 0, R.w, R.h).data;
+}
 /* Et bilde fra en kilde (PNG) som piksler, skalert til w x h ruter */
 export async function bildePiksler(buf: ArrayBuffer, w: number, h: number) {
   const g = tegneflate(w, h);

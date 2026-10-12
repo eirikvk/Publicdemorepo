@@ -56,6 +56,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'solv.verdsattNaturAreal': ['solv.grense', 'solv.verdsattNatur'],
   'solv.kartlagt': ['bronse.kartlagt', 'solv.grense'],
   'gull.detaljareal': ['bronse.detaljregister', 'solv.detaljklasser', 'solv.grense'],
+  'gull.detaljerIVerneomrader': ['bronse.detaljregister', 'solv.detaljklasser', 'solv.grense', 'solv.verneomrader'],
   'gull.dagensKlasser': ['bronse.klasseregister', 'solv.grense', 'solv.klassekart', 'solv.sammensatt'],
   'gull.utbredelse': ['solv.arealtall'],
   'gull.endring': ['solv.historie'],

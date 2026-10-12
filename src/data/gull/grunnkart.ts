@@ -4,10 +4,11 @@
    som laget de lagrede. Kan ikke blokkene lages, brukes det sammensatte kartet av flisene som er hentet (solv.sammensatt), og da
    gjelder alt som bygger på det, bare den delen av kommunen som er hentet.
    Utbyggingen (gull/utbygging.ts), kartet og sidene leser dagens klasser herfra.
-   Nederst arealet per detaljklasse (gull.detaljareal), som foreløpig bare tvillingen fra Figma bruker. */
-import type { Flerflate } from '../generelt/geometri.ts';
+   Nederst arealet per detaljklasse, i hele kommunen (gull.detaljareal) og i verneområdene (gull.detaljerIVerneomrader), som
+   foreløpig bare tvillingen fra Figma bruker. */
+import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { FLISNIVA, flisAvNavn, m2PerKm2, ruteM, type Flis } from '../solv/felles.ts';
+import { FLISNIVA, flisAvNavn, flisUtsnitt, m2PerKm2, ruteM, type Flis } from '../solv/felles.ts';
 import { tellIFlate, type Oversikt } from '../solv/grunnkart.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
 import { arealFraRuter, tiDekar } from './felles.ts';
@@ -49,19 +50,33 @@ export interface Detaljareal {
 }
 /* Tabellen gull.detaljareal: arealet per detaljklasse i kommunen nr, av blokkene på 10,6 meter (solv.detaljklasser) klippet til
    kommunen etter halvregelen. Bare for kommunene med lagrede detaljklasser (bronse.detaljregister): for de andre ville det koste ett
-   kall mot NIBIO per blokk, og da er svaret null. Blokkene leses seks om gangen. */
+   kall mot NIBIO per blokk, og da er svaret null. */
 export async function detaljareal(nr: string): Promise<Detaljareal | null> {
+  return tellDetaljer(nr, null);
+}
+/* Tabellen gull.detaljerIVerneomrader: det samme, men bare innenfor verneområdene (solv.verneomrader). Der områder overlapper,
+   telles arealet én gang. Ruter teller når verneområdene dekker minst halve ruta. */
+export async function detaljerIVerneomrader(nr: string): Promise<Detaljareal | null> {
+  return tellDetaljer(nr, (await katalog.solv.verneomrader(nr)).omrader);
+}
+/* Arealet per detaljklasse i kommunen nr, eller bare innenfor flatene. Blokkene utenfor flatene hoppes over, og blokkene leses seks
+   om gangen. null når kommunen ikke har lagrede detaljklasser. */
+async function tellDetaljer(
+  nr: string,
+  flater: { koord: Flerflate; ext: Utsnitt }[] | null
+): Promise<Detaljareal | null> {
   const reg = await katalog.bronse.detaljregister(),
     L = reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][FLISNIVA];
   if (!L || !L.length) return null;
   const g = await katalog.solv.grense(nr),
     n = new Array<number>(DETALJKLASSER.length + 1).fill(0),
-    ko = [...L];
+    ko = L.filter(([x, y]) => !flater || flater.some(f => overlapper(f.ext, flisUtsnitt([FLISNIVA, x, y])))),
+    koord = flater && flater.map(f => f.koord);
   await Promise.all(
     Array.from({ length: 6 }, async () => {
       for (let b = ko.shift(); b; b = ko.shift()) {
-        const t = tellIFlate(await katalog.solv.detaljklasser([FLISNIVA, b[0], b[1]]), g.koord, n.length);
-        t.forEach((v, k) => (n[k] += v));
+        const K = await katalog.solv.detaljklasser([FLISNIVA, b[0], b[1]]);
+        tellIFlate(K, g.koord, n.length, koord || undefined).forEach((v, k) => (n[k] += v));
       }
     })
   );

@@ -26,11 +26,13 @@ import {
   svar
 } from '../komponenter/deler.tsx';
 import {
+  GK_LAND,
   GK_SKOG,
   GK_VATMARK,
   detaljer,
   detaljsum,
   iGrunnkartet,
+  perOkosystem,
   graa,
   graaIPlan,
   inon,
@@ -119,7 +121,8 @@ const GRUNNKART_KILDE = (
 
 function Skog({ tema }: { tema: Tema }) {
   const D = detaljer(),
-    skog = D.s === 'ok' ? iGrunnkartet(D.v, GK_SKOG) : null;
+    skog = D.s === 'ok' ? iGrunnkartet(D.v, GK_SKOG) : null,
+    V = detaljer('vern');
   return (
     <Temaside
       tema={tema}
@@ -134,7 +137,7 @@ function Skog({ tema }: { tema: Tema }) {
       kort={[
         ['Skog i kommunen', svar(D, () => iTekst(skog!.km2))],
         ['Andel av landarealet som er skog', svar(D, () => prosent(skog!.andel))],
-        ['Skog som er vernet', <span className="mangler-tall">Ikke laget ennå</span>]
+        ['Skog som er vernet', svar(V, v => iTekst(detaljsum(v, GK_SKOG)))]
       ]}
       kilde={GRUNNKART_KILDE}
       lag={[KLASSER, PLAN]}
@@ -298,7 +301,9 @@ function perVerneform(omrader: { km2: number; egenskaper: Record<string, unknown
 
 function Vern({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('vern'),
-    v = T.s === 'ok' ? T.v : null;
+    v = T.s === 'ok' ? T.v : null,
+    V = detaljer('vern'),
+    D = detaljer();
   return (
     <Temaside
       tema={tema}
@@ -389,10 +394,38 @@ function Vern({ tema }: { tema: Tema }) {
           </Figur>
         </>
       )}
-      <Mangler
+      <Figur
         tittel={`Naturen som er vernet i ${kommunen()}`}
-        trenger="grunnkartets økosystemtyper krysset med verneområdene, slik planlagt utbygging krysses i dag."
-      />
+        tekst={
+          <p>
+            Grunnkartets økosystemtyper innenfor verneområdene. Myr og beite med trær er med i skogen. Der områder
+            overlapper, telles arealet én gang.
+          </p>
+        }
+        kilder={['grunnkart', 'vern']}
+      >
+        {svar(V, d => {
+          const land = detaljsum(d, GK_LAND),
+            hav = detaljsum(d, k => k.id === 'hav'),
+            fersk = detaljsum(d, k => k.id === 'inn' || k.id === 'elv'),
+            andel = D.s === 'ok' ? iGrunnkartet(d, GK_LAND, D.v).andel : null;
+          return d.sum > 0 ? (
+            <>
+              <Liggende
+                hva="Vernet areal per økosystemtype"
+                data={perOkosystem(d).map(([navn, km2]) => ({ navn, km2, farge: 'vern' }))}
+              />
+              <p>
+                Av det vernede arealet er {iTekst(land)} på land, {iTekst(hav)} i sjø og {iTekst(fersk)} i innsjøer og
+                elver.
+                {andel !== null && <> Det vernede på land er {prosent(andel)} av landarealet i grunnkartet.</>}
+              </p>
+            </>
+          ) : (
+            <p>Kommunen har ingen verneområder.</p>
+          );
+        })}
+      </Figur>
     </Temaside>
   );
 }
