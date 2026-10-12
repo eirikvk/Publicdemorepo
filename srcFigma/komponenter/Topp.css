@@ -1,0 +1,191 @@
+/* Toppen (Topp.tsx): den smale linjen om prototypen, den grønne toppen med navnet og knappene, og menyen under. Fra 760 px og ned
+   står menyen og knappene bak menyknappen. */
+.prototyp {
+  background: var(--md-color-beige-4);
+  font-size: var(--md-typography-body-s);
+  padding: 6px var(--luft);
+  text-align: center;
+}
+.topp {
+  position: relative;
+  background: var(--md-color-primary-100);
+  color: var(--md-color-text-inverted);
+}
+.topp a {
+  color: inherit;
+}
+.topp-rad {
+  max-width: calc(1040px + 2 * var(--luft));
+  margin: 0 auto;
+  padding: 16px var(--luft) 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.merke {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+.merke-ikon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+.topp-knapper {
+  display: flex;
+  gap: 8px;
+}
+.topp-knapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: none;
+  color: var(--md-color-text-inverted);
+  font-size: var(--md-typography-body-s);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.topp-knapp:hover,
+.topp-knapp[aria-expanded='true'] {
+  background: rgb(255 255 255 / 0.12);
+}
+.topp-knapp svg {
+  width: 18px;
+  height: 18px;
+}
+.menyknapp {
+  display: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 8px;
+  cursor: pointer;
+}
+.menyknapp svg {
+  width: 28px;
+  height: 28px;
+}
+.meny {
+  max-width: calc(1040px + 2 * var(--luft));
+  margin: 0 auto;
+  padding: 0 var(--luft);
+}
+.meny ul {
+  display: flex;
+  gap: 24px;
+}
+.meny ul a {
+  display: block;
+  padding: 10px 0 8px;
+  border-bottom: 3px solid transparent;
+  font-size: var(--md-typography-body-s);
+  font-weight: 600;
+  text-decoration: none;
+}
+.meny ul a:hover {
+  border-bottom-color: rgb(255 255 255 / 0.5);
+}
+.meny ul a[aria-current='page'] {
+  border-bottom-color: var(--md-color-text-inverted);
+}
+.meny-knapper {
+  display: none;
+}
+.topp :focus-visible {
+  outline-color: var(--md-color-text-inverted);
+}
+
+/* Kommunevelgeren under toppen */
+.kommunevelger {
+  max-width: calc(1040px + 2 * var(--luft));
+  margin: 0 auto;
+  padding: 12px var(--luft) 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--md-typography-body-s);
+}
+.kommunevelger label {
+  font-weight: 600;
+}
+.kommunevelger-rad {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.kommunevelger select {
+  flex: 0 1 360px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--md-color-grey-5);
+  border-radius: 4px;
+  background: var(--md-color-grey-white);
+  color: var(--md-color-text-primary);
+  font-size: 1rem;
+}
+.kommunevelger .lukk {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 8px;
+  cursor: pointer;
+}
+.kommunevelger .lukk svg {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 760px) {
+  .topp-rad {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .merke {
+    font-size: 1.125rem;
+  }
+  .topp-rad .topp-knapper {
+    display: none;
+  }
+  .menyknapp {
+    display: block;
+  }
+  .meny {
+    display: none;
+    padding-bottom: 16px;
+  }
+  .meny.apen {
+    display: block;
+  }
+  .meny ul {
+    flex-direction: column;
+    gap: 0;
+  }
+  .meny ul a {
+    padding: 12px 0;
+    border-bottom: 1px solid rgb(255 255 255 / 0.25);
+    border-left: 3px solid transparent;
+    font-size: 1rem;
+  }
+  .meny ul a[aria-current='page'] {
+    border-bottom-color: rgb(255 255 255 / 0.25);
+    border-left-color: var(--md-color-text-inverted);
+    padding-left: 10px;
+  }
+  .meny-knapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}

@@ -68,6 +68,63 @@ export function tolkHistorie(j: JsonStat, nr: string): Historie | null {
   };
 }
 
+/* SSBs arealklasser hver for seg, slik tabell 09594 har dem: [kode, navn, klassen den regnes til (bebygd, jordbruk, natur eller vann)].
+   Bebygd per formål, jordbruk som fulldyrka og ikke fulldyrka, skog per treslag og resten av naturen per klasse. Summert gir de det
+   samme som KL og VANN. Navnene står som hos SSB. */
+export const DETALJER: [kode: string, navn: string, klasse: 'beb' | 'jor' | 'nat' | 'vann'][] = [
+  ['01', 'Boligbebyggelse', 'beb'],
+  ['02', 'Fritidsbebyggelse', 'beb'],
+  ['03', 'Bebygd område for landbruk og fiske', 'beb'],
+  ['04', 'Næring, offentlig og privat tjenesteyting', 'beb'],
+  ['05', 'Undervisning og barnehage', 'beb'],
+  ['06', 'Helse- og sosialinstitusjoner', 'beb'],
+  ['07', 'Kultur og religiøse aktiviteter', 'beb'],
+  ['08-09', 'Transport, telekommunikasjon og teknisk infrastruktur', 'beb'],
+  ['10-11', 'Beredskapstjenester og Forsvaret', 'beb'],
+  ['12-13', 'Grønne områder, idretts- og sportsområder', 'beb'],
+  ['14', 'Uklassifisert bebyggelse og anlegg', 'beb'],
+  ['15', 'Fulldyrka jord', 'jor'],
+  ['16', 'Ikke fulldyrka jord', 'jor'],
+  ['17.01', 'Barskog', 'nat'],
+  ['17.02', 'Blandingsskog', 'nat'],
+  ['17.03', 'Lauvskog', 'nat'],
+  ['17.04', 'Uklassifisert skog', 'nat'],
+  ['18', 'Åpen fastmark', 'nat'],
+  ['19', 'Åpen myr', 'nat'],
+  ['20', 'Bart fjell, grus- og blokkmark', 'nat'],
+  ['21', 'Varig snø, is og bre', 'nat'],
+  ['24', 'Uklassifisert ubebygd område', 'nat'],
+  ['22.01', 'Innsjø og tjern', 'vann'],
+  ['22.02', 'Elv', 'vann']
+];
+/* Arealet i km² for hver arealklasse (DETALJER) i hvert år fra 2017 (aar), og om grensen trolig er flyttet i perioden (endret) */
+export interface Arealdetaljer {
+  nr: string;
+  aar: string[];
+  klasser: { kode: string; navn: string; klasse: string; km2: number[] }[];
+  endret: boolean;
+}
+/* Tolker svaret med arealklassene hver for seg. Årene før 2017 tas bort (det eldre API-et gir alle år). Mangler en klasse, er den 0. */
+export function tolkDetaljer(j: JsonStat, nr: string): Arealdetaljer {
+  const kl = liste(j.dimension.ArealKlasse.category.index),
+    alle = liste(j.dimension.Tid.category.index),
+    nT = alle.length,
+    f = Math.max(0, alle.indexOf('2017')),
+    aar = alle.slice(f);
+  const klasser = DETALJER.map(([kode, navn, klasse]) => {
+    const i = kl.indexOf(kode);
+    return { kode, navn, klasse, km2: aar.map((_, t) => (i < 0 ? 0 : j.value[i * nT + f + t] || 0)) };
+  });
+  const alt = (t: number) => summen(klasser.map(k => k.km2[t])),
+    n = aar.length;
+  return {
+    nr,
+    aar,
+    klasser,
+    endret: n > 1 && alt(n - 1) > 0 && Math.abs(alt(n - 1) - alt(0)) / alt(n - 1) > GRENSE_FLYTTET
+  };
+}
+
 /* Tabellen solv.arealtall: arealet per klasse fra SSB i nyeste år, med landareal, innsjø og elv */
 export async function arealtall(nr: string): Promise<Arealtall> {
   return tolkAreal(await katalog.bronse.arealtall(nr));
@@ -75,4 +132,8 @@ export async function arealtall(nr: string): Promise<Arealtall> {
 /* Tabellen solv.historie: arealet per klasse i 2017 og i nyeste år, eller null når serien ikke rekker så langt */
 export async function historie(nr: string): Promise<Historie | null> {
   return tolkHistorie(await katalog.bronse.arealtidsserie(nr), nr);
+}
+/* Tabellen solv.arealdetaljer: arealet per arealklasse hos SSB, hver for seg, i hvert år fra 2017 */
+export async function arealdetaljer(nr: string): Promise<Arealdetaljer> {
+  return tolkDetaljer(await katalog.bronse.arealdetaljer(nr), nr);
 }

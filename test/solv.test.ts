@@ -95,3 +95,22 @@ test('punkt: feltene fra GetFeatureInfo hos NIBIO og DiBK, med navn på koder og
     globalThis.fetch = ekte;
   }
 });
+
+test('SSB: arealklassene hver for seg, fra 2017', async () => {
+  const { tolkDetaljer } = await import('../src/data/solv/ssb.ts');
+  /* To klasser (barskog og myr) og tre år, der 2016 skal tas bort */
+  const D = tolkDetaljer(
+    {
+      dimension: {
+        ArealKlasse: { category: { index: ['17.01', '19'] } },
+        Tid: { category: { index: ['2016', '2017', '2018'] } }
+      },
+      value: [9, 10, 11, 5, 6, 6]
+    },
+    '5001'
+  );
+  assert.deepEqual(D.aar, ['2017', '2018']);
+  assert.deepEqual(D.klasser.find(k => k.kode === '17.01')!.km2, [10, 11]);
+  assert.deepEqual(D.klasser.find(k => k.kode === '19')!.km2, [6, 6]);
+  assert.deepEqual(D.klasser.find(k => k.kode === '01')!.km2, [0, 0]);
+});

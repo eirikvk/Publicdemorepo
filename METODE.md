@@ -914,6 +914,12 @@ kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m²
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
 
+**Tvillingen fra Figma, 12. oktober 2026.** En egen side på `figma/` har utseendet og navigeringen fra Figma-skissene, med tall
+og kart fra den samme datamotoren (se README). Datamotoren har fått én ny tabell, SSBs arealklasser hver for seg fra 2017
+(`bronse.arealdetaljer` og `solv.arealdetaljer`), til skog per treslag, åpen myr og bebygd per formål. Den bygger på samme tabell
+hos SSB som arealtallene, og summert per klasse gir den de samme tallene. Bare tvillingen henter den. Hovedsidens tall er ikke
+endret, og regresjonstesten ga ingen avvik.
+
 **Mer fra kildene i detaljene, 12. oktober 2026.** Når detaljene for punktet vises, slås punktet nå opp hos NIBIO, DiBK og
 Miljødirektoratet, og områdene i naturtemaene får alle feltene fra kilden. Feltene har lesbare navn, med et valg for å se alle med
 kildenes egne navn. Flatene i punktet får et stiplet omriss i kartet. Tallene er ikke endret, og regresjonstesten ga ingen avvik.

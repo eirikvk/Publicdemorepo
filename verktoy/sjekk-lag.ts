@@ -24,6 +24,10 @@
    eller WeakSet). Unntaket er listen over hvem som abonnerer, i data/motor/tilstand.ts. Kartet kan ha sitt eget minne
    for det som tegnes.
 
+   Tvillingen fra Figma, i srcFigma/ (se vite.figma.config.ts), er en egen side som bruker den samme datamotoren. Den kan importere
+   fra src/, men src/ importerer aldri fra srcFigma/. Fra src/ kan den bruke datamotoren (src/data, men ikke bronse: den henter ikke
+   selv), kartet (src/ui/kart) og noen små fellesfiler (FIGMA_LOV). Hovedsidens sider og adresse (src/ui/sider.ts) bruker den ikke.
+
    Typene sjekkes av TypeScript (tsc). Denne sjekken ser bare på hvem som importerer fra hvem, og på reglene over. Koden leses med
    oxc-parser, som kan lese TypeScript og JSX.
 
@@ -153,8 +157,64 @@ for (const [lag, regel] of Object.entries(LAG)) {
   }
 }
 
+/* Tvillingen fra Figma: srcFigma/ kan bruke det i FIGMA_LOV fra src/, men src/ bruker aldri srcFigma/ */
+const ROT = path.resolve(SRC, '..'),
+  FIGMA = path.join(ROT, 'srcFigma');
+const FIGMA_LOV = [
+    'data/',
+    'ui/kart/',
+    'ui/tilstand.ts',
+    'ui/tekst.ts',
+    'ui/farger.ts',
+    'ui/komponenter/md.ts',
+    'ui/komponenter/lager.ts'
+  ],
+  FIGMA_IKKE = ['data/bronse/'];
+const filerI = (mappe: string): string[] =>
+  fs.existsSync(mappe)
+    ? fs
+        .readdirSync(mappe, { withFileTypes: true })
+        .flatMap(d =>
+          d.isDirectory()
+            ? filerI(path.join(mappe, d.name))
+            : /\.[jt]sx?$/.test(d.name)
+              ? [path.join(mappe, d.name)]
+              : []
+        )
+    : [];
+const importer = (fil: string) => {
+  const kode = fs.readFileSync(fil, 'utf8'),
+    { program } = parseSync(path.basename(fil), kode);
+  return (program.body as Node[])
+    .filter(n => n.type === 'ImportDeclaration')
+    .map(n => ({ fra: n.source.value as string, linje: kode.slice(0, n.start).split('\n').length }));
+};
+for (const fil of filerI(SRC))
+  for (const { fra, linje } of importer(fil))
+    if (fra.includes('srcFigma'))
+      feil.push(`${path.relative(ROT, fil)}:${linje} importerer fra tvillingen (${fra}): src/ bruker aldri srcFigma/`);
+for (const fil of filerI(FIGMA)) {
+  antall++;
+  for (const { fra, linje } of importer(fil)) {
+    if (!fra.startsWith('.')) continue; /* pakker */
+    const hvor = path.resolve(path.dirname(fil), fra);
+    if (hvor.startsWith(FIGMA + path.sep)) continue;
+    const rel = path.relative(SRC, hvor).split(path.sep).join('/');
+    const ok =
+      hvor.startsWith(SRC + path.sep) &&
+      FIGMA_LOV.some(p => rel.startsWith(p)) &&
+      !FIGMA_IKKE.some(p => rel.startsWith(p));
+    if (!ok)
+      feil.push(
+        `${path.relative(ROT, fil)}:${linje} importerer fra ${fra}: tvillingen kan bare bruke ${FIGMA_LOV.join(', ')}`
+      );
+  }
+}
+
 feil.forEach(x => console.log(x));
 console.log(
-  feil.length ? `\n${feil.length} brudd.` : `${antall} filer i ${Object.keys(LAG).length} lag sjekket. Ingen brudd.`
+  feil.length
+    ? `\n${feil.length} brudd.`
+    : `${antall} filer i ${Object.keys(LAG).length} lag og tvillingen sjekket. Ingen brudd.`
 );
 process.exit(feil.length ? 1 : 0);

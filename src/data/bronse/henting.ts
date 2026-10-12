@@ -41,7 +41,13 @@ function logg(kilde: string, hva: string, ms: number, bytes: number, feil?: bool
   henteStatus.kall = [{ kilde, hva, ms, bytes, feilet: !!feil }, ...henteStatus.kall].slice(0, 8);
   melding();
 }
-/* Henter fra url. kilde og hva står i kall-loggen. stille: feil føres ikke i loggen. bytes: svaret er et bilde eller en annen fil
+/* Mappen med sidens egne filer (kommuner.json, klasser.json og klasser/), relativt til siden. En side i en undermappe, som tvillingen
+   fra Figma i figma/, sier hvor de ligger med <meta name="egne-filer" content="../">. Uten den ligger de ved siden av siden. */
+const egneFiler = () => {
+  const m = typeof document !== 'undefined' ? document.querySelector('meta[name="egne-filer"]') : null;
+  return (m && m.getAttribute('content')) || '';
+};
+/* Henter fra url. kilde og hva står i kall-loggen. Filer fra kilden «Egen fil» hentes fra mappen med sidens egne filer. stille: feil føres ikke i loggen. bytes: svaret er et bilde eller en annen fil
    (ArrayBuffer), ellers JSON. kropp: spørringen sendes som POST med denne teksten. JSON-svaret er unknown: filen for hver kilde sier
    hvilken form det har. */
 export function hent(
@@ -69,6 +75,7 @@ export async function hent(
   kropp?: string
 ): Promise<unknown> {
   const t0 = performance.now();
+  if (kilde === 'Egen fil') url = egneFiler() + url;
   try {
     const r = await fetch(url, kropp ? { method: 'POST', body: kropp } : undefined);
     if (!r.ok) throw new Error(String(r.status));

@@ -3,7 +3,7 @@
 import type { Kommune } from '../solv/felles.ts';
 import { kommunen } from './kartverket.ts';
 import { KL, VANN } from '../solv/klasser.ts';
-import type { JsonStat } from '../solv/ssb.ts';
+import { DETALJER, type JsonStat } from '../solv/ssb.ts';
 import { hent } from './henting.ts';
 
 const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data';
@@ -15,7 +15,7 @@ const SSBKODER = [
 ]; /* arealklassene som hentes: de tre på land, og innsjø og elv */
 const SSB0 = 'https://data.ssb.no/api/v0/no/table/09594';
 type Utvalg = [filter: string, verdier: string[]];
-async function hentSSB(hva: string, nytt: string, region: Utvalg, tid: Utvalg): Promise<JsonStat> {
+async function hentSSB(hva: string, nytt: string, region: Utvalg, tid: Utvalg, koder = SSBKODER): Promise<JsonStat> {
   try {
     return (await hent('SSB', hva, nytt)) as JsonStat;
   } catch (e) {}
@@ -29,7 +29,7 @@ async function hentSSB(hva: string, nytt: string, region: Utvalg, tid: Utvalg): 
     JSON.stringify({
       query: [
         valg('Region', ...region),
-        valg('ArealKlasse', 'item', SSBKODER),
+        valg('ArealKlasse', 'item', koder),
         valg('ContentsCode', 'item', ['Areal']),
         valg('Tid', ...tid)
       ],
@@ -55,6 +55,19 @@ export const hentTidsserie = (k: Kommune) =>
     ['all', ['*']]
   );
 
+/* Arealet fra 2017 for hver av SSBs arealklasser for seg (se DETALJER i solv/ssb.ts), med de samme sammenslåtte tidsseriene.
+   Brukes foreløpig bare av tvillingen fra Figma (srcFigma/), til skog, våtmark og hva arealet går til. */
+export function hentDetaljer(k: Kommune) {
+  const koder = DETALJER.map(d => d[0]);
+  return hentSSB(
+    `Arealklassene fra 2017 for ${k.navn}`,
+    `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=K-${k.nr}&valueCodes[ArealKlasse]=${koder.join(',')}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=from(2017)`,
+    ['agg:KommSummer', ['K-' + k.nr]],
+    ['all', ['*']],
+    koder
+  );
+}
+
 /* Tabellen bronse.arealtall: arealet per klasse for kommunen i nyeste år, som JSON-stat */
 export async function arealtall(nr: string): Promise<JsonStat> {
   return hentArealtall(await kommunen(nr));
@@ -62,4 +75,8 @@ export async function arealtall(nr: string): Promise<JsonStat> {
 /* Tabellen bronse.arealtidsserie: arealet per klasse fra 2017, som JSON-stat */
 export async function arealtidsserie(nr: string): Promise<JsonStat> {
   return hentTidsserie(await kommunen(nr));
+}
+/* Tabellen bronse.arealdetaljer: arealet fra 2017 for hver av SSBs arealklasser for seg, som JSON-stat */
+export async function arealdetaljer(nr: string): Promise<JsonStat> {
+  return hentDetaljer(await kommunen(nr));
 }

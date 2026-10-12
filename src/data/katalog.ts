@@ -56,7 +56,7 @@ const flisMidt =
 
 /* Kildene: hvem som eier dataene, datasettet, hvor det er beskrevet (Geonorge eller data.norge.no) og lisensen. Lisensene er
    kontrollert mot Geonorge og data.norge.no 11. oktober 2026. Brukes av tabellene i bronse (kilde) til infoknappene og METODE.md. */
-const KILDE = {
+export const KILDE = {
   kartverket: {
     navn: 'Kartverket',
     datasett: 'Administrative enheter, kommuner (Kommuneinfo-API-et)',
@@ -227,6 +227,17 @@ export const katalog = {
       kilde: KILDE.ssb,
       husk: 6,
       etl: ssb.arealtidsserie
+    }),
+    arealdetaljer: tabell({
+      lag: 'bronse',
+      navn: 'arealdetaljer',
+      tittel: 'Arealklassene fra SSB, hver for seg',
+      om: 'arealet fra 2017 for hver av SSBs arealklasser for seg, som JSON-stat. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Det samme som arealtidsserie, men med hver arealklasse for seg i stedet for summert: bebygd per formål, fulldyrka og ikke fulldyrka jord, skog per treslag og resten av naturen per klasse.',
+      kilde: KILDE.ssb,
+      husk: 6,
+      etl: ssb.arealdetaljer
     }),
     grunnkartflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
@@ -444,6 +455,19 @@ export const katalog = {
       ],
       husk: 6,
       etl: solvSsb.historie
+    }),
+    arealdetaljer: tabell({
+      lag: 'solv',
+      navn: 'arealdetaljer',
+      tittel: 'Arealklassene hver for seg',
+      om: 'arealet per arealklasse hos SSB, hver for seg, i hvert år fra 2017. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Hver av SSBs arealklasser for seg, i km² per år fra 2017. Summert per klasse gir de det samme som arealtallene. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet.',
+      usikkerhet: [
+        'SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. Forskjeller mellom år er derfor ikke målt endring.'
+      ],
+      husk: 6,
+      etl: solvSsb.arealdetaljer
     }),
     klasser: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',

@@ -22,6 +22,8 @@ npm run dev        siden på http://localhost:5173, som lastes på nytt ved endr
 npm run bygg       bygger siden til dist/
 ```
 
+Tvillingen fra Figma (se under) kjøres med `npm run dev-figma` og bygges med `npm run bygg-figma`, etter `npm run bygg`.
+
 [KOM-I-GANG.md](KOM-I-GANG.md) har hele veien: krav, prøving på mobil, bygg, tester, verktøyene og feilsøking.
 
 Innholdet i `dist/` er hele siden: én HTML-fil, ett skript, ett stilark, skriftfilene og de lagrede dataene. Det kan legges på en
@@ -162,9 +164,9 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 
 | Fil | Innhold |
 |---|---|
-| `henting.ts` | Henting, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `henting.ts` | Henting, kall-loggen, hvor sidens egne filer ligger, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 eller ett punkt |
-| `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve |
+| `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve, summert til tre klasser og hver arealklasse for seg |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
 | `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, per flis, de lagrede klassene per blokk med registeret, og grunnkartet i ett punkt |
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
@@ -183,7 +185,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Den eneste filen i sølv og gull som bruker nettleseren. |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, tolking av fargene i kartbildene, og dagens klasse per rute i en flis |
-| `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017 |
+| `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017, og hver arealklasse for seg per år (til tvillingen fra Figma) |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
 | `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
@@ -279,6 +281,39 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |
 | `lager.ts` | Kroken som kobler komponentene til tilstanden |
+
+## Tvillingen fra Figma
+
+En egen side med utseendet og navigeringen fra Figma-skissene for naturregnskapet, drevet av den samme datamotoren. Den ligger på
+`…/figma/` ved siden av hovedsiden, med samme adresser i hash: `#5001` (oversikten), `#5001/naturtapet`, `#5001/utforsk`,
+`#5001/utforsk/skog`, `#5001/kart` og `#5001/hjelp`. Den skal la oss prøve den overordnede navigeringen og enkeltsidene fra skissene
+med ekte tall, uten å endre hovedsiden.
+
+- Kildekoden ligger i `srcFigma/`, og bygges for seg med `vite.figma.config.ts` til `dist/figma/`. Arbeidsflyten bygger den etter
+  hovedsiden, så hovedsidens bygg er det samme som uten den.
+- `srcFigma/` kan bruke kode fra `src/`, men `src/` bruker aldri `srcFigma/`. Fra `src/` bruker den datamotoren (`src/data`, men ikke
+  bronse), kartet (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet og kroken som tegner siden på nytt).
+  Hovedsidens sider og adresse (`src/ui/sider.ts`) bruker den ikke. `verktoy/sjekk-lag.ts` passer på dette.
+- Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`).
+- Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Foreløpig er det én tabell bare tvillingen bruker:
+  SSBs arealklasser hver for seg (`solv.arealdetaljer`), til skog, åpen myr og bebygd per formål. Hovedsiden henter den ikke.
+- Sidens egne filer (`kommuner.json` og `klasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
+  `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
+- Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra
+  skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro.
+- `npm run roykt-figma` åpner hver side i en mobilnettleser og sjekker overskrift, bredde, feil og Tilbake (`verktoy/figma-roykt.ts`).
+
+| Fil i `srcFigma/` | Innhold |
+|---|---|
+| `index.html`, `main.tsx` | Inngangen: stilene og siden |
+| `App.tsx` | Hele siden: toppen, siden for adressen og bunnen |
+| `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
+| `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
+| `tall.ts` | Tallene sidene viser, lest fra datamotoren |
+| `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
+| `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av |
+| `sider/` | Hovedsidene og temasidene |
+| `stil.css` | Grunnlaget og delene. Toppen og kartet har egne stilark. |
 
 ## Dokumentasjon
 
@@ -551,7 +586,7 @@ Ting å vite:
 4. Commit og push til `main`.
 
 Arbeidsflyten `.github/workflows/legg-ut.yml` («Bygg og legg ut») kjører ved hver push til `main`: den installerer pakkene fra
-`package-lock.json`, kjører `npm run sjekk` og `npm test`, bygger og legger ut `dist/` på GitHub Pages. Den kan også startes for hånd under
+`package-lock.json`, kjører `npm run sjekk` og `npm test`, bygger hovedsiden og tvillingen fra Figma, og legger ut `dist/` på GitHub Pages. Den kan også startes for hånd under
 Actions. Feiler sjekken, testene eller bygget, blir ingenting lagt ut, og siden som ligger ute, står urørt.
 
 GitHub Pages må ha «GitHub Actions» som kilde (Settings → Pages → Build and deployment → Source). Står den på «Deploy from a
@@ -581,7 +616,7 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   kjøringer av samme kode gir nøyaktig like tall.
 - `motortall.ts` henter tallene fra datamotoren til regresjonstesten. Tallene leses fra katalogen, med samme utdata som før. Med `?teknisk`
   gjør siden tilstanden, temaene, katalogen, innholdet i cachen og kartet tilgjengelig som `window.motor` (`src/ui/teknisk.ts`).
-- `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, se over. `npm run sjekk` kjører typesjekken
+- `sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning, også mellom tvillingen og `src/`, se over. `npm run sjekk` kjører typesjekken
   (`tsc`) for `src` og `verktoy`, så denne, og så `forklaringer.ts --sjekk`.
 - `forklaringer.ts` leser ut av ETL-funksjonene hvilke tabeller hver tabell bygger på (`src/data/avhengigheter.ts`), og skriver
   kapitlene i METODE.md mellom merkene `<!-- forklaringer:gruppe -->` fra kortene og katalogen. `npm run forklaringer` kjører den.
@@ -591,6 +626,7 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og lagrer svaret. Siden bruker da den samme funksjonens svar som
   ferdig svar (`lagret` i katalogen). En blokk koster fire kall mot NIBIO på 21 meter og ett på 10 meter, og de samme kartbildene
   brukes til begge.
+- `figma-roykt.ts` er røyktesten for tvillingen fra Figma, se over.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.
 
 `npm run formater` formaterer koden etter `.prettierrc.json`.
