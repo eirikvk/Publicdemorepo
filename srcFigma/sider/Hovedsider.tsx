@@ -7,7 +7,7 @@ import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { NATURTEMA } from '../../src/data/solv/temaer.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
-import { dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
+import { andelTekst, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
 import { MdRadioGroup } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
@@ -27,10 +27,13 @@ import { figma, velgKartTema } from '../navigasjon.ts';
 import {
   SKOG,
   arealklasser,
+  detaljer,
   endring,
   graaIPlan,
   naturtema,
   oppstilling,
+  perOkosystem,
+  planIDetaljer,
   planlagt,
   plansum,
   summer,
@@ -65,7 +68,9 @@ export function Oversikt() {
   const U = utbredelse(),
     E = endring(),
     P = plansum(),
-    A = arealklasser();
+    A = arealklasser(),
+    D = detaljer(),
+    PD = planIDetaljer();
   /* Bebygde klasser som økte mest, fra SSBs arealklasser hver for seg */
   const okning =
     A.s === 'ok'
@@ -149,7 +154,8 @@ export function Oversikt() {
                 endring: noe av den kan skyldes bedre kartlegging.
               </p>
               <p className="hint">
-                «Hva slags natur ble bygget ned?» i skissene krever målt endring, og er ikke laget ennå.
+                «Hva slags natur ble bygget ned?» i skissene krever målt endring. Under står i stedet hva slags natur
+                kommuneplanen setter av til utbygging.
               </p>
             </>
           }
@@ -185,6 +191,41 @@ export function Oversikt() {
                     Math.abs(r.na - r.fra) >= 0.0005 ? <Endringsmerke d={r.na - r.fra} av={r.fra} /> : ''
                   ])}
               />
+            );
+          })}
+        </Figur>
+        <Figur
+          tittel="Hva slags natur kommuneplanen setter av til utbygging"
+          tekst={
+            <>
+              <p>
+                Natur og jordbruk som kommuneplanen setter av til utbygging, per økosystemtype i grunnkartet, og hvor
+                stor del av typen i kommunen det er. Myr og beite med trær er med i skogen. Smale striper er ikke med.
+              </p>
+              <p className="hint">Summen er den samme som i båndet over.</p>
+            </>
+          }
+          kilder={['grunnkart', 'dibk']}
+        >
+          {svar(PD, p => {
+            const iDag = D.s === 'ok' ? perOkosystem(D.v.km2) : [],
+              rader = perOkosystem(p.km2);
+            if (p.ukjent > 0) rader.push(['Uten type i grunnkartet', p.ukjent]);
+            return rader.length ? (
+              <Tabell
+                hva="Satt av til utbygging per økosystemtype"
+                kolonner={[
+                  { navn: 'Økosystemtype' },
+                  { navn: 'Satt av', tall: true },
+                  { navn: 'Andel av typen', tall: true }
+                ]}
+                rader={rader.map(([navn, km2]) => {
+                  const av = iDag.find(([n]) => n === navn);
+                  return [navn, dekar(km2), av ? andelTekst((km2 / av[1]) * 100) : '–'];
+                })}
+              />
+            ) : (
+              <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
             );
           })}
         </Figur>

@@ -10,6 +10,7 @@ import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
 import { bildetallet, valgt, verdi } from '../src/data/motor/valgt.ts';
 import type { Arealdetaljer } from '../src/data/solv/ssb.ts';
 import type { Detaljareal } from '../src/data/gull/grunnkart.ts';
+import type { PlanlagtDetaljer } from '../src/data/gull/planlagt.ts';
 import { DETALJKLASSER, type Detaljklasse } from '../src/data/solv/klasser.ts';
 
 /* Et tall som hentes: henter, feil, ingen (kommunen har ikke noe av det), mangler (ikke regnet ut for kommunen, og hvorfor) eller
@@ -36,8 +37,8 @@ export function detaljer(i: 'kommunen' | 'vern' = 'kommunen'): Svar<Detaljareal>
   if (S.s !== 'ok') return S;
   return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
 }
-/* Arealet av detaljklassene som passer */
-export const detaljsum = (D: Detaljareal, passer: (k: Detaljklasse) => boolean) =>
+/* Arealet av detaljklassene som passer, fra km² per detaljklasse (gull.detaljareal, gull.planlagtPerDetaljklasse og andre) */
+export const detaljsum = (D: { km2: number[] }, passer: (k: Detaljklasse) => boolean) =>
   summen(DETALJKLASSER.map((k, i) => (passer(k) ? D.km2[i] : 0)));
 /* Skog i grunnkartet: økosystemtypen skog, også tresatt myr og tresatt innmarksbeite. Våtmark: økosystemtypen våtmark (åpen
    våtmark) og tresatt myr. */
@@ -51,14 +52,22 @@ export function iGrunnkartet(D: Detaljareal, passer: (k: Detaljklasse) => boolea
     L = detaljsum(land, GK_LAND);
   return { km2, andel: L > 0 ? (km2 / L) * 100 : null };
 }
-/* Arealet per økosystemtype på nivå 1 i grunnkartet, med skogen samlet, størst først og uten de som er 0 */
-export function perOkosystem(D: Detaljareal): [navn: string, km2: number][] {
+/* Arealet per økosystemtype på nivå 1 i grunnkartet, fra km² per detaljklasse, med skogen samlet. Størst først, uten de som er 0. */
+export function perOkosystem(km2: number[]): [navn: string, km2: number][] {
   const m = new Map<string, number>();
   DETALJKLASSER.forEach((k, i) => {
     const navn = k.treslag ? 'Skog' : k.navn;
-    m.set(navn, (m.get(navn) || 0) + D.km2[i]);
+    m.set(navn, (m.get(navn) || 0) + km2[i]);
   });
-  return [...m].filter(([, km2]) => km2 > 0).sort((a, b) => b[1] - a[1]);
+  return [...m].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+}
+/* Planlagt utbygging per detaljklasse (gull.planlagtPerDetaljklasse). Mangler som detaljer(), og ingen uten utbygging. */
+export function planIDetaljer(): Svar<PlanlagtDetaljer> {
+  const D = detaljer();
+  if (D.s === 'mangler') return D;
+  const S = fraRad(valgt(katalog.gull.planlagtPerDetaljklasse));
+  if (S.s !== 'ok') return S;
+  return S.v ? { s: 'ok', v: S.v } : { s: 'ingen' };
 }
 
 /* Naturtemaene fra Miljødirektoratet: temaet (gull) og planlagt utbygging i det, når planen er regnet ut for de samme områdene */

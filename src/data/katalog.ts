@@ -883,6 +883,17 @@ export const katalog = {
       brukerstyrt: true,
       etl: gullPlan.planlagt
     }),
+    planlagtPerDetaljklasse: tabell({
+      lag: 'gull',
+      navn: 'planlagtPerDetaljklasse',
+      tittel: 'Planlagt utbygging per detaljklasse',
+      om: 'natur og jordbruk satt av til utbygging, fordelt på detaljklassene i grunnkartet: hver rute får den detaljklassen av riktig slag det er mest av i ruta. Summen er den samme som i gull.plansum. Bare for kommunene med lagrede detaljklasser, ellers null. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Planlagt utbygging per økosystemtype i grunnkartet: hvor mye av naturen som settes av, er skog, våtmark, tresatt myr og så videre. Hver rute med planlagt utbygging får den typen det er mest av i ruta, så summen er den samme som natur og jordbruk satt av. Bare for kommuner der detaljklassene er lagret.',
+      husk: 6,
+      brukerstyrt: true,
+      etl: gullPlan.planlagtPerDetaljklasse
+    }),
     plansum: tabell({
       lag: 'gull',
       navn: 'plansum',

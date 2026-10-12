@@ -33,6 +33,7 @@ import {
   detaljsum,
   iGrunnkartet,
   perOkosystem,
+  planIDetaljer,
   graa,
   graaIPlan,
   inon,
@@ -210,9 +211,44 @@ function Skog({ tema }: { tema: Tema }) {
   );
 }
 
+/* Våtmark som er planlagt nedbygget, som fremhevet melding: åpen våtmark og tresatt myr satt av til utbygging */
+function VatmarkIPlan({ P }: { P: ReturnType<typeof planIDetaljer> }) {
+  if (P.s === 'mangler') return null;
+  if (P.s !== 'ok')
+    return (
+      <Fremhevet>
+        <span>
+          {P.s === 'ingen'
+            ? 'Kommunen har ingen kommuneplan med utbygging hos DiBK.'
+            : P.s === 'feil'
+              ? 'Planlagt utbygging i våtmark kunne ikke regnes ut.'
+              : 'Planlagt utbygging i våtmark regnes ut når kartet for kommunen er hentet.'}
+        </span>
+      </Fremhevet>
+    );
+  const apen = detaljsum(P.v, k => k.id === 'vat'),
+    tresatt = detaljsum(P.v, k => k.underlag === 'myr');
+  return (
+    <Fremhevet>
+      {apen + tresatt > 0 ? (
+        <>
+          <b>Våtmark som er planlagt nedbygget: ca. {iTekst(apen + tresatt)}</b>
+          <span>
+            {iTekst(apen)} åpen våtmark og {iTekst(tresatt)} tresatt myr, etter kommuneplanen
+            {app.valgt ? ` for ${app.valgt.navn}` : ''}. Smale striper er ikke med.
+          </span>
+        </>
+      ) : (
+        <b>Kommuneplanen har ingen utbygging i våtmark.</b>
+      )}
+    </Fremhevet>
+  );
+}
+
 function Vatmark({ tema }: { tema: Tema }) {
   const D = detaljer(),
-    vat = D.s === 'ok' ? iGrunnkartet(D.v, GK_VATMARK) : null;
+    vat = D.s === 'ok' ? iGrunnkartet(D.v, GK_VATMARK) : null,
+    P = planIDetaljer();
   return (
     <Temaside
       tema={tema}
@@ -229,6 +265,7 @@ function Vatmark({ tema }: { tema: Tema }) {
         ['Andel av landarealet som er våtmark', svar(D, () => prosent(vat!.andel))]
       ]}
       kilde={GRUNNKART_KILDE}
+      fremhevet={<VatmarkIPlan P={P} />}
       lag={[KLASSER, PLAN]}
       lagEtter={
         <p className="hint">Lagene for økosystemtypen våtmark og tresatt myr fra skissene er ikke laget ennå.</p>
@@ -247,10 +284,6 @@ function Vatmark({ tema }: { tema: Tema }) {
         ['Kommunen i dagens løsning', iDagens('')]
       ]}
     >
-      <Mangler
-        tittel="Våtmark som er planlagt nedbygget"
-        trenger="grunnkartets økosystemtype våtmark krysset med planlagt utbygging, slik natur og jordbruk krysses i dag."
-      />
       <Figur
         tittel={`Dette dekker våtmarken i ${kommunen()}`}
         tekst={
@@ -413,7 +446,7 @@ function Vern({ tema }: { tema: Tema }) {
             <>
               <Liggende
                 hva="Vernet areal per økosystemtype"
-                data={perOkosystem(d).map(([navn, km2]) => ({ navn, km2, farge: 'vern' }))}
+                data={perOkosystem(d.km2).map(([navn, km2]) => ({ navn, km2, farge: 'vern' }))}
               />
               <p>
                 Av det vernede arealet er {iTekst(land)} på land, {iTekst(hav)} i sjø og {iTekst(fersk)} i innsjøer og

@@ -75,6 +75,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
     'solv.planoversikt'
   ],
   'gull.planlagt': ['gull.utbygging', 'solv.arealtall'],
+  'gull.planlagtPerDetaljklasse': ['bronse.detaljregister', 'gull.utbygging', 'solv.detaljklasser'],
   'gull.plansum': ['gull.utbygging'],
   'gull.inon': ['solv.arealtall', 'solv.inon'],
   'gull.graakryss': ['gull.utbygging', 'solv.graa'],
