@@ -42,6 +42,7 @@ import {
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
+import { SKOGLAG } from '../kartlag.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -73,7 +74,7 @@ function Temaside(p: Temasideinnhold) {
         </div>
         {p.fremhevet}
       </div>
-      <Kart lag={p.lag} etter={p.lagEtter} />
+      <Kart key={p.tema.id} lag={p.lag} etter={p.lagEtter} />
       <div className="innhold">
         {p.children}
         <Sporsmal liste={p.sporsmal} />
@@ -112,6 +113,8 @@ function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; 
   );
 }
 
+/* Kilden til lagene fra grunnkartet, i lagvelgeren */
+const GK = 'Grunnkart for arealanalyse, NIBIO';
 /* Kilden for tallene fra grunnkartet med detaljklassene */
 const GRUNNKART_KILDE = (
   <p>
@@ -142,11 +145,44 @@ function Skog({ tema }: { tema: Tema }) {
         ['Skog som er vernet', svar(V, v => iTekst(detaljsum(v, GK_SKOG)))]
       ]}
       kilde={GRUNNKART_KILDE}
-      lag={[KLASSER, PLAN]}
+      lag={[
+        {
+          id: 'skog',
+          navn: 'Økosystemtype skog',
+          kilde: GK,
+          farger: [['Skog', 'skog']],
+          ol: SKOGLAG.skog,
+          av: true
+        },
+        {
+          id: 'skogtyper',
+          navn: 'Skogtyper',
+          kilde: GK,
+          farger: [
+            ['Barskog', 'skog-bar'],
+            ['Blandingsskog', 'skog-bland'],
+            ['Lauvskog', 'skog-lauv']
+          ],
+          ol: SKOGLAG.skogtyper
+        },
+        {
+          id: 'tresatt',
+          navn: 'Tresatt myr og innmarksbeite',
+          kilde: GK,
+          farger: [
+            ['Tresatt myr', 'myr-tresatt'],
+            ['Tresatt innmarksbeite', 'beite-tresatt']
+          ],
+          ol: SKOGLAG.tresatt
+        },
+        { ...KLASSER, av: true },
+        PLAN
+      ]}
       lagEtter={
-        <p className="hint">
-          Lagene for skog, skogtyper, tresatt myr, naturskog og naturtyper i skog fra skissene er ikke laget ennå.
-        </p>
+        <>
+          {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
+          <p className="hint">Lagene for naturskog og naturtyper i skog fra skissene er ikke laget ennå.</p>
+        </>
       }
       sporsmal={[
         [

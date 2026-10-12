@@ -1,8 +1,10 @@
 /* Kartet i tvillingen: det samme kartet som hovedsiden (src/ui/kart), satt inn her, med lagvelgeren fra Figma ved siden av. Hvilket
    tema kartet viser, følger siden (ui.side, se navigasjon.ts). Lagvelgeren skjuler og viser lagene med gjennomsiktighet, så kartets
-   egen styring av lagene ikke røres. Det finnes ett kart, så bare én side om gangen har det. «Åpne kart i fullskjerm» legger kartet
-   over hele vinduet. */
+   egen styring av lagene ikke røres. Lag som bare tvillingen har (kartlag.ts), legges inn under planen når kartet vises, og tas ut
+   igjen etterpå. Det finnes ett kart, så bare én side om gangen har det. «Åpne kart i fullskjerm» legger kartet over hele vinduet. */
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import type TileLayer from 'ol/layer/Tile.js';
+import type XYZ from 'ol/source/XYZ.js';
 import { UTM } from '../../src/data/solv/felles.ts';
 import { hentingAvKlasser } from '../../src/data/motor/grunnkart.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
@@ -21,14 +23,17 @@ import { henteKort } from '../../src/ui/tekst.ts';
 import { MdButton, MdCheckbox, MdIconClose, MdIconExpandContent, MdLoadingSpinner } from '../md.ts';
 import './Kart.css';
 
-/* Et lag i lagvelgeren: hvilke av kartets lag det styrer, navnet, kilden og fargene i tegnforklaringen [navn, farge] */
+/* Et lag i lagvelgeren: hvilke av kartets lag det styrer (klasser, plan eller tema), eller et eget lag (ol), navnet, kilden, fargene
+   i tegnforklaringen [navn, farge], og av når laget er skjult til man slår det på */
 export interface Kartlag {
-  id: 'klasser' | 'plan' | 'tema';
+  id: string;
   navn: string;
   kilde: string;
   farger?: [navn: string, farge: string][];
+  ol?: TileLayer<XYZ>;
+  av?: boolean;
 }
-const OL_LAG = {
+const OL_LAG: Record<string, () => { setOpacity(o: number): void }[]> = {
   klasser: () => [klasseLag, oversiktLag],
   plan: () => [planLag],
   tema: () => [...flateLag, dekLag, inonLag, graaLag]
@@ -106,7 +111,9 @@ export default function Kart({
   stor?: boolean;
   enkel?: string;
 }) {
-  const [skjult, settSkjult] = useState<Record<string, boolean>>({}),
+  const [skjult, settSkjult] = useState<Record<string, boolean>>(() =>
+      Object.fromEntries(lag.filter(l => l.av).map(l => [l.id, true]))
+    ),
     [full, settFull] = useState(false),
     henting = hentingAvKlasser(),
     p = ui.probe;
@@ -115,6 +122,17 @@ export default function Kart({
     for (const [id, f] of Object.entries(OL_LAG)) f().forEach(l => l.setOpacity(skjult[id] ? 0 : 1));
   }, [skjult]);
   useEffect(() => () => Object.values(OL_LAG).forEach(f => f().forEach(l => l.setOpacity(1))), []);
+  /* Egne lag: inn under planen mens kartet vises, og synlige når de er slått på */
+  const egne = lag.filter(l => l.ol);
+  useEffect(() => {
+    const k = lagKart(),
+      L = k.getLayers();
+    egne.forEach(l => {
+      if (!L.getArray().includes(l.ol!)) L.insertAt(L.getArray().indexOf(planLag), l.ol!);
+    });
+    return () => egne.forEach(l => L.remove(l.ol!));
+  }, [egne.map(l => l.id).join()]);
+  useEffect(() => egne.forEach(l => l.ol!.setVisible(!skjult[l.id])), [skjult, egne.map(l => l.id).join()]);
   useEffect(() => {
     if (kartet) kartet.updateSize();
     if (!full) return;

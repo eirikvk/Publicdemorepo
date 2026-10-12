@@ -13,15 +13,16 @@
   --blaa: var(--md-color-attention-info-1);
   --blaa-merke: #1f6fb2;
   --gul: #fdf1cf;
-  /* Treslagene i figuren for skog: fra mørk til lys grønn */
+  /* Skogen i figurene og kartlagene: samlet, og treslagene fra mørk til lys grønn */
+  --skog: #4f8a35;
   --skog-bar: #3f7a2a;
   --skog-bland: #7aa63c;
   --skog-lauv: #b7d47a;
   --skog-ukjent: #c9c4b3;
   /* Våtmarken i figuren for våtmark: åpen våtmark og tresatt myr */
   --myr-apen: #5b9bc4;
-  --myr-tresatt: #4f7f5f;
-  --beite-tresatt: #a89a4e;
+  --myr-tresatt: #2b8c8c;
+  --beite-tresatt: #c99a2e;
   --luft: 24px;
   color-scheme: light;
 }
