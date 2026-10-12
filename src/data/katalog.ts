@@ -261,6 +261,40 @@ export const katalog = {
         'Rutestørrelsen brukeren har valgt under Tekniske valg: 21 meter (nivå 9 i flisnettet, som er standard) eller 10,6 meter (nivå 10, et forsøk). På 10 meter hentes også kommuneplanen fra DiBK på nivå 10, med fire ganger så mange kall, og egne områder legges i det samme rutenettet. Alt annet er likt, også regelen om smale striper, som da tar bort felt smalere enn rundt 20 meter i stedet for 40.',
       husk: 1
     }),
+    detaljflis: tabell<Flis, ArrayBuffer>({
+      lag: 'bronse',
+      navn: 'detaljflis',
+      tittel: 'Kartbilder av grunnkartet med detaljklasser',
+      om: 'kartbilder av de 19 detaljklassene fra NIBIO, 512 x 512 piksler med 24 bit farge, kalt med flisen [10, x, y]. Stilen er for lang til å stå i adressen, så de hentes med POST. Brukes foreløpig bare til å lage de lagrede detaljklassene. Nøkkel: flisen som «z/x/y».',
+      forklaring:
+        'Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype. Hver klasse i sin farge, med 24 bit farge.',
+      kilde: KILDE.grunnkart,
+      husk: 50,
+      nokkel: flisnavn,
+      etl: nibioGrunnkart.detaljflis
+    }),
+    detaljregister: tabell<void, Klasseregister | null>({
+      lag: 'bronse',
+      navn: 'detaljregister',
+      tittel: 'Register over lagrede detaljklasser',
+      om: 'kommunene som har detaljklassene lagret sammen med siden, og blokkene på nivå 10 for hver',
+      teknisk: true,
+      forklaring: 'Kommunene som har detaljklassene lagret sammen med siden, og blokkene for hver.',
+      husk: 1,
+      etl: nibioGrunnkart.detaljregister
+    }),
+    detaljfil: tabell<Flis, ArrayBuffer | null>({
+      lag: 'bronse',
+      navn: 'detaljfil',
+      tittel: 'Lagrede detaljklasser per blokk',
+      om: 'detaljklassene i en blokk på nivå 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [10, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
+      teknisk: true,
+      forklaring:
+        'Detaljklassene i en blokk slik de er lagret sammen med siden. Det er svaret fra solv.detaljklasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts --detalj).',
+      husk: 0,
+      nokkel: flisnavn,
+      etl: nibioGrunnkart.detaljfil
+    }),
     klasseregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'klasseregister',
@@ -481,6 +515,19 @@ export const katalog = {
       etl: solvGrunnkart.klasser,
       lagret: solvGrunnkart.lagredeKlasser,
       eksempel: flisMidt(PLANNIVA)
+    }),
+    detaljklasser: tabell<Flis, solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'detaljklasser',
+      tittel: 'Detaljklasser per blokk',
+      om: 'detaljklassen per rute i en blokk på nivå 10 (10,6 meter), kalt med blokken [10, x, y], laget av ett kartbilde fra NIBIO (bronse.detaljflis). For noen kommuner ligger svaret lagret sammen med siden (bronse.detaljfil). Nøkkel: blokken som «z/x/y».',
+      forklaring:
+        'Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er mest av, når fargen er en blanding. Foreløpig lagret bare for Trondheim.',
+      husk: 0,
+      nokkel: flisnavn,
+      etl: solvGrunnkart.detaljklasser,
+      lagret: solvGrunnkart.lagredeDetaljklasser,
+      eksempel: flisMidt(10)
     }),
     blokker: tabell<[string, number], Flis[]>({
       lag: 'solv',
@@ -715,6 +762,19 @@ export const katalog = {
     })
   },
   gull: {
+    detaljareal: tabell({
+      lag: 'gull',
+      navn: 'detaljareal',
+      tittel: 'Areal per detaljklasse',
+      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter klippet til kommunen etter halvregelen. Bare for kommunene med lagrede detaljklasser, ellers null. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Bare for kommuner der detaljklassene er lagret.',
+      usikkerhet: [
+        'Klassen leses av fargen i kartbildet, og i kanten mellom to flater blander NIBIO fargene. Smale flater, som elver og bekker, blir derfor for små.'
+      ],
+      husk: 12,
+      etl: gullGrunnkart.detaljareal
+    }),
     dagensKlasser: tabell({
       lag: 'gull',
       navn: 'dagensKlasser',

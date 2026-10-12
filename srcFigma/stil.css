@@ -18,6 +18,9 @@
   --skog-bland: #7aa63c;
   --skog-lauv: #b7d47a;
   --skog-ukjent: #c9c4b3;
+  /* Våtmarken i figuren for våtmark: åpen våtmark og tresatt myr */
+  --myr-apen: #5b9bc4;
+  --myr-tresatt: #4f7f5f;
   --luft: 24px;
   color-scheme: light;
 }

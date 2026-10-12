@@ -1,5 +1,6 @@
 /* Sølv, felles standard: arealklassene. Inndelingen i bebygd, jordbruk og natur, med koblingen til SSBs arealklasser og
-   grunnkartets økosystemtyper, og tolkingen av fargene i kartbildene fra NIBIO. */
+   grunnkartets økosystemtyper, og tolkingen av fargene i kartbildene fra NIBIO. Nederst detaljklassene, som deler de samme klassene
+   videre. */
 import { SYNLIG, type Piksler } from './felles.ts';
 
 /* Klassene, med id: bebygd, jordbruk og natur på land, og hav, innsjø og elv */
@@ -100,5 +101,128 @@ export function klasserIFlis(K: Piksler): Uint8Array {
   const kl = new Uint8Array(K.length / 4);
   for (let i = 0, q = 0; i < K.length; i += 4, q++)
     if (K[i + 3] >= SYNLIG) kl[q] = klasseAv(K[i], K[i + 1], K[i + 2]) + 1;
+  return kl;
+}
+
+/* Detaljklassene: de samme klassene, men med skogen delt etter treslag (barskog, lauvskog og blandingsskog) og underlag (tresatt
+   myr og tresatt innmarksbeite for seg), jordbruket delt i dyrket mark og grasmark, og naturen ellers etter økosystemtype. Til
+   sammen 19 klasser, i ett kartbilde per flis. Foreløpig bare til tvillingen fra Figma. Dagens klasser over, som hovedsiden bruker,
+   er ikke endret.
+   NIBIO tegner hver klasse i en egen farge (DETALJFARGE), i bilder med 24 bit farge. Hver farge leses som blandingen av de to
+   klassene den ligger nærmest, som for dagens klasser. Sammenlignet med en tegning uten blanding (SVG) gir det samme areal for de
+   seks klassene, og innenfor ±3 % for de store detaljklassene (se METODE.md). */
+/* Treslaget som dominerer i skogen, og underlaget: vanlig skog, tresatt myr eller tresatt innmarksbeite */
+export type Treslag = 'bar' | 'lauv' | 'bland';
+export type Underlag = 'vanlig' | 'myr' | 'beite';
+/* En detaljklasse: id, navn, klassen den hører til blant dagens seks (gruppe), og økosystemtypen i grunnkartet
+   (okosystemtypeniva1). Skogen har også treslag og underlag. */
+export interface Detaljklasse {
+  id: string;
+  navn: string;
+  gruppe: KlasseId;
+  okosystem: string;
+  treslag?: Treslag;
+  underlag?: Underlag;
+}
+const TRESLAG: [Treslag, string][] = [
+    ['bar', 'Barskog'],
+    ['lauv', 'Lauvskog'],
+    ['bland', 'Blandingsskog']
+  ],
+  UNDERLAG: [Underlag, string][] = [
+    ['vanlig', ''],
+    ['myr', ' på myr'],
+    ['beite', ' på innmarksbeite']
+  ];
+/* De 19 klassene, i rekkefølgen fargene er valgt for */
+export const DETALJKLASSER: Detaljklasse[] = [
+  { id: 'beb', navn: 'Bebygd og opparbeidet', gruppe: 'beb', okosystem: 'bebygdOpparbeidetAreal' },
+  { id: 'dyrket', navn: 'Dyrket mark', gruppe: 'jor', okosystem: 'dyrketmark' },
+  { id: 'gras', navn: 'Grasmark', gruppe: 'jor', okosystem: 'grasmark' },
+  ...TRESLAG.flatMap(([treslag, tnavn]) =>
+    UNDERLAG.map(([underlag, unavn]) => ({
+      id: `skog-${treslag}-${underlag}`,
+      navn: tnavn + unavn,
+      gruppe: 'nat' as KlasseId,
+      okosystem: 'skog',
+      treslag,
+      underlag
+    }))
+  ),
+  { id: 'hei', navn: 'Hei og buskmark', gruppe: 'nat', okosystem: 'heiBuskmark' },
+  { id: 'lite', navn: 'Lite vegetert mark', gruppe: 'nat', okosystem: 'liteVegetertMark' },
+  { id: 'vat', navn: 'Åpen våtmark', gruppe: 'nat', okosystem: 'vatmark' },
+  { id: 'kyst', navn: 'Kyststrender, svaberg og dyner', gruppe: 'nat', okosystem: 'kyststrenderSvabergDyner' },
+  { id: 'elv', navn: 'Elver og bekker', gruppe: 'elv', okosystem: 'elverBekkerKanaler' },
+  { id: 'inn', navn: 'Innsjøer', gruppe: 'inn', okosystem: 'innsjoerVannmagasiner' },
+  { id: 'hav', navn: 'Hav', gruppe: 'hav', okosystem: 'hav' }
+];
+/* Fargene NIBIO bes tegne klassene i, i samme rekkefølge. Valgt ved å prøve: for hvert par av klasser som grenser til hverandre i
+   testflisene, skal blandingen ligge langt fra blandingene av alle andre par. */
+export const DETALJFARGE: number[][] = [
+  [191, 0, 191],
+  [255, 64, 0],
+  [51, 0, 0],
+  [0, 64, 128],
+  [153, 102, 255],
+  [255, 153, 51],
+  [0, 102, 102],
+  [102, 255, 51],
+  [191, 255, 191],
+  [64, 255, 191],
+  [51, 204, 0],
+  [204, 255, 0],
+  [255, 51, 153],
+  [255, 204, 255],
+  [0, 64, 255],
+  [204, 204, 153],
+  [102, 204, 102],
+  [64, 0, 64],
+  [204, 153, 153]
+];
+/* Fargetabellen for de lagrede detaljklassene: plass 0 er ukjent og gjennomsiktig, plass 1–19 er klassene */
+export const DETALJTABELL = [[0, 0, 0], ...DETALJFARGE];
+
+/* Klassen det er mest av i en piksel med fargen (r, g, b): plass i DETALJKLASSER. Fargen leses som en blanding av de to klassene den
+   ligger nærmest linjen mellom, og klassen er den det er minst halvparten av. */
+export function detaljklasseAv(r: number, g: number, b: number): number {
+  const P = DETALJFARGE,
+    p = [r, g, b];
+  let best = Infinity,
+    kl = 0;
+  for (let a = 0; a < P.length; a++)
+    for (let c = a + 1; c < P.length; c++) {
+      let dd = 0,
+        pd = 0;
+      for (let k = 0; k < 3; k++) {
+        const d = P[a][k] - P[c][k];
+        dd += d * d;
+        pd += (p[k] - P[c][k]) * d;
+      }
+      const t = Math.max(0, Math.min(1, pd / dd));
+      let e = 0;
+      for (let k = 0; k < 3; k++) {
+        const d = p[k] - P[c][k] - t * (P[a][k] - P[c][k]);
+        e += d * d;
+      }
+      if (e < best) {
+        best = e;
+        kl = t >= 0.5 ? a : c;
+      }
+    }
+  return kl;
+}
+/* Detaljklassen per piksel i et kartbilde: 0 der bildet er tomt (mindre dekket enn SYNLIG), ellers plassen i DETALJKLASSER pluss én.
+   Et kartbilde har få ulike farger, så klassen regnes ut én gang per farge i bildet. */
+export function detaljklasserIFlis(K: Piksler): Uint8Array {
+  const kl = new Uint8Array(K.length / 4),
+    perFarge = new Map<number, number>();
+  for (let i = 0, q = 0; i < K.length; i += 4, q++) {
+    if (K[i + 3] < SYNLIG) continue;
+    const f = (K[i] << 16) | (K[i + 1] << 8) | K[i + 2];
+    let k = perFarge.get(f);
+    if (k === undefined) perFarge.set(f, (k = detaljklasseAv(K[i], K[i + 1], K[i + 2]) + 1));
+    kl[q] = k;
+  }
   return kl;
 }

@@ -2,7 +2,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fliserI, flisUtsnitt, m2PerKm2, rutenett } from '../src/data/solv/felles.ts';
-import { BEB, DATAFARGE, JOR, NAT, klasseAv } from '../src/data/solv/klasser.ts';
+import {
+  BEB,
+  DATAFARGE,
+  DETALJFARGE,
+  DETALJKLASSER,
+  JOR,
+  NAT,
+  detaljklasseAv,
+  klasseAv
+} from '../src/data/solv/klasser.ts';
 import { INONSONER, UTENFOR, inonSone, tolkInon } from '../src/data/solv/inon.ts';
 import { graaTrinn } from '../src/data/solv/graa.ts';
 import { tolkAreal } from '../src/data/solv/ssb.ts';
@@ -113,4 +122,16 @@ test('SSB: arealklassene hver for seg, fra 2017', async () => {
   assert.deepEqual(D.klasser.find(k => k.kode === '17.01')!.km2, [10, 11]);
   assert.deepEqual(D.klasser.find(k => k.kode === '19')!.km2, [6, 6]);
   assert.deepEqual(D.klasser.find(k => k.kode === '01')!.km2, [0, 0]);
+});
+
+test('detaljklassene: de rene fargene, og en blanding gir klassen det er mest av', () => {
+  const F = DETALJFARGE,
+    blanding = (a: number, b: number, t: number) =>
+      F[a].map((v, k) => Math.round(t * v + (1 - t) * F[b][k])) as [number, number, number];
+  assert.equal(DETALJKLASSER.length, 19);
+  F.forEach((f, i) => assert.equal(detaljklasseAv(f[0], f[1], f[2]), i));
+  const skog = DETALJKLASSER.findIndex(k => k.id === 'skog-bar-vanlig'),
+    myr = DETALJKLASSER.findIndex(k => k.id === 'skog-bar-myr');
+  assert.equal(detaljklasseAv(...blanding(skog, myr, 0.7)), skog);
+  assert.equal(detaljklasseAv(...blanding(skog, myr, 0.3)), myr);
 });

@@ -135,7 +135,7 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 | `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
 | `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
-| `public/` | Filer som legges ut som de er: listen over kommuner og dagens klasser lagret per blokk på 21 og 10 meter for noen kommuner (`klasser/` og `klasser.json`) |
+| `public/` | Filer som legges ut som de er: listen over kommuner, dagens klasser lagret per blokk på 21 og 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for Trondheim (`detaljklasser/` og `detaljklasser.json`) |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
@@ -295,9 +295,12 @@ med ekte tall, uten å endre hovedsiden.
   bronse), kartet (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet og kroken som tegner siden på nytt).
   Hovedsidens sider og adresse (`src/ui/sider.ts`) bruker den ikke. `verktoy/sjekk-lag.ts` passer på dette.
 - Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`).
-- Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Foreløpig er det én tabell bare tvillingen bruker:
-  SSBs arealklasser hver for seg (`solv.arealdetaljer`), til skog, åpen myr og bebygd per formål. Hovedsiden henter den ikke.
-- Sidens egne filer (`kommuner.json` og `klasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
+- Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Foreløpig er det to tabeller bare tvillingen bruker,
+  og hovedsiden henter dem ikke:
+  - SSBs arealklasser hver for seg (`solv.arealdetaljer`), til skog, åpen myr og bebygd per formål.
+  - Arealet per detaljklasse i grunnkartet (`gull.detaljareal`), til skog per treslag, tresatt myr og åpen våtmark. Den finnes bare
+    for kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md, Arealklassene).
+- Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra
   skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro.
@@ -364,7 +367,8 @@ slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (
 `public/klasser/`, både på 21 meter (nivå 9) og 10,6 meter (nivå 10), rundt 3 800 filer og 19 MB. Siden slipper da kallene mot
 NIBIO, og nettleseren henter bare filene for valgt kommune og rutestørrelse. Blokkene i kommunen (`solv.blokker`) står i
 registeret (`public/klasser.json`). Begge nivåene lages fra kartbildene fra NIBIO. 21 meter regnes ikke av 10 meter, for da ville
-klassen avrundes to ganger.
+klassen avrundes to ganger. Detaljklassene (`solv.detaljklasser`) er lagret på samme måte, foreløpig for Trondheim
+(`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`).
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 

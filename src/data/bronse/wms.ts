@@ -13,7 +13,11 @@ const felles = (u: Utsnitt, w: number, h: number, desimaler: number) => ({
   width: String(w),
   height: String(h)
 });
-/* Adressen til et kartbilde av utsnittet u på w x h piksler fra tjenesten på adresse */
+/* Spørringen etter et kartbilde av utsnittet u på w x h piksler */
+export const wmsSkjema = (u: Utsnitt, w: number, h: number, valg: Record<string, string>, desimaler = 2) =>
+  new URLSearchParams({ ...felles(u, w, h, desimaler), request: 'GetMap', ...valg });
+/* Adressen til et kartbilde av utsnittet u på w x h piksler fra tjenesten på adresse. Er spørringen for lang til å stå i adressen
+   (en lang stil), sendes wmsSkjema som POST i stedet. */
 export const wmsBilde = (
   adresse: string,
   u: Utsnitt,
@@ -21,7 +25,7 @@ export const wmsBilde = (
   h: number,
   valg: Record<string, string>,
   desimaler = 2
-) => adresse + '?' + new URLSearchParams({ ...felles(u, w, h, desimaler), request: 'GetMap', ...valg });
+) => adresse + '?' + wmsSkjema(u, w, h, valg, desimaler);
 /* Adressen til et oppslag i pikselen (i, j) i det samme bildet */
 export const wmsOppslag = (
   adresse: string,

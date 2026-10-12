@@ -159,7 +159,8 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
 
 - SSBs arealklasser i tabell 09594.
 - NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon 2025, som WMS. Siden ber NIBIO tegne seks klasser i rene farger ut fra
-  egenskapen `okosystemtypeniva1` (`DATAFARGE`, stilen lages i `src/data/bronse/nibio-grunnkart.ts`).
+  egenskapen `okosystemtypeniva1` (`DATAFARGE`, stilen lages i `src/data/bronse/nibio-grunnkart.ts`). Detaljklassene i steg 5
+  bruker også `okosystemtypeniva2` og `arealdekkeniva1`.
 
 **Steg.**
 
@@ -186,9 +187,20 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
    Klassen leses som i steg 2. Begge nivåene lages fra kartbildene. 21 meter regnes ikke av 10 meter: da er klassen allerede
    avrundet for hver piksel, og blandingsfargen i kanten er borte. En vei på 5 meter blir da bebygd i to av fire piksler og
    avrundes på nytt til en bebygd rute på 21 meter.
+5. **Detaljklassene**, foreløpig bare til tvillingen fra Figma. Det samme grunnkartet tegnes med 19 klasser i ett kartbilde
+   (`DETALJKLASSER`, `DETALJFARGE`):
+   - Skogen deles etter treslag, ut fra økosystemtypen på nivå 2: lauvskog, blandingsskog, og resten er barskog.
+   - Skogen deles også etter underlag, ut fra arealdekket på nivå 1: myr er tresatt myr, og jordbruk er tresatt innmarksbeite.
+   - Jordbruket deles i dyrket mark og grasmark.
+   - Resten følger økosystemtypene på nivå 1.
+
+   Bildet har 24 bit farge, fordi fargetabellen i et bilde med 8 bit er for grov til å skille blandingene. Stilen er for lang til å
+   stå i adressen (NIBIO svarer 414), så kartbildene hentes med POST. Klassen leses som i steg 2: den nærmeste blandingen av to av
+   de 19 fargene, regnet ut én gang per farge i bildet (`detaljklasserIFlis`). Blokkene er på nivå 10 (10,6 meter), ett kartbilde
+   per blokk (`solv.detaljklasser`). Arealet per klasse i kommunen telles med halvregelen (`gull.detaljareal`).
 
 **Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 21 meter (eller 10,6
-meter) i hver blokk.
+meter) i hver blokk. For kommuner med lagrede detaljklasser: arealet per detaljklasse i kommunen.
 
 **Usikkerhet.**
 
@@ -203,12 +215,24 @@ meter) i hver blokk.
   hentet. Mens det hentes, viser kartet et bilde av flisene som er kommet (`solv.sammensatt`), med høyst 2048 piksler på lengste side.
   Kan ikke blokkene lages, regnes bare den delen som er hentet, av det bildet. Hvilken av de to som brukes, avgjøres i
   `gull.dagensKlasser`.
+- Detaljklassene er kontrollert mot en tegning av sju testfliser i Trondheim uten blanding i kantene (SVG fra NIBIO):
+  - Summert til de seks klassene gir de samme areal som dagens klasser, innenfor 0,3 %.
+  - De store detaljklassene er innenfor ±3 %.
+  - Tresatt myr er 3,4 % for lite, lite vegetert mark 5 % for lite og elver 30 % for lite. Smale flater blir for små når kantene
+    blandes.
+
+  For hele Trondheim gir detaljklassene, summert til seks klasser, innenfor 0,7 % av dagens klasser for bebygd, jordbruk, natur og
+  hav. Innsjø er 1,4 % og elv 2,6 % større. Lite vegetert mark er bare prøvd i Trondheim, og bør prøves i en fjellkommune.
+- Detaljklassene er lagret bare for Trondheim (`public/detaljklasser/`, 40 blokker og 630 kB, laget med
+  `verktoy/klasser.ts --detalj`). For andre kommuner regnes de ikke ut, for det ville koste ett kall mot NIBIO per blokk.
 
 **Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
 kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser per blokk og for hele kommunen: `solv.klasser`, `solv.blokker`,
 `solv.klassekart` og `solv.sammensatt` i `src/data/solv/grunnkart.ts`, de lagrede blokkene i `bronse.klassefil` og
 `bronse.klasseregister`, og valget mellom kildene i `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis til
-kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`.
+kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`. Detaljklassene: `DETALJKLASSER` og `detaljklasserIFlis` i
+`src/data/solv/klasser.ts`, stilen og `bronse.detaljflis` i `src/data/bronse/nibio-grunnkart.ts`, `solv.detaljklasser` i
+`src/data/solv/grunnkart.ts` og `gull.detaljareal` i `src/data/gull/grunnkart.ts`.
 
 ## SSB-tallene og utbredelsesregnskapet
 
@@ -919,6 +943,11 @@ og kart fra den samme datamotoren (se README). Datamotoren har fått én ny tabe
 (`bronse.arealdetaljer` og `solv.arealdetaljer`), til skog per treslag, åpen myr og bebygd per formål. Den bygger på samme tabell
 hos SSB som arealtallene, og summert per klasse gir den de samme tallene. Bare tvillingen henter den. Hovedsidens tall er ikke
 endret, og regresjonstesten ga ingen avvik.
+
+**Detaljklassene fra grunnkartet, 13. oktober 2026.** Grunnkartet kan nå også leses med 19 klasser i ett kartbilde per flis, med
+skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
+Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
+(rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
 
 **Mer fra kildene i detaljene, 12. oktober 2026.** Når detaljene for punktet vises, slås punktet nå opp hos NIBIO, DiBK og
 Miljødirektoratet, og områdene i naturtemaene får alle feltene fra kilden. Feltene har lesbare navn, med et valg for å se alle med

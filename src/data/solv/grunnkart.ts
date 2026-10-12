@@ -2,6 +2,8 @@
    Per blokk (solv.klasser): klassen per rute i blokkene på nivå 10 (10,6 meter) eller 9 (21 meter), i samme rutenett som planen.
    Begge lages av kartbildene fra NIBIO, og for noen kommuner ligger de lagret ferdig sammen med siden (bronse.klassefil).
    Det lagrede er laget med den samme funksjonen, så det er samme svar. Begge nivåene er lagret.
+   Detaljklassene per blokk (solv.detaljklasser): det samme med 19 klasser (se klasser.ts), bare på nivå 10, og lagret for noen
+   kommuner på samme måte (bronse.detaljfil).
    For hele kommunen zoomet ut (Oversikt), fra to kilder side om side: blokkene satt sammen (solv.klassekart) og det sammensatte
    kartet av flisene som er hentet (solv.sammensatt). Gull velger mellom dem (gull.dagensKlasser).
    Kartbildene fra NIBIO leses som de er: klassen leses av fargen (klasserIFlis i klasser.ts). */
@@ -19,7 +21,7 @@ import {
   type Piksler,
   type Plassering
 } from './felles.ts';
-import { KLASSETABELL, klasserIFlis } from './klasser.ts';
+import { KLASSETABELL, detaljklasserIFlis, klasserIFlis } from './klasser.ts';
 import {
   bildePiksler,
   flatePiksler,
@@ -107,6 +109,20 @@ export async function lagredeKlasser(tc: Flis): Promise<Klasser | null> {
   return buf ? { ...iBlokk(tc), kl: klasserIFlis(await bildePiksler(buf, 512, 512)) } : null;
 }
 
+/* Tabellen solv.detaljklasser: detaljklassen per rute i blokken tc [10, x, y], på 10,6 meter. Blokken er ett kartbilde fra NIBIO
+   (bronse.detaljflis). kl er 0 for ukjent, ellers plassen i DETALJKLASSER pluss én. Bare nivå 10, for tallene regnes på den
+   oppløsningen grunnkartet tegnes i. */
+export async function detaljklasser(tc: Flis): Promise<Klasser> {
+  if (tc[0] !== FLISNIVA) throw new Error('detaljklassene er på nivå 10');
+  return { ...iBlokk(tc), kl: detaljklasserIFlis(await bildePiksler(await katalog.bronse.detaljflis(tc), 512, 512)) };
+}
+/* Det lagrede svaret for solv.detaljklasser: filen for blokken (bronse.detaljfil), et bilde med fargetabellen DETALJTABELL. null
+   når blokken ikke er lagret. */
+export async function lagredeDetaljklasser(tc: Flis): Promise<Klasser | null> {
+  const buf = await katalog.bronse.detaljfil(tc);
+  return buf ? { ...iBlokk(tc), kl: detaljklasserIFlis(await bildePiksler(buf, 512, 512)) } : null;
+}
+
 /* Hvor mye av hver rute i blokken tc flaten koord dekker, som alfa fra 0 til 255 */
 const flateIBlokk = (koord: Flerflate, tc: Flis) =>
   flatePiksler(koord, { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 });
@@ -116,6 +132,14 @@ export function klasserIFlate(K: Klasser, koord: Flerflate): Uint8Array {
     kl = K.kl.slice();
   for (let q = 0; q < kl.length; q++) if (M[4 * q + 3] < HALV) kl[q] = 0;
   return kl;
+}
+/* Antall ruter per klasse i K innenfor flaten koord (kommunen), etter halvregelen. Plass 0 er ruter innenfor uten klasse, og klasse k
+   er plass k. antall er antall klasser pluss én. */
+export function tellIFlate(K: Klasser, koord: Flerflate, antall: number): number[] {
+  const M = flateIBlokk(koord, [K.z, K.cx0 / 512, K.cy0 / 512]),
+    n = new Array<number>(antall).fill(0);
+  for (let q = 0; q < K.kl.length; q++) if (M[4 * q + 3] >= HALV) n[K.kl[q]]++;
+  return n;
 }
 /* Tabellen solv.blokker: blokkene på nivå z (9 eller 10) der kommunen nr har minst én rute etter halvregelen, som [z, x, y].
    Kalles med [nr, z]. */

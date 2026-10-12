@@ -90,9 +90,10 @@ export async function hent(
 /* Én henter per kilde for kartbilder: egen kø med høyst fire kall om gangen, og én linje i kall-loggen per runde. */
 const hentere: Henter[] = [];
 export const opptatt = () => hentere.some(h => h.opptatt());
-/* En henter for kartbilder fra én kilde: henter(adresse) gir bildet, og opptatt sier om den holder på */
+/* En henter for kartbilder fra én kilde: henter(adresse) gir bildet (henter(adresse, skjema) med POST), og opptatt sier om den holder
+   på */
 export interface Henter {
-  (src: string): Promise<ArrayBuffer>;
+  (src: string, kropp?: URLSearchParams): Promise<ArrayBuffer>;
   opptatt: () => boolean;
 }
 /* bareVisning: kartbilder som bare vises, som bakgrunnskartet. De føres i kall-loggen, men tallene venter ikke på dem, og de teller
@@ -125,7 +126,8 @@ export function lagHenter(
     melding();
     runde = { n: 0, bytes: 0, t0: 0, feil: 0 };
   }
-  const hent = async (src: string) => {
+  /* kropp: spørringen sendes som skjema med POST, når den er for lang til å stå i adressen */
+  const hent = async (src: string, kropp?: URLSearchParams) => {
     await new Promise<void>(ok => {
       ko.push(ok);
       slipp();
@@ -140,7 +142,7 @@ export function lagHenter(
       }
     }
     try {
-      const r = await fetch(src);
+      const r = await fetch(src, kropp ? { method: 'POST', body: kropp } : undefined);
       if (!r.ok) throw new Error(String(r.status));
       if (!(r.headers.get('content-type') || '').startsWith('image')) throw new Error('ikke bilde');
       const buf = await r.arrayBuffer();

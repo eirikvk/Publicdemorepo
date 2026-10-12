@@ -8,6 +8,10 @@
        node verktoy/klasser.ts 5001 5021
        node verktoy/klasser.ts --fylke 50 --hentet "11. oktober 2026"
        node verktoy/klasser.ts 5612 --niva 10
+       node verktoy/klasser.ts 5001 --detalj --hentet "13. oktober 2026"
+
+   Med --detalj lages detaljklassene (19 klasser, solv.detaljklasser) i stedet, bare på nivå 10, i public/detaljklasser/ og
+   public/detaljklasser.json. En blokk koster da ett kall mot NIBIO.
 
    Blokkene legges i public/klasser/z/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
    --paa-nytt. En blokk koster fire kall mot NIBIO på nivå 9 og ett på nivå 10. Kartbildene huskes i nettleseren mens verktøyet går,
@@ -19,7 +23,7 @@ import { parseArgs } from 'node:util';
 import { deflateSync } from 'node:zlib';
 import { createServer } from 'vite';
 import { palettPng } from '../src/data/generelt/png.ts';
-import { KLASSETABELL } from '../src/data/solv/klasser.ts';
+import { DETALJTABELL, KLASSETABELL } from '../src/data/solv/klasser.ts';
 import type { blokkerFor, lagBlokk } from './klasser-side.ts';
 import { startNettleser } from './regresjon.ts';
 
@@ -31,6 +35,7 @@ const { values: valg, positionals: kommuner } = parseArgs({
     'paa-nytt': { type: 'boolean' } /* lag blokkene også når de er lagret fra før */,
     hentet: { type: 'string' } /* tekst for når klassene er laget, vises på siden */,
     niva: { type: 'string', default: '9,10' } /* nivåene som lages */,
+    detalj: { type: 'boolean' } /* detaljklassene i stedet for dagens klasser, bare på nivå 10 */,
     ut: { type: 'string', default: path.join(ROT, 'public') } /* mappen klasser/ og klasser.json legges i */
   }
 });
@@ -50,7 +55,10 @@ if (!numre.length) {
   console.log('Bruk: node verktoy/klasser.ts <kommunenumre> [--fylke 50] [--paa-nytt] [--hentet tekst] [--ut mappe]');
   process.exit(2);
 }
-const NIVAER = valg.niva!.split(',').map(Number);
+const DETALJ = !!valg.detalj,
+  NAVN = DETALJ ? 'detaljklasser' : 'klasser',
+  TABELL = DETALJ ? DETALJTABELL : KLASSETABELL,
+  NIVAER = DETALJ ? [10] : valg.niva!.split(',').map(Number);
 if (NIVAER.some(z => z !== 9 && z !== 10)) throw new Error('nivåene er 9 og 10');
 /* Registeret: blokkene [x, y] per kommune og nivå */
 interface Register {
@@ -58,12 +66,12 @@ interface Register {
   hentet: string;
   kommuner: Record<string, Record<string, number[][]>>;
 }
-const regfil = path.join(valg.ut!, 'klasser.json'),
+const regfil = path.join(valg.ut!, NAVN + '.json'),
   register: Register = fs.existsSync(regfil)
     ? JSON.parse(fs.readFileSync(regfil, 'utf8'))
     : { versjon: 'årsversjon 2025', hentet: '', kommuner: {} };
-const blokkfil = (z: number, [x, y]: number[]) => path.join(valg.ut!, 'klasser', String(z), String(x), `${y}.png`);
-const DEKNING = KLASSETABELL.map((_, i) => (i ? 255 : 0)); /* plass 0 er gjennomsiktig */
+const blokkfil = (z: number, [x, y]: number[]) => path.join(valg.ut!, NAVN, String(z), String(x), `${y}.png`);
+const DEKNING = TABELL.map((_, i) => (i ? 255 : 0)); /* plass 0 er gjennomsiktig */
 
 /* Koden i src serveres av Vite, og nettleseren henter den gjennom en side på http://klasser.test/. Registeret over lagrede
    klasser finnes ikke der, så katalogen lager svarene selv. */
@@ -76,7 +84,8 @@ await side.route('http://klasser.test/**', async r => {
   const u = new URL(r.request().url());
   if (u.pathname === '/')
     return r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Lagrede klasser</title>' });
-  if (u.pathname === '/klasser.json') return r.fulfill({ status: 404, body: '' });
+  if (u.pathname === '/klasser.json' || u.pathname === '/detaljklasser.json')
+    return r.fulfill({ status: 404, body: '' });
   const svar = await fetch(adresse + u.pathname + u.search);
   return r.fulfill({
     status: svar.status,
@@ -106,10 +115,10 @@ async function lagNiva(nr: string, z: number) {
   const lag = async (b: number[]) => {
     const fil = blokkfil(z, b),
       K: Awaited<ReturnType<typeof lagBlokk>> = await side.evaluate(
-        ([m, z, x, y]) => import(m as string).then(s => s.lagBlokk(z, x, y)),
-        [modul, z, b[0], b[1]]
+        ([m, z, x, y, d]) => import(m as string).then(s => s.lagBlokk(z, x, y, d)),
+        [modul, z, b[0], b[1], DETALJ] as const
       );
-    const png = palettPng(512, 512, Buffer.from(K.kl, 'base64'), KLASSETABELL, DEKNING, data =>
+    const png = palettPng(512, 512, Buffer.from(K.kl, 'base64'), TABELL, DEKNING, data =>
       deflateSync(data, { level: 9 })
     );
     fs.mkdirSync(path.dirname(fil), { recursive: true });

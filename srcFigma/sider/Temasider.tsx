@@ -25,7 +25,19 @@ import {
   Trekkspill,
   svar
 } from '../komponenter/deler.tsx';
-import { MYR, SKOG, arealet, arealklasser, graa, graaIPlan, inon, kartleggingen, naturtema } from '../tall.ts';
+import {
+  MYR,
+  SKOG,
+  arealet,
+  arealklasser,
+  detaljer,
+  detaljsum,
+  graa,
+  graaIPlan,
+  inon,
+  kartleggingen,
+  naturtema
+} from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
@@ -97,6 +109,9 @@ function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; 
   );
 }
 
+/* Når detaljklassene fra grunnkartet ikke er lagret for kommunen */
+const BARE_LAGRET = 'Regnet ut bare for Trondheim foreløpig';
+
 const SSB_KILDE = (
   <p>
     {KILDE.ssb.navn}, {KILDE.ssb.datasett}. Tallene er SSBs arealklasser for nyeste år. SSB skriver at tabellen ikke kan
@@ -107,7 +122,8 @@ const SSB_KILDE = (
 function Skog({ tema }: { tema: Tema }) {
   const A = arealklasser(),
     a = A.s === 'ok' ? arealet(A.v, SKOG) : null,
-    typer = A.s === 'ok' ? A.v.klasser.filter(SKOG) : [];
+    typer = A.s === 'ok' ? A.v.klasser.filter(SKOG) : [],
+    D = detaljer();
   return (
     <Temaside
       tema={tema}
@@ -133,10 +149,11 @@ function Skog({ tema }: { tema: Tema }) {
       }
       sporsmal={[
         [
-          'Hvorfor er tallene for skog ikke de samme som i kartet?',
+          'Hvorfor er tallene for skog ikke de samme overalt?',
           <p>
-            Tallene er SSBs arealklasser, mens kartet er NIBIOs grunnkart for arealanalyse, med økosystemtyper. De to
-            deler arealet inn på ulike måter, så de gir ikke helt samme areal.
+            Tallene øverst og figuren med treslag er SSBs arealklasser. Kartet og figuren om hva skogen dekker er NIBIOs
+            grunnkart for arealanalyse, med økosystemtyper. De to deler arealet inn på ulike måter, så de gir ikke helt
+            samme areal.
           </p>
         ]
       ]}
@@ -167,17 +184,48 @@ function Skog({ tema }: { tema: Tema }) {
           />
         ))}
       </Figur>
-      <Mangler
+      <Figur
         tittel={`Dette dekker skogen i ${kommunen()}`}
-        trenger="grunnkartets økosystemtyper for skog, med tresatt myr og tresatt innmarksbeite for seg."
-      />
+        tekst={
+          <p>
+            Skogen i grunnkartet fra NIBIO, etter treslaget som dominerer. Noe av skogen står på myr eller på
+            innmarksbeite. Den er med i tallene for treslagene, og vises også for seg under.
+          </p>
+        }
+        kilder={['grunnkart']}
+      >
+        {svar(
+          D,
+          d => {
+            const tresatt = (u: string) => detaljsum(d, k => k.underlag === u);
+            return (
+              <>
+                <Liggende
+                  hva="Skog i grunnkartet etter treslag"
+                  data={[
+                    ['bar', 'Barskog', 'skog-bar'],
+                    ['lauv', 'Lauvskog', 'skog-lauv'],
+                    ['bland', 'Blandingsskog', 'skog-bland']
+                  ].map(([t, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.treslag === t), farge }))}
+                />
+                <p>
+                  Til sammen {iTekst(detaljsum(d, k => !!k.treslag))} skog. Av den er {iTekst(tresatt('myr'))} tresatt
+                  myr og {iTekst(tresatt('beite'))} tresatt innmarksbeite.
+                </p>
+              </>
+            );
+          },
+          BARE_LAGRET
+        )}
+      </Figur>
     </Temaside>
   );
 }
 
 function Vatmark({ tema }: { tema: Tema }) {
   const A = arealklasser(),
-    a = A.s === 'ok' ? arealet(A.v, MYR) : null;
+    a = A.s === 'ok' ? arealet(A.v, MYR) : null,
+    D = detaljer();
   return (
     <Temaside
       tema={tema}
@@ -202,8 +250,8 @@ function Vatmark({ tema }: { tema: Tema }) {
         [
           'Hvorfor står det åpen myr og ikke våtmark?',
           <p>
-            SSB har åpen myr som egen arealklasse. Myr med trær og annen våtmark finnes i grunnkartet fra NIBIO, men er
-            ikke regnet ut her ennå.
+            SSB har åpen myr som egen arealklasse. Myr med trær og annen våtmark finnes i grunnkartet fra NIBIO, og
+            vises i figuren om hva våtmarken dekker.
           </p>
         ]
       ]}
@@ -217,10 +265,37 @@ function Vatmark({ tema }: { tema: Tema }) {
         tittel="Våtmark som er planlagt nedbygget"
         trenger="grunnkartets økosystemtype våtmark krysset med planlagt utbygging, slik natur og jordbruk krysses i dag."
       />
-      <Mangler
+      <Figur
         tittel={`Dette dekker våtmarken i ${kommunen()}`}
-        trenger="grunnkartets økosystemtype våtmark, med tresatt myr for seg."
-      />
+        tekst={
+          <p>
+            Våtmarken i grunnkartet fra NIBIO: økosystemtypen våtmark, som er åpen myr og annen åpen våtmark, og tresatt
+            myr. Grunnkartet regner tresatt myr som skog, så den står også på siden om skog.
+          </p>
+        }
+        kilder={['grunnkart']}
+      >
+        {svar(
+          D,
+          d => {
+            const apen = detaljsum(d, k => k.id === 'vat'),
+              tresatt = detaljsum(d, k => k.underlag === 'myr');
+            return (
+              <>
+                <Liggende
+                  hva="Våtmark i grunnkartet"
+                  data={[
+                    { navn: 'Åpen våtmark', km2: apen, farge: 'myr-apen' },
+                    { navn: 'Tresatt myr', km2: tresatt, farge: 'myr-tresatt' }
+                  ]}
+                />
+                <p>Til sammen {iTekst(apen + tresatt)}.</p>
+              </>
+            );
+          },
+          BARE_LAGRET
+        )}
+      </Figur>
     </Temaside>
   );
 }

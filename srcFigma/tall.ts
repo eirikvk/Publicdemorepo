@@ -1,6 +1,7 @@
 /* Tallene tvillingen viser, lest fra datamotoren for valgt kommune. Alt er regnet ut i src/data (gull, og sølv for SSBs arealklasser
    hver for seg). Her settes de bare sammen til det sidene trenger, og ingenting hentes eller regnes på nytt. Arealer er i km²,
-   andeler i prosent, som i datamotoren. */
+   andeler i prosent, som i datamotoren. Arealet per detaljklasse i grunnkartet finnes bare for kommunene der detaljklassene er
+   lagret. */
 import type { Rad } from '../src/data/cache.ts';
 import { summen } from '../src/data/generelt/tall.ts';
 import type { Bildetall } from '../src/data/gull/felles.ts';
@@ -8,6 +9,8 @@ import type { TemaIPlan, Temaet } from '../src/data/gull/temaer.ts';
 import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
 import { bildetallet, valgt, verdi } from '../src/data/motor/valgt.ts';
 import type { Arealdetaljer } from '../src/data/solv/ssb.ts';
+import type { Detaljareal } from '../src/data/gull/grunnkart.ts';
+import { DETALJKLASSER, type Detaljklasse } from '../src/data/solv/klasser.ts';
 
 /* Et tall som hentes: henter, feil, ingen (kommunen har ikke noe av det) eller ok med verdien */
 export type Svar<T> = { s: 'henter' } | { s: 'feil' } | { s: 'ingen' } | { s: 'ok'; v: T };
@@ -31,6 +34,15 @@ export function arealet(D: Arealdetaljer, passer: (k: Klasse) => boolean) {
     for_ = summer(D, passer, 0);
   return { km2: na, km2Fra: for_, andel: (na / landet(D)) * 100, fra: D.aar[0], til: D.aar[D.aar.length - 1] };
 }
+
+/* Arealet per detaljklasse fra grunnkartet (gull.detaljareal), med ingen når kommunen ikke har lagrede detaljklasser */
+export function detaljer(): Svar<Detaljareal> {
+  const S = fraRad(valgt(katalog.gull.detaljareal));
+  return S.s !== 'ok' ? S : S.v ? { s: 'ok', v: S.v } : { s: 'ingen' };
+}
+/* Arealet av detaljklassene som passer */
+export const detaljsum = (D: Detaljareal, passer: (k: Detaljklasse) => boolean) =>
+  summen(DETALJKLASSER.map((k, i) => (passer(k) ? D.km2[i] : 0)));
 
 /* Naturtemaene fra Miljødirektoratet: temaet (gull) og planlagt utbygging i det, når planen er regnet ut for de samme områdene */
 export function naturtema(id: 'vern' | 'rein' | 'verdi') {
