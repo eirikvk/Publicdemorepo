@@ -1,6 +1,6 @@
 /* Kartet med merkelappene oppå, og linjen under kartet. Hva kartet viser, bestemmes av sidevelgeren. Selve kartet lages i
    ui/kart/kart.ts og settes inn her. */
-import { useEffect, useLayoutEffect, useRef, type DragEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type DragEvent } from 'react';
 import { lastOppPlan } from '../../data/motor/egne.ts';
 import { hentingAvKlasser } from '../../data/motor/grunnkart.ts';
 import { app } from '../../data/motor/tilstand.ts';
@@ -11,6 +11,7 @@ import { velgSide } from '../sider.ts';
 import { henteKort } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { MdButton, MdIconButton, MdIconClose, MdLoadingSpinner } from './md.ts';
+import Punktdetaljer, { Detaljknapp } from './Punktdetaljer.tsx';
 import Tegnforklaring from './Tegnforklaring.tsx';
 import './Kartpanel.css';
 
@@ -65,7 +66,8 @@ export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
       lastOppPlan(f);
     }
   };
-  const p = ui.probe,
+  const detaljId = useId(),
+    p = ui.probe,
     henting = hentingAvKlasser();
   return (
     <section className="kartpanel" aria-label="Kart">
@@ -111,17 +113,21 @@ export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
         )}
       </div>
       <div className="kartfot">
-        <p className="probe">
-          {!p ? (
-            'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.'
-          ) : p.punkt ? (
-            <>
-              Valgt punkt: <b>{p.punkt}</b>
-            </>
-          ) : (
-            p.tekst
-          )}
-        </p>
+        <div className="probelinje">
+          <p className="probe">
+            {!p ? (
+              'Trykk i kommunen for å se klassen, eller utenfor for å bytte kommune.'
+            ) : p.punkt ? (
+              <>
+                Valgt punkt: <b>{p.punkt}</b>
+              </>
+            ) : (
+              p.tekst
+            )}
+          </p>
+          {ui.punkt && <Detaljknapp panel={detaljId} />}
+        </div>
+        {ui.punkt && ui.detaljer && <Punktdetaljer P={ui.punkt} id={detaljId} />}
         {teknisk && <p className="hint">{ui.siste}</p>}
       </div>
     </section>

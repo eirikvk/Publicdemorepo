@@ -237,7 +237,8 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `felles.ts` | Flisnettene, hva kartet holder på med, hjelpere for lag som tegnes i nettleseren, og kildene hvert lag krediterer (`KILDER`) |
 | `kart.ts` | Selve kartet: bakgrunn, grense og status, hvordan lagene settes sammen, og kartets minne til katalogen |
 | `klipping.ts` | Klipping mot kommunen: utenfor valgt kommune vises bare bakgrunnskartet |
-| `trykk.ts` | Trykk i kartet: hva som er i punktet, og bytte til kommunen man trykket i |
+| `trykk.ts` | Trykk i kartet: hva som er i punktet, prikken for punktet, og bytte til kommunen man trykket i |
+| `punktinfo.ts` | Detaljene for punktet man trykket på, gruppert per kartlag, som et oppslag i et vanlig GIS. Bare det som alt er hentet. |
 | `maaling.ts` | Måling av hvor jevnt kartet går, til teknisk visning |
 | `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
 | `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og bildet av hele kommunen zoomet ut |
@@ -257,6 +258,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Topp.tsx` | Valg av fylke og kommune, og overskriften |
 | `Sidevelger.tsx` | Knappene for sidene, over kart og innhold, i grupper |
 | `Kartpanel.tsx` | Kartet med merkelappene oppå, og linjen under kartet |
+| `Punktdetaljer.tsx` | Detaljene for punktet under kartet, og knappen som slår dem på og av |
 | `Tegnforklaring.tsx` | Tegnforklaringen i kartet: fargene som vises nå, ut fra hvilke kartlag som er synlige. Kan lukkes. |
 | `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |

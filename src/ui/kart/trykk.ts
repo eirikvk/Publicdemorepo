@@ -18,6 +18,7 @@ import { kart } from './kart.ts';
 import { utenforKommunen } from './klipping.ts';
 import { navnVed } from './naturtema.ts';
 import { planLag } from './plan.ts';
+import { punktinfo } from './punktinfo.ts';
 
 /* Kartet som kommunevelger: et trykk utenfor valgt kommune slår opp kommunen i punktet hos Kartverket og viser en knapp
    rett over punktet, med en prikk der man trykket. Byttet skjer først når man trykker på knappen, så et bomtrykk ved grensen ikke bytter kommune.
@@ -82,30 +83,32 @@ async function finnKommune(koord: Coordinate) {
     if (mitt === byttSok) settProbe({ tekst: 'Fant ingen annen kommune her.' });
   }
 }
-/* Trykk på kartet: les fargen i punktet og finn klassen. */
+/* Trykk på kartet: les fargen i punktet og finn klassen, og om det er planlagt utbygging der. Setningen under kartet sier det
+   viktigste, og detaljene (punktinfo.ts) alt kartet vet om punktet. Prikken viser hvilket punkt det gjelder. */
 export function trykkIKartet(e: MapBrowserEvent) {
   if (tegner()) return; /* under tegning er trykk i kartet hjørner i området */
   if (utenforKommunen(e.coordinate)) {
+    glemPunkt();
     finnKommune(e.coordinate);
     return;
   }
   lukkBytt();
   const iTema = navnVed(e.coordinate);
-  const pl = (planLag.getVisible() ? planLag.getData(e.pixel) : null) as Uint8ClampedArray | null;
-  if (pl && pl[3] > 40) {
-    const jordbruk = naermesteFarge(pl[0], pl[1], pl[2], [rgb('pnat'), rgb('pjor')]) === 1;
-    settProbe({ punkt: 'Planlagt utbygging på ' + (jordbruk ? 'jordbruk' : 'natur') + iTema });
-    return;
-  }
+  const pl = (planLag.getVisible() ? planLag.getData(e.pixel) : null) as Uint8ClampedArray | null,
+    plan =
+      pl && pl[3] > 40
+        ? naermesteFarge(pl[0], pl[1], pl[2], [rgb('pnat'), rgb('pjor')]) === 1
+          ? 'jordbruk'
+          : 'natur'
+        : null;
   let d = (tema.getVisible() ? tema.getData(e.pixel) : null) as Uint8ClampedArray | null;
   if ((!d || d[3] < 40) && oversikt() && oversiktLag.getVisible())
     d = oversiktLag.getData(e.pixel) as Uint8ClampedArray | null;
-  if (!d || d[3] < 40) {
-    settProbe({ tekst: 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).' });
-    return;
-  }
-  const valg = [...ALLE, ['slor', null] as const],
-    best =
+  let klasse: string | null = null,
+    tekst = 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).';
+  if (d && d[3] >= 40) {
+    const valg = [...ALLE, ['slor', null] as const];
+    klasse =
       valg[
         naermesteFarge(
           d[0],
@@ -114,11 +117,19 @@ export function trykkIKartet(e: MapBrowserEvent) {
           valg.map(([id]) => rgb(id))
         )
       ][1];
-  if (!best) {
-    settProbe({ tekst: 'Kartlaget for dette punktet er skjult.' });
-    return;
+    if (!klasse) tekst = 'Kartlaget for dette punktet er skjult.';
   }
-  settProbe({ punkt: best + iTema });
+  ui.punkt = punktinfo(e.coordinate, klasse, plan);
+  punktLag!.setPosition(e.coordinate);
+  settProbe(plan ? { punkt: 'Planlagt utbygging på ' + plan + iTema } : klasse ? { punkt: klasse + iTema } : { tekst });
+}
+/* Punktet og detaljene glemmes: ved trykk utenfor kommunen og når kommunen byttes */
+export function glemPunkt() {
+  if (punktLag) punktLag.setPosition(undefined);
+  if (ui.punkt) {
+    ui.punkt = null;
+    endret();
+  }
 }
 
 /* Prikken der man trykket, som følger punktet når kartet flyttes */
@@ -127,4 +138,12 @@ export function lagByttPrikk() {
   prikk.className = 'punkt';
   byttLag = new ol.Overlay({ element: prikk, positioning: 'center-center', stopEvent: false });
   return byttLag;
+}
+/* Prikken for punktet man trykket på i kommunen */
+let punktLag: Overlay | null = null;
+export function lagPunktPrikk() {
+  const prikk = document.createElement('div');
+  prikk.className = 'punkt';
+  punktLag = new ol.Overlay({ element: prikk, positioning: 'center-center', stopEvent: false });
+  return punktLag;
 }

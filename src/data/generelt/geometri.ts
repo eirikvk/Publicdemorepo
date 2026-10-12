@@ -86,3 +86,15 @@ export const snitt = (a: Utsnitt, b: Utsnitt): Utsnitt => [
 ];
 export const tomt = (e: Utsnitt) => e[2] < e[0] || e[3] < e[1];
 export const overlapper = (a: Utsnitt, b: Utsnitt) => a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+/* Om punktet p ligger i flerflaten koord. Like-ulik-regelen over alle ringene, så punkter i hull er utenfor. */
+export function iFlate(p: Punkt, koord: Flerflate) {
+  let inne = false;
+  for (const flate of koord)
+    for (const ring of flate)
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i],
+          [xj, yj] = ring[j];
+        if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) inne = !inne;
+      }
+  return inne;
+}

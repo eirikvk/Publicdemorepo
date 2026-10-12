@@ -36,7 +36,7 @@ import { klippSist, settKlipp } from './klipping.ts';
 import { maalKartet, startMaaling, stoppMaaling } from './maaling.ts';
 import { dekLag, flateLag, markLag, slorSynlig, synligeTemaer } from './naturtema.ts';
 import { planLag } from './plan.ts';
-import { lagByttPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
+import { glemPunkt, lagByttPrikk, lagPunktPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
 
 /* Bakgrunnskartet hentes gjennom katalogen (bronse.bakgrunnsflis), som ikke lagrer det. Kartet holder de ferdige flisene selv. */
 function lastBakgrunn(tile: ImageTile) {
@@ -165,6 +165,7 @@ abonner(() => {
   if (ny('valgt', app.valgt) && app.valgt) {
     const k = app.valgt;
     lukkBytt();
+    glemPunkt();
     ui.probe = null;
     ui.siste = '';
     grenseKilde.clear();
@@ -293,6 +294,7 @@ export function lagKart() {
     }
   });
   kart.addOverlay(lagByttPrikk());
+  kart.addOverlay(lagPunktPrikk());
   kart.on('postrender', plasserBytt);
   kart.on('singleclick', trykkIKartet);
   document.addEventListener('keydown', e => {

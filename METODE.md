@@ -755,6 +755,13 @@ utbygging der, sier siden om det er natur eller jordbruk som er satt av. Er et n
 Utenfor valgt kommune slås kommunen opp hos Kartverket (tabellen `bronse.kommuneIPunkt`). Dette er ikke en analyse og ligger i
 `trykkIKartet` i `src/ui/kart/trykk.ts`.
 
+Med «Detaljer» under kartet vises alt siden vet om punktet, gruppert per kartlag, som et oppslag i et vanlig GIS
+(`src/ui/kart/punktinfo.ts`): dagens arealklasse og planlagt utbygging lest av kartlagene, egne områder og opplastede planer med
+arealformål og status, hvert område i naturtemaene med egenskapene slik Miljødirektoratet ga dem, om punktet er kartlagt for
+naturtyper, sonen for inngrepsfri natur og trinnet for grått areal i bildet av kommunen, og kommunen og koordinatene i UTM 33 og
+grader. Naturtemaene er med også når laget ikke vises, så lenge de er hentet. Ingenting hentes for dette: alt er det samme som
+kartet og tallene bygger på. Punktet i flaten avgjøres med like-ulik-regelen (`iFlate` i `src/data/generelt/geometri.ts`).
+
 ## Kontroller
 
 **Regresjonstesten.** `verktoy/regresjon.ts` kjører siden i en nettleser med tre faste scenarier: Trondheim med tegnet område og
@@ -896,6 +903,12 @@ Kontrollen viser at oversikten fant alle blokkene med plan i disse kommunene, me
 kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m² borte i oversikten. De er for små til å gi en rute
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
+
+**Detaljer for punktet i kartet, 12. oktober 2026.** Under setningen om punktet man trykket på, er det kommet en knapp,
+«Detaljer», som viser alt siden vet om punktet, gruppert per kartlag: klasse, plan, egne områder, områdene i naturtemaene med
+egenskapene fra kilden, kartlegging, inngrepsfri natur, grått areal, kommune og koordinater. Detaljene er av til man slår dem på.
+En prikk viser punktet. Ingenting nytt hentes, og sølv tar nå vare på egenskapene til områdene slik kilden ga dem. Tallene er ikke
+endret, og regresjonstesten ga ingen avvik.
 
 **Alle flatene fra Miljødirektoratet, side for side, 12. oktober 2026.** Karttjenestene gir høyst et visst antall flater per svar:
 1000 for villrein, 2000 for verneområder og 5000 for naturtypene og det kartlagte. Før ble bare verdsatt natur merket som for lav

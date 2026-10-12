@@ -9,7 +9,8 @@ import {
   overlapper,
   snitt,
   tomt,
-  utsnitt
+  utsnitt,
+  iFlate
 } from '../src/data/generelt/geometri.ts';
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
@@ -99,4 +100,24 @@ test('glissent rutenett: som et vanlig rutenett, og en delt blokk kopieres før 
     finn(L, v => v === 1 || v === 2),
     [2, 5]
   );
+});
+
+test('punkt i flate: inne, ute og i hullet', () => {
+  const ytre = [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+      [0, 0]
+    ],
+    hull = [
+      [4, 4],
+      [6, 4],
+      [6, 6],
+      [4, 6],
+      [4, 4]
+    ];
+  assert.equal(iFlate([2, 2], [[ytre, hull]]), true);
+  assert.equal(iFlate([5, 5], [[ytre, hull]]), false);
+  assert.equal(iFlate([12, 5], [[ytre, hull]]), false);
 });

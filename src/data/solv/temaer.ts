@@ -64,12 +64,13 @@ export interface Opplysninger {
   under: string;
   v?: number;
 }
-/* Et område i et naturtema: flaten, om den er klippet mot kommunen (uklippet hvis klippingen feilet), arealet i kommunen i km², og
-   opplysningene */
+/* Et område i et naturtema: flaten, om den er klippet mot kommunen (uklippet hvis klippingen feilet), arealet i kommunen i km²,
+   opplysningene, og egenskapene slik kilden ga dem (til detaljene ved trykk i kartet) */
 export interface Omrade extends Opplysninger {
   koord: Flerflate;
   uklippet: boolean;
   km2: number;
+  egenskaper: Record<string, unknown>;
 }
 /* Et område med utsnittet, slik tabellene har det */
 export interface TemaOmrade extends Omrade {
@@ -199,7 +200,7 @@ export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Le
         if (!m || !(m.m2 > 0)) return null;
         km2 = m.m2 / skala;
       }
-      return km2 > 0 ? { koord, uklippet, km2, ...les(f.properties || {}) } : null;
+      return km2 > 0 ? { koord, uklippet, km2, ...les(f.properties || {}), egenskaper: f.properties || {} } : null;
     })
     .filter((o): o is Omrade => !!o)
     .sort((a, b) => b.km2 - a.km2 || fastRekkefolge(a, b));
@@ -214,7 +215,13 @@ export function lokaliteter(features: Objekt[], kommune: FlateMedUtsnitt, les: L
     .filter(f => f.geometry && f.geometry.coordinates)
     .map(f => {
       const koord = flerflate(f.geometry as GeoJsonFlate);
-      return { koord, uklippet: false, km2: koord.length ? areal(koord) / skala : 0, ...les(f.properties || {}) };
+      return {
+        koord,
+        uklippet: false,
+        km2: koord.length ? areal(koord) / skala : 0,
+        ...les(f.properties || {}),
+        egenskaper: f.properties || {}
+      };
     })
     .sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2 || fastRekkefolge(a, b));
   return omrader;

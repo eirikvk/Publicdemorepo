@@ -12,6 +12,20 @@ export interface Probe {
   tekst?: string;
   punkt?: string;
 }
+/* Én gruppe i detaljene for punktet: et kartlag eller et område, med radene [navn, verdi], kilden, en lenke, og området i et
+   naturtema (tema og plassen i listen over områder) når det kan vises i kartet */
+export interface Punktlag {
+  tittel: string;
+  rader: [navn: string, verdi: string][];
+  kilde?: string;
+  lenke?: { tekst: string; url: string };
+  omrade?: { tema: string; nr: number };
+}
+/* Detaljene for punktet man trykket på: koordinaten i UTM33 og gruppene */
+export interface Punktinfo {
+  koord: number[];
+  lag: Punktlag[];
+}
 export interface Visning {
   side: string;
   visSmale: boolean;
@@ -20,6 +34,8 @@ export interface Visning {
   ute: boolean;
   sidezoom: boolean;
   probe: Probe | null;
+  punkt: Punktinfo | null;
+  detaljer: boolean;
   bytt: { nr: string; navn: string } | null;
   siste: string;
   maaling: string;
@@ -33,6 +49,8 @@ export const ui: Visning = {
   ute: false /* kartet er zoomet ut forbi det NIBIO tegner, uten dagens klasser zoomet ut */,
   sidezoom: false /* selve siden er forstørret, så kartet slipper bevegelsene igjennom */,
   probe: null /* svaret på et trykk i kartet: { tekst } eller { punkt } */,
+  punkt: null /* detaljene for punktet man trykket på i kommunen, se Punktinfo */,
+  detaljer: false /* om detaljene for punktet vises. Slås på og av under kartet, og gjelder så lenge siden er åpen. */,
   bytt: null /* kommunen i punktet man trykket på utenfor valgt kommune: { nr, navn } */,
   siste: '' /* hva kartet sist hentet eller viser, til teknisk visning */,
   maaling: '' /* måling av hvor jevnt kartet går, til teknisk visning */
