@@ -28,6 +28,7 @@ import * as solvGrunnkart from './solv/grunnkart.ts';
 import * as solvInon from './solv/inon.ts';
 import * as solvKommune from './solv/kommune.ts';
 import * as solvPlan from './solv/kommuneplan.ts';
+import * as solvPunkt from './solv/punkt.ts';
 import * as solvSsb from './solv/ssb.ts';
 import * as solvTemaer from './solv/temaer.ts';
 import { PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
@@ -160,6 +161,50 @@ export const katalog = {
       husk: 20,
       nokkel: kartverket.punktNokkel,
       etl: kartverket.kommuneIPunkt
+    }),
+    planIPunkt: tabell<number[], unknown>({
+      lag: 'bronse',
+      navn: 'planIPunkt',
+      tittel: 'Kommuneplanen i et punkt',
+      om: 'flatene i kommuneplanene i et punkt fra DiBK, med egenskapene og flaten, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke: sølv lagrer det som trengs. Nøkkel: punktet i hele meter.',
+      forklaring:
+        'Oppslag i kommuneplanene fra DiBK i punktet man har trykket på (GetFeatureInfo), med alle arealformål.',
+      kilde: KILDE.dibk,
+      husk: 0,
+      nokkel: kartverket.punktNokkel,
+      etl: dibk.planIPunkt
+    }),
+    grunnkartIPunkt: tabell<number[], string>({
+      lag: 'bronse',
+      navn: 'grunnkartIPunkt',
+      tittel: 'Grunnkartet i et punkt',
+      om: 'grunnkartet i et punkt fra NIBIO, med økosystemtype, arealdekke, skogbonitet, grunnforhold og kilden, som GML. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: punktet i hele meter.',
+      forklaring: 'Oppslag i grunnkartet fra NIBIO i punktet man har trykket på (GetFeatureInfo).',
+      kilde: KILDE.grunnkart,
+      husk: 0,
+      nokkel: kartverket.punktNokkel,
+      etl: nibioGrunnkart.grunnkartIPunkt
+    }),
+    inonIPunkt: tabell<number[], unknown>({
+      lag: 'bronse',
+      navn: 'inonIPunkt',
+      tittel: 'Inngrepsfri natur i et punkt',
+      om: 'sonen for inngrepsfri natur i et punkt fra Miljødirektoratet, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: punktet i hele meter.',
+      forklaring: 'Oppslag i kartet over inngrepsfri natur i punktet man har trykket på (GetFeatureInfo).',
+      kilde: KILDE.inon,
+      husk: 0,
+      nokkel: kartverket.punktNokkel,
+      etl: mdirInon.inonIPunkt
+    }),
+    temaegenskaper: tabell<[string, number], unknown>({
+      lag: 'bronse',
+      navn: 'temaegenskaper',
+      tittel: 'Alle feltene for et område',
+      om: 'alle feltene for ett område i et naturtema fra Miljødirektoratet, kalt med [tema, OBJECTID]. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: «tema/OBJECTID».',
+      forklaring: 'Alle feltene for området man har trykket på, slått opp med OBJECTID i karttjenesten.',
+      husk: 0,
+      nokkel: ([t, id]) => `${t}/${id}`,
+      etl: mdirNatur.temaegenskaper
     }),
     arealtall: tabell({
       lag: 'bronse',
@@ -535,6 +580,47 @@ export const katalog = {
         'Hver rute får et trinn etter andel vegetasjon i flaten: under 1 %, 1–25 %, 25–50 %, 50–75 % eller 75–100 %. Grått areal uten oppgitt andel, som veier, er et eget trinn. En rute er grå når den er minst halvt dekket. Rutene innenfor kommunen telles per trinn.',
       husk: 3,
       etl: solvGraa.graa
+    }),
+    planIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
+      lag: 'solv',
+      navn: 'planIPunkt',
+      tittel: 'Kommuneplanen i et punkt, tolket',
+      om: 'flatene i kommuneplanene i et punkt, med feltene og flaten, og navnet på arealformål og status fra kodelisten. Nøkkel: punktet i hele meter.',
+      forklaring:
+        'Feltene slik DiBK gir dem, med navnet på arealformål og arealbruksstatus fra kodelistene i Geonorge, og flaten.',
+      husk: 20,
+      nokkel: kartverket.punktNokkel,
+      etl: solvPunkt.planIPunkt
+    }),
+    grunnkartIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
+      lag: 'solv',
+      navn: 'grunnkartIPunkt',
+      tittel: 'Grunnkartet i et punkt, tolket',
+      om: 'feltene i grunnkartet i et punkt, lest av GML-svaret fra NIBIO. Nøkkel: punktet i hele meter.',
+      forklaring: 'Feltene slik NIBIO gir dem.',
+      husk: 20,
+      nokkel: kartverket.punktNokkel,
+      etl: solvPunkt.grunnkartIPunkt
+    }),
+    inonIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
+      lag: 'solv',
+      navn: 'inonIPunkt',
+      tittel: 'Inngrepsfri natur i et punkt, tolket',
+      om: 'feltene for sonen i et punkt: id, sone og arealet av sonen. Nøkkel: punktet i hele meter.',
+      forklaring: 'Feltene slik Miljødirektoratet gir dem.',
+      husk: 20,
+      nokkel: kartverket.punktNokkel,
+      etl: solvPunkt.inonIPunkt
+    }),
+    temaegenskaper: tabell<[string, number], solvPunkt.Punktflate[]>({
+      lag: 'solv',
+      navn: 'temaegenskaper',
+      tittel: 'Alle feltene for et område, tolket',
+      om: 'alle feltene for ett område i et naturtema, med datoene som datoer. Nøkkel: «tema/OBJECTID».',
+      forklaring: 'Feltene slik Miljødirektoratet gir dem, med datoene som datoer.',
+      husk: 50,
+      nokkel: ([t, id]) => `${t}/${id}`,
+      etl: solvPunkt.temaegenskaper
     }),
     verneomrader: tabell({
       lag: 'solv',
@@ -927,6 +1013,7 @@ const ETL_FILER: [string, object][] = [
   ['solv/graa.ts', solvGraa],
   ['solv/temaer.ts', solvTemaer],
   ['solv/egne.ts', solvEgne],
+  ['solv/punkt.ts', solvPunkt],
   ['gull/regnskap.ts', gullRegnskap],
   ['gull/planlagt.ts', gullPlan],
   ['gull/grunnkart.ts', gullGrunnkart],

@@ -54,13 +54,13 @@ async function alleFlater(
 }
 /* Per tema: laget i tjenesten, feltene som hentes, forenklingen i meter, og utvalget når det ikke bare er kommunenummeret */
 const TEMA: Record<string, { url: string; felt: string; slakk: number; hvor?: (nr: string) => string }> = {
-  vern: { url: MD + 'vern/MapServer/0/query', felt: 'offisieltNavn,verneform,vernedato,faktaark', slakk: 5 },
+  vern: { url: MD + 'vern/MapServer/0/query', felt: 'OBJECTID,offisieltNavn,verneform,vernedato,faktaark', slakk: 5 },
   rein: { url: MD + 'villrein/MapServer/1/query', felt: '*', slakk: 20 },
   verdi: {
     url: MD + 'naturtyper_kuverdi/MapServer/0/query',
     hvor: nr =>
       `Verdikategori IN ('Svært stor verdi','Stor verdi','Middels verdi','Noe verdi') AND Kommune LIKE '%(${nr})%'`,
-    felt: 'Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark',
+    felt: 'OBJECTID,Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark',
     slakk: 5
   }
 };
@@ -97,4 +97,16 @@ export async function verdsattNatur(nr: string): Promise<Temasvar> {
 /* Tabellen bronse.kartlagt: dekningsflatene for naturtypekartlegging rundt kommunen, som GeoJSON */
 export async function kartlagt(nr: string): Promise<Temasvar> {
   return hentKartlagt(await kommunen(nr), (await katalog.solv.grense(nr)).ext);
+}
+
+/* Tabellen bronse.temaegenskaper: alle feltene for området med OBJECTID id i temaet tema (vern, rein eller verdi), slik tjenesten
+   gir dem, med feltbeskrivelsene. Kalles med [tema, id]. Til detaljene ved trykk i kartet. */
+export async function temaegenskaper([tema, id]: [string, number]): Promise<unknown> {
+  return hent(
+    'Miljødirektoratet',
+    'Alle feltene for et område',
+    TEMA[tema].url +
+      '?' +
+      new URLSearchParams({ objectIds: String(id), outFields: '*', returnGeometry: 'false', f: 'json' })
+  );
 }

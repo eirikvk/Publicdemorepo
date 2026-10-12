@@ -5,7 +5,7 @@ import type { Kommune } from '../solv/felles.ts';
 import { hent } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { bildenett } from '../solv/kommune.ts';
-import { wmsBilde } from './wms.ts';
+import { wmsBilde, wmsPunkt } from './wms.ts';
 
 const INON = 'https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms';
 const inonBilde = (u: Utsnitt, w: number, h: number) =>
@@ -24,4 +24,20 @@ export const hentInonBilde = (k: Kommune, u: Utsnitt, w: number, h: number) =>
 export async function inonbilde(nr: string): Promise<ArrayBuffer> {
   const R = await bildenett(nr);
   return hentInonBilde(await kommunen(nr), R.u, R.w, R.h);
+}
+
+/* Tabellen bronse.inonIPunkt: sonen i punktet p [øst, nord] slik Miljødirektoratet gir den (id, sone og arealet av sonen), som
+   GeoJSON. Til detaljene ved trykk i kartet. */
+export async function inonIPunkt(p: number[]): Promise<unknown> {
+  return hent(
+    'Miljødirektoratet',
+    'Inngrepsfri natur i et punkt',
+    wmsPunkt(INON, p, {
+      layers: 'status',
+      query_layers: 'status',
+      styles: '',
+      info_format: 'application/json',
+      feature_count: '5'
+    })
+  );
 }

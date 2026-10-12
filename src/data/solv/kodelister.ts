@@ -1,0 +1,100 @@
+/* Kodelister fra Geonorge, til å vise navnet ved siden av koden. Hentet fra register.geonorge.no 12. oktober 2026:
+   - KpArealformål: https://register.geonorge.no/sosi-kodelister/plan/kommuneplan/kparealformål (arealformål i kommuneplan etter
+     plan- og bygningsloven 2008, § 11-7, og vedlegg II i kart- og planforskriften)
+   - Arealbrukstatus: https://register.geonorge.no/sosi-kodelister/plan/kommuneplan/arealbrukstatus
+   - EierformType: fra SOSI produktspesifikasjon for kommuneplan 4.5, del 3.1 (17. april 2012)
+   Navnene står som i kilden, med stor forbokstav. */
+export const KP_AREALFORMAL: Record<string, string> = {
+  '1000': 'Bebyggelse og anlegg - generalisert (utgått)',
+  '1001': 'Bebyggelse og anlegg',
+  '1110': 'Boligbebyggelse',
+  '1114': 'Studentboliger',
+  '1120': 'Fritidsbebyggelse',
+  '1130': 'Sentrumsformål',
+  '1140': 'Kjøpesenter',
+  '1150': 'Forretninger',
+  '1160': 'Bebyggelse for offentlig eller privat tjenesteyting',
+  '1170': 'Fritids- og turistformål',
+  '1200': 'Råstoffutvinning',
+  '1202': 'Massemottak',
+  '1300': 'Næringsbebyggelse',
+  '1400': 'Idrettsanlegg',
+  '1500': 'Andre typer anlegg',
+  '1530': 'Vindkraftanlegg',
+  '1531': 'Solkraftanlegg',
+  '1600': 'Uteoppholdsarealer',
+  '1640': 'Urbant landbruk',
+  '1700': 'Gravplass',
+  '1800': 'Bebyggelse og anlegg kombinert i samsvar med angitte bestemmelser',
+  '2000': 'Samferdselsanlegg og teknisk infrastruktur - generalisert (utgått)',
+  '2001': 'Samferdselsanlegg og teknisk infrastruktur',
+  '2010': 'Veg',
+  '2020': 'Bane',
+  '2030': 'Lufthavn',
+  '2040': 'Havn',
+  '2044': 'Molo',
+  '2050': 'Hovednett for sykkel',
+  '2060': 'Kollektivnett',
+  '2070': 'Kollektivknutepunkt',
+  '2080': 'Parkering',
+  '2100': 'Trase for teknisk infrastruktur (utgått)',
+  '2101': 'Teknisk infrastruktur',
+  '2180': 'Trasé for nærmere angitt teknisk infrastruktur',
+  '2800': 'Samferdselsanlegg og teknisk infrastruktur kombinert i samsvar med angitte bestemmelser',
+  '3000': 'Grønnstruktur - generalisert (utgått)',
+  '3001': 'Grønnstruktur',
+  '3002': 'Blågrønnstruktur',
+  '3020': 'Naturområde',
+  '3030': 'Turdrag',
+  '3040': 'Friområde',
+  '3050': 'Park',
+  '3100': 'Overvannstiltak',
+  '3800': 'Grønnstruktur kombinert i samsvar med angitte bestemmelser',
+  '4000': 'Forsvaret - generalisert (utgått)',
+  '4001': 'Forsvaret',
+  '4010': 'Ulike typer militære formål',
+  '4020': 'Skytefelt eller øvingsområde',
+  '4030': 'Forlegning eller leir',
+  '4800': 'Områder for Forsvaret kombinert i samsvar med angitte bestemmelser',
+  '5000': 'Landbruk-, natur- og friluftsformål samt reindrift (LNFR) - generalisert (utgått)',
+  '5001': 'Landbruks-, natur- og friluftsformål samt reindrift (LNFR) (utgått)',
+  '5100':
+    'LNFR-areal for nødvendige tiltak for landbruk og reindrift og gårdstilknyttet næringsvirksomhet basert på gårdens ressursgrunnlag',
+  '5200': 'LNFR-areal for spredt bolig- fritids- eller næringsbebyggelse, mv.',
+  '5210': 'Spredt boligbebyggelse',
+  '5220': 'Spredt fritidsbebyggelse',
+  '5230': 'Spredt næringsbebyggelse',
+  '6000': 'Bruk og vern av sjø og vassdrag med tilhørende strandsone - generalisert (utgått)',
+  '6001': 'Bruk og vern av sjø og vassdrag med tilhørende strandsone',
+  '6100': 'Ferdsel',
+  '6110': 'Ankringsområde',
+  '6120': 'Opplagsområde',
+  '6130': 'Riggområde',
+  '6200': 'Farleder',
+  '6211': 'Hoved- og biled',
+  '6220': 'Havneområde i sjø',
+  '6230': 'Småbåthavn',
+  '6300': 'Fiske',
+  '6400': 'Akvakultur',
+  '6500': 'Drikkevann',
+  '6600': 'Naturområde (utgått)',
+  '6610': 'Naturområde i sjø og vassdrag',
+  '6620': 'Naturområde i sjø og vassdrag med tilhørende strandsone',
+  '6700': 'Friluftsområde (utgått)',
+  '6710': 'Friluftsområde i sjø og vassdrag',
+  '6720': 'Friluftsområde i sjø og vassdrag med tilhørende strandsone',
+  '6800': 'Bruk og vern av sjø og vassdrag med tilhørende strandsone kombinert i samsvar med angitte bestemmelser'
+};
+export const AREALBRUKSSTATUS: Record<string, string> = {
+  '1': 'Nåværende',
+  '2': 'Framtidig',
+  '3': 'Videreutvikling av nåværende (tilbaketrukket, gyldig til 2009-06-30)'
+};
+export const EIERFORM: Record<string, string> = {
+  '1': 'Offentlig formål',
+  '2': 'Felles',
+  '3': 'Annen eierform'
+};
+/* Koden med navnet fra kodelisten, eller bare koden når den ikke står der */
+export const medNavn = (kode: string, liste: Record<string, string>) =>
+  Object.hasOwn(liste, kode) ? `${kode} ${liste[kode]}` : kode;

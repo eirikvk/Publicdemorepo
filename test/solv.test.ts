@@ -63,3 +63,35 @@ test('planflater: utbygging er framtidig bebyggelse og samferdsel', () => {
 test('projeksjon: 15 grader øst er midtlinjen i UTM33', () => {
   assert.ok(Math.abs(tilUTM('EPSG:4326')([15, 65])[0] - 500000) < 1e-6);
 });
+
+test('punkt: feltene fra GetFeatureInfo hos NIBIO og DiBK, med navn på koder og datoer', async () => {
+  const { grunnkartIPunkt, planIPunkt } = await import('../src/data/solv/punkt.ts'),
+    ekte = globalThis.fetch;
+  globalThis.fetch = (async (adresse: string) =>
+    new Response(
+      /nibio/.test(adresse)
+        ? '<x><okosystemtype_feature><gml:boundedBy>…</gml:boundedBy><arealdekkeniva1>skog</arealdekkeniva1><kystsone></kystsone></okosystemtype_feature></x>'
+        : JSON.stringify({
+            features: [
+              {
+                properties: {
+                  arealformål: '1170',
+                  eierform: '3',
+                  beskrivelse: null,
+                  oppdateringsdato: '2023-03-29T00:00:00Z'
+                }
+              }
+            ]
+          })
+    )) as typeof fetch;
+  try {
+    assert.deepEqual(await grunnkartIPunkt([1, 2]), [{ felt: [['arealdekkeniva1', 'skog']] }]);
+    assert.deepEqual((await planIPunkt([1, 2]))[0].felt, [
+      ['arealformål', '1170 Fritids- og turistformål'],
+      ['eierform', '3 Annen eierform'],
+      ['oppdateringsdato', '29.03.2023']
+    ]);
+  } finally {
+    globalThis.fetch = ekte;
+  }
+});

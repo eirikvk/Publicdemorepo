@@ -42,3 +42,6 @@ export const wmsOppslag = (
     j: String(j),
     ...valg
   });
+/* Adressen til et oppslag i punktet p [øst, nord] i UTM33: et bilde på 3 x 3 piksler à én meter med punktet i midten */
+export const wmsPunkt = (adresse: string, p: number[], valg: Record<string, string>) =>
+  wmsOppslag(adresse, [p[0] - 1.5, p[1] - 1.5, p[0] + 1.5, p[1] + 1.5], 3, 3, 1, 1, valg, 1);

@@ -759,8 +759,18 @@ Med «Detaljer» under kartet vises alt siden vet om punktet, gruppert per kartl
 (`src/ui/kart/punktinfo.ts`): dagens arealklasse og planlagt utbygging lest av kartlagene, egne områder og opplastede planer med
 arealformål og status, hvert område i naturtemaene med egenskapene slik Miljødirektoratet ga dem, om punktet er kartlagt for
 naturtyper, sonen for inngrepsfri natur og trinnet for grått areal i bildet av kommunen, og kommunen og koordinatene i UTM 33 og
-grader. Naturtemaene er med også når laget ikke vises, så lenge de er hentet. Ingenting hentes for dette: alt er det samme som
-kartet og tallene bygger på. Punktet i flaten avgjøres med like-ulik-regelen (`iFlate` i `src/data/generelt/geometri.ts`).
+grader. Naturtemaene er med også når laget ikke vises, så lenge de er hentet. Punktet i flaten avgjøres med like-ulik-regelen
+(`iFlate` i `src/data/generelt/geometri.ts`).
+
+Når detaljene vises, slås punktet også opp hos kildene, med GetFeatureInfo på et bilde på 3 × 3 meter med punktet i midten
+(`src/data/solv/punkt.ts`): grunnkartet fra NIBIO (`solv.grunnkartIPunkt`, laget for økosystemtype), flatene i kommuneplanen fra
+DiBK med alle arealformål, ikke bare utbygging (`solv.planIPunkt`), og sonen for inngrepsfri natur (`solv.inonIPunkt`). For hvert
+område i naturtemaene hentes alle feltene fra Miljødirektoratet etter OBJECTID (`solv.temaegenskaper`). Grått areal har ingen
+egenskaper i svaret og slås ikke opp. Kodene for arealformål, arealbruksstatus og eierform får navnet fra kodelistene
+(`src/data/solv/kodelister.ts`), og datoer skrives som dd.mm.åååå. Feltene vises med lesbare navn, og felt som bare beskriver
+flaten eller databasen (id-er, koder som gjentar et navn, arealet av hele flaten), er skjult (`src/ui/kart/feltnavn.ts`). Med «Vis
+alle felt med kildenes feltnavn» vises alle feltene med navnene fra kilden. Flatene i punktet som er kjent, får et stiplet omriss i
+kartet: egne områder, områdene i naturtemaene og flatene i kommuneplanen. Ingenting av dette inngår i tallene.
 
 ## Kontroller
 
@@ -903,6 +913,10 @@ Kontrollen viser at oversikten fant alle blokkene med plan i disse kommunene, me
 kantene med delvis dekning, slik det ser ut, blir bare flater under rundt 14 m² borte i oversikten. De er for små til å gi en rute
 med plan, som krever minst halve ruta: rundt 224 m² på 21 meter og 56 m² på 10 meter. Hvordan DiBK tegner, er ikke kontrollert
 direkte.
+
+**Mer fra kildene i detaljene, 12. oktober 2026.** Når detaljene for punktet vises, slås punktet nå opp hos NIBIO, DiBK og
+Miljødirektoratet, og områdene i naturtemaene får alle feltene fra kilden. Feltene har lesbare navn, med et valg for å se alle med
+kildenes egne navn. Flatene i punktet får et stiplet omriss i kartet. Tallene er ikke endret, og regresjonstesten ga ingen avvik.
 
 **Detaljer for punktet i kartet, 12. oktober 2026.** Under setningen om punktet man trykket på, er det kommet en knapp,
 «Detaljer», som viser alt siden vet om punktet, gruppert per kartlag: klasse, plan, egne områder, områdene i naturtemaene med

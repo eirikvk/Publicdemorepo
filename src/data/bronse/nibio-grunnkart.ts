@@ -7,7 +7,7 @@ import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
 import { hent, lagHenter } from './henting.ts';
-import { wmsBilde } from './wms.ts';
+import { wmsBilde, wmsPunkt } from './wms.ts';
 
 const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 /* Stilen som sendes til NIBIO: seks regler med rene farger. Den er lik i alle kall. */
@@ -66,4 +66,23 @@ export async function klassefil(tc: Flis): Promise<ArrayBuffer | null> {
     );
   if (!finnes) return null;
   return hent('Egen fil', `Lagrede klasser ${flisnavn(tc)}`, `klasser/${flisnavn(tc)}.png`, false, true);
+}
+
+/* Tabellen bronse.grunnkartIPunkt: grunnkartet i punktet p [øst, nord] slik NIBIO gir det, med økosystemtype, arealdekke,
+   skogbonitet, grunnforhold og kilden, som GML-tekst. Til detaljene ved trykk i kartet. */
+export async function grunnkartIPunkt(p: number[]): Promise<string> {
+  const buf = await hent(
+    'NIBIO',
+    'Grunnkartet i et punkt',
+    wmsPunkt(WMS, p, {
+      layers: 'okosystemtype',
+      query_layers: 'okosystemtype',
+      styles: '',
+      info_format: 'application/vnd.ogc.gml',
+      feature_count: '5'
+    }),
+    false,
+    true
+  );
+  return new TextDecoder().decode(buf);
 }

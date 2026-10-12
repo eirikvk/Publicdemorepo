@@ -36,7 +36,16 @@ import { klippSist, settKlipp } from './klipping.ts';
 import { maalKartet, startMaaling, stoppMaaling } from './maaling.ts';
 import { dekLag, flateLag, markLag, slorSynlig, synligeTemaer } from './naturtema.ts';
 import { planLag } from './plan.ts';
-import { glemPunkt, lagByttPrikk, lagPunktPrikk, lukkBytt, plasserBytt, trykkIKartet } from './trykk.ts';
+import {
+  glemPunkt,
+  lagByttPrikk,
+  lagPunktPrikk,
+  lukkBytt,
+  omrissLag,
+  oppdaterOmriss,
+  plasserBytt,
+  trykkIKartet
+} from './trykk.ts';
 
 /* Bakgrunnskartet hentes gjennom katalogen (bronse.bakgrunnsflis), som ikke lagrer det. Kartet holder de ferdige flisene selv. */
 function lastBakgrunn(tile: ImageTile) {
@@ -162,6 +171,7 @@ export function kartStatus() {
 /* Kartet følger valgt kommune og grensen */
 const ny = nyttSiden();
 abonner(() => {
+  oppdaterOmriss();
   if (ny('valgt', app.valgt) && app.valgt) {
     const k = app.valgt;
     lukkBytt();
@@ -211,7 +221,20 @@ abonner(() => {
 export function lagKart() {
   if (kart) return kart;
   kart = new ol.Map({
-    layers: [bakgrunn, oversiktLag, tema, inonLag, graaLag, dekLag, ...flateLag, planLag, grense, egneLag, markLag],
+    layers: [
+      bakgrunn,
+      oversiktLag,
+      tema,
+      inonLag,
+      graaLag,
+      dekLag,
+      ...flateLag,
+      planLag,
+      grense,
+      egneLag,
+      omrissLag,
+      markLag
+    ],
     view,
     pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [

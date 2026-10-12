@@ -4,6 +4,7 @@ import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
 import type Overlay from 'ol/Overlay.js';
 import type { Coordinate } from 'ol/coordinate.js';
 import { ol } from './ol.ts';
+import { se } from '../../data/cache.ts';
 import { katalog } from '../../data/katalog.ts';
 import { naermesteFarge } from '../../data/generelt/farge.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
@@ -11,14 +12,14 @@ import { oversikt } from '../../data/motor/grunnkart.ts';
 import { finn, velgKommune } from '../../data/motor/kommune.ts';
 import { app, endret } from '../../data/motor/tilstand.ts';
 import { rgb } from '../farger.ts';
-import { ui, type Probe } from '../tilstand.ts';
+import { ui, type Probe, type Punktinfo } from '../tilstand.ts';
 import { tegner } from './egne.ts';
 import { oversiktLag, tema } from './grunnkart.ts';
 import { kart } from './kart.ts';
 import { utenforKommunen } from './klipping.ts';
 import { navnVed } from './naturtema.ts';
 import { planLag } from './plan.ts';
-import { punktinfo } from './punktinfo.ts';
+import { kjenteFlater, punktinfo } from './punktinfo.ts';
 
 /* Kartet som kommunevelger: et trykk utenfor valgt kommune slår opp kommunen i punktet hos Kartverket og viser en knapp
    rett over punktet, med en prikk der man trykket. Byttet skjer først når man trykker på knappen, så et bomtrykk ved grensen ikke bytter kommune.
@@ -146,4 +147,27 @@ export function lagPunktPrikk() {
   prikk.className = 'punkt';
   punktLag = new ol.Overlay({ element: prikk, positioning: 'center-center', stopEvent: false });
   return punktLag;
+}
+
+/* Omrisset av flatene i punktet mens detaljene vises: egne områder, områdene i naturtemaene og flatene i kommuneplanen (se
+   kjenteFlater i punktinfo.ts). Stiplet, så det skilles fra området som er valgt fra en liste. Tegnes på nytt når punktet endres,
+   detaljene slås på eller av, eller DiBK svarer. */
+const omrissKilde = new ol.source.Vector();
+export const omrissLag = new ol.layer.Vector({
+  className: 'omriss-punkt',
+  source: omrissKilde,
+  style: [
+    new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(255,255,255,.9)', width: 5 }) }),
+    new ol.style.Style({ stroke: new ol.style.Stroke({ color: '#171C1A', width: 2, lineDash: [6, 4] }) })
+  ]
+});
+let omrissFor: [Punktinfo | null, unknown] = [null, null];
+export function oppdaterOmriss() {
+  const P = ui.detaljer ? ui.punkt : null,
+    D = P ? se(katalog.solv.planIPunkt, P.koord) : null,
+    dibk = D && D.verdi;
+  if (P === omrissFor[0] && dibk === omrissFor[1]) return;
+  omrissFor = [P, dibk];
+  omrissKilde.clear();
+  if (P) omrissKilde.addFeatures(kjenteFlater(P).map(f => new ol.Feature(new ol.geom.MultiPolygon(f))));
 }

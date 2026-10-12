@@ -16,7 +16,7 @@ import {
 import type { Planopplysninger } from '../solv/kommuneplan.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
-import { wmsBilde, wmsOppslag } from './wms.ts';
+import { wmsBilde, wmsOppslag, wmsPunkt } from './wms.ts';
 
 const PLAN = 'https://nap.ft.dibk.no/services/wms/kommuneplaner/';
 const planSom = (v: string) =>
@@ -116,4 +116,20 @@ export async function planopplysninger(nr: string): Promise<Planopplysninger | n
   if (!D.finnes) return null;
   const q = D.treff[D.treff.length >> 1];
   return hentPlaninfo(await kommunen(nr), D.u, D.w, D.h, q % D.w, Math.floor(q / D.w));
+}
+
+/* Tabellen bronse.planIPunkt: flatene i kommuneplanene i punktet p [øst, nord], med egenskapene og flaten, som GeoJSON. Til
+   detaljene ved trykk i kartet. Alle arealformål er med, ikke bare utbygging. */
+export async function planIPunkt(p: number[]): Promise<unknown> {
+  return hent(
+    'DiBK',
+    'Kommuneplanen i et punkt',
+    wmsPunkt(PLAN, p, {
+      layers: 'kparealformalomrade',
+      query_layers: 'kparealformalomrade',
+      styles: '',
+      info_format: 'application/json',
+      feature_count: '10'
+    })
+  );
 }

@@ -163,13 +163,13 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | Fil | Innhold |
 |---|---|
 | `henting.ts` | Henting, kall-loggen, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
-| `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 |
+| `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 eller ett punkt |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
-| `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, per flis, og de lagrede klassene per blokk med registeret |
-| `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, og hvilken plan det er |
-| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar |
-| `mdir-inon.ts` | Inngrepsfrie naturområder, som ett bilde av kommunen |
+| `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, per flis, de lagrede klassene per blokk med registeret, og grunnkartet i ett punkt |
+| `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
+| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
+| `mdir-inon.ts` | Inngrepsfrie naturområder, som ett bilde av kommunen og i ett punkt |
 | `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
@@ -189,6 +189,8 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
 | `inon.ts` | Inngrepsfri natur: sone per rute |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon |
+| `punkt.ts` | Oppslag i ett punkt, til detaljene ved trykk i kartet: grunnkartet, kommuneplanen og inngrepsfri natur i punktet, og alle feltene for et område i et naturtema, som felt og verdi. Inngår ikke i tallene. |
+| `kodelister.ts` | Kodelister fra Geonorge og SOSI: arealformål, arealbruksstatus og eierform i kommuneplanen |
 
 Gull, i `src/data/gull/`. Alt som setter kilder sammen, og det sidene viser, for én kommune. Funksjonene som heter `bygg`, `kryss`
 eller `kombiner` noe, er rene utregninger som tabellene bruker.
@@ -237,8 +239,9 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `felles.ts` | Flisnettene, hva kartet holder på med, hjelpere for lag som tegnes i nettleseren, og kildene hvert lag krediterer (`KILDER`) |
 | `kart.ts` | Selve kartet: bakgrunn, grense og status, hvordan lagene settes sammen, og kartets minne til katalogen |
 | `klipping.ts` | Klipping mot kommunen: utenfor valgt kommune vises bare bakgrunnskartet |
-| `trykk.ts` | Trykk i kartet: hva som er i punktet, prikken for punktet, og bytte til kommunen man trykket i |
-| `punktinfo.ts` | Detaljene for punktet man trykket på, gruppert per kartlag, som et oppslag i et vanlig GIS. Bare det som alt er hentet. |
+| `trykk.ts` | Trykk i kartet: hva som er i punktet, prikken og omrisset av flatene i punktet, og bytte til kommunen man trykket i |
+| `punktinfo.ts` | Detaljene for punktet man trykket på, gruppert per kartlag, som et oppslag i et vanlig GIS: det som alt er hentet, og det som slås opp hos kildene når detaljene vises |
+| `feltnavn.ts` | Lesbare navn på feltene fra kildene i detaljene, og hvilke felt som bare vises med kildenes egne navn |
 | `maaling.ts` | Måling av hvor jevnt kartet går, til teknisk visning |
 | `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
 | `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og bildet av hele kommunen zoomet ut |
