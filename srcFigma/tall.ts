@@ -12,8 +12,10 @@ import type { Arealdetaljer } from '../src/data/solv/ssb.ts';
 import type { Detaljareal } from '../src/data/gull/grunnkart.ts';
 import { DETALJKLASSER, type Detaljklasse } from '../src/data/solv/klasser.ts';
 
-/* Et tall som hentes: henter, feil, ingen (kommunen har ikke noe av det) eller ok med verdien */
-export type Svar<T> = { s: 'henter' } | { s: 'feil' } | { s: 'ingen' } | { s: 'ok'; v: T };
+/* Et tall som hentes: henter, feil, ingen (kommunen har ikke noe av det), mangler (ikke regnet ut for kommunen, og hvorfor) eller
+   ok med verdien */
+export type Svar<T> =
+  { s: 'henter' } | { s: 'feil' } | { s: 'ingen' } | { s: 'mangler'; hvorfor: string } | { s: 'ok'; v: T };
 export const fraRad = <T>(r: Rad<T> | null): Svar<T> =>
   !r || r.status === 'henter' ? { s: 'henter' } : r.status === 'feil' ? { s: 'feil' } : { s: 'ok', v: r.verdi as T };
 
@@ -25,24 +27,30 @@ export function summer(D: Arealdetaljer, passer: (k: Klasse) => boolean, t = -1)
   const i = t < 0 ? D.aar.length + t : t;
   return summen(D.klasser.filter(passer).map(k => k.km2[i]));
 }
-export const landet = (D: Arealdetaljer, t = -1) => summer(D, k => k.klasse !== 'vann', t);
 export const SKOG = (k: Klasse) => k.kode.startsWith('17.');
-export const MYR = (k: Klasse) => k.kode === '19';
-/* Et areal i nyeste år og i 2017, med andelen av landarealet i nyeste år */
-export function arealet(D: Arealdetaljer, passer: (k: Klasse) => boolean) {
-  const na = summer(D, passer),
-    for_ = summer(D, passer, 0);
-  return { km2: na, km2Fra: for_, andel: (na / landet(D)) * 100, fra: D.aar[0], til: D.aar[D.aar.length - 1] };
-}
 
-/* Arealet per detaljklasse fra grunnkartet (gull.detaljareal), med ingen når kommunen ikke har lagrede detaljklasser */
+/* Arealet per detaljklasse fra grunnkartet (gull.detaljareal). Mangler når kommunen ikke har lagrede detaljklasser. */
 export function detaljer(): Svar<Detaljareal> {
   const S = fraRad(valgt(katalog.gull.detaljareal));
-  return S.s !== 'ok' ? S : S.v ? { s: 'ok', v: S.v } : { s: 'ingen' };
+  return S.s !== 'ok'
+    ? S
+    : S.v
+      ? { s: 'ok', v: S.v }
+      : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
 }
 /* Arealet av detaljklassene som passer */
 export const detaljsum = (D: Detaljareal, passer: (k: Detaljklasse) => boolean) =>
   summen(DETALJKLASSER.map((k, i) => (passer(k) ? D.km2[i] : 0)));
+/* Skog i grunnkartet: økosystemtypen skog, også tresatt myr og tresatt innmarksbeite. Våtmark: økosystemtypen våtmark (åpen
+   våtmark) og tresatt myr. */
+export const GK_SKOG = (k: Detaljklasse) => !!k.treslag;
+export const GK_VATMARK = (k: Detaljklasse) => k.id === 'vat' || k.underlag === 'myr';
+/* Et areal i grunnkartet med andelen av landarealet i grunnkartet: alt unntatt hav, innsjøer og elver */
+export function iGrunnkartet(D: Detaljareal, passer: (k: Detaljklasse) => boolean) {
+  const km2 = detaljsum(D, passer),
+    land = detaljsum(D, k => k.gruppe === 'beb' || k.gruppe === 'jor' || k.gruppe === 'nat');
+  return { km2, andel: land > 0 ? (km2 / land) * 100 : null };
+}
 
 /* Naturtemaene fra Miljødirektoratet: temaet (gull) og planlagt utbygging i det, når planen er regnet ut for de samme områdene */
 export function naturtema(id: 'vern' | 'rein' | 'verdi') {
@@ -81,13 +89,8 @@ export function temaflis(id: string): Svar<{ km2: number; andel: number | null }
   ): Svar<{ km2: number; andel: number | null }> => (S.s === 'ok' ? { s: 'ok', v: f(S.v) } : S);
   switch (id) {
     case 'skog':
-    case 'vatmark': {
-      const A = arealklasser();
-      return fra(A, D => {
-        const a = arealet(D, id === 'skog' ? SKOG : MYR);
-        return { km2: a.km2, andel: a.andel };
-      });
-    }
+    case 'vatmark':
+      return fra(detaljer(), D => iGrunnkartet(D, id === 'skog' ? GK_SKOG : GK_VATMARK));
     case 'verneomrader':
     case 'villrein':
     case 'verdsatte-naturtyper': {

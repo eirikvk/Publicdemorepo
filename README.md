@@ -297,9 +297,9 @@ med ekte tall, uten å endre hovedsiden.
 - Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`).
 - Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Foreløpig er det to tabeller bare tvillingen bruker,
   og hovedsiden henter dem ikke:
-  - SSBs arealklasser hver for seg (`solv.arealdetaljer`), til skog, åpen myr og bebygd per formål.
-  - Arealet per detaljklasse i grunnkartet (`gull.detaljareal`), til skog per treslag, tresatt myr og åpen våtmark. Den finnes bare
-    for kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md, Arealklassene).
+  - SSBs arealklasser hver for seg (`solv.arealdetaljer`), til skog per treslag og bebygd per formål.
+  - Arealet per detaljklasse i grunnkartet (`gull.detaljareal`), til alle tallene for skog og våtmark utenom figuren med treslag
+    fra SSB. Den finnes bare for kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md, Arealklassene).
 - Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra

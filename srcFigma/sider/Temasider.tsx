@@ -26,12 +26,13 @@ import {
   svar
 } from '../komponenter/deler.tsx';
 import {
-  MYR,
+  GK_SKOG,
+  GK_VATMARK,
   SKOG,
-  arealet,
   arealklasser,
   detaljer,
   detaljsum,
+  iGrunnkartet,
   graa,
   graaIPlan,
   inon,
@@ -109,38 +110,38 @@ function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; 
   );
 }
 
-/* Når detaljklassene fra grunnkartet ikke er lagret for kommunen */
-const BARE_LAGRET = 'Regnet ut bare for Trondheim foreløpig';
-
-const SSB_KILDE = (
+/* Kilden for tallene fra grunnkartet med detaljklassene */
+const GRUNNKART_KILDE = (
   <p>
-    {KILDE.ssb.navn}, {KILDE.ssb.datasett}. Tallene er SSBs arealklasser for nyeste år. SSB skriver at tabellen ikke kan
-    brukes til å regne ut endring mellom år, fordi grunnlaget blir bedre over tid.
+    {KILDE.grunnkart.navn}, {KILDE.grunnkart.datasett}. Tallene er regnet ut fra grunnkartet på 10 meter, klippet til
+    kommunen. Andelen er av landarealet i grunnkartet, det vil si alt unntatt hav, innsjøer og elver. Foreløpig er det
+    regnet ut bare for Trondheim.
   </p>
 );
 
 function Skog({ tema }: { tema: Tema }) {
   const A = arealklasser(),
-    a = A.s === 'ok' ? arealet(A.v, SKOG) : null,
     typer = A.s === 'ok' ? A.v.klasser.filter(SKOG) : [],
-    D = detaljer();
+    D = detaljer(),
+    skog = D.s === 'ok' ? iGrunnkartet(D.v, GK_SKOG) : null;
   return (
     <Temaside
       tema={tema}
       trekkspill={
         <Trekkspill tittel="Mer om skog">
           <p>
-            Tallene er SSBs arealklasse skog, delt etter treslaget som dominerer: barskog, blandingsskog og lauvskog.
-            Kartet viser dagens arealklasser fra NIBIO, der skog er en del av naturen.
+            Tallene er skog i grunnkartet fra NIBIO: økosystemtypen skog, også skog på myr og på innmarksbeite. Figuren
+            med treslag er SSBs arealklasse skog. Kartet viser dagens arealklasser fra NIBIO, der skog er en del av
+            naturen.
           </p>
         </Trekkspill>
       }
       kort={[
-        ['Skog i kommunen', svar(A, () => iTekst(a!.km2))],
-        ['Andel av landarealet som er skog', svar(A, () => prosent(a!.andel))],
+        ['Skog i kommunen', svar(D, () => iTekst(skog!.km2))],
+        ['Andel av landarealet som er skog', svar(D, () => prosent(skog!.andel))],
         ['Skog som er vernet', <span className="mangler-tall">Ikke laget ennå</span>]
       ]}
-      kilde={SSB_KILDE}
+      kilde={GRUNNKART_KILDE}
       lag={[KLASSER, PLAN]}
       lagEtter={
         <p className="hint">
@@ -151,9 +152,8 @@ function Skog({ tema }: { tema: Tema }) {
         [
           'Hvorfor er tallene for skog ikke de samme overalt?',
           <p>
-            Tallene øverst og figuren med treslag er SSBs arealklasser. Kartet og figuren om hva skogen dekker er NIBIOs
-            grunnkart for arealanalyse, med økosystemtyper. De to deler arealet inn på ulike måter, så de gir ikke helt
-            samme areal.
+            Figuren med treslag er SSBs arealklasser. Resten er NIBIOs grunnkart for arealanalyse, med økosystemtyper.
+            De to deler arealet inn på ulike måter, så de gir ikke helt samme areal.
           </p>
         ]
       ]}
@@ -194,69 +194,63 @@ function Skog({ tema }: { tema: Tema }) {
         }
         kilder={['grunnkart']}
       >
-        {svar(
-          D,
-          d => {
-            const tresatt = (u: string) => detaljsum(d, k => k.underlag === u);
-            return (
-              <>
-                <Liggende
-                  hva="Skog i grunnkartet etter treslag"
-                  data={[
-                    ['bar', 'Barskog', 'skog-bar'],
-                    ['lauv', 'Lauvskog', 'skog-lauv'],
-                    ['bland', 'Blandingsskog', 'skog-bland']
-                  ].map(([t, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.treslag === t), farge }))}
-                />
-                <p>
-                  Til sammen {iTekst(detaljsum(d, k => !!k.treslag))} skog. Av den er {iTekst(tresatt('myr'))} tresatt
-                  myr og {iTekst(tresatt('beite'))} tresatt innmarksbeite.
-                </p>
-              </>
-            );
-          },
-          BARE_LAGRET
-        )}
+        {svar(D, d => {
+          const tresatt = (u: string) => detaljsum(d, k => k.underlag === u);
+          return (
+            <>
+              <Liggende
+                hva="Skog i grunnkartet etter treslag"
+                data={[
+                  ['bar', 'Barskog', 'skog-bar'],
+                  ['lauv', 'Lauvskog', 'skog-lauv'],
+                  ['bland', 'Blandingsskog', 'skog-bland']
+                ].map(([t, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.treslag === t), farge }))}
+              />
+              <p>
+                Til sammen {iTekst(detaljsum(d, k => !!k.treslag))} skog. Av den er {iTekst(tresatt('myr'))} tresatt myr
+                og {iTekst(tresatt('beite'))} tresatt innmarksbeite.
+              </p>
+            </>
+          );
+        })}
       </Figur>
     </Temaside>
   );
 }
 
 function Vatmark({ tema }: { tema: Tema }) {
-  const A = arealklasser(),
-    a = A.s === 'ok' ? arealet(A.v, MYR) : null,
-    D = detaljer();
+  const D = detaljer(),
+    vat = D.s === 'ok' ? iGrunnkartet(D.v, GK_VATMARK) : null;
   return (
     <Temaside
       tema={tema}
       trekkspill={
         <Trekkspill tittel="Mer om våtmark">
           <p>
-            Tallene er SSBs arealklasse åpen myr. Myr med trær er ikke med i tallet, og heller ikke annen våtmark, som
-            sump og strandeng.
+            Tallene er våtmark i grunnkartet fra NIBIO: økosystemtypen våtmark, som er åpen myr og annen åpen våtmark,
+            og tresatt myr.
           </p>
         </Trekkspill>
       }
       kort={[
-        ['Åpen myr i kommunen', svar(A, () => iTekst(a!.km2))],
-        ['Andel av landarealet som er åpen myr', svar(A, () => prosent(a!.andel))]
+        ['Våtmark i kommunen', svar(D, () => iTekst(vat!.km2))],
+        ['Andel av landarealet som er våtmark', svar(D, () => prosent(vat!.andel))]
       ]}
-      kilde={SSB_KILDE}
+      kilde={GRUNNKART_KILDE}
       lag={[KLASSER, PLAN]}
       lagEtter={
         <p className="hint">Lagene for økosystemtypen våtmark og tresatt myr fra skissene er ikke laget ennå.</p>
       }
       sporsmal={[
         [
-          'Hvorfor står det åpen myr og ikke våtmark?',
+          'Hvorfor er tresatt myr med i våtmarken?',
           <p>
-            SSB har åpen myr som egen arealklasse. Myr med trær og annen våtmark finnes i grunnkartet fra NIBIO, og
-            vises i figuren om hva våtmarken dekker.
+            Grunnkartet regner myr med trær som skog. Skissene har den med i våtmarken, så her telles den både i
+            våtmarken og i skogen.
           </p>
         ]
       ]}
       ressurser={[
-        ['SSB, tabell 09594', KILDE.ssb.adresse],
         ['Grunnkart for arealanalyse', KILDE.grunnkart.adresse],
         ['Kommunen i dagens løsning', iDagens('')]
       ]}
@@ -275,26 +269,22 @@ function Vatmark({ tema }: { tema: Tema }) {
         }
         kilder={['grunnkart']}
       >
-        {svar(
-          D,
-          d => {
-            const apen = detaljsum(d, k => k.id === 'vat'),
-              tresatt = detaljsum(d, k => k.underlag === 'myr');
-            return (
-              <>
-                <Liggende
-                  hva="Våtmark i grunnkartet"
-                  data={[
-                    { navn: 'Åpen våtmark', km2: apen, farge: 'myr-apen' },
-                    { navn: 'Tresatt myr', km2: tresatt, farge: 'myr-tresatt' }
-                  ]}
-                />
-                <p>Til sammen {iTekst(apen + tresatt)}.</p>
-              </>
-            );
-          },
-          BARE_LAGRET
-        )}
+        {svar(D, d => {
+          const apen = detaljsum(d, k => k.id === 'vat'),
+            tresatt = detaljsum(d, k => k.underlag === 'myr');
+          return (
+            <>
+              <Liggende
+                hva="Våtmark i grunnkartet"
+                data={[
+                  { navn: 'Åpen våtmark', km2: apen, farge: 'myr-apen' },
+                  { navn: 'Tresatt myr', km2: tresatt, farge: 'myr-tresatt' }
+                ]}
+              />
+              <p>Til sammen {iTekst(apen + tresatt)}.</p>
+            </>
+          );
+        })}
       </Figur>
     </Temaside>
   );

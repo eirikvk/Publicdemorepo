@@ -31,6 +31,7 @@ export function Lenke({
 /* Et tall som hentes, som tekst: verdien når den er der, ellers henter, feil eller ingen */
 export function svar<T>(S: Svar<T>, vis: (v: T) => ReactNode, ingen = 'Ingen i kommunen'): ReactNode {
   if (S.s === 'ok') return vis(S.v);
+  if (S.s === 'mangler') return <span className="mangler-tall">{S.hvorfor}</span>;
   return S.s === 'henter' ? <span className="henter">Henter …</span> : S.s === 'feil' ? 'Kunne ikke hentes' : ingen;
 }
 
