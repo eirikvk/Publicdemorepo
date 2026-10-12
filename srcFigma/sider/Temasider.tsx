@@ -32,6 +32,7 @@ import {
   detaljer,
   detaljsum,
   iGrunnkartet,
+  inonIVillrein,
   perOkosystem,
   planIDetaljer,
   graa,
@@ -675,7 +676,8 @@ function Inon({ tema }: { tema: Tema }) {
 
 function Rein({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('rein'),
-    v = T.s === 'ok' ? T.v : null;
+    v = T.s === 'ok' ? T.v : null,
+    IV = inonIVillrein();
   const kommunenavn = (s: unknown) =>
     String(s || '')
       .split(',')
@@ -695,7 +697,8 @@ function Rein({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Villreinområder i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av landarealet som er villreinområde', svar(T, x => prosent(x.andelLand))]
+        ['Andel av landarealet som er villreinområde', svar(T, x => prosent(x.andelLand))],
+        ['Andel villreinområde som er inngrepsfri natur', svar(IV, x => prosent(x!.andel), 'Ingen villreinområder')]
       ]}
       kilde={
         <p>
@@ -764,9 +767,29 @@ function Rein({ tema }: { tema: Tema }) {
         tittel="Tilstand for villreinen"
         trenger="vurderingen etter kvalitetsnormen for villrein, som skissene viser per område."
       />
+      {IV.s === 'ok' && IV.v && (
+        <Figur
+          tittel="Inngrepsfri natur i villreinområdene"
+          tekst={
+            <p>
+              Hvor mye av villreinområdene i kommunen som er inngrepsfri natur, per sone. Sonene sier hvor langt fra
+              tyngre tekniske inngrep naturen ligger.
+            </p>
+          }
+          kilder={['villrein', 'inon']}
+        >
+          <Liggende
+            hva="Inngrepsfri natur i villreinområdene per sone"
+            data={INONSONER.map(([, farge, , , navn], i) => ({ navn, km2: IV.v!.soner[i], farge }))}
+          />
+          <p>
+            {iTekst(IV.v.sum)} av {iTekst(IV.v.villrein)} villreinområde i kommunen er inngrepsfri natur.
+          </p>
+        </Figur>
+      )}
       <Mangler
-        tittel="Inngrepsfri natur i villreinområdene"
-        trenger="inngrepsfri natur krysset med villreinområdene, og kartene for tidligere år."
+        tittel="Inngrepsfri natur i villreinområdene over tid"
+        trenger="kartene over inngrepsfri natur for tidligere år, som finnes i det samme datasettet hos Miljødirektoratet."
       />
     </Temaside>
   );

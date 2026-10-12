@@ -88,6 +88,11 @@ function bilde<T>(r: Rad<Bildetall<T>> | null): Svar<T> {
   return B.tilstand === 'ok' ? { s: 'ok', v: B as T } : { s: B.tilstand };
 }
 export const inon = () => bilde(valgt(katalog.gull.inon));
+/* Inngrepsfri natur i villreinområdene (gull.inonIVillrein), med ingen når kommunen ikke har villreinområder */
+export function inonIVillrein() {
+  const S = fraRad(valgt(katalog.gull.inonIVillrein));
+  return S.s === 'ok' && !S.v ? ({ s: 'ingen' } as const) : S;
+}
 export const graa = () => bilde(valgt(katalog.gull.graa));
 export const graaIPlan = () => verdi(katalog.gull.graaIPlan);
 

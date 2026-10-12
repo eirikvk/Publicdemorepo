@@ -914,6 +914,16 @@ export const katalog = {
       husk: 6,
       etl: gullInon.inon
     }),
+    inonIVillrein: tabell({
+      lag: 'gull',
+      navn: 'inonIVillrein',
+      tittel: 'Inngrepsfri natur i villreinområdene',
+      om: 'inngrepsfri natur innenfor villreinområdene i kommunen: arealet samlet og per sone, og andelen av villreinområdene. Begge arealene telles i rutenettet for inngrepsfri natur. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Villreinområdene tegnes i det samme rutenettet som inngrepsfri natur. Rutene som er minst halvt dekket av villreinområdene, telles, og av dem rutene som ligger i en sone for inngrepsfri natur. Andelen er inngrepsfri natur av villreinområdene i kommunen.',
+      husk: 12,
+      etl: gullInon.inonIVillrein
+    }),
     graakryss: tabell({
       lag: 'gull',
       navn: 'graakryss',
