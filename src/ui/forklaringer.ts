@@ -389,6 +389,42 @@ export function stegFor(k: Kort): Steg[] {
       return { navn: n, tabell: tabellen(n), se: e && !egen.includes(n) ? e : undefined };
     });
 }
+/* Et steg i infoboksen: en kilde i bronse med sølvtabellene som justerer den (hentes fra … og justeres til …), eller ett steg for
+   seg */
+export type Infosteg = { kilde: Steg; justeres: Steg[] } | { steg: Steg };
+/* Stegene for kortet, med hver kilde i bronse og sølvtabellene som leser den slått sammen til ett steg. En sølvtabell hører til
+   kilden når den leser nøyaktig én kilde med eier (kilde i katalogen) blant stegene. Ellers hører den til samme kilde som
+   sølvtabellen den bygger på (kommunegrensen ikke medregnet), som arealet av verdsatt natur. Ellers, når den leser nøyaktig én
+   kilde uten eier, som egne områder, til den. Resten står som før, hver for seg, i samme rekkefølge. */
+export function infostegFor(k: Kort): Infosteg[] {
+  const S = stegFor(k),
+    her = new Map(S.filter(s => !s.se).map(s => [s.navn, s])),
+    kilder = new Map<string, Steg[]>() /* kilden i bronse: sølvtabellene som justerer den */,
+    hører = new Map<string, string>(); /* sølvtabellen: kilden den hører til */
+  for (const s of S) {
+    if (s.se || !s.navn.startsWith('solv.')) continue;
+    const deps = AVHENGIGHETER[s.navn] || [],
+      bronse = deps.filter(d => d.startsWith('bronse.') && her.has(d)),
+      medEier = bronse.filter(d => her.get(d)!.tabell.kilde),
+      forelder = deps.find(d => d !== 'solv.grense' && hører.has(d)),
+      b =
+        medEier.length === 1
+          ? medEier[0]
+          : forelder
+            ? hører.get(forelder)
+            : bronse.length === 1
+              ? bronse[0]
+              : undefined;
+    if (!b) continue;
+    hører.set(s.navn, b);
+    kilder.set(b, [...(kilder.get(b) || []), s]);
+  }
+  return S.flatMap((s): Infosteg[] => {
+    if (hører.has(s.navn)) return [];
+    const j = kilder.get(s.navn);
+    return j ? [{ kilde: s, justeres: j }] : [{ steg: s }];
+  });
+}
 /* De tekniske stegene for kortet: oppslag, lagrede svar og hjelpetabeller som ikke endrer tallene */
 export const tekniskeFor = (k: Kort) => gjennomgang(k).filter(n => tabellen(n).teknisk);
 /* Forbeholdene for kortet: kortets egne og stegenes, hvert én gang. Steg et annet kort forklarer, har forbeholdene der. */

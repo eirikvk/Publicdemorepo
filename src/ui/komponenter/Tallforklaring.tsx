@@ -1,10 +1,11 @@
 /* Overskriften på et kort med tall, med en infoknapp som forklarer tallene. Panelet åpnes rett under overskriften og har tre lag:
    kort fortalt, regnestykket for valgt kommune (tallene fra gull satt inn i tekst), og stegene fra kilde til tall med usikkerheten
-   og lenker til metoden og koden. Innholdet står i src/ui/forklaringer.ts og i katalogen, så det samme står i METODE.md. */
+   og lenker til metoden og koden. I stegene står hver kilde sammen med det den justeres til i sølv: «hentes fra … og justeres
+   til …» (infostegFor). Innholdet står i src/ui/forklaringer.ts og i katalogen, så det samme står i METODE.md. */
 import { useId, useState, type ReactNode } from 'react';
 import { valgtNr, verdi } from '../../data/motor/valgt.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { ankerFor, kortet, REPO, stegFor, usikkerhetFor } from '../forklaringer.ts';
+import { ankerFor, infostegFor, kortet, REPO, usikkerhetFor, type Steg } from '../forklaringer.ts';
 import { Sidelenke } from './deler.tsx';
 import { MdHelpButton, MdHelpText } from './md.ts';
 import './Tallforklaring.css';
@@ -38,6 +39,19 @@ export function Korttittel({ kort, id, children }: { kort: string; id: string; c
   );
 }
 
+/* Kilden til et steg i bronse, med lenke til datasettet og lisensen */
+const Kilde = ({ t: { tabell: t } }: { t: Steg }) =>
+  t.kilde ? (
+    <>
+      {' '}
+      Kilde:{' '}
+      <a href={t.kilde.adresse}>
+        {t.kilde.navn}, {t.kilde.datasett}
+      </a>
+      , {t.kilde.lisens}.
+    </>
+  ) : null;
+
 /* Innholdet i panelet. Regnestykket leser tabellene i gull for valgt kommune, og vises når de er klare. */
 function Innhold({ kort }: { kort: string }) {
   const k = kortet(kort),
@@ -59,29 +73,37 @@ function Innhold({ kort }: { kort: string }) {
       <details>
         <summary>Fra kilde til tall</summary>
         <ol>
-          {stegFor(k).map(({ navn, tabell: t, se }) => (
-            <li key={navn}>
-              <b>{t.tittel}.</b>{' '}
-              {se ? (
-                <>
-                  Forklart under <Sidelenke id={se.side}>{se.tittel}</Sidelenke>.
-                </>
-              ) : (
-                t.forklaring
-              )}
-              {!se && t.kilde && (
-                <>
-                  {' '}
-                  Kilde:{' '}
-                  <a href={t.kilde.adresse}>
-                    {t.kilde.navn}, {t.kilde.datasett}
-                  </a>
-                  , {t.kilde.lisens}.
-                </>
-              )}{' '}
-              <code>{navn}</code>
-            </li>
-          ))}
+          {infostegFor(k).map(i =>
+            'kilde' in i ? (
+              <li key={i.kilde.navn}>
+                <b>{i.kilde.tabell.tittel}.</b> {i.kilde.tabell.kilde ? 'Hentes: ' : ''}
+                {i.kilde.tabell.forklaring}
+                <Kilde t={i.kilde} />
+                {i.justeres.map(j => (
+                  <span key={j.navn} className="justeres">
+                    Justeres: {j.tabell.forklaring}
+                  </span>
+                ))}
+                <span className="koder">
+                  {[i.kilde, ...i.justeres].map(j => (
+                    <code key={j.navn}>{j.navn}</code>
+                  ))}
+                </span>
+              </li>
+            ) : (
+              <li key={i.steg.navn}>
+                <b>{i.steg.tabell.tittel}.</b>{' '}
+                {i.steg.se ? (
+                  <>
+                    Forklart under <Sidelenke id={i.steg.se.side}>{i.steg.se.tittel}</Sidelenke>.
+                  </>
+                ) : (
+                  i.steg.tabell.forklaring
+                )}
+                {!i.steg.se && <Kilde t={i.steg} />} <code>{i.steg.navn}</code>
+              </li>
+            )
+          )}
         </ol>
       </details>
       {U.length > 0 && (

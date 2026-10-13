@@ -233,7 +233,7 @@ Felles, i `src/ui/`:
 | `sider.ts` | Sidene, valg av side, adressen (`#kommune/side`), og oppstarten. Hvert nytt valg av side eller kommune legges i nettleserens historikk, så Tilbake og Frem virker, og en adresse som skrives inn eller lenkes til, velger kommunen og siden. |
 | `farger.ts` | Fargene i kartet og i tegnforklaringene |
 | `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
-| `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser (og andre det forklarer) og regnestykket for valgt kommune, og stegene fra kilde til tall. Et steg et annet kort forklarer, blir en henvisning dit. Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
+| `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser (og andre det forklarer) og regnestykket for valgt kommune, og stegene fra kilde til tall. Et steg et annet kort forklarer, blir en henvisning dit. I infoknappene står hver kilde i bronse sammen med sølvtabellene som justerer den (`infostegFor`): «hentes … justeres …». Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
 | `teknisk.ts` | Formen på `window.motor`: det siden gjør tilgjengelig med `?teknisk`, til feilsøking og regresjonstesten |
 
 Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
@@ -271,7 +271,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
 | `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
-| `Tallforklaring.tsx` | Overskriften på et kort med infoknappen, og panelet under: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall, usikkerheten og lenker til metoden og koden |
+| `Tallforklaring.tsx` | Overskriften på et kort med infoknappen, og panelet under: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall (hver kilde med det den justeres til), usikkerheten og lenker til metoden og koden |
 | `Temaside.tsx` | Toppen og rammen som alle temasidene har: navnet, arealet i kommunen, andelen av landarealet og kilden |
 | `Naturtema.tsx` | Sidene for verneområder, villrein og verdsatt natur, med lister over områdene, og ordene sidene bruker om hvert tema |
 | `Inon.tsx` | Siden for inngrepsfri natur |
