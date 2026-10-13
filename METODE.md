@@ -358,6 +358,11 @@ oversettes til dem med en fast nøkkel (`ssbTilHovedokosystem`):
 3. Tvillingen summerer dem til natur, jordbruk og bebygd (`gull.oversiktKort`) og viser hvor mye av hver landklasse som er bygget
    ned (`gull.nedbygging`). Arealet i 2017 er arealet i 2024 med det som gikk til og fra bebygd lagt tilbake.
 
+**Hva tabellene ikke gir.** SSB gir bare endringen mellom bebygd og hvert av de andre hovedøkosystemene. Endring over tid på
+undernivåene, som tresatt myr, skogtypene eller hva det bebygde arealet ble brukt til, kommer ikke nå. Den venter på en kilde, som
+Naturkart. Våtmark er her hovedøkosystemet våtmark: myr og annen våtmark uten trær. Tresatt myr hører til skog. Der skissene sier
+«siste fem år», betyr det 2017–2024.
+
 **Usikkerhet.**
 
 - Tallene er syntetiske og skal byttes med SSBs tabeller. Endringen er et anslag av arealet i to år, ikke målte overganger, og SSB
@@ -1004,7 +1009,8 @@ Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knap
 **Syntetiske tabeller og vedtatt arealplan, 13. oktober 2026.** To syntetiske tabeller står i stedet for SSBs tabeller for
 naturregnskapet til 25. november (se SSB-tallene, Syntetiske tabeller). Tvillingens oversikt bruker dem til natur, jordbruk og bebygd og
 til hva som er bygget ned. Fremtiden i skissene, som «2025–2035», er vedtatt arealplan, altså kommuneplanen fra DiBK som siden
-allerede bruker. Hovedsidens tall er ikke endret.
+allerede bruker. «Siste fem år» i skissene betyr 2017–2024. Endring over tid på undernivåer, som tresatt myr, venter på kilde, som
+Naturkart. Hovedsidens tall er ikke endret.
 
 **Tvillingen er bare brukergrensesnitt, 13. oktober 2026.** Utregningene som lå i tvillingen fra Figma, er flyttet til datamotoren,
 så begge sidene bygger på én metode:
