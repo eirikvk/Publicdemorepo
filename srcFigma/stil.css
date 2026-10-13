@@ -664,17 +664,32 @@ main > .innhold > h2 + ul {
   flex-direction: column;
   gap: 8px;
 }
-.klassekort li {
+/* Kortene er knapper: kortet som er valgt, er fremhevet og viser klassen i kartet */
+.klassekort li button {
+  width: 100%;
   border: 1px solid var(--md-color-primary-30);
   border-radius: 4px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  font: inherit;
   font-size: var(--md-typography-body-s);
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
 }
-.klassekort li.klassekort-nat {
+.klassekort li button:hover {
+  border-color: var(--md-color-primary-50);
+}
+.klassekort li.valgt button {
   background: var(--kort);
+  border-color: var(--md-color-primary-50);
+}
+.klassekort li button:focus-visible {
+  outline: 2px solid var(--md-color-primary-50);
+  outline-offset: 2px;
 }
 .klassekort-topp {
   display: flex;
@@ -692,7 +707,7 @@ main > .innhold > h2 + ul {
   font-size: var(--md-typography-body-s);
   white-space: nowrap;
 }
-.klassekort-nat .endringsmerke {
+.klassekort .valgt .endringsmerke {
   background: var(--md-color-primary-20);
 }
 @media (max-width: 900px) {

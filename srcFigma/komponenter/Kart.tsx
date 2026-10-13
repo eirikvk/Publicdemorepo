@@ -2,7 +2,7 @@
    tema kartet viser, følger siden (ui.side, se navigasjon.ts). Lagvelgeren skjuler og viser lagene med gjennomsiktighet, så kartets
    egen styring av lagene ikke røres. Lag som bare tvillingen har (kartlag.ts), legges inn under planen når kartet vises, og tas ut
    igjen etterpå. Det finnes ett kart, så bare én side om gangen har det. «Åpne kart i fullskjerm» legger kartet over hele vinduet. */
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
 import { UTM } from '../../src/data/solv/felles.ts';
@@ -99,24 +99,35 @@ function Bytt() {
 }
 
 /* Kartet med lagvelgeren ved siden av (lag og det som står under den, etter), som et bånd over hele bredden. stor gir et høyere kart.
-   enkel gir bare kartet, med en merkelapp nede til venstre, som på oversikten. */
+   enkel gir bare kartet, med en merkelapp nede til venstre, som på oversikten, og prikken i merkelappen har fargen enkelFarge (en
+   variabel i stilen, til vanlig natur). */
 export default function Kart({
   lag,
   etter,
   stor,
-  enkel
+  enkel,
+  enkelFarge = 'nat'
 }: {
   lag: Kartlag[];
   etter?: ReactNode;
   stor?: boolean;
   enkel?: string;
+  enkelFarge?: string;
 }) {
   const [skjult, settSkjult] = useState<Record<string, boolean>>(() =>
       Object.fromEntries(lag.filter(l => l.av).map(l => [l.id, true]))
     ),
     [full, settFull] = useState(false),
     henting = hentingAvKlasser(),
-    p = ui.probe;
+    p = ui.probe,
+    avPaa = lag.map(l => l.id + (l.av ? ':av' : '')).join();
+  /* Bytter siden lagene (som kortene på oversikten), starter lagene som de er satt: av eller på */
+  const forrige = useRef(avPaa);
+  useEffect(() => {
+    if (forrige.current === avPaa) return;
+    forrige.current = avPaa;
+    settSkjult(Object.fromEntries(lag.filter(l => l.av).map(l => [l.id, true])));
+  }, [avPaa]);
   /* Lagene som er skjult, er gjennomsiktige. Alt vises igjen når kartet tas ut av siden. */
   useEffect(() => {
     for (const [id, f] of Object.entries(OL_LAG)) f().forEach(l => l.setOpacity(skjult[id] ? 0 : 1));
@@ -163,7 +174,11 @@ export default function Kart({
       )}
       {ui.ute && !henting && <div className="kartmerke nede">Zoom inn for å se arealklassene.</div>}
       <Bytt />
-      {enkel && <div className="kartmerke enkel-merke">{enkel}</div>}
+      {enkel && (
+        <div className="kartmerke enkel-merke" style={{ '--merke': `var(--${enkelFarge})` } as CSSProperties}>
+          {enkel}
+        </div>
+      )}
     </div>
   );
   if (enkel)

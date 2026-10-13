@@ -1,7 +1,8 @@
 /* Kartlag som bare tvillingen har. Lag av detaljklassene i grunnkartet, som skogtyper og tresatt myr: flisene tegnes i nettleseren
    av de lagrede detaljklassene (solv.detaljklasser), i kartets flisnett. En flis på nivå 10 er én blokk, en flis zoomet ut er flere
    blokker forminsket, og en flis zoomet inn er en del av en blokk forstørret. Hver detaljklasse får fargen laget gir den, eller ingen.
-   De finnes bare for kommunene med lagrede detaljklasser. Og lag fra Miljødirektoratets kart over naturskog, bare til visning. Alle
+   De finnes bare for kommunene med lagrede detaljklasser. På samme måte lag med én av dagens klasser (bebygd, jordbruk eller natur) for
+   seg, til kortene på oversikten. Og lag fra Miljødirektoratets kart over naturskog, bare til visning. Alle
    flisene klippes mot kommunen. Kartet (Kart.tsx) legger lagene inn i det felles kartet når siden vises, og tar dem ut igjen
    etterpå. */
 import type ImageTile from 'ol/ImageTile.js';
@@ -11,7 +12,7 @@ import { katalog } from '../src/data/katalog.ts';
 import { abonner } from '../src/data/motor/tilstand.ts';
 import { valgtNr, verdi } from '../src/data/motor/valgt.ts';
 import { FLISNIVA, type Flis } from '../src/data/solv/felles.ts';
-import { DETALJKLASSER, type Detaljklasse } from '../src/data/solv/klasser.ts';
+import { ALLE, DETALJKLASSER, type Detaljklasse, type KlasseId } from '../src/data/solv/klasser.ts';
 import { flislerret, lesBilde, sti, tegneflate } from '../src/data/solv/raster.ts';
 import { KILDER, TOM, friskOpp, nyttSiden, plannett, tegnetKilde, type Flistegner } from '../src/ui/kart/felles.ts';
 import { ol } from '../src/ui/kart/ol.ts';
@@ -25,21 +26,19 @@ function cssFarge(navn: string): number[] {
   return m ? [1, 2, 3].map(i => parseInt(m[i], 16)) : [128, 128, 128];
 }
 
-/* Blokkene med lagrede detaljklasser for kommunen nr (solv.detaljblokker), som «x/y». Tom når kommunen ikke har noen. */
-async function blokkene(nr: string): Promise<Set<string>> {
-  return new Set((await katalog.solv.detaljblokker(nr)).map(([, x, y]) => `${x}/${y}`));
-}
-
-/* Et kartlag av detaljklassene. farge gir fargen (en variabel i stilen) for hver detaljklasse som skal vises, eller null. */
-export function detaljlag(tittel: string, farge: (k: Detaljklasse) => string | null): TileLayer<XYZ> {
-  const tabell = () =>
-    DETALJKLASSER.map(k => {
-      const f = farge(k);
-      return f ? cssFarge(f) : null;
-    });
+/* Et kartlag av klassene i blokkene på nivå niva (9 eller 10): blokker gir blokkene for kommunen, klasser klassene per rute i en blokk
+   (plassen i tabellen pluss én, 0 for ingen), og farger fargen for hver plass som [r, g, b], eller null når den ikke vises. En flis
+   på nivået er én blokk, en flis zoomet ut er flere blokker forminsket, og en flis zoomet inn er en del av en blokk forstørret. */
+function blokklag(
+  tittel: string,
+  niva: number,
+  blokker: (nr: string) => Promise<Flis[]>,
+  klasser: (tc: Flis) => Promise<{ kl: ArrayLike<number> }>,
+  farger: () => (number[] | null)[]
+): TileLayer<XYZ> {
   /* Blokken som lerret i lagets farger. Klassene laget ikke viser, er gjennomsiktige. */
   async function blokk(bx: number, by: number, F: (number[] | null)[]) {
-    const K = await katalog.solv.detaljklasser([FLISNIVA, bx, by]),
+    const K = await klasser([niva, bx, by]),
       g = tegneflate(512, 512),
       d = g.createImageData(512, 512),
       o = d.data;
@@ -64,14 +63,14 @@ export function detaljlag(tittel: string, farge: (k: Detaljklasse) => string | n
         [z, x, y] = tile.getTileCoord() as Flis,
         u = plannett.getTileCoordExtent([z, x, y]);
       if (!nr || !G || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
-      const har = await blokkene(nr),
-        F = tabell(),
+      const har = new Set((await blokker(nr)).map(([, bx, by]) => `${bx}/${by}`)),
+        F = farger(),
         c = flislerret(),
         g = c.getContext('2d')!;
       let tegnet = false;
-      if (z <= FLISNIVA) {
+      if (z <= niva) {
         /* zoomet ut: n x n blokker forminsket inn i flisen */
-        const n = 1 << (FLISNIVA - z),
+        const n = 1 << (niva - z),
           s = 512 / n;
         g.imageSmoothingEnabled = true;
         for (let j = 0; j < n; j++)
@@ -87,9 +86,9 @@ export function detaljlag(tittel: string, farge: (k: Detaljklasse) => string | n
           }
       } else {
         /* zoomet inn: en del av én blokk, forstørret med skarpe ruter */
-        const n = 1 << (z - FLISNIVA),
-          bx = x >> (z - FLISNIVA),
-          by = y >> (z - FLISNIVA),
+        const n = 1 << (z - niva),
+          bx = x >> (z - niva),
+          by = y >> (z - niva),
           s = 512 / n;
         if (har.has(`${bx}/${by}`)) {
           const b = await blokk(bx, by, F);
@@ -125,6 +124,32 @@ export function detaljlag(tittel: string, farge: (k: Detaljklasse) => string | n
   });
   return lag;
 }
+
+/* Et kartlag av detaljklassene (solv.detaljklasser, nivå 10). farge gir fargen (en variabel i stilen) for hver detaljklasse som skal
+   vises, eller null. De finnes bare for kommunene med lagrede detaljklasser (solv.detaljblokker). */
+export const detaljlag = (tittel: string, farge: (k: Detaljklasse) => string | null) =>
+  blokklag(
+    tittel,
+    FLISNIVA,
+    nr => katalog.solv.detaljblokker(nr),
+    tc => katalog.solv.detaljklasser(tc),
+    () =>
+      DETALJKLASSER.map(k => {
+        const f = farge(k);
+        return f ? cssFarge(f) : null;
+      })
+  );
+/* Et kartlag med én av dagens klasser (bebygd, jordbruk eller natur) i klassens farge, av blokkene på nivå 9 (solv.blokker og
+   solv.klasser, 21 meter). De er lagret for noen kommuner og lages ellers av kartbildene fra NIBIO, som for hovedsidens kart, så
+   laget henter ikke noe mer enn kartet alt gjør. */
+export const klasselag = (tittel: string, id: KlasseId) =>
+  blokklag(
+    tittel,
+    FLISNIVA - 1,
+    nr => katalog.solv.blokker([nr, FLISNIVA - 1]),
+    tc => katalog.solv.klasser(tc),
+    () => ALLE.map(([k]) => (k === id ? cssFarge(id) : null))
+  );
 
 /* Et kartlag fra Miljødirektoratets kart over naturskog (bronse.naturskogflis), klippet mot kommunen. Bare til visning. */
 type Naturskoglag = Parameters<typeof katalog.bronse.naturskogflis>[0][0];
@@ -180,4 +205,11 @@ export const SKOGLAG = {
 export const VATMARKLAG = {
   apen: detaljlag('Økosystemtype våtmark', k => (k.id === 'vat' ? 'myr-apen' : null)),
   tresatt: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null))
+};
+
+/* Lagene på oversikten: hver av dagens klasser for seg, til kortene natur, jordbruk og bebygd */
+export const KLASSELAG = {
+  nat: klasselag('Natur', 'nat'),
+  jor: klasselag('Jordbruk', 'jor'),
+  beb: klasselag('Bebygd', 'beb')
 };

@@ -1,7 +1,7 @@
 /* Hovedsidene i tvillingen: Oversikt, Naturtapet, Utforsk naturen, Utforsk i kart, Hjelp og veileder, og siden for en adresse som
    ikke finnes. Oversikten følger Figma. Naturtapet, Utforsk naturen og Utforsk i kart er tomme i skissene, så de er satt sammen av
    de samme delene. */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
@@ -11,6 +11,7 @@ import type { Plassering } from '../../src/data/gull/syntetisk.ts';
 import { andelTekst, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
 import { MdRadioGroup } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
+import { KLASSELAG } from '../kartlag.ts';
 import Tabell from '../komponenter/Tabell.tsx';
 import {
   Figur,
@@ -73,7 +74,25 @@ const MedUnder = ({ tall, under }: { tall: string; under: string }) => (
 const plassTekst = (p: Plassering) =>
   p.plass === null ? 'Kan ikke sammenlignes' : <MedUnder tall={`Nr. ${p.plass} av ${p.av}`} under={iTekst(p.km2)} />;
 
+/* Kortet som er valgt på oversikten, og laget og merkelappen det gir i kartet */
+type Klassevalg = keyof typeof KLASSELAG;
+const KLASSEKART: Record<Klassevalg, [lag: Kartlag, merke: (kommune: string) => string]> = {
+  nat: [
+    { id: 'kl-nat', navn: 'Natur', kilde: 'Grunnkart for arealanalyse, NIBIO', ol: KLASSELAG.nat },
+    k => `Naturen i ${k} i dag`
+  ],
+  jor: [
+    { id: 'kl-jor', navn: 'Jordbruk', kilde: 'Grunnkart for arealanalyse, NIBIO', ol: KLASSELAG.jor },
+    k => `Jordbruket i ${k} i dag`
+  ],
+  beb: [
+    { id: 'kl-beb', navn: 'Bebygd', kilde: 'Grunnkart for arealanalyse, NIBIO', ol: KLASSELAG.beb },
+    k => `Bebygd areal i ${k} i dag`
+  ]
+};
+
 export function Oversikt() {
+  const [vist, settVist] = useState<Klassevalg>('nat');
   const U = oversiktKort(),
     N = nedbygging(),
     S = sammenligning(),
@@ -100,19 +119,21 @@ export function Oversikt() {
             {svar(U, u => (
               <ul className="klassekort">
                 {u.klasser.map(k => (
-                  <li key={k.id} className={'klassekort-' + k.id}>
-                    <div className="klassekort-topp">
-                      <b>{k.navn}</b>
-                      {k.endring !== null && <Endringsmerke d={k.endring} pst={k.pst} />}
-                    </div>
-                    <span>
-                      {prosent(k.andel)} av landarealet, {iTekst(k.km2)}
-                    </span>
-                    {k.endring !== null && (
+                  <li key={k.id} className={'klassekort-' + k.id + (k.id === vist ? ' valgt' : '')}>
+                    <button type="button" aria-pressed={k.id === vist} onClick={() => settVist(k.id as Klassevalg)}>
+                      <div className="klassekort-topp">
+                        <b>{k.navn}</b>
+                        {k.endring !== null && <Endringsmerke d={k.endring} pst={k.pst} />}
+                      </div>
                       <span>
-                        {k.endring < 0 ? 'Ned' : 'Opp'} {iTekst(Math.abs(k.endring))} ({u.fra}–{u.til})
+                        {prosent(k.andel)} av landarealet, {iTekst(k.km2)}
                       </span>
-                    )}
+                      {k.endring !== null && (
+                        <span>
+                          {k.endring < 0 ? 'Ned' : 'Opp'} {iTekst(Math.abs(k.endring))} ({u.fra}–{u.til})
+                        </span>
+                      )}
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -131,7 +152,11 @@ export function Oversikt() {
               </Trekkspill>
             </div>
           </div>
-          <Kart lag={[KLASSER, PLAN]} enkel={`Naturen i ${kommunen()} i dag`} />
+          <Kart
+            lag={[{ ...KLASSER, av: true }, KLASSEKART[vist][0], PLAN]}
+            enkel={KLASSEKART[vist][1](kommunen())}
+            enkelFarge={vist}
+          />
         </section>
       </div>
       <section className="baand">
