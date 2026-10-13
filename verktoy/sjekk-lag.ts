@@ -157,7 +157,9 @@ for (const [lag, regel] of Object.entries(LAG)) {
   }
 }
 
-/* Tvillingen fra Figma: srcFigma/ kan bruke det i FIGMA_LOV fra src/, men src/ bruker aldri srcFigma/ */
+/* Tvillingen fra Figma: srcFigma/ kan bruke det i FIGMA_LOV fra src/, men src/ bruker aldri srcFigma/. Tvillingen er bare
+   brukergrensesnitt: tallene leses ferdige fra gull. Den kan derfor bare bruke typer fra gull og ikke regnehjelperne i
+   data/generelt/, og fra bronse i katalogen bare kartbildene (tabeller som slutter på «flis»), slik kartet i hovedsiden gjør. */
 const ROT = path.resolve(SRC, '..'),
   FIGMA = path.join(ROT, 'srcFigma');
 const FIGMA_LOV = [
@@ -169,7 +171,8 @@ const FIGMA_LOV = [
     'ui/komponenter/md.ts',
     'ui/komponenter/lager.ts'
   ],
-  FIGMA_IKKE = ['data/bronse/'];
+  FIGMA_IKKE = ['data/bronse/', 'data/generelt/'],
+  FIGMA_BARE_TYPER = ['data/gull/'];
 const filerI = (mappe: string): string[] =>
   fs.existsSync(mappe)
     ? fs
@@ -187,7 +190,14 @@ const importer = (fil: string) => {
     { program } = parseSync(path.basename(fil), kode);
   return (program.body as Node[])
     .filter(n => n.type === 'ImportDeclaration')
-    .map(n => ({ fra: n.source.value as string, linje: kode.slice(0, n.start).split('\n').length }));
+    .map(n => ({
+      fra: n.source.value as string,
+      linje: kode.slice(0, n.start).split('\n').length,
+      typer:
+        n.importKind === 'type' ||
+        (n.specifiers.length > 0 &&
+          (n.specifiers as Node[]).every(x => x.type === 'ImportSpecifier' && x.importKind === 'type'))
+    }));
 };
 for (const fil of filerI(SRC))
   for (const { fra, linje } of importer(fil))
@@ -195,19 +205,24 @@ for (const fil of filerI(SRC))
       feil.push(`${path.relative(ROT, fil)}:${linje} importerer fra tvillingen (${fra}): src/ bruker aldri srcFigma/`);
 for (const fil of filerI(FIGMA)) {
   antall++;
-  for (const { fra, linje } of importer(fil)) {
+  const kode = fs.readFileSync(fil, 'utf8');
+  for (const m of kode.matchAll(/katalog\.bronse\.([A-Za-z]+)/g))
+    if (!m[1].endsWith('flis'))
+      feil.push(
+        `${path.relative(ROT, fil)}:${kode.slice(0, m.index).split('\n').length} bruker katalog.bronse.${m[1]}: tvillingen bruker bare kartbildene fra bronse`
+      );
+  for (const { fra, linje, typer } of importer(fil)) {
     if (!fra.startsWith('.')) continue; /* pakker */
     const hvor = path.resolve(path.dirname(fil), fra);
     if (hvor.startsWith(FIGMA + path.sep)) continue;
     const rel = path.relative(SRC, hvor).split(path.sep).join('/');
-    const ok =
-      hvor.startsWith(SRC + path.sep) &&
-      FIGMA_LOV.some(p => rel.startsWith(p)) &&
-      !FIGMA_IKKE.some(p => rel.startsWith(p));
-    if (!ok)
-      feil.push(
-        `${path.relative(ROT, fil)}:${linje} importerer fra ${fra}: tvillingen kan bare bruke ${FIGMA_LOV.join(', ')}`
-      );
+    const sted = `${path.relative(ROT, fil)}:${linje} importerer fra ${fra}`;
+    if (!hvor.startsWith(SRC + path.sep) || !FIGMA_LOV.some(p => rel.startsWith(p)))
+      feil.push(`${sted}: tvillingen kan bare bruke ${FIGMA_LOV.join(', ')}`);
+    else if (FIGMA_IKKE.some(p => rel.startsWith(p)))
+      feil.push(`${sted}: tvillingen bruker ikke ${FIGMA_IKKE.join(' eller ')}`);
+    else if (!typer && FIGMA_BARE_TYPER.some(p => rel.startsWith(p)))
+      feil.push(`${sted}: tvillingen bruker bare typer fra gull`);
   }
 }
 

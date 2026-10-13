@@ -379,3 +379,58 @@ export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | nul
   const [{ omrader }, g] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.solv.grense(nr)]);
   return klasseAreal(omrader, VERDI.klasser!.length, g, v.flate).klasser;
 }
+
+/* Tabellen gull.vernPerVerneform: det vernede arealet i kommunen nr per verneform, slik Miljødirektoratet skriver den
+   (egenskapen verneform, tom når den mangler). Størst først. */
+export async function vernPerVerneform(nr: string): Promise<{ verneform: string; km2: number }[]> {
+  const T = await katalog.gull.verneomrader(nr),
+    m = new Map<string, number>();
+  T.omrader.forEach(o => {
+    const f = String(o.egenskaper.verneform || '');
+    m.set(f, (m.get(f) || 0) + o.km2);
+  });
+  return [...m].map(([verneform, km2]) => ({ verneform, km2 })).sort((a, b) => b.km2 - a.km2);
+}
+/* Tabellen gull.villreinPerOmrade: villreinområdene i kommunen nr med delen som ligger i kommunen, andelen av landarealet,
+   kommunene området ligger i (egenskapen kommune) og faktaarket. Størst først. */
+export async function villreinPerOmrade(
+  nr: string
+): Promise<{ navn: string; km2: number; andel: number | null; kommuner: string; url: string }[]> {
+  const [T, land] = await Promise.all([katalog.gull.villrein(nr), landareal(nr)]);
+  return T.omrader
+    .map(o => ({
+      navn: o.navn,
+      km2: o.km2,
+      andel: andel(o.km2, land),
+      kommuner: String(o.egenskaper.kommune || ''),
+      url: o.url
+    }))
+    .sort((a, b) => b.km2 - a.km2);
+}
+/* En naturtype i verdsatt natur: arealet, antall lokaliteter og den høyeste verdien blant dem (v, 0 er svært stor) */
+export interface Naturtype {
+  navn: string;
+  km2: number;
+  antall: number;
+  v: number;
+}
+/* Tabellen gull.verdsattPerNaturtype: lokalitetene i verdsatt natur i kommunen nr gruppert per naturtype, alle og bare de med stor
+   eller svært stor verdi. Arealet er summen av lokalitetene, så overlapp telles flere ganger. Størst først. */
+export async function verdsattPerNaturtype(nr: string): Promise<{ alle: Naturtype[]; hoy: Naturtype[] }> {
+  const T = await katalog.gull.verdsattNatur(nr);
+  const grupper = (bareHoy: boolean) => {
+    const m = new Map<string, Naturtype>();
+    T.omrader
+      .filter(o => !bareHoy || (o.v !== undefined && o.v <= 1))
+      .forEach(o => {
+        const navn = String(o.egenskaper.Naturtype || 'Uten naturtype'),
+          t = m.get(navn) || { navn, km2: 0, antall: 0, v: 3 };
+        t.km2 += o.km2;
+        t.antall++;
+        t.v = Math.min(t.v, o.v ?? 3);
+        m.set(navn, t);
+      });
+    return [...m.values()].sort((a, b) => b.km2 - a.km2);
+  };
+  return { alle: grupper(false), hoy: grupper(true) };
+}

@@ -26,15 +26,14 @@ import {
   svar
 } from '../komponenter/deler.tsx';
 import {
-  GK_LAND,
-  GK_SKOG,
-  GK_VATMARK,
-  detaljer,
-  detaljsum,
-  iGrunnkartet,
   inonIVillrein,
-  perOkosystem,
-  planIDetaljer,
+  planPerOkosystem,
+  skog as skogen,
+  vatmark as vatmarken,
+  verdsattPerNaturtype,
+  vernPerVerneform,
+  vernetNatur,
+  villreinPerOmrade,
   graa,
   graaIPlan,
   inon,
@@ -115,6 +114,8 @@ function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; 
 
 /* Kilden til lagene fra grunnkartet, i lagvelgeren */
 const GK = 'Grunnkart for arealanalyse, NIBIO';
+/* Fargen for hvert underlag i skogen, til figuren */
+const UNDERLAGFARGE: Record<string, string> = { vanlig: 'skog-bar', myr: 'myr-tresatt', beite: 'beite-tresatt' };
 /* Kilden for tallene fra grunnkartet med detaljklassene */
 const GRUNNKART_KILDE = (
   <p>
@@ -125,9 +126,8 @@ const GRUNNKART_KILDE = (
 );
 
 function Skog({ tema }: { tema: Tema }) {
-  const D = detaljer(),
-    skog = D.s === 'ok' ? iGrunnkartet(D.v, GK_SKOG) : null,
-    V = detaljer('vern');
+  const S = skogen(),
+    V = vernetNatur();
   return (
     <Temaside
       tema={tema}
@@ -140,9 +140,9 @@ function Skog({ tema }: { tema: Tema }) {
         </Trekkspill>
       }
       kort={[
-        ['Skog i kommunen', svar(D, () => iTekst(skog!.km2))],
-        ['Andel av landarealet som er skog', svar(D, () => prosent(skog!.andel))],
-        ['Skog som er vernet', svar(V, v => iTekst(detaljsum(v, GK_SKOG)))]
+        ['Skog i kommunen', svar(S, s => iTekst(s.km2))],
+        ['Andel av landarealet som er skog', svar(S, s => prosent(s.andel))],
+        ['Skog som er vernet', svar(V, v => iTekst(v.skog))]
       ]}
       kilde={GRUNNKART_KILDE}
       lag={[
@@ -199,7 +199,7 @@ function Skog({ tema }: { tema: Tema }) {
       ]}
       lagEtter={
         <>
-          {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
+          {S.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
           <p className="hint">
             Skissene har ett lag for naturskog. Kartet over naturskog har flere; her er to av dem. Laget for naturtyper
             i skog venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart ennå.
@@ -231,14 +231,10 @@ function Skog({ tema }: { tema: Tema }) {
         }
         kilder={['grunnkart']}
       >
-        {svar(D, d => (
+        {svar(S, s => (
           <Stolper
             hva="Skog etter treslag"
-            data={[
-              ['bar', 'Barskog', 'skog-bar'],
-              ['bland', 'Blandingsskog', 'skog-bland'],
-              ['lauv', 'Lauvskog', 'skog-lauv']
-            ].map(([t, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.treslag === t), farge }))}
+            data={s.treslag.map(t => ({ navn: t.navn, km2: t.km2, farge: 'skog-' + t.id }))}
           />
         ))}
       </Figur>
@@ -252,17 +248,13 @@ function Skog({ tema }: { tema: Tema }) {
         }
         kilder={['grunnkart']}
       >
-        {svar(D, d => (
+        {svar(S, s => (
           <>
             <Liggende
               hva="Skog i grunnkartet etter underlag"
-              data={[
-                ['vanlig', 'Skog på fastmark', 'skog-bar'],
-                ['myr', 'Tresatt myr', 'myr-tresatt'],
-                ['beite', 'Tresatt innmarksbeite', 'beite-tresatt']
-              ].map(([u, navn, farge]) => ({ navn, km2: detaljsum(d, k => k.underlag === u), farge }))}
+              data={s.underlag.map(u => ({ navn: u.navn, km2: u.km2, farge: UNDERLAGFARGE[u.id] }))}
             />
-            <p>Til sammen {iTekst(detaljsum(d, GK_SKOG))} skog.</p>
+            <p>Til sammen {iTekst(s.km2)} skog.</p>
           </>
         ))}
       </Figur>
@@ -271,7 +263,7 @@ function Skog({ tema }: { tema: Tema }) {
 }
 
 /* Våtmark som er planlagt nedbygget, som fremhevet melding: åpen våtmark og tresatt myr satt av til utbygging */
-function VatmarkIPlan({ P }: { P: ReturnType<typeof planIDetaljer> }) {
+function VatmarkIPlan({ P }: { P: ReturnType<typeof planPerOkosystem> }) {
   if (P.s === 'mangler') return null;
   if (P.s !== 'ok')
     return (
@@ -285,13 +277,12 @@ function VatmarkIPlan({ P }: { P: ReturnType<typeof planIDetaljer> }) {
         </span>
       </Fremhevet>
     );
-  const apen = detaljsum(P.v, k => k.id === 'vat'),
-    tresatt = detaljsum(P.v, k => k.underlag === 'myr');
+  const { km2, apen, tresatt } = P.v.vatmark;
   return (
     <Fremhevet>
-      {apen + tresatt > 0 ? (
+      {km2 > 0 ? (
         <>
-          <b>Våtmark som er planlagt nedbygget: ca. {iTekst(apen + tresatt)}</b>
+          <b>Våtmark som er planlagt nedbygget: ca. {iTekst(km2)}</b>
           <span>
             {iTekst(apen)} åpen våtmark og {iTekst(tresatt)} tresatt myr, etter kommuneplanen
             {app.valgt ? ` for ${app.valgt.navn}` : ''}. Smale striper er ikke med.
@@ -305,9 +296,8 @@ function VatmarkIPlan({ P }: { P: ReturnType<typeof planIDetaljer> }) {
 }
 
 function Vatmark({ tema }: { tema: Tema }) {
-  const D = detaljer(),
-    vat = D.s === 'ok' ? iGrunnkartet(D.v, GK_VATMARK) : null,
-    P = planIDetaljer();
+  const W = vatmarken(),
+    P = planPerOkosystem();
   return (
     <Temaside
       tema={tema}
@@ -320,8 +310,8 @@ function Vatmark({ tema }: { tema: Tema }) {
         </Trekkspill>
       }
       kort={[
-        ['Våtmark i kommunen', svar(D, () => iTekst(vat!.km2))],
-        ['Andel av landarealet som er våtmark', svar(D, () => prosent(vat!.andel))]
+        ['Våtmark i kommunen', svar(W, w => iTekst(w.km2))],
+        ['Andel av landarealet som er våtmark', svar(W, w => prosent(w.andel))]
       ]}
       kilde={GRUNNKART_KILDE}
       fremhevet={<VatmarkIPlan P={P} />}
@@ -345,7 +335,7 @@ function Vatmark({ tema }: { tema: Tema }) {
       ]}
       lagEtter={
         <>
-          {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
+          {W.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
           <p className="hint">
             Laget for naturtyper i våtmark venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart
             ennå.
@@ -376,22 +366,18 @@ function Vatmark({ tema }: { tema: Tema }) {
         }
         kilder={['grunnkart']}
       >
-        {svar(D, d => {
-          const apen = detaljsum(d, k => k.id === 'vat'),
-            tresatt = detaljsum(d, k => k.underlag === 'myr');
-          return (
-            <>
-              <Liggende
-                hva="Våtmark i grunnkartet"
-                data={[
-                  { navn: 'Åpen våtmark', km2: apen, farge: 'myr-apen' },
-                  { navn: 'Tresatt myr', km2: tresatt, farge: 'myr-tresatt' }
-                ]}
-              />
-              <p>Til sammen {iTekst(apen + tresatt)}.</p>
-            </>
-          );
-        })}
+        {svar(W, w => (
+          <>
+            <Liggende
+              hva="Våtmark i grunnkartet"
+              data={[
+                { navn: 'Åpen våtmark', km2: w.apen, farge: 'myr-apen' },
+                { navn: 'Tresatt myr', km2: w.tresatt, farge: 'myr-tresatt' }
+              ]}
+            />
+            <p>Til sammen {iTekst(w.km2)}.</p>
+          </>
+        ))}
       </Figur>
     </Temaside>
   );
@@ -404,21 +390,12 @@ const verneform = (v: unknown) =>
     .toLowerCase()
     .replace(/omraade/g, 'område')
     .replace(/^./, c => c.toUpperCase());
-/* Arealet i kommunen per verneform, fra egenskapene til hvert verneområde */
-function perVerneform(omrader: { km2: number; egenskaper: Record<string, unknown> }[]) {
-  const m = new Map<string, number>();
-  omrader.forEach(o => {
-    const f = verneform(o.egenskaper.verneform);
-    m.set(f, (m.get(f) || 0) + o.km2);
-  });
-  return [...m].sort((a, b) => b[1] - a[1]);
-}
 
 function Vern({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('vern'),
     v = T.s === 'ok' ? T.v : null,
-    V = detaljer('vern'),
-    D = detaljer();
+    F = vernPerVerneform(),
+    V = vernetNatur();
   return (
     <Temaside
       tema={tema}
@@ -473,10 +450,12 @@ function Vern({ tema }: { tema: Tema }) {
             }
             kilder={['vern']}
           >
-            <Liggende
-              hva="Vernet areal per verneform"
-              data={perVerneform(v.omrader).map(([navn, km2]) => ({ navn, km2, farge: 'vern' }))}
-            />
+            {svar(F, f => (
+              <Liggende
+                hva="Vernet areal per verneform"
+                data={f.map(x => ({ navn: verneform(x.verneform), km2: x.km2, farge: 'vern' }))}
+              />
+            ))}
           </Figur>
           <Figur
             tittel={`Verneområdene i ${kommunen()}`}
@@ -519,27 +498,25 @@ function Vern({ tema }: { tema: Tema }) {
         }
         kilder={['grunnkart', 'vern']}
       >
-        {svar(V, d => {
-          const land = detaljsum(d, GK_LAND),
-            hav = detaljsum(d, k => k.id === 'hav'),
-            fersk = detaljsum(d, k => k.id === 'inn' || k.id === 'elv'),
-            andel = D.s === 'ok' ? iGrunnkartet(d, GK_LAND, D.v).andel : null;
-          return d.sum > 0 ? (
+        {svar(V, d =>
+          d.sum > 0 ? (
             <>
               <Liggende
                 hva="Vernet areal per økosystemtype"
-                data={perOkosystem(d.km2).map(([navn, km2]) => ({ navn, km2, farge: 'vern' }))}
+                data={d.perOkosystem.map(x => ({ navn: x.navn, km2: x.km2, farge: 'vern' }))}
               />
               <p>
-                Av det vernede arealet er {iTekst(land)} på land, {iTekst(hav)} i sjø og {iTekst(fersk)} i innsjøer og
-                elver.
-                {andel !== null && <> Det vernede på land er {prosent(andel)} av landarealet i grunnkartet.</>}
+                Av det vernede arealet er {iTekst(d.land)} på land, {iTekst(d.hav)} i sjø og {iTekst(d.ferskvann)} i
+                innsjøer og elver.
+                {d.andelLand !== null && (
+                  <> Det vernede på land er {prosent(d.andelLand)} av landarealet i grunnkartet.</>
+                )}
               </p>
             </>
           ) : (
             <p>Kommunen har ingen verneområder.</p>
-          );
-        })}
+          )
+        )}
       </Figur>
     </Temaside>
   );
@@ -551,19 +528,9 @@ function Verdi({ tema }: { tema: Tema }) {
     v = T.s === 'ok' ? T.v : null,
     kartlagt = K.s === 'ok' && K.v ? K.v.kartlagt : null,
     klasser = NATURTEMA.find(t => t.id === 'verdi')!.klasser!;
-  const [bareHoy, settBareHoy] = useState(false);
-  /* Lokalitetene gruppert per naturtype: arealet, antall og høyeste verdi */
-  const typer = new Map<string, { km2: number; antall: number; v: number }>();
-  (v ? v.omrader : [])
-    .filter(o => !bareHoy || (o.v !== undefined && o.v <= 1))
-    .forEach(o => {
-      const navn = String(o.egenskaper.Naturtype || 'Uten naturtype'),
-        t = typer.get(navn) || { km2: 0, antall: 0, v: 3 };
-      t.km2 += o.km2;
-      t.antall++;
-      t.v = Math.min(t.v, o.v ?? 3);
-      typer.set(navn, t);
-    });
+  const [bareHoy, settBareHoy] = useState(false),
+    N = verdsattPerNaturtype(),
+    typer = N.s === 'ok' ? (bareHoy ? N.v.hoy : N.v.alle) : [];
   return (
     <Temaside
       tema={tema}
@@ -659,16 +626,14 @@ function Verdi({ tema }: { tema: Tema }) {
           <Tabell
             hva="Naturtypene"
             kolonner={[{ navn: 'Naturtype' }, { navn: 'Antall', tall: true }, { navn: 'Areal', tall: true }]}
-            rader={[...typer]
-              .sort((a, b) => b[1].km2 - a[1].km2)
-              .map(([navn, t]) => [
-                <span className="med-farge">
-                  <i style={{ background: `var(--${klasser[t.v][1]})` }} title={klasser[t.v][0]} />
-                  {navn}
-                </span>,
-                nf(t.antall, 0),
-                dekar(t.km2)
-              ])}
+            rader={typer.map(t => [
+              <span className="med-farge">
+                <i style={{ background: `var(--${klasser[t.v][1]})` }} title={klasser[t.v][0]} />
+                {t.navn}
+              </span>,
+              nf(t.antall, 0),
+              dekar(t.km2)
+            ])}
           />
         </Figur>
       )}
@@ -758,6 +723,7 @@ function Inon({ tema }: { tema: Tema }) {
 function Rein({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('rein'),
     v = T.s === 'ok' ? T.v : null,
+    R = villreinPerOmrade(),
     IV = inonIVillrein();
   const kommunenavn = (s: unknown) =>
     String(s || '')
@@ -826,21 +792,19 @@ function Rein({ tema }: { tema: Tema }) {
               { navn: 'Kommuner', ikkeMobil: true },
               { navn: 'Faktaark' }
             ]}
-            rader={[...v.omrader]
-              .sort((a, b) => b.km2 - a.km2)
-              .map(o => [
-                o.navn,
-                dekar(o.km2),
-                prosent(v.sum > 0 && v.andelLand !== null ? (o.km2 / v.sum) * v.andelLand : null),
-                kommunenavn(o.egenskaper.kommune),
-                o.url ? (
-                  <a href={o.url} target="_blank" rel="noopener">
-                    Åpne
-                  </a>
-                ) : (
-                  ''
-                )
-              ])}
+            rader={(R.s === 'ok' ? R.v : []).map(o => [
+              o.navn,
+              dekar(o.km2),
+              prosent(o.andel),
+              kommunenavn(o.kommuner),
+              o.url ? (
+                <a href={o.url} target="_blank" rel="noopener">
+                  Åpne
+                </a>
+              ) : (
+                ''
+              )
+            ])}
           />
         </Figur>
       )}

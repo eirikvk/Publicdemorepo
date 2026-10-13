@@ -955,6 +955,18 @@ skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Ar
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
 
+**Tvillingen er bare brukergrensesnitt, 13. oktober 2026.** Utregningene som lå i tvillingen fra Figma, er flyttet til datamotoren,
+så begge sidene bygger på én metode:
+- Hva som regnes som skog, våtmark og land i grunnkartet, står i `src/data/solv/klasser.ts`.
+- Svarene er nye tabeller i gull: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype
+  (`gull/okosystemer.ts`), kortene og arealklassene fra SSB (`gull/regnskap.ts`), og verneformene, villreinområdene og verdsatt
+  natur per naturtype (`gull/temaer.ts`).
+- Kartlagene i tvillingen finner blokkene gjennom sølv (`solv.detaljblokker`), ikke registeret i bronse.
+
+Lagsjekken stopper nye utregninger i tvillingen. Tvillingens sider viser samme tekst og tall før og etter (sammenlignet side for side
+for Trondheim, Oppdal og Oslo). Regresjonstesten for hovedsiden ga ingen avvik i tallene. To skjermbilder skilte seg fra
+referansen, fordi referansen var tatt mens «Henter kart …» ennå sto i kartet; to nye kjøringer ga like bilder.
+
 **Kryssinger for tvillingen, 13. oktober 2026.** Tre nye kryssinger, som bare tvillingen bruker foreløpig:
 - Detaljklassene i verneområdene: Trondheim har 27 000 dekar vernet i grunnkartet, mot 27 035 dekar regnet av flatene.
 - Planlagt utbygging per detaljklasse: i Trondheim er summen 1 955 dekar natur og 774 dekar jordbruk, som i `gull.plansum`.

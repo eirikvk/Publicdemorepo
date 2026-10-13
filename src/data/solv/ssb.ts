@@ -98,6 +98,8 @@ export const DETALJER: [kode: string, navn: string, klasse: 'beb' | 'jor' | 'nat
   ['22.02', 'Elv', 'vann']
 ];
 /* Arealet i km² for hver arealklasse (DETALJER) i hvert år fra 2017 (aar), og om grensen trolig er flyttet i perioden (endret) */
+/* Skog hos SSB: arealklassene 17.01–17.04 (barskog, blandingsskog, lauvskog og skog med ukjent treslag) */
+export const erSkogSSB = (k: { kode: string }) => k.kode.startsWith('17.');
 export interface Arealdetaljer {
   nr: string;
   aar: string[];

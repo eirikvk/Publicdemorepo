@@ -65,17 +65,16 @@ async function tellDetaljer(
   nr: string,
   flater: { koord: Flerflate; ext: Utsnitt }[] | null
 ): Promise<Detaljareal | null> {
-  const reg = await katalog.bronse.detaljregister(),
-    L = reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][FLISNIVA];
-  if (!L || !L.length) return null;
+  const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.detaljblokker(nr)]);
+  if (!L.length) return null;
   const g = await katalog.solv.grense(nr),
     n = new Array<number>(DETALJKLASSER.length + 1).fill(0),
-    ko = L.filter(([x, y]) => !flater || flater.some(f => overlapper(f.ext, flisUtsnitt([FLISNIVA, x, y])))),
+    ko = L.filter(tc => !flater || flater.some(f => overlapper(f.ext, flisUtsnitt(tc)))),
     koord = flater && flater.map(f => f.koord);
   await Promise.all(
     Array.from({ length: 6 }, async () => {
       for (let b = ko.shift(); b; b = ko.shift()) {
-        const K = await katalog.solv.detaljklasser([FLISNIVA, b[0], b[1]]);
+        const K = await katalog.solv.detaljklasser(b);
         tellIFlate(K, g.koord, n.length, koord || undefined).forEach((v, k) => (n[k] += v));
       }
     })
@@ -87,7 +86,7 @@ async function tellDetaljer(
     km2,
     sum,
     ukjent: tiDekar((n[0] * res * res) / skala),
-    hentet: reg!.hentet || '',
-    versjon: reg!.versjon || ''
+    hentet: (reg && reg.hentet) || '',
+    versjon: (reg && reg.versjon) || ''
   };
 }

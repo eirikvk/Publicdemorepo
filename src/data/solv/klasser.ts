@@ -157,6 +157,25 @@ export const DETALJKLASSER: Detaljklasse[] = [
   { id: 'inn', navn: 'Innsjøer', gruppe: 'inn', okosystem: 'innsjoerVannmagasiner' },
   { id: 'hav', navn: 'Hav', gruppe: 'hav', okosystem: 'hav' }
 ];
+/* Navnene på treslagene og underlagene som egne grupper, i rekkefølgen sidene viser dem */
+export const TRESLAGNAVN: [Treslag, string][] = [
+  ['bar', 'Barskog'],
+  ['bland', 'Blandingsskog'],
+  ['lauv', 'Lauvskog']
+];
+export const UNDERLAGNAVN: [Underlag, string][] = [
+  ['vanlig', 'Skog på fastmark'],
+  ['myr', 'Tresatt myr'],
+  ['beite', 'Tresatt innmarksbeite']
+];
+/* Gruppene av detaljklassene som svarene bygger på. Skog er økosystemtypen skog, også tresatt myr og tresatt innmarksbeite.
+   Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr, som skissene regner med i våtmarken; tresatt
+   myr er dermed både skog og våtmark. Land er alt unntatt hav, innsjøer og elver. Økosystemtypen på nivå 1 har skogen samlet. */
+export const erSkog = (k: Detaljklasse) => !!k.treslag;
+export const erVatmark = (k: Detaljklasse) => k.id === 'vat' || k.underlag === 'myr';
+export const erLand = (k: Detaljklasse) => k.gruppe === 'beb' || k.gruppe === 'jor' || k.gruppe === 'nat';
+export const okosystemNavn = (k: Detaljklasse) => (k.treslag ? 'Skog' : k.navn);
+
 /* Fargene NIBIO bes tegne klassene i, i samme rekkefølge. Valgt ved å prøve: for hvert par av klasser som grenser til hverandre i
    testflisene, skal blandingen ligge langt fra blandingene av alle andre par. */
 export const DETALJFARGE: number[][] = [

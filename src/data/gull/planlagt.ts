@@ -77,11 +77,10 @@ export interface PlanlagtDetaljer {
    2 x 2 av dem. Slik blir summen den samme som natur og jordbruk satt av i gull.plansum. Finnes ingen klasse av riktig slag i ruta,
    telles den som ukjent. null uten utbygging, eller når kommunen ikke har lagrede detaljklasser. */
 export async function planlagtPerDetaljklasse(nr: string): Promise<PlanlagtDetaljer | null> {
-  const [reg, R] = await Promise.all([katalog.bronse.detaljregister(), katalog.gull.utbygging(nr)]);
-  const L = reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][FLISNIVA];
-  if (!R || !L) return null;
+  const [L, R] = await Promise.all([katalog.solv.detaljblokker(nr), katalog.gull.utbygging(nr)]);
+  if (!R || !L.length) return null;
   const f = 1 << (FLISNIVA - R.z) /* detaljruter langs siden av en rute */,
-    har = new Set(L.map(([x, y]) => `${x}/${y}`)),
+    har = new Set(L.map(([, x, y]) => `${x}/${y}`)),
     perBlokk = new Map<string, number[]>(),
     n = new Array<number>(DETALJKLASSER.length + 1).fill(0);
   for (const i of R.celler) {

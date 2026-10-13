@@ -25,11 +25,9 @@ function cssFarge(navn: string): number[] {
   return m ? [1, 2, 3].map(i => parseInt(m[i], 16)) : [128, 128, 128];
 }
 
-/* Blokkene med lagrede detaljklasser for kommunen nr, som «x/y». Tom når kommunen ikke har noen. */
+/* Blokkene med lagrede detaljklasser for kommunen nr (solv.detaljblokker), som «x/y». Tom når kommunen ikke har noen. */
 async function blokkene(nr: string): Promise<Set<string>> {
-  const reg = await katalog.bronse.detaljregister(),
-    L = (reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][FLISNIVA]) || [];
-  return new Set(L.map(([x, y]) => `${x}/${y}`));
+  return new Set((await katalog.solv.detaljblokker(nr)).map(([, x, y]) => `${x}/${y}`));
 }
 
 /* Et kartlag av detaljklassene. farge gir fargen (en variabel i stilen) for hver detaljklasse som skal vises, eller null. */

@@ -25,29 +25,25 @@ import {
 } from '../komponenter/deler.tsx';
 import { figma, velgKartTema } from '../navigasjon.ts';
 import {
-  SKOG,
-  arealklasser,
-  detaljer,
-  endring,
+  arealPerKlasse,
+  bebygdOkning,
   graaIPlan,
   naturtema,
   oppstilling,
-  perOkosystem,
-  planIDetaljer,
+  oversiktKort,
+  planPerOkosystem,
   planlagt,
-  plansum,
-  summer,
-  utbredelse
+  plansum
 } from '../tall.ts';
 import { TEMAER } from '../temaer.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
 const prosent = (a: number | null) => (a === null ? '–' : pst(a) + ' %');
 const Merket = ({ children }: { children: ReactNode }) => <span className="tallmerke">{children}</span>;
-/* En endring som tekst med pil: ned eller opp */
-const Endringsmerke = ({ d, av }: { d: number; av: number }) => (
+/* En endring som tekst med pil: ned eller opp, med endringen i prosent (pst) */
+const Endringsmerke = ({ d, pst }: { d: number; pst: number | null }) => (
   <span className={'endringsmerke ' + (d < 0 ? 'ned' : 'opp')}>
-    <span aria-hidden="true">{d < 0 ? '↘' : '↗'}</span> {av > 0 ? nf(Math.abs((d / av) * 100), 1) : '–'} %
+    <span aria-hidden="true">{d < 0 ? '↘' : '↗'}</span> {pst !== null ? nf(Math.abs(pst), 1) : '–'} %
   </span>
 );
 
@@ -65,22 +61,12 @@ const SSB_ENDRING = (
 );
 
 export function Oversikt() {
-  const U = utbredelse(),
-    E = endring(),
+  const U = oversiktKort(),
     P = plansum(),
-    A = arealklasser(),
-    D = detaljer(),
-    PD = planIDetaljer();
-  /* Bebygde klasser som økte mest, fra SSBs arealklasser hver for seg */
-  const okning =
-    A.s === 'ok'
-      ? A.v.klasser
-          .filter(k => k.klasse === 'beb' && k.kode !== '14')
-          .map(k => ({ navn: k.navn, d: k.km2[k.km2.length - 1] - k.km2[0] }))
-          .filter(k => k.d > 0.0005)
-          .sort((a, b) => b.d - a.d)
-          .slice(0, 3)
-      : [];
+    A = arealPerKlasse(),
+    O = bebygdOkning(),
+    PD = planPerOkosystem(),
+    okning = O ? O.klasser : [];
   return (
     <>
       <div className="innhold">
@@ -89,25 +75,22 @@ export function Oversikt() {
             <h1 className="md-typography-heading-l">Naturregnskap for {kommunen()} kommune</h1>
             {svar(U, u => (
               <ul className="klassekort">
-                {u.klasser.map(k => {
-                  const e = E && !E.endret ? E.klasser.find(x => x.id === k.id) : null;
-                  return (
-                    <li key={k.id} className={'klassekort-' + k.id}>
-                      <div className="klassekort-topp">
-                        <b>{k.navn}</b>
-                        {e && <Endringsmerke d={e.km2} av={k.km2 - e.km2} />}
-                      </div>
+                {u.klasser.map(k => (
+                  <li key={k.id} className={'klassekort-' + k.id}>
+                    <div className="klassekort-topp">
+                      <b>{k.navn}</b>
+                      {k.endring !== null && <Endringsmerke d={k.endring} pst={k.pst} />}
+                    </div>
+                    <span>
+                      {prosent(k.andel)} av landarealet, {iTekst(k.km2)}
+                    </span>
+                    {k.endring !== null && (
                       <span>
-                        {prosent(k.andel)} av landarealet, {iTekst(k.km2)}
+                        {k.endring < 0 ? 'Ned' : 'Opp'} {iTekst(Math.abs(k.endring))} ({u.fra}–{u.til})
                       </span>
-                      {e && (
-                        <span>
-                          {e.km2 < 0 ? 'Ned' : 'Opp'} {iTekst(Math.abs(e.km2))} ({E!.fra}–{E!.til})
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
+                    )}
+                  </li>
+                ))}
               </ul>
             ))}
             <div className="trekkspill-liste">
@@ -161,38 +144,24 @@ export function Oversikt() {
           }
           kilder={['ssb']}
         >
-          {svar(A, D => {
-            const rader: [string, (k: (typeof D.klasser)[number]) => boolean][] = [
-              ['Bebygd og opparbeidet areal', k => k.klasse === 'beb'],
-              ...D.klasser
-                .filter(k => k.klasse !== 'beb' && k.klasse !== 'vann' && !SKOG(k))
-                .map(k => [k.navn, (x: (typeof D.klasser)[number]) => x.kode === k.kode] as [string, typeof SKOG]),
-              ['Skog', SKOG]
-            ];
-            const til = D.aar[D.aar.length - 1];
-            return (
-              <Tabell
-                hva="Arealet per arealklasse"
-                perSide={30}
-                kolonner={[
-                  { navn: 'Arealklasse' },
-                  { navn: til, tall: true },
-                  { navn: 'Forskjell fra ' + D.aar[0], tall: true },
-                  { navn: '', tall: true, ikkeMobil: true }
-                ]}
-                rader={rader
-                  .map(([navn, f]) => ({ navn, na: summer(D, f), fra: summer(D, f, 0) }))
-                  .filter(r => r.na > 0 || r.fra > 0)
-                  .sort((a, b) => b.na - a.na)
-                  .map(r => [
-                    r.navn,
-                    dekar(r.na),
-                    (r.na - r.fra < 0 ? '−' : r.na - r.fra > 0 ? '+' : '') + dekar(Math.abs(r.na - r.fra)),
-                    Math.abs(r.na - r.fra) >= 0.0005 ? <Endringsmerke d={r.na - r.fra} av={r.fra} /> : ''
-                  ])}
-              />
-            );
-          })}
+          {svar(A, a => (
+            <Tabell
+              hva="Arealet per arealklasse"
+              perSide={30}
+              kolonner={[
+                { navn: 'Arealklasse' },
+                { navn: a.til, tall: true },
+                { navn: 'Forskjell fra ' + a.fra, tall: true },
+                { navn: '', tall: true, ikkeMobil: true }
+              ]}
+              rader={a.rader.map(r => [
+                r.navn,
+                dekar(r.km2),
+                (r.endring < 0 ? '−' : r.endring > 0 ? '+' : '') + dekar(Math.abs(r.endring)),
+                Math.abs(r.endring) >= 0.0005 ? <Endringsmerke d={r.endring} pst={r.pst} /> : ''
+              ])}
+            />
+          ))}
         </Figur>
         <Figur
           tittel="Hva slags natur kommuneplanen setter av til utbygging"
@@ -207,35 +176,31 @@ export function Oversikt() {
           }
           kilder={['grunnkart', 'dibk']}
         >
-          {svar(PD, p => {
-            const iDag = D.s === 'ok' ? perOkosystem(D.v.km2) : [],
-              rader = perOkosystem(p.km2);
-            if (p.ukjent > 0) rader.push(['Uten type i grunnkartet', p.ukjent]);
-            return rader.length ? (
-              <Tabell
-                hva="Satt av til utbygging per økosystemtype"
-                kolonner={[
-                  { navn: 'Økosystemtype' },
-                  { navn: 'Satt av', tall: true },
-                  { navn: 'Andel av typen', tall: true }
-                ]}
-                rader={rader.map(([navn, km2]) => {
-                  const av = iDag.find(([n]) => n === navn);
-                  return [navn, dekar(km2), av ? andelTekst((km2 / av[1]) * 100) : '–'];
-                })}
-              />
-            ) : (
-              <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
-            );
-          })}
+          {svar(
+            PD,
+            p =>
+              p.rader.length ? (
+                <Tabell
+                  hva="Satt av til utbygging per økosystemtype"
+                  kolonner={[
+                    { navn: 'Økosystemtype' },
+                    { navn: 'Satt av', tall: true },
+                    { navn: 'Andel av typen', tall: true }
+                  ]}
+                  rader={p.rader.map(r => [r.navn, dekar(r.km2), r.andel !== null ? andelTekst(r.andel) : '–'])}
+                />
+              ) : (
+                <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
+              ),
+            'Kommunen har ingen kommuneplan med utbygging hos DiBK.'
+          )}
         </Figur>
       </div>
-      {okning.length > 0 && A.s === 'ok' && (
+      {O && okning.length > 0 && (
         <section className="baand">
           <div className="innhold baand-innhold">
             <p className="baand-tekst">
-              Av det bebygde arealet økte <Merket>{okning[0].navn.toLowerCase()}</Merket> mest fra {A.v.aar[0]} til{' '}
-              {A.v.aar[A.v.aar.length - 1]}
+              Av det bebygde arealet økte <Merket>{okning[0].navn.toLowerCase()}</Merket> mest fra {O.fra} til {O.til}
               {okning.length > 1 && (
                 <>
                   . Deretter kommer{' '}

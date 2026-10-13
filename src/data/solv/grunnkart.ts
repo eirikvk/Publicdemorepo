@@ -117,6 +117,14 @@ export async function detaljklasser(tc: Flis): Promise<Klasser> {
   if (tc[0] !== FLISNIVA) throw new Error('detaljklassene er på nivå 10');
   return { ...iBlokk(tc), kl: detaljklasserIFlis(await bildePiksler(await katalog.bronse.detaljflis(tc), 512, 512)) };
 }
+/* Tabellen solv.detaljblokker: blokkene på nivå 10 med lagrede detaljklasser for kommunen nr (bronse.detaljregister), som
+   [10, x, y]. Tom når kommunen ikke har lagrede detaljklasser. Blokkene lages ikke her, for det ville koste ett kall mot NIBIO per
+   blokk. */
+export async function detaljblokker(nr: string): Promise<Flis[]> {
+  const reg = await katalog.bronse.detaljregister(),
+    L = (reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][FLISNIVA]) || [];
+  return L.map(([x, y]): Flis => [FLISNIVA, x, y]);
+}
 /* Det lagrede svaret for solv.detaljklasser: filen for blokken (bronse.detaljfil), et bilde med fargetabellen DETALJTABELL. null
    når blokken ikke er lagret. */
 export async function lagredeDetaljklasser(tc: Flis): Promise<Klasser | null> {

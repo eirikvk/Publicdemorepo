@@ -203,7 +203,8 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes som ett bilde |
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
-| `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
+| `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann. Til tvillingen også kortene på oversikten, arealet per arealklasse hos SSB og de bebygde klassene som økte mest. |
+| `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Foreløpig bare til tvillingen. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
 | `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnen for hvert tema i utbyggingen, summene over den, og planlagt utbygging utenfor det kartlagte |
@@ -292,21 +293,28 @@ med ekte tall, uten å endre hovedsiden.
 
 - Kildekoden ligger i `srcFigma/`, og bygges for seg med `vite.figma.config.ts` til `dist/figma/`. Arbeidsflyten bygger den etter
   hovedsiden, så hovedsidens bygg er det samme som uten den.
-- `srcFigma/` kan bruke kode fra `src/`, men `src/` bruker aldri `srcFigma/`. Fra `src/` bruker den datamotoren (`src/data`, men ikke
-  bronse), kartet (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet og kroken som tegner siden på nytt).
-  Hovedsidens sider og adresse (`src/ui/sider.ts`) bruker den ikke. `verktoy/sjekk-lag.ts` passer på dette.
-- Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`).
-- Tall som trengs i tvillingen, regnes ut i datamotoren, ikke i `srcFigma/`. Noen tabeller bruker foreløpig bare tvillingen, og
-  hovedsiden henter dem ikke:
-  - SSBs arealklasser hver for seg (`solv.arealdetaljer`), til bebygd per formål på oversikten.
-  - Arealet per detaljklasse i grunnkartet (`gull.detaljareal`), til tallene for skog og våtmark.
-  - Det samme i verneområdene (`gull.detaljerIVerneomrader`), til naturen som er vernet og skog som er vernet.
-  - Planlagt utbygging per detaljklasse (`gull.planlagtPerDetaljklasse`), til våtmark som er planlagt nedbygget og tabellen per
-    økosystemtype på oversikten.
-  - Inngrepsfri natur i villreinområdene (`gull.inonIVillrein`).
-
-  De tre som bygger på detaljklassene, finnes bare for kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md,
-  Arealklassene).
+- `srcFigma/` kan bruke kode fra `src/`, men `src/` bruker aldri `srcFigma/`. Fra `src/` bruker den datamotoren (`src/data`), kartet
+  (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet og kroken som tegner siden på nytt). Hovedsidens sider og
+  adresse (`src/ui/sider.ts`) bruker den ikke.
+- Tvillingen er bare brukergrensesnitt. All data og all metode ligger i datamotoren, som én sannhet for begge sidene: tallene leses
+  ferdige fra gull gjennom katalogen, og `srcFigma/tall.ts` slår dem bare opp. Hva som regnes som skog, våtmark og land i
+  grunnkartet, står i `src/data/solv/klasser.ts`. `verktoy/sjekk-lag.ts` passer på at tvillingen
+  - ikke bruker bronse-filene eller regnehjelperne i `data/generelt/`,
+  - bare bruker typer fra gull, ikke funksjonene,
+  - og fra bronse i katalogen bare kartbildene (tabeller som slutter på «flis»), slik kartet i hovedsiden gjør.
+- Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`). Lagene bare tvillingen
+  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.detaljblokker` og `solv.detaljklasser`) og kartbildene fra bronse.
+- Noen tabeller bruker foreløpig bare tvillingen, og hovedsiden henter dem ikke:
+  - Grunnkartet med detaljklassene (`gull/okosystemer.ts`): skog (`gull.skog`), våtmark (`gull.vatmark`), naturen i
+    verneområdene (`gull.vernetNatur`) og planlagt utbygging per økosystemtype (`gull.planPerOkosystem`). De bygger på arealet
+    per detaljklasse (`gull.detaljareal`, `gull.detaljerIVerneomrader` og `gull.planlagtPerDetaljklasse`), og finnes bare for
+    kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md, Arealklassene).
+  - SSB-tallene (`gull/regnskap.ts`): kortene på oversikten (`gull.oversiktKort`), arealet per arealklasse
+    (`gull.arealPerKlasse`) og de bebygde klassene som økte mest (`gull.bebygdOkning`), av SSBs arealklasser hver for seg
+    (`solv.arealdetaljer`).
+  - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per verneform (`gull.vernPerVerneform`), villreinområdene med
+    andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
+    villreinområdene (`gull.inonIVillrein`).
 - Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra
@@ -319,7 +327,7 @@ med ekte tall, uten å endre hovedsiden.
 | `App.tsx` | Hele siden: toppen, siden for adressen og bunnen |
 | `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
 | `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
-| `tall.ts` | Tallene sidene viser, lest fra datamotoren |
+| `tall.ts` | Tallene sidene viser, slått opp ferdige i gull, med tilstanden (henter, feil, ingen, mangler eller ok) |
 | `kartlag.ts` | Kartlag bare tvillingen har: skogtyper og tresatt myr fra detaljklassene, og to lag fra kartet over naturskog |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av |

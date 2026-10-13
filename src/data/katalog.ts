@@ -42,6 +42,7 @@ import * as gullEgne from './gull/egne.ts';
 import * as gullGraa from './gull/graa.ts';
 import * as gullGrunnkart from './gull/grunnkart.ts';
 import * as gullInon from './gull/inon.ts';
+import * as gullOkosystemer from './gull/okosystemer.ts';
 import * as gullPlan from './gull/planlagt.ts';
 import * as gullRegnskap from './gull/regnskap.ts';
 import * as gullTemaer from './gull/temaer.ts';
@@ -549,6 +550,16 @@ export const katalog = {
       lagret: solvGrunnkart.lagredeDetaljklasser,
       eksempel: flisMidt(10)
     }),
+    detaljblokker: tabell<string, Flis[]>({
+      lag: 'solv',
+      navn: 'detaljblokker',
+      tittel: 'Blokkene med detaljklasser',
+      om: 'blokkene på nivå 10 med lagrede detaljklasser for kommunen, som [10, x, y], fra registeret (bronse.detaljregister). Tom når kommunen ikke har lagrede detaljklasser.',
+      teknisk: true,
+      forklaring: 'Blokkene der detaljklassene er lagret sammen med siden, for kommunen.',
+      husk: 12,
+      etl: solvGrunnkart.detaljblokker
+    }),
     blokker: tabell<[string, number], Flis[]>({
       lag: 'solv',
       navn: 'blokker',
@@ -804,6 +815,104 @@ export const katalog = {
         'Grunnkartets økosystemtyper i verneområdene: hvor mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Bare for kommuner der detaljklassene er lagret.',
       husk: 12,
       etl: gullGrunnkart.detaljerIVerneomrader
+    }),
+    skog: tabell({
+      lag: 'gull',
+      navn: 'skog',
+      tittel: 'Skog i grunnkartet',
+      om: 'skogen i kommunen fra grunnkartet: arealet, andelen av landarealet i grunnkartet, og arealet per treslag og per underlag (fastmark, tresatt myr, tresatt innmarksbeite). Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Skog er økosystemtypen skog i grunnkartet, også tresatt myr og tresatt innmarksbeite. Arealet summeres fra detaljklassene, og andelen er av landarealet i grunnkartet (alt unntatt hav, innsjøer og elver).',
+      husk: 12,
+      etl: gullOkosystemer.skog
+    }),
+    vatmark: tabell({
+      lag: 'gull',
+      navn: 'vatmark',
+      tittel: 'Våtmark i grunnkartet',
+      om: 'våtmarken i kommunen fra grunnkartet: åpen våtmark og tresatt myr, samlet og hver for seg, og andelen av landarealet i grunnkartet. Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr, som skissene regner med i våtmarken. Tresatt myr er dermed både skog og våtmark.',
+      husk: 12,
+      etl: gullOkosystemer.vatmark
+    }),
+    vernetNatur: tabell({
+      lag: 'gull',
+      navn: 'vernetNatur',
+      tittel: 'Naturen i verneområdene',
+      om: 'det vernede arealet per økosystemtype i grunnkartet, på land, i sjø og i ferskvann, andelen vernet land av landarealet i grunnkartet, og skogen som er vernet. Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Arealet per detaljklasse innenfor verneområdene, summert til økosystemtypene på nivå 1 og til land, sjø og ferskvann.',
+      husk: 12,
+      etl: gullOkosystemer.vernetNatur
+    }),
+    planPerOkosystem: tabell({
+      lag: 'gull',
+      navn: 'planPerOkosystem',
+      tittel: 'Planlagt utbygging per økosystemtype',
+      om: 'natur og jordbruk satt av til utbygging per økosystemtype i grunnkartet, med andelen av typen i kommunen, og våtmarken som er satt av. Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Planlagt utbygging per detaljklasse, summert til økosystemtypene på nivå 1. Andelen er arealet satt av delt på arealet av typen i kommunen.',
+      husk: 6,
+      brukerstyrt: true,
+      etl: gullOkosystemer.planPerOkosystem
+    }),
+    oversiktKort: tabell({
+      lag: 'gull',
+      navn: 'oversiktKort',
+      tittel: 'Kortene på oversikten',
+      om: 'natur, jordbruk og bebygd hos SSB i nyeste år med andelen av landarealet, og forskjellen fra 2017 i km² og prosent. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Utbredelsen og forskjellen fra 2017 satt sammen per klasse, med forskjellen i prosent av arealet i 2017.',
+      husk: 12,
+      etl: gullRegnskap.oversiktKort
+    }),
+    arealPerKlasse: tabell({
+      lag: 'gull',
+      navn: 'arealPerKlasse',
+      tittel: 'Arealet per arealklasse hos SSB',
+      om: 'arealet på land per arealklasse hos SSB i nyeste år og i 2017, med bebygd og skog slått sammen, og forskjellen i km² og prosent. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'SSBs arealklasser hver for seg, med bebygd og skog summert. Forskjellen mellom årgangene er ikke målt endring.',
+      husk: 12,
+      etl: gullRegnskap.arealPerKlasse
+    }),
+    bebygdOkning: tabell({
+      lag: 'gull',
+      navn: 'bebygdOkning',
+      tittel: 'Bebygde klasser som økte mest',
+      om: 'de tre bebygde arealklassene hos SSB som økte mest fra 2017 til nyeste år, uten uklassifisert bebyggelse. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring: 'Forskjellen fra 2017 for hver bebygd arealklasse hos SSB, de tre største økningene.',
+      husk: 12,
+      etl: gullRegnskap.bebygdOkning
+    }),
+    vernPerVerneform: tabell({
+      lag: 'gull',
+      navn: 'vernPerVerneform',
+      tittel: 'Vernet areal per verneform',
+      om: 'det vernede arealet i kommunen per verneform fra Miljødirektoratet. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring: 'Arealet av verneområdene i kommunen summert per verneform.',
+      husk: 12,
+      etl: gullTemaer.vernPerVerneform
+    }),
+    villreinPerOmrade: tabell({
+      lag: 'gull',
+      navn: 'villreinPerOmrade',
+      tittel: 'Villreinområdene i kommunen',
+      om: 'villreinområdene med delen i kommunen, andelen av landarealet og kommunene området ligger i. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring: 'Hvert villreinområde med arealet i kommunen og andelen av landarealet hos SSB.',
+      husk: 12,
+      etl: gullTemaer.villreinPerOmrade
+    }),
+    verdsattPerNaturtype: tabell({
+      lag: 'gull',
+      navn: 'verdsattPerNaturtype',
+      tittel: 'Verdsatt natur per naturtype',
+      om: 'lokalitetene i verdsatt natur gruppert per naturtype, alle og bare de med stor eller svært stor verdi: arealet, antall og høyeste verdi. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Lokalitetene gruppert per naturtype. Arealet er summen av lokalitetene, så overlapp telles flere ganger.',
+      husk: 12,
+      etl: gullTemaer.verdsattPerNaturtype
     }),
     dagensKlasser: tabell({
       lag: 'gull',
@@ -1155,6 +1264,7 @@ const ETL_FILER: [string, object][] = [
   ['gull/grunnkart.ts', gullGrunnkart],
   ['gull/utbygging.ts', gullUtbygging],
   ['gull/inon.ts', gullInon],
+  ['gull/okosystemer.ts', gullOkosystemer],
   ['gull/graa.ts', gullGraa],
   ['gull/temaer.ts', gullTemaer],
   ['gull/egne.ts', gullEgne]
