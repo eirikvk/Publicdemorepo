@@ -42,7 +42,7 @@ import {
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
-import { SKOGLAG } from '../kartlag.ts';
+import { SKOGLAG, VATMARKLAG } from '../kartlag.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -325,9 +325,29 @@ function Vatmark({ tema }: { tema: Tema }) {
       ]}
       kilde={GRUNNKART_KILDE}
       fremhevet={<VatmarkIPlan P={P} />}
-      lag={[KLASSER, PLAN]}
+      lag={[
+        {
+          id: 'vatmark',
+          navn: 'Økosystemtype våtmark',
+          kilde: GK,
+          farger: [['Åpen myr og annen åpen våtmark', 'myr-apen']],
+          ol: VATMARKLAG.apen
+        },
+        {
+          id: 'tresatt',
+          navn: 'Tresatt myr',
+          kilde: GK,
+          farger: [['Tresatt myr', 'myr-tresatt']],
+          ol: VATMARKLAG.tresatt
+        },
+        { ...KLASSER, av: true },
+        PLAN
+      ]}
       lagEtter={
-        <p className="hint">Lagene for økosystemtypen våtmark og tresatt myr fra skissene er ikke laget ennå.</p>
+        <>
+          {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
+          <p className="hint">Laget for naturtyper i våtmark fra skissene er ikke laget ennå.</p>
+        </>
       }
       sporsmal={[
         [

@@ -177,3 +177,9 @@ export const SKOGLAG = {
   naerhet: naturskoglag('Naturskogsnærhet', 'naturskogsnaerhet'),
   for1940: naturskoglag('Skog etablert før 1940, ikke flatehogd', 'skog_etablert_foer_1940_ikke_flatehogd')
 };
+
+/* Lagene på våtmarkssiden: økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr fra grunnkartet */
+export const VATMARKLAG = {
+  apen: detaljlag('Økosystemtype våtmark', k => (k.id === 'vat' ? 'myr-apen' : null)),
+  tresatt: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null))
+};
