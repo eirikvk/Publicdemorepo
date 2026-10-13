@@ -4,8 +4,7 @@ import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { HAV_MIN_ANDEL, HAV_MIN_KM2 } from '../solv/felles.ts';
 import { KL, type KlasseId } from '../solv/klasser.ts';
-import { erSkogSSB, type Arealdetaljer, type Historie } from '../solv/ssb.ts';
-import { andel } from './felles.ts';
+import type { Historie } from '../solv/ssb.ts';
 
 /* Tallene fra SSB for valgt kommune, så langt de er hentet: arealet per klasse (bebygd, jordbruk, natur) i km² og året */
 export interface SsbTall {
@@ -103,65 +102,6 @@ export async function landOgVann(nr: string): Promise<ReturnType<typeof byggLand
   return byggLandOgVann(g.km2, T.land, T.ferskvann);
 }
 
-/* Kortene på oversikten i tvillingen: hver klasse (natur, jordbruk, bebygd) med arealet og andelen i nyeste år, og forskjellen fra
-   2017 i km² og i prosent av arealet i 2017. Forskjellen er null når tallene ikke kan sammenlignes. */
-export interface Klassekort {
-  id: KlasseId;
-  navn: string;
-  km2: number;
-  andel: number;
-  endring: number | null;
-  pst: number | null;
-}
-/* Tabellen gull.oversiktKort: kortene for kommunen nr, av gull.utbredelse og gull.endring */
-export async function oversiktKort(
-  nr: string
-): Promise<{ fra: string | null; til: string | null; klasser: Klassekort[] }> {
-  const [U, E] = await Promise.all([katalog.gull.utbredelse(nr), katalog.gull.endring(nr).catch(() => null)]),
-    e = E && !E.endret ? E : null;
-  return {
-    fra: e ? e.fra : null,
-    til: e ? e.til : null,
-    klasser: U.klasser.map(k => {
-      const d = e ? e.klasser.find(x => x.id === k.id) : null;
-      return { ...k, endring: d ? d.km2 : null, pst: d ? andel(d.km2, k.km2 - d.km2) : null };
-    })
-  };
-}
-
-/* En arealklasse hos SSB i nyeste år og i 2017: arealet, arealet i 2017 (fra), forskjellen, og forskjellen i prosent av 2017 */
-export interface Klasserad {
-  navn: string;
-  km2: number;
-  fra: number;
-  endring: number;
-  pst: number | null;
-}
-const arealI = (D: Arealdetaljer, passer: (k: Arealdetaljer['klasser'][number]) => boolean, i: number) =>
-  summen(D.klasser.filter(passer).map(k => k.km2[i]));
-/* Tabellen gull.arealPerKlasse: arealet på land per arealklasse hos SSB for kommunen nr (solv.arealdetaljer), i nyeste år og i
-   2017. Bebygd og skog er slått sammen, de andre klassene står hver for seg. Klasser uten areal i noen av årene er ikke med. Størst
-   først. SSB skriver at forskjellen mellom årgangene ikke er målt endring. */
-export async function arealPerKlasse(nr: string): Promise<{ fra: string; til: string; rader: Klasserad[] }> {
-  const D = await katalog.solv.arealdetaljer(nr),
-    n = D.aar.length - 1,
-    grupper: [string, (k: Arealdetaljer['klasser'][number]) => boolean][] = [
-      ['Bebygd og opparbeidet areal', k => k.klasse === 'beb'],
-      ...D.klasser
-        .filter(k => k.klasse !== 'beb' && k.klasse !== 'vann' && !erSkogSSB(k))
-        .map((k): [string, (x: Arealdetaljer['klasser'][number]) => boolean] => [k.navn, x => x.kode === k.kode]),
-      ['Skog', erSkogSSB]
-    ];
-  const rader = grupper
-    .map(([navn, f]) => {
-      const km2 = arealI(D, f, n),
-        fra = arealI(D, f, 0);
-      return { navn, km2, fra, endring: km2 - fra, pst: andel(km2 - fra, fra) };
-    })
-    .filter(r => r.km2 > 0 || r.fra > 0)
-    .sort((a, b) => b.km2 - a.km2);
-  return { fra: D.aar[0], til: D.aar[n], rader };
-}
 /* Tabellen gull.bebygdOkning: de tre bebygde arealklassene hos SSB som økte mest fra 2017 til nyeste år, uten uklassifisert
    bebyggelse, med økningen i km². Tom når ingen økte. */
 export async function bebygdOkning(

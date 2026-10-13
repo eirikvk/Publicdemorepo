@@ -9,7 +9,7 @@
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, flisAvNavn, flisUtsnitt, m2PerKm2, ruteM, type Flis } from '../solv/felles.ts';
-import { tellIFlate, type Oversikt } from '../solv/grunnkart.ts';
+import { klasserIOversikt, tellIFlate, type Oversikt } from '../solv/grunnkart.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
 import { arealFraRuter, tiDekar } from './felles.ts';
 
@@ -37,6 +37,16 @@ export async function dagensKlasser(nr: string): Promise<DagensKlasser | null> {
   const s = await katalog.solv.sammensatt(nr);
   if (!s.har.size) return null;
   return { ov: s.ov, koord: g.koord, lagret, fliser: [...s.har].map(flisAvNavn), delvis: true };
+}
+
+/* Tabellen gull.grunnkartAreal: arealet i km² per klasse i grunnkartet for kommunen nr (bebygd, jordbruk, natur, hav, innsjø og elv,
+   som ALLE), talt i bildet av dagens klasser zoomet ut (gull.dagensKlasser). Ingenting hentes i tillegg til det siden alt henter.
+   delvis sier at bare den delen av kommunen som er hentet, er med. null når dagens klasser mangler. */
+export async function grunnkartAreal(nr: string): Promise<{ km2: number[]; delvis: boolean } | null> {
+  const [D, g] = await Promise.all([katalog.gull.dagensKlasser(nr), katalog.solv.grense(nr)]);
+  if (!D) return null;
+  const n = klasserIOversikt(D.ov, D.delvis ? g.koord : null);
+  return { km2: arealFraRuter(n, D.ov.res, m2PerKm2(g.ext)).km2, delvis: D.delvis };
 }
 
 /* Arealet per detaljklasse i kommunen: km² per klasse i DETALJKLASSER (km2), arealet innenfor kommunen uten klasse (ukjent), summen

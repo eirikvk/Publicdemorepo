@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felles.ts';
 import { byggInon } from '../src/data/gull/inon.ts';
 import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
+import { byggEndring as byggBebygdEndring, byggFordeling, byggHovedklasser } from '../src/data/gull/syntetisk.ts';
 
 const rutebilde = { u: [0, 0, 1, 1], res: 1, w: 1, h: 1 };
 
@@ -53,4 +54,44 @@ test('regnskapet: natur først, og ingen sammenligning når grensen er flyttet',
 test('land og vann: en liten rest regnes ikke som hav', () => {
   assert.equal(byggLandOgVann(100, 90, { inn: 5, elv: 4.9 })!.hav, 0);
   assert.equal(byggLandOgVann(100, 80, { inn: 5, elv: 5 })!.hav, 10);
+});
+
+test('syntetiske tabeller: fordeling på hovedøkosystemer og endring mellom bebygd og landklassene', () => {
+  const kl = (kode: string, klasse: string, km2: number[]) => ({ kode, navn: kode, klasse, km2 });
+  const D = {
+    nr: '1',
+    aar: ['2017', '2024'],
+    endret: false,
+    klasser: [
+      kl('01', 'beb', [10, 14]),
+      kl('15', 'jor', [6, 5]),
+      kl('16', 'jor', [4, 3]),
+      kl('17.01', 'nat', [50, 49]),
+      kl('19', 'nat', [10, 10]),
+      kl('22.01', 'vann', [5, 5])
+    ]
+  };
+  /* grunnkartet: bebygd 15, jordbruk 10, natur 60, hav 0, innsjø 5, elv 0 */
+  const F = byggFordeling([15, 10, 60, 0, 5, 0], D, '2024'),
+    km2 = (kode: string) => F.find(r => r.kode === kode)!.km2;
+  assert.equal(km2('bebygdOpparbeidetAreal'), 15);
+  assert.equal(km2('dyrketmark'), 6.25); /* 10 · 5/8 */
+  assert.equal(km2('grasmark'), 3.75);
+  assert.equal(km2('skog'), 49.83); /* 60 · 49/59 */
+  assert.equal(km2('vatmark'), 10.17);
+  assert.equal(km2('innsjoerVannmagasiner'), 5);
+  /* bebygd opp 4: først fra jordbruket som gikk ned (dyrket mark 1, grasmark 1), resten fra naturen etter arealet i 2017 */
+  const E = byggBebygdEndring(D, '2017', '2024'),
+    til = (kode: string) => E.klasser.find(r => r.kode === kode)!.tilBebygd;
+  assert.deepEqual([til('dyrketmark'), til('grasmark'), til('skog'), til('vatmark')], [1, 1, 1.67, 0.33]);
+  assert.equal(E.uforklart, 0);
+  const K = byggHovedklasser(F, E.klasser);
+  assert.deepEqual(
+    K.map(k => [k.id, k.endring]),
+    [
+      ['beb', 4],
+      ['jor', -2],
+      ['nat', -2]
+    ]
+  );
 });

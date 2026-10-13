@@ -43,6 +43,7 @@ import * as gullGraa from './gull/graa.ts';
 import * as gullGrunnkart from './gull/grunnkart.ts';
 import * as gullInon from './gull/inon.ts';
 import * as gullOkosystemer from './gull/okosystemer.ts';
+import * as gullSyntetisk from './gull/syntetisk.ts';
 import * as gullPlan from './gull/planlagt.ts';
 import * as gullRegnskap from './gull/regnskap.ts';
 import * as gullTemaer from './gull/temaer.ts';
@@ -857,26 +858,6 @@ export const katalog = {
       brukerstyrt: true,
       etl: gullOkosystemer.planPerOkosystem
     }),
-    oversiktKort: tabell({
-      lag: 'gull',
-      navn: 'oversiktKort',
-      tittel: 'Kortene på oversikten',
-      om: 'natur, jordbruk og bebygd hos SSB i nyeste år med andelen av landarealet, og forskjellen fra 2017 i km² og prosent. Brukes foreløpig bare av tvillingen fra Figma.',
-      forklaring:
-        'Utbredelsen og forskjellen fra 2017 satt sammen per klasse, med forskjellen i prosent av arealet i 2017.',
-      husk: 12,
-      etl: gullRegnskap.oversiktKort
-    }),
-    arealPerKlasse: tabell({
-      lag: 'gull',
-      navn: 'arealPerKlasse',
-      tittel: 'Arealet per arealklasse hos SSB',
-      om: 'arealet på land per arealklasse hos SSB i nyeste år og i 2017, med bebygd og skog slått sammen, og forskjellen i km² og prosent. Brukes foreløpig bare av tvillingen fra Figma.',
-      forklaring:
-        'SSBs arealklasser hver for seg, med bebygd og skog summert. Forskjellen mellom årgangene er ikke målt endring.',
-      husk: 12,
-      etl: gullRegnskap.arealPerKlasse
-    }),
     bebygdOkning: tabell({
       lag: 'gull',
       navn: 'bebygdOkning',
@@ -913,6 +894,65 @@ export const katalog = {
         'Lokalitetene gruppert per naturtype. Arealet er summen av lokalitetene, så overlapp telles flere ganger.',
       husk: 12,
       etl: gullTemaer.verdsattPerNaturtype
+    }),
+    grunnkartAreal: tabell({
+      lag: 'gull',
+      navn: 'grunnkartAreal',
+      tittel: 'Arealet per klasse i grunnkartet',
+      om: 'arealet i km² per klasse i grunnkartet for kommunen (bebygd, jordbruk, natur, hav, innsjø og elv), talt i bildet av dagens klasser zoomet ut. Henter ingenting i tillegg. Bare for valgt kommune.',
+      forklaring:
+        'Arealet per klasse i grunnkartet, talt i bildet av dagens klasser for hele kommunen, som kartet alt viser. En piksel teller når den er minst halvt dekket.',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullGrunnkart.grunnkartAreal
+    }),
+    okosystemfordeling: tabell({
+      lag: 'gull',
+      navn: 'okosystemfordeling',
+      tittel: 'Hovedøkosystemer per kommune 2024 (syntetisk)',
+      om: 'SYNTETISK: arealet per hovedøkosystem i kommunen i 2024, i samme form som SSBs tabell som publiseres 25. november 2026. Grunnkartets areal for bebygd, jordbruk, natur og vann, delt videre etter andelene i SSBs arealklasser for 2024. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Syntetiske tall til SSBs tabell kommer. Bebygd, jordbruk, natur og vann er grunnkartets areal. Jordbruket og naturen deles på hovedøkosystemene etter andelene i SSBs arealklasser for 2024, med en fast nøkkel.',
+      usikkerhet: [
+        'Syntetiske tall: en tommelfingerregel som står i stedet for SSBs tabell til den publiseres. Kyststrender, svaberg og dyner kan ikke skilles ut og blir 0.'
+      ],
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullSyntetisk.okosystemfordeling
+    }),
+    bebygdEndring: tabell({
+      lag: 'gull',
+      navn: 'bebygdEndring',
+      tittel: 'Endring mellom bebygd og landklassene 2017–2024 (syntetisk)',
+      om: 'SYNTETISK: arealet fra hver landklasse til bebygd, og fra bebygd til klassen, fra 2017 til 2024, i samme form som SSBs tabell som publiseres 25. november 2026. Anslått av SSBs arealklasser for de to årene. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Syntetiske tall til SSBs tabell kommer. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel, og økningen i bebygd fordeles på landklassene som gikk ned, i forhold til hvor mye hver gikk ned.',
+      usikkerhet: [
+        'Syntetiske tall: arealet i to år, ikke målte overganger. SSB skriver at forskjellen mellom årgangene også kommer av bedre kartlegging.'
+      ],
+      husk: 12,
+      etl: gullSyntetisk.bebygdEndring
+    }),
+    oversiktKort: tabell({
+      lag: 'gull',
+      navn: 'oversiktKort',
+      tittel: 'Kortene på oversikten (syntetisk)',
+      om: 'natur, jordbruk og bebygd i 2024 med andelen av landarealet og endringen fra 2017, summert fra de syntetiske tabellene. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Hovedøkosystemene summert til natur, jordbruk og bebygd, og endringen mellom bebygd og de andre summert på samme måte.',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullSyntetisk.oversiktKort
+    }),
+    nedbygging: tabell({
+      lag: 'gull',
+      navn: 'nedbygging',
+      tittel: 'Nedbygd per landklasse 2017–2024 (syntetisk)',
+      om: 'hvor mye av hver landklasse som ble bygget ned fra 2017 til 2024, med arealet i 2024 og andelen av arealet i 2017, og summen for natur og jordbruk, fra de syntetiske tabellene. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring: 'Arealet fra hver landklasse til bebygd, med andelen av arealet klassen hadde i 2017.',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullSyntetisk.nedbygging
     }),
     dagensKlasser: tabell({
       lag: 'gull',
@@ -1265,6 +1305,7 @@ const ETL_FILER: [string, object][] = [
   ['gull/utbygging.ts', gullUtbygging],
   ['gull/inon.ts', gullInon],
   ['gull/okosystemer.ts', gullOkosystemer],
+  ['gull/syntetisk.ts', gullSyntetisk],
   ['gull/graa.ts', gullGraa],
   ['gull/temaer.ts', gullTemaer],
   ['gull/egne.ts', gullEgne]

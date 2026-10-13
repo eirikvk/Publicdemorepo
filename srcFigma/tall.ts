@@ -22,6 +22,12 @@ function fraGrunnkart<T>(t: Tabell<string, T | null>): Svar<T> {
   if (S.s !== 'ok') return S;
   return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
 }
+/* Svarene som bygger på dagens klasser for hele kommunen (de syntetiske tabellene): mangler til kartet for kommunen er hentet */
+function fraKartet<T>(t: Tabell<string, T | null>): Svar<T> {
+  const S = fraRad(valgt(t));
+  if (S.s !== 'ok') return S;
+  return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnes ut når kartet for kommunen er hentet' };
+}
 export const skog = () => fraGrunnkart(katalog.gull.skog);
 export const vatmark = () => fraGrunnkart(katalog.gull.vatmark);
 export const vernetNatur = () => fraGrunnkart(katalog.gull.vernetNatur);
@@ -60,10 +66,10 @@ export function inonIVillrein() {
 export const graa = () => bilde(valgt(katalog.gull.graa));
 export const graaIPlan = () => verdi(katalog.gull.graaIPlan);
 
-/* SSB-tallene: kortene på oversikten (natur, jordbruk, bebygd nå og forskjellen fra 2017), arealet per arealklasse, de bebygde
-   klassene som økte mest, og regnskapsoppstillingen. Og planlagt utbygging. */
-export const oversiktKort = () => fraRad(valgt(katalog.gull.oversiktKort));
-export const arealPerKlasse = () => fraRad(valgt(katalog.gull.arealPerKlasse));
+/* Kortene på oversikten (natur, jordbruk, bebygd nå og endringen fra 2017) og nedbyggingen per landklasse, fra de syntetiske
+   tabellene. De bebygde klassene som økte mest og regnskapsoppstillingen, fra SSB. Og planlagt utbygging. */
+export const oversiktKort = () => fraKartet(katalog.gull.oversiktKort);
+export const nedbygging = () => fraKartet(katalog.gull.nedbygging);
 export const bebygdOkning = () => verdi(katalog.gull.bebygdOkning);
 export const oppstilling = () => fraRad(valgt(katalog.gull.oppstilling));
 export const plansum = () => verdi(katalog.gull.plansum);

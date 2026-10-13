@@ -809,3 +809,13 @@ main > .innhold > h2 + ul {
     aspect-ratio: 16 / 5;
   }
 }
+/* Merket for syntetiske tall, som står i stedet for SSBs tabeller til de kommer */
+.syntetisk-merke {
+  display: block;
+  width: fit-content;
+  margin: 8px 0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--gul);
+  font-size: var(--md-typography-body-s);
+}

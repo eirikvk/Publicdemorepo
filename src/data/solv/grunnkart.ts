@@ -21,7 +21,7 @@ import {
   type Piksler,
   type Plassering
 } from './felles.ts';
-import { KLASSETABELL, detaljklasserIFlis, klasserIFlis } from './klasser.ts';
+import { ALLE, KLASSETABELL, detaljklasserIFlis, klasseAv, klasserIFlis } from './klasser.ts';
 import {
   bildePiksler,
   flatePiksler,
@@ -203,6 +203,26 @@ export async function klassekart(nr: string): Promise<Oversikt> {
   g.fill('evenodd');
   g.globalCompositeOperation = 'source-over';
   return { lerret: g.canvas, ext, res: m * f };
+}
+
+/* Antall piksler per klasse i bildet zoomet ut (ov), som plassen i ALLE: bebygd, jordbruk, natur, hav, innsjø og elv. En piksel
+   teller når den er minst halvt dekket, og klassen leses av fargen (klasseAv). Med koord telles bare pikslene inni flaten
+   (kommunen), for det sammensatte kartet, som ikke er klippet. */
+export function klasserIOversikt(ov: Oversikt, koord: Flerflate | null): number[] {
+  const w = ov.lerret.width,
+    h = ov.lerret.height,
+    g = tegneflate(w, h);
+  g.drawImage(ov.lerret, 0, 0);
+  if (koord) {
+    g.globalCompositeOperation = 'destination-in';
+    sti(g, koord, ov.ext, 1 / ov.res);
+    g.fill('evenodd');
+  }
+  const d = g.getImageData(0, 0, w, h).data,
+    n = new Array<number>(ALLE.length).fill(0);
+  g.canvas.width = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] >= HALV) n[klasseAv(d[i], d[i + 1], d[i + 2])]++;
+  return n;
 }
 
 /* Det sammensatte kartet: lerretet (c) med klassene i rene farger, meter per piksel, utsnittet det dekker, flisene som er lagt inn

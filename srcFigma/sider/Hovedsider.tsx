@@ -25,7 +25,7 @@ import {
 } from '../komponenter/deler.tsx';
 import { figma, velgKartTema } from '../navigasjon.ts';
 import {
-  arealPerKlasse,
+  nedbygging,
   bebygdOkning,
   graaIPlan,
   naturtema,
@@ -43,27 +43,27 @@ const Merket = ({ children }: { children: ReactNode }) => <span className="tallm
 /* En endring som tekst med pil: ned eller opp, med endringen i prosent (pst) */
 const Endringsmerke = ({ d, pst }: { d: number; pst: number | null }) => (
   <span className={'endringsmerke ' + (d < 0 ? 'ned' : 'opp')}>
-    <span aria-hidden="true">{d < 0 ? '↘' : '↗'}</span> {pst !== null ? nf(Math.abs(pst), 1) : '–'} %
+    <span aria-hidden="true">{d < 0 ? '↘' : '↗'}</span> {pst !== null ? andelTekst(Math.abs(pst)) : '– %'}
   </span>
 );
 
 const NATUR_JORDBRUK_BEBYGD = (
   <p>
-    Natur er skog, åpen fastmark, myr, bart fjell og snø og is. Jordbruk er fulldyrka og ikke fulldyrka jord. Bebygd er
-    alt som er bygd eller opparbeidet, som boliger, hytter, næring, veier og parker. Vann er ikke med.
+    Natur er skog, hei og buskmark, lite vegetert mark, våtmark og kyststrender, slik grunnkartet deler inn
+    økosystemene. Jordbruk er dyrket mark og grasmark. Bebygd er alt som er bygd eller opparbeidet, som boliger, hytter,
+    næring, veier og parker. Vann er ikke med.
   </p>
 );
-const SSB_ENDRING = (
-  <p>
-    Tallene er fra {KILDE.ssb.navn}, {KILDE.ssb.datasett}. SSB skriver at tabellen ikke kan brukes til å regne ut
-    endring mellom år, fordi grunnlaget blir bedre over tid. Forskjellen fra 2017 er derfor ikke målt endring.
-  </p>
-);
+/* Hvor de syntetiske tallene kommer fra */
+const SYNTETISK_TEKST =
+  'Tallene er syntetiske, til SSBs tabeller for naturregnskapet kommer 25. november 2026. Arealet i 2024 er grunnkartet fra NIBIO, delt på økosystemtypene etter SSBs arealstatistikk. Det som er bygget ned, er anslått av SSBs arealstatistikk for 2017 og 2024, som ikke måler endring direkte.';
+/* Merket som sier at tallene er syntetiske */
+const Syntetisk = () => <p className="syntetisk-merke">Syntetiske tall</p>;
 
 export function Oversikt() {
   const U = oversiktKort(),
+    N = nedbygging(),
     P = plansum(),
-    A = arealPerKlasse(),
     O = bebygdOkning(),
     PD = planPerOkosystem(),
     okning = O ? O.klasser : [];
@@ -73,6 +73,13 @@ export function Oversikt() {
         <section className="oversikt-topp">
           <div>
             <h1 className="md-typography-heading-l">Naturregnskap for {kommunen()} kommune</h1>
+            {N.s === 'ok' && (
+              <p className="ingress">
+                {iTekst(N.v.natur.nedbygd)} natur
+                {N.v.natur.andel !== null && <> ({andelTekst(N.v.natur.andel)})</>} ble bygget ned mellom {N.v.fra} og{' '}
+                {N.v.til}.
+              </p>
+            )}
             {svar(U, u => (
               <ul className="klassekort">
                 {u.klasser.map(k => (
@@ -93,6 +100,7 @@ export function Oversikt() {
                 ))}
               </ul>
             ))}
+            {U.s === 'ok' && U.v.syntetisk && <Syntetisk />}
             <div className="trekkspill-liste">
               <Trekkspill tittel="Hva legger vi i natur, jordbruk og bebygd?">{NATUR_JORDBRUK_BEBYGD}</Trekkspill>
               <Trekkspill tittel="Hva er et naturregnskap?">
@@ -101,7 +109,9 @@ export function Oversikt() {
                   data fra SSB, NIBIO, Miljødirektoratet og kommuneplanene hos DiBK.
                 </p>
               </Trekkspill>
-              <Trekkspill tittel="Hvor kommer tallene fra?">{SSB_ENDRING}</Trekkspill>
+              <Trekkspill tittel="Hvor kommer tallene fra?">
+                <p>{SYNTETISK_TEKST}</p>
+              </Trekkspill>
             </div>
           </div>
           <Kart lag={[KLASSER, PLAN]} enkel={`Naturen i ${kommunen()} i dag`} />
@@ -129,38 +139,34 @@ export function Oversikt() {
       </section>
       <div className="innhold">
         <Figur
-          tittel="Arealet i kommunen, og forskjellen fra 2017"
+          tittel="Hva slags natur ble bygget ned?"
           tekst={
             <>
               <p>
-                Arealet på land per arealklasse hos SSB, i nyeste år, og forskjellen fra 2017. Forskjellen er ikke målt
-                endring: noe av den kan skyldes bedre kartlegging.
+                Arealet per økosystemtype i 2024, og hvor mye av det som ble bygget ned fra 2017 til 2024, med andelen
+                av arealet typen hadde i 2017.
               </p>
-              <p className="hint">
-                «Hva slags natur ble bygget ned?» i skissene krever målt endring. Under står i stedet hva slags natur
-                kommuneplanen setter av til utbygging.
-              </p>
+              <p className="hint">{SYNTETISK_TEKST}</p>
             </>
           }
-          kilder={['ssb']}
+          kilder={['grunnkart', 'ssb']}
         >
-          {svar(A, a => (
-            <Tabell
-              hva="Arealet per arealklasse"
-              perSide={30}
-              kolonner={[
-                { navn: 'Arealklasse' },
-                { navn: a.til, tall: true },
-                { navn: 'Forskjell fra ' + a.fra, tall: true },
-                { navn: '', tall: true, ikkeMobil: true }
-              ]}
-              rader={a.rader.map(r => [
-                r.navn,
-                dekar(r.km2),
-                (r.endring < 0 ? '−' : r.endring > 0 ? '+' : '') + dekar(Math.abs(r.endring)),
-                Math.abs(r.endring) >= 0.0005 ? <Endringsmerke d={r.endring} pst={r.pst} /> : ''
-              ])}
-            />
+          {svar(N, n => (
+            <>
+              <Tabell
+                hva="Bygget ned per økosystemtype"
+                kolonner={[
+                  { navn: 'Økosystemtype' },
+                  { navn: n.til, tall: true },
+                  { navn: `Bygget ned ${n.fra}–${n.til}`, tall: true },
+                  { navn: 'Andel', tall: true, ikkeMobil: true }
+                ]}
+                rader={n.rader
+                  .filter(r => r.km2 > 0 || r.nedbygd > 0)
+                  .map(r => [r.navn, dekar(r.km2), dekar(r.nedbygd), r.andel !== null ? andelTekst(r.andel) : '–'])}
+              />
+              {n.syntetisk && <Syntetisk />}
+            </>
           ))}
         </Figur>
         <Figur

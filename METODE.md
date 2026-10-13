@@ -321,6 +321,52 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 <!-- /forklaringer:ssb -->
 
+### Syntetiske tabeller til SSBs naturregnskap kommer
+
+SSB publiserer to tabeller for naturregnskapet 25. november 2026: arealet per kommune på hovedøkosystemene fra grunnkartet (2024,
+grunnkartet 2025), og endringen i areal fra 2017 til 2024 mellom bebygd og hver av de andre landklassene. Til de kommer, står to
+**syntetiske** tabeller i gull i stedet (`src/data/gull/syntetisk.ts`). De har samme form: kommune, hovedøkosystem og år eller
+periode, med areal i km², og feltet `syntetisk` sier at tallene er syntetiske, så sidene kan si det. Når SSBs tabeller kommer, hentes
+de i bronse og tolkes i sølv, og de to gull-tabellene leser dem i stedet. Det som bygger på dem, endres ikke.
+
+Begge lages av det siden alt henter, uten nye kall: dagens klasser i grunnkartet for hele kommunen og SSBs arealklasser fra 2017.
+Hovedøkosystemene er økosystemtypene på nivå 1 i grunnkartet (`HOVEDOKOSYSTEMER` i `src/data/solv/klasser.ts`). SSBs arealklasser
+oversettes til dem med en fast nøkkel (`ssbTilHovedokosystem`):
+
+| SSB, tabell 09594 | Hovedøkosystem |
+|---|---|
+| 01–14 bebygd | Bebygd og opparbeidet areal |
+| 15 fulldyrka jord | Dyrket mark |
+| 16 ikke fulldyrka jord | Grasmark |
+| 17 skog | Skog |
+| 18 åpen fastmark | Hei og buskmark |
+| 19 åpen myr | Våtmark |
+| 20 bart fjell, grus- og blokkmark, og 21 varig snø, is og bre | Lite vegetert mark |
+| 24 uklassifisert ubebygd område, og 22 vann | Ikke med |
+
+1. **Arealet per hovedøkosystem i 2024** (`gull.okosystemfordeling`). Bebygd, jordbruk, natur, hav, innsjøer og elver er
+   grunnkartets areal, talt i bildet av dagens klasser for kommunen (`gull.grunnkartAreal`). Jordbruket deles i dyrket mark og
+   grasmark, og naturen i skog, hei og buskmark, lite vegetert mark og våtmark, etter andelene i SSBs arealklasser for 2024.
+   Kyststrender, svaberg og dyner har ingen egen klasse hos SSB og blir 0.
+2. **Endringen mellom bebygd og landklassene fra 2017 til 2024** (`gull.bebygdEndring`), med en grådig tommelfingerregel:
+   - Økningen i bebygd tas først fra jordbruket, så langt dyrket mark og grasmark gikk ned. Jordbruksarealet er godt kartlagt, og
+     når det går ned, er det for det meste fordi det bygges ned.
+   - Resten tas fra naturen, fordelt etter arealet hver naturklasse hadde i 2017. Endringene i naturklassene hos SSB kommer mest av
+     bedre kartlegging: i Trondheim gikk åpen myr ned 7,1 km² og skog opp 9,2 km² fra 2017 til 2024. Fordeles økningen i bebygd
+     etter nedgangen i hver klasse, havner mye av den på myr, og ingenting på skog.
+   - Gikk bebygd ned, føres nedgangen tilbake til naturen etter arealet.
+3. Tvillingen summerer dem til natur, jordbruk og bebygd (`gull.oversiktKort`) og viser hvor mye av hver landklasse som er bygget
+   ned (`gull.nedbygging`). Arealet i 2017 er arealet i 2024 med det som gikk til og fra bebygd lagt tilbake.
+
+**Usikkerhet.**
+
+- Tallene er syntetiske og skal byttes med SSBs tabeller. Endringen er et anslag av arealet i to år, ikke målte overganger, og SSB
+  skriver at forskjellen mellom årgangene også kommer av bedre kartlegging.
+- Arealet i 2024 er talt i bildet av hele kommunen zoomet ut, med høyst 2048 piksler på lengste side. Mens kartet hentes for en
+  kommune uten lagrede klasser, gjelder det bare det som er hentet (`delvis`).
+- For Trondheim gir den syntetiske fordelingen 280,5 km² skog og 39,0 km² våtmark, mot 293,5 km² skog (med tresatt myr og beite)
+  og 38,2 km² åpen våtmark i detaljklassene.
+
 ## Planlagt utbygging
 
 <!-- forklaringer:plan -->
@@ -954,6 +1000,11 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Syntetiske tabeller og vedtatt arealplan, 13. oktober 2026.** To syntetiske tabeller står i stedet for SSBs tabeller for
+naturregnskapet til 25. november (se SSB-tallene, Syntetiske tabeller). Tvillingens oversikt bruker dem til natur, jordbruk og bebygd og
+til hva som er bygget ned. Fremtiden i skissene, som «2025–2035», er vedtatt arealplan, altså kommuneplanen fra DiBK som siden
+allerede bruker. Hovedsidens tall er ikke endret.
 
 **Tvillingen er bare brukergrensesnitt, 13. oktober 2026.** Utregningene som lå i tvillingen fra Figma, er flyttet til datamotoren,
 så begge sidene bygger på én metode:
