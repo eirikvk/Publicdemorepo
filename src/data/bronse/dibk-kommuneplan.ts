@@ -14,11 +14,11 @@ import {
   type Kommune
 } from '../solv/felles.ts';
 import type { Planopplysninger } from '../solv/kommuneplan.ts';
+import { KOMMUNEPLAN as PLAN } from './endepunkter.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { wmsBilde, wmsOppslag, wmsPunkt } from './wms.ts';
 
-const PLAN = 'https://nap.ft.dibk.no/services/wms/kommuneplaner/';
 const planSom = (v: string) =>
   `<PropertyIsLike wildCard="*" singleChar="?" escapeChar="!"><PropertyName>arealformål</PropertyName><Literal>${v}</Literal></PropertyIsLike>`;
 const PLANFILTER = `<Filter xmlns="http://www.opengis.net/ogc"><And><PropertyIsEqualTo><PropertyName>arealbruksstatus</PropertyName><Literal>2</Literal></PropertyIsEqualTo><Or>${planSom('1*')}${planSom('2*')}</Or></And></Filter>`;

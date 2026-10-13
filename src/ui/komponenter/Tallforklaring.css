@@ -50,6 +50,7 @@
 .tallforklaring code {
   font-size: 0.9em;
   opacity: 0.8;
+  overflow-wrap: anywhere; /* lange endepunkter brytes */
 }
 /* En kilde med det den justeres til: hver del på egen linje */
 .tallforklaring .justeres,

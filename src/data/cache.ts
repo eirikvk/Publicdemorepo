@@ -66,6 +66,7 @@ export interface Tabelldef<N, V> {
   forklaring?: string /* hva tabellen gjør, på klarspråk, til infoknappene og metodebeskrivelsen (verktoy/forklaringer.ts) */;
   usikkerhet?: string[] /* forbehold ved tallene som kommer fra dette steget */;
   kilde?: Kildeinfo /* i bronse: hvor dataene hentes fra */;
+  endepunkt?: string /* i bronse: adressen som kalles, uten parametre ({…} er det som settes inn), eller filen sammen med siden */;
   teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i
      infoknappene, bare i en liste for seg i metodebeskrivelsen. */;
   eksempel?: (

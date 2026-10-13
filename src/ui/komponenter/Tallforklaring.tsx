@@ -39,6 +39,22 @@ export function Korttittel({ kort, id, children }: { kort: string; id: string; c
   );
 }
 
+/* Forklaringen på et steg. En kilde i bronse sier hvor den hentes fra: endepunktet, eller bare «Hentes» når den har eier uten
+   endepunkt. */
+const Hentes = ({ t: { tabell: t } }: { t: Steg }) => (
+  <>
+    {t.endepunkt ? (
+      <>
+        Hentes fra <code>{t.endepunkt}</code>:{' '}
+      </>
+    ) : t.kilde ? (
+      'Hentes: '
+    ) : (
+      ''
+    )}
+    {t.forklaring}
+  </>
+);
 /* Kilden til et steg i bronse, med lenke til datasettet og lisensen */
 const Kilde = ({ t: { tabell: t } }: { t: Steg }) =>
   t.kilde ? (
@@ -76,8 +92,7 @@ function Innhold({ kort }: { kort: string }) {
           {infostegFor(k).map(i =>
             'kilde' in i ? (
               <li key={i.kilde.navn}>
-                <b>{i.kilde.tabell.tittel}.</b> {i.kilde.tabell.kilde ? 'Hentes: ' : ''}
-                {i.kilde.tabell.forklaring}
+                <b>{i.kilde.tabell.tittel}.</b> <Hentes t={i.kilde} />
                 <Kilde t={i.kilde} />
                 {i.justeres.map(j => (
                   <span key={j.navn} className="justeres">
@@ -98,7 +113,7 @@ function Innhold({ kort }: { kort: string }) {
                     Forklart under <Sidelenke id={i.steg.se.side}>{i.steg.se.tittel}</Sidelenke>.
                   </>
                 ) : (
-                  i.steg.tabell.forklaring
+                  <Hentes t={i.steg} />
                 )}
                 {!i.steg.se && <Kilde t={i.steg} />} <code>{i.steg.navn}</code>
               </li>

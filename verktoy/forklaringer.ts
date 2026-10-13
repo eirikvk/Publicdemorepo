@@ -124,9 +124,15 @@ const feil: string[] = [];
 const gammelAvh = fs.existsSync(AVH_FIL) ? fs.readFileSync(AVH_FIL, 'utf8') : '';
 if (SJEKK && gammelAvh !== avhKode) feil.push('src/data/avhengigheter.ts er ikke oppdatert');
 if (!SJEKK) fs.writeFileSync(AVH_FIL, avhKode);
-const { GRUPPER, KORT, ankerFor, stegFor, tabellen, tekniskeFor, usikkerhetFor } =
+const { GRUPPER, KORT, ankerFor, infostegFor, stegFor, tabellen, tekniskeFor, usikkerhetFor } =
   await import('../src/ui/forklaringer.ts');
 type Steg = ReturnType<typeof stegFor>[number];
+/* Forklaringen på et steg. En kilde i bronse sier hvor den hentes fra: endepunktet, eller bare «Hentes» når den har eier uten
+   endepunkt. Som i infoknappen (Tallforklaring.tsx). */
+const hentes = (t: Steg['tabell']) =>
+  (t.endepunkt ? `Hentes fra \`${t.endepunkt}\`: ` : t.kilde ? 'Hentes: ' : '') + (t.forklaring || '');
+const kildeTekst = (t: Steg['tabell']) =>
+  t.kilde ? ` Kilde: [${t.kilde.navn}, ${t.kilde.datasett}](${t.kilde.adresse}), ${t.kilde.lisens}.` : '';
 
 /* Bryter teksten t i linjer på høyst 130 tegn. Første linje starter med forran, de neste med like mange mellomrom. */
 function bryt(t: string, forran = '', bredde = 130) {
@@ -165,33 +171,61 @@ function kapittel(gruppe: string) {
       )
     );
   }
-  /* Stegene for alle kortene, hvert én gang. Er et steg en henvisning for ett kort og forklart av et annet i kapitlet, forklares det. */
-  const steg = new Map<string, Steg>();
-  for (const s of kort.flatMap(stegFor)) {
-    const f = steg.get(s.navn);
-    if (!f || (f.se && !s.se)) steg.set(s.navn, s.se && s.se.gruppe === gruppe ? { ...s, se: undefined } : s);
+  /* Stegene for alle kortene, hvert én gang: hver kilde med det den justeres til i sølv, og de andre stegene. Er et steg en
+     henvisning for ett kort og forklart av et annet i kapitlet, forklares det. */
+  const kilder = new Map<string, { kilde: Steg; justeres: Map<string, Steg> }>(),
+    andre = new Map<string, Steg>(),
+    rekkefolge: string[] = [];
+  for (const i of kort.flatMap(infostegFor)) {
+    if ('kilde' in i) {
+      const k = kilder.get(i.kilde.navn) || { kilde: i.kilde, justeres: new Map<string, Steg>() };
+      i.justeres.forEach(j => k.justeres.set(j.navn, j));
+      if (!kilder.has(i.kilde.navn)) rekkefolge.push(i.kilde.navn);
+      kilder.set(i.kilde.navn, k);
+    } else {
+      const s = i.steg,
+        f = andre.get(s.navn);
+      if (!f) rekkefolge.push(s.navn);
+      if (!f || (f.se && !s.se)) andre.set(s.navn, s.se && s.se.gruppe === gruppe ? { ...s, se: undefined } : s);
+    }
   }
+  /* Et steg som er justert under en kilde, står ikke for seg i tillegg */
+  const justert = new Set([...kilder.values()].flatMap(k => [...k.justeres.keys()]));
   const lagrekke = (n: string) => LAG.indexOf(n.split('.')[0] as (typeof LAG)[number]),
-    rekke = [...steg.values()].sort((a, b) => lagrekke(a.navn) - lagrekke(b.navn));
-  /* Steg med samme tekst og kilde slås sammen */
-  const punkter = new Map<string, Steg[]>();
-  for (const s of rekke) {
+    orden = rekkefolge
+      .filter(n => kilder.has(n) || (andre.has(n) && !justert.has(n)))
+      .sort((a, b) => lagrekke(a) - lagrekke(b));
+  /* Andre steg med samme tekst og kilde slås sammen */
+  const punkter = new Map<string, { kilde?: { kilde: Steg; justeres: Steg[] }; steg: Steg[] }>();
+  for (const n of orden) {
+    const k = kilder.get(n);
+    if (k) {
+      const S = [k.kilde, ...k.justeres.values()];
+      S.forEach(s => !s.tabell.forklaring && feil.push(`${s.navn} mangler forklaring (kapitlet ${gruppe})`));
+      punkter.set('kilde:' + n, { kilde: { kilde: k.kilde, justeres: [...k.justeres.values()] }, steg: S });
+      continue;
+    }
+    const s = andre.get(n)!;
     if (!s.se && !s.tabell.forklaring) feil.push(`${s.navn} mangler forklaring (kapitlet ${gruppe})`);
-    const nokkel = s.se ? 'se:' + s.navn : `${s.tabell.forklaring}|${s.tabell.kilde ? s.tabell.kilde.adresse : ''}`;
-    punkter.set(nokkel, [...(punkter.get(nokkel) || []), s]);
+    const nokkel = s.se ? 'se:' + s.navn : `${s.tabell.forklaring}|${s.tabell.kilde ? s.tabell.kilde.adresse : ''}`,
+      f = punkter.get(nokkel);
+    punkter.set(nokkel, { steg: [...(f ? f.steg : []), s] });
   }
+  const rekke = [...punkter.values()].flatMap(p => p.steg);
   deler.push('### Fra kilde til tall');
   deler.push(
     [...punkter.values()]
-      .map((S, i) => {
+      .map(({ kilde: K, steg: S }, i) => {
+        if (K) {
+          const navn = `**${K.kilde.tabell.tittel}** (${S.map(s => `\`${s.navn}\``).join(' → ')})`,
+            justeres = K.justeres.map(j => ` Justeres: ${j.tabell.forklaring || ''}`).join('');
+          return bryt(`${navn}. ${hentes(K.kilde.tabell)}${kildeTekst(K.kilde.tabell)}${justeres}`, `${i + 1}. `);
+        }
         const navn = ramse(S.map(s => `**${s.tabell.tittel}** (\`${s.navn}\`)`)),
           t = S[0].tabell,
           se = S[0].se;
         if (se) return bryt(`${navn}. Forklart under [${se.tittel}](#${ankerFor(se)}).`, `${i + 1}. `);
-        const kilde = t.kilde
-          ? ` Kilde: [${t.kilde.navn}, ${t.kilde.datasett}](${t.kilde.adresse}), ${t.kilde.lisens}.`
-          : '';
-        return bryt(`${navn}. ${t.forklaring || ''}${kilde}`, `${i + 1}. `);
+        return bryt(`${navn}. ${hentes(t)}${kildeTekst(t)}`, `${i + 1}. `);
       })
       .join('\n')
   );
@@ -203,7 +237,7 @@ function kapittel(gruppe: string) {
         .map(n => {
           const t = tabellen(n);
           if (!t.forklaring) feil.push(`${n} mangler forklaring (kapitlet ${gruppe})`);
-          return bryt(`**${t.tittel}** (\`${n}\`). ${t.forklaring || ''}`, '- ');
+          return bryt(`**${t.tittel}** (\`${n}\`). ${hentes(t)}`, '- ');
         })
         .join('\n')
     );

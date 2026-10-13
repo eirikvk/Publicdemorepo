@@ -2,12 +2,12 @@
    kommunen, uten glatting av kantene, så hver sone har én ren farge. */
 import type { Utsnitt } from '../generelt/geometri.ts';
 import type { Kommune } from '../solv/felles.ts';
+import { INON } from './endepunkter.ts';
 import { hent } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { bildenett } from '../solv/kommune.ts';
 import { wmsBilde, wmsPunkt } from './wms.ts';
 
-const INON = 'https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms';
 const inonBilde = (u: Utsnitt, w: number, h: number) =>
   wmsBilde(INON, u, w, h, {
     layers: 'status',

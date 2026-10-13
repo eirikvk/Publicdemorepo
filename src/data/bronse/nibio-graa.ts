@@ -3,12 +3,12 @@
 import { GRAATRINN } from '../solv/graa.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
 import { flisUtsnitt, type Flis, type Kommune } from '../solv/felles.ts';
+import { GRAA } from './endepunkter.ts';
 import { hent, lagHenter } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 import { bildenett } from '../solv/kommune.ts';
 import { wmsBilde } from './wms.ts';
 
-const GRAA = 'https://wms.nibio.no/cgi-bin/graastruktur';
 /* Egne stiler uten kantstrek. Alt grått areal tegnes i svart. Flatene med oppgitt andel vegetasjon får en rødfarge som sier hvilket
    trinn de er i. Kartflisene henter begge lagene i ett bilde. Til tallene hentes de hver for seg: i ett bilde blandes fargene
    langs kantene, og med ruter på 20 meter ga det for mye grått areal og for lite vegetasjon. */

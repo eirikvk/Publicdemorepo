@@ -7,10 +7,10 @@ import { DETALJFARGE, DETALJKLASSER, type Treslag, type Underlag } from '../solv
 import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
+import { GRUNNKART as WMS } from './endepunkter.ts';
 import { hent, lagHenter } from './henting.ts';
 import { wmsBilde, wmsPunkt, wmsSkjema } from './wms.ts';
 
-const WMS = 'https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse';
 const hex = (f: number[]) => '#' + f.map(v => v.toString(16).padStart(2, '0')).join('');
 const stil = (regler: string) =>
   `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>okosystemtype</Name><UserStyle><FeatureTypeStyle>${regler}</FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>`;

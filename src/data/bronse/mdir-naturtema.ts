@@ -7,6 +7,7 @@ import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { UTM, type Kommune } from '../solv/felles.ts';
 import type { Objekt } from '../solv/temaer.ts';
+import { KARTLAGT, VERDSATT, VERN, VILLREIN } from './endepunkter.ts';
 import { hent } from './henting.ts';
 import { kommunen } from './kartverket.ts';
 
@@ -16,7 +17,6 @@ export interface Temasvar {
   exceededTransferLimit?: boolean;
 }
 
-const MD = 'https://kart.miljodirektoratet.no/arcgis/rest/services/';
 const SR = UTM.replace('EPSG:', ''); /* UTM33 som tall, slik ArcGIS vil ha det */
 /* En spørring etter flater i laget på adresse, som GeoJSON i UTM33 med hele meter. slakk er forenklingen i meter, og valg resten av
    spørringen (utvalget, feltene og lignende). */
@@ -54,10 +54,10 @@ async function alleFlater(
 }
 /* Per tema: laget i tjenesten, feltene som hentes, forenklingen i meter, og utvalget når det ikke bare er kommunenummeret */
 const TEMA: Record<string, { url: string; felt: string; slakk: number; hvor?: (nr: string) => string }> = {
-  vern: { url: MD + 'vern/MapServer/0/query', felt: 'OBJECTID,offisieltNavn,verneform,vernedato,faktaark', slakk: 5 },
-  rein: { url: MD + 'villrein/MapServer/1/query', felt: '*', slakk: 20 },
+  vern: { url: VERN, felt: 'OBJECTID,offisieltNavn,verneform,vernedato,faktaark', slakk: 5 },
+  rein: { url: VILLREIN, felt: '*', slakk: 20 },
   verdi: {
-    url: MD + 'naturtyper_kuverdi/MapServer/0/query',
+    url: VERDSATT,
     hvor: nr =>
       `Verdikategori IN ('Svært stor verdi','Stor verdi','Middels verdi','Noe verdi') AND Kommune LIKE '%(${nr})%'`,
     felt: 'OBJECTID,Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark',
@@ -75,7 +75,7 @@ export function hentTemaflater(id: string, navn: string, k: Kommune): Promise<Te
 }
 /* Det kartlagte for naturtyper etter Miljødirektoratets instruks: alle dekningsflater som berører utsnittet e rundt kommunen */
 export const hentKartlagt = (k: Kommune, e: Utsnitt) =>
-  alleFlater(`Kartlagt område i ${k.navn}`, MD + 'naturtyper_nin/MapServer/1/query', 10, {
+  alleFlater(`Kartlagt område i ${k.navn}`, KARTLAGT, 10, {
     where: '1=1',
     geometry: e.map(v => Math.round(v)).join(','),
     geometryType: 'esriGeometryEnvelope',

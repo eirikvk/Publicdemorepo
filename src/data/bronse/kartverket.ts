@@ -2,9 +2,8 @@
 import { utsnitt, type GeoJsonFlate } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import type { Flis, Fylke, Kommune } from '../solv/felles.ts';
+import { BAKGRUNN, KOMMUNEINFO as KV } from './endepunkter.ts';
 import { hent, lagHenter } from './henting.ts';
-
-const KV = 'https://api.kartverket.no/kommuneinfo/v1';
 
 /* Avgrensningsboksen til en kommune som [vest, sør, øst, nord] i grader */
 const boksAv = (b: { coordinates?: number[][][] } | null) => {
@@ -69,8 +68,7 @@ export async function kommuneIPunkt(p: number[]): Promise<{ kommunenummer: strin
 }
 
 /* Bakgrunnskartet: Kartverkets topografiske kart i gråtoner, som fliser i UTM33 */
-export const bakgrunnUrl = ([z, x, y]: Flis) =>
-  `https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/utm33n/${String(z).padStart(2, '0')}/${y}/${x}.png`;
+export const bakgrunnUrl = ([z, x, y]: Flis) => `${BAKGRUNN}/${String(z).padStart(2, '0')}/${y}/${x}.png`;
 /* Bakgrunnskartet bare vises: egen kø med seks kall om gangen, som nettleseren selv bruker mot én vert */
 const hentBakgrunn = lagHenter('Kartverket', 'Bakgrunn', { bareVisning: true, samtidig: 6 });
 /* Tabellen bronse.bakgrunnsflis: én flis av bakgrunnskartet, som PNG */

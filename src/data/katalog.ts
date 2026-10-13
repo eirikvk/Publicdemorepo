@@ -16,6 +16,7 @@
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
 import { glem, tabell, type Kildeinfo, type Tabell, type Utgangspunkt } from './cache.ts';
+import * as E from './bronse/endepunkter.ts';
 import * as dibk from './bronse/dibk-kommuneplan.ts';
 import * as kartverket from './bronse/kartverket.ts';
 import * as mdirInon from './bronse/mdir-inon.ts';
@@ -135,6 +136,7 @@ export const katalog = {
     kommuner: tabell<void, Fylke[]>({
       lag: 'bronse',
       navn: 'kommuner',
+      endepunkt: 'kommuner.json',
       tittel: 'Fylker og kommuner',
       om: 'fylkene og kommunene, sortert etter navn',
       teknisk: true,
@@ -147,9 +149,10 @@ export const katalog = {
     kommunegrense: tabell({
       lag: 'bronse',
       navn: 'kommunegrense',
+      endepunkt: `${E.KOMMUNEINFO}/kommuner/{kommunenummer}/omrade`,
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen fra Kartverket som GeoJSON',
-      forklaring: 'Kommunegrensen fra Kartverket.',
+      forklaring: 'Kommunegrensen som flate i UTM 33.',
       kilde: KILDE.kartverket,
       husk: 6,
       etl: kartverket.kommunegrense
@@ -157,6 +160,7 @@ export const katalog = {
     bakgrunnsflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'bakgrunnsflis',
+      endepunkt: `${E.BAKGRUNN}/{z}/{y}/{x}.png`,
       tittel: 'Bakgrunnskartet',
       om: 'fliser av Kartverkets topografiske kart i gråtoner, kalt med flisen [z, x, y]. Lagres ikke: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.',
       husk: 0,
@@ -167,6 +171,7 @@ export const katalog = {
     kommuneIPunkt: tabell<number[], { kommunenummer: string }>({
       lag: 'bronse',
       navn: 'kommuneIPunkt',
+      endepunkt: `${E.KOMMUNEINFO}/punkt`,
       tittel: 'Kommune i et punkt',
       om: 'hvilken kommune et punkt i kartet ligger i, fra Kartverket, når man trykker utenfor valgt kommune. Nøkkel: punktet i hele meter.',
       husk: 20,
@@ -176,6 +181,7 @@ export const katalog = {
     planIPunkt: tabell<number[], unknown>({
       lag: 'bronse',
       navn: 'planIPunkt',
+      endepunkt: E.KOMMUNEPLAN,
       tittel: 'Kommuneplanen i et punkt',
       om: 'flatene i kommuneplanene i et punkt fra DiBK, med egenskapene og flaten, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke: sølv lagrer det som trengs. Nøkkel: punktet i hele meter.',
       forklaring:
@@ -188,6 +194,7 @@ export const katalog = {
     grunnkartIPunkt: tabell<number[], string>({
       lag: 'bronse',
       navn: 'grunnkartIPunkt',
+      endepunkt: E.GRUNNKART,
       tittel: 'Grunnkartet i et punkt',
       om: 'grunnkartet i et punkt fra NIBIO, med økosystemtype, arealdekke, skogbonitet, grunnforhold og kilden, som GML. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: punktet i hele meter.',
       forklaring: 'Oppslag i grunnkartet fra NIBIO i punktet man har trykket på (GetFeatureInfo).',
@@ -199,6 +206,7 @@ export const katalog = {
     inonIPunkt: tabell<number[], unknown>({
       lag: 'bronse',
       navn: 'inonIPunkt',
+      endepunkt: E.INON,
       tittel: 'Inngrepsfri natur i et punkt',
       om: 'sonen for inngrepsfri natur i et punkt fra Miljødirektoratet, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: punktet i hele meter.',
       forklaring: 'Oppslag i kartet over inngrepsfri natur i punktet man har trykket på (GetFeatureInfo).',
@@ -210,6 +218,7 @@ export const katalog = {
     temaegenskaper: tabell<[string, number], unknown>({
       lag: 'bronse',
       navn: 'temaegenskaper',
+      endepunkt: `${E.MILJO}{tjeneste}/MapServer/{lag}/query`,
       tittel: 'Alle feltene for et område',
       om: 'alle feltene for ett område i et naturtema fra Miljødirektoratet, kalt med [tema, OBJECTID]. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: «tema/OBJECTID».',
       forklaring: 'Alle feltene for området man har trykket på, slått opp med OBJECTID i karttjenesten.',
@@ -220,10 +229,10 @@ export const katalog = {
     arealtall: tabell({
       lag: 'bronse',
       navn: 'arealtall',
+      endepunkt: E.SSB,
       tittel: 'Arealtall fra SSB',
       om: 'arealet per klasse i nyeste år fra SSB, som JSON-stat',
-      forklaring:
-        'Arealet i km² per arealklasse for kommunen i nyeste år. SSBs nye API (PxWebApi v2) brukes først, og det eldre (v0) hvis det nye ikke svarer. De to gir samme tall.',
+      forklaring: 'Arealet i km² per arealklasse i nyeste år. Svarer ikke API-et, spørres det eldre (v0) om det samme.',
       kilde: KILDE.ssb,
       husk: 6,
       etl: ssb.arealtall
@@ -231,10 +240,11 @@ export const katalog = {
     arealtidsserie: tabell({
       lag: 'bronse',
       navn: 'arealtidsserie',
+      endepunkt: E.SSB,
       tittel: 'Arealtall fra SSB for 2017',
       om: 'arealet per klasse fra 2017 fra SSB, som JSON-stat',
       forklaring:
-        'Det samme fra 2017 og fram, med SSBs sammenslåtte tidsserier (kodelisten agg_KommSummer). Da gjelder tallene for 2017 dagens kommune også der kommuner er slått sammen.',
+        'Det samme fra 2017, med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen.',
       kilde: KILDE.ssb,
       husk: 6,
       etl: ssb.arealtidsserie
@@ -242,6 +252,7 @@ export const katalog = {
     arealdetaljer: tabell({
       lag: 'bronse',
       navn: 'arealdetaljer',
+      endepunkt: E.SSB,
       tittel: 'Arealklassene fra SSB, hver for seg',
       om: 'arealet fra 2017 for hver av SSBs arealklasser for seg, som JSON-stat. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
@@ -253,6 +264,7 @@ export const katalog = {
     arealAlle: tabell<void, solvSsbJson>({
       lag: 'bronse',
       navn: 'arealAlle',
+      endepunkt: E.SSB,
       tittel: 'Arealklassene fra SSB for alle kommuner',
       om: 'arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, som JSON-stat. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
@@ -264,6 +276,7 @@ export const katalog = {
     kommuneareal: tabell<void, kartverket.Kommuneareal>({
       lag: 'bronse',
       navn: 'kommuneareal',
+      endepunkt: 'kommuneareal.json',
       tittel: 'Flaten til kommunene',
       om: 'flaten til hver kommune i km², med land, ferskvann og hav, regnet av Kartverkets kommunegrenser én gang og lagret sammen med siden (kommuneareal.json). Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
@@ -275,10 +288,11 @@ export const katalog = {
     grunnkartflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'grunnkartflis',
+      endepunkt: E.GRUNNKART,
       tittel: 'Kartbilder av grunnkartet',
       om: 'kartbilder av dagens arealklasser fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       forklaring:
-        'Kartbilder av dagens arealklasser fra NIBIOs grunnkart for arealanalyse, 512 × 512 piksler per flis, med egen stil uten kantstrek (se Arealklassene).',
+        'Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen stil uten kantstrek (se Arealklassene).',
       kilde: KILDE.grunnkart,
       husk: 400,
       nokkel: flisnavn,
@@ -291,12 +305,13 @@ export const katalog = {
       tittel: 'Rutestørrelse',
       om: 'nivået i flisnettet utbyggingen regnes på, slik brukeren har valgt under Tekniske valg: 9 (ruter på 21 meter, som er standard) eller 10 (10,6 meter). Datamotoren fyller den. Tom betyr standard.',
       forklaring:
-        'Rutestørrelsen brukeren har valgt under Tekniske valg: 21 meter (nivå 9 i flisnettet, som er standard) eller 10,6 meter (nivå 10, et forsøk). På 10 meter hentes også kommuneplanen fra DiBK på nivå 10, med fire ganger så mange kall, og egne områder legges i det samme rutenettet. Alt annet er likt, også regelen om smale striper, som da tar bort felt smalere enn rundt 20 meter i stedet for 40.',
+        'Rutestørrelsen valgt under Tekniske valg: 21 meter (standard) eller 10,6 meter (forsøk). På 10,6 meter hentes kommuneplanen med fire ganger så mange kall, og egne områder legges i samme rutenett. Smale striper er da under rundt 20 meter i stedet for 40.',
       husk: 1
     }),
     detaljflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'detaljflis',
+      endepunkt: E.GRUNNKART,
       tittel: 'Kartbilder av grunnkartet med detaljklasser',
       om: 'kartbilder av de 19 detaljklassene fra NIBIO, 512 x 512 piksler med 24 bit farge, kalt med flisen [10, x, y]. Stilen er for lang til å stå i adressen, så de hentes med POST. Brukes foreløpig bare til å lage de lagrede detaljklassene. Nøkkel: flisen som «z/x/y».',
       forklaring:
@@ -309,6 +324,7 @@ export const katalog = {
     detaljregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'detaljregister',
+      endepunkt: 'detaljklasser.json',
       tittel: 'Register over lagrede detaljklasser',
       om: 'kommunene som har detaljklassene lagret sammen med siden, og blokkene på nivå 10 for hver',
       teknisk: true,
@@ -319,6 +335,7 @@ export const katalog = {
     detaljfil: tabell<Flis, ArrayBuffer | null>({
       lag: 'bronse',
       navn: 'detaljfil',
+      endepunkt: 'detaljklasser/{z}/{x}/{y}.png',
       tittel: 'Lagrede detaljklasser per blokk',
       om: 'detaljklassene i en blokk på nivå 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [10, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
       teknisk: true,
@@ -331,6 +348,7 @@ export const katalog = {
     klasseregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'klasseregister',
+      endepunkt: 'klasser.json',
       tittel: 'Register over lagrede klasser',
       om: 'kommunene som har dagens klasser lagret sammen med siden, og blokkene på nivå 9 for hver',
       teknisk: true,
@@ -341,6 +359,7 @@ export const katalog = {
     klassefil: tabell<Flis, ArrayBuffer | null>({
       lag: 'bronse',
       navn: 'klassefil',
+      endepunkt: 'klasser/{z}/{x}/{y}.png',
       tittel: 'Lagrede klasser per blokk',
       om: 'dagens klasser i en blokk på nivå 9 eller 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [z, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
       teknisk: true,
@@ -353,10 +372,10 @@ export const katalog = {
     plandekning: tabell({
       lag: 'bronse',
       navn: 'plandekning',
+      endepunkt: E.KOMMUNEPLAN,
       tittel: 'Bilde av kommuneplanen over kommunen',
       om: 'ett lite bilde av hele kommuneplanen fra DiBK over kommunen',
-      forklaring:
-        'Et lite bilde av kommuneplanen over hele kommunen, som viser hvor stor del av kommunen planen dekker.',
+      forklaring: 'Et lite bilde av kommuneplanen over hele kommunen.',
       kilde: KILDE.dibk,
       husk: 6,
       etl: dibk.plandekning
@@ -364,10 +383,11 @@ export const katalog = {
     planopplysninger: tabell({
       lag: 'bronse',
       navn: 'planopplysninger',
+      endepunkt: E.KOMMUNEPLAN,
       tittel: 'Opplysninger om kommuneplanen',
       om: 'hvilken kommuneplan DiBK har, slått opp midt i det planen dekker',
       forklaring:
-        'Hvilken kommuneplan DiBK har: plan-id, hvem som har levert den, og når den ble kopiert til DiBK. Slått opp midt i det planen dekker.',
+        'Plan-id, hvem som leverte planen og når den ble kopiert til DiBK, slått opp midt i det planen dekker.',
       kilde: KILDE.dibk,
       husk: 6,
       etl: dibk.planopplysninger
@@ -375,6 +395,7 @@ export const katalog = {
     planoversikt: tabell({
       lag: 'bronse',
       navn: 'planoversikt',
+      endepunkt: E.KOMMUNEPLAN,
       tittel: 'Oversikt over kommuneplanen',
       om: 'ett bilde av kommuneplanen fra DiBK over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Brukes til å hente kartbildene bare der det er plan.',
       teknisk: true,
@@ -387,10 +408,11 @@ export const katalog = {
     planflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'planflis',
+      endepunkt: E.KOMMUNEPLAN,
       tittel: 'Kartbilder av kommuneplanen',
       om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       forklaring:
-        'Kartbilder av kommuneplanen fra DiBKs nasjonale tjeneste for kommuneplaner, laget kparealformalomrade, 512 × 512 piksler per flis. Bare flater med arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdselsanlegg og teknisk infrastruktur) og arealbruksstatus 2 (framtidig), fylt og uten kantstrek.',
+        'Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis: arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og uten kantstrek.',
       usikkerhet: [
         'Kommuneplanens arealdel viser hva som er satt av, ikke hva som blir bygd. Reguleringsplaner er ikke med.'
       ],
@@ -402,6 +424,7 @@ export const katalog = {
     naturskogflis: tabell<[mdirNaturskog.Naturskoglag, Flis], ArrayBuffer>({
       lag: 'bronse',
       navn: 'naturskogflis',
+      endepunkt: E.NATURSKOG,
       tittel: 'Kartbilder av naturskog',
       om: 'kartbilder av et lag i Miljødirektoratets kart over naturskog (v1), 512 x 512 piksler, kalt med [lag, flisen]. Bare til visning i kartet, foreløpig bare i tvillingen fra Figma. Nøkkel: «lag/z/x/y».',
       forklaring:
@@ -414,10 +437,11 @@ export const katalog = {
     inonbilde: tabell({
       lag: 'bronse',
       navn: 'inonbilde',
+      endepunkt: E.INON,
       tittel: 'Bilde av inngrepsfri natur',
       om: 'bildet av inngrepsfri natur over hele kommunen fra Miljødirektoratet, som PNG',
       forklaring:
-        'Ett bilde av hele kommunen fra laget status (nyeste status, 2023), i kommunebildenes rutenett og uten glatting av kantene.',
+        'Ett bilde av hele kommunen fra laget status (2023), i kommunebildenes rutenett, uten glatting av kantene.',
       kilde: KILDE.inon,
       husk: 6,
       etl: mdirInon.inonbilde
@@ -425,10 +449,11 @@ export const katalog = {
     graabilder: tabell({
       lag: 'bronse',
       navn: 'graabilder',
+      endepunkt: E.GRAA,
       tittel: 'Bilder av grått areal',
       om: 'de to bildene av grått areal over hele kommunen fra NIBIO, som PNG',
       forklaring:
-        'To bilder av hele kommunen i kommunebildenes rutenett, med egen stil uten kantstrek: alt grått areal, og flatene med oppgitt andel vegetasjon. Stilen tegner trinn n i rødt med styrken 51 · n, så trinnet kan leses av fargen. Bildene hentes hver for seg, fordi fargene blandes langs kantene i ett bilde.',
+        'To bilder av hele kommunen i egen stil uten kantstrek: alt grått areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene.',
       usikkerhet: [
         'Kartet er en testversjon. Andel bygninger er ikke brukt, fordi tjenesten oppga 0 for alle flater som ble slått opp.'
       ],
@@ -439,6 +464,7 @@ export const katalog = {
     graaflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'graaflis',
+      endepunkt: E.GRAA,
       tittel: 'Kartbilder av grått areal',
       om: 'kartbilder av grått areal fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       husk: 400,
@@ -448,10 +474,11 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'bronse',
       navn: 'verneomrader',
+      endepunkt: E.VERN,
       tittel: 'Verneområder',
       om: 'verneområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Verneområdene fra tjenesten vern, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
+        'Verneområdene i kommunen som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar.',
       kilde: KILDE.vern,
       husk: 0,
       etl: mdirNatur.verneomrader
@@ -459,10 +486,11 @@ export const katalog = {
     villrein: tabell({
       lag: 'bronse',
       navn: 'villrein',
+      endepunkt: E.VILLREIN,
       tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Leveområdene for villrein fra tjenesten villrein, lag 1, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 20 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
+        'Leveområdene for villrein i kommunen som flater i UTM 33, forenklet med 20 meter, side for side når de ikke kommer i ett svar.',
       kilde: KILDE.villrein,
       husk: 0,
       etl: mdirNatur.villrein
@@ -470,10 +498,11 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'bronse',
       navn: 'verdsattNatur',
+      endepunkt: E.VERDSATT,
       tittel: 'Verdsatt natur',
       om: 'naturtyper med verdi i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Naturtyper med verdikategori svært stor, stor, middels eller noe verdi fra tjenesten naturtyper_kuverdi, lag 0, der kommunenummeret står i egenskapen for kommune. Flatene hentes som GeoJSON i UTM33, forenklet med 5 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
+        'Naturtyper med svært stor, stor, middels eller noe verdi i kommunen, som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar.',
       kilde: KILDE.verdsatt,
       husk: 0,
       etl: mdirNatur.verdsattNatur
@@ -481,10 +510,11 @@ export const katalog = {
     kartlagt: tabell({
       lag: 'bronse',
       navn: 'kartlagt',
+      endepunkt: E.KARTLAGT,
       tittel: 'Kartlagt for naturtyper',
       om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks fra tjenesten naturtyper_nin, lag 1: alt innenfor utsnittet rundt kommunen, forenklet med 10 meter. Gir tjenesten ikke alle i ett svar, hentes resten side for side.',
+        'Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks rundt kommunen, forenklet med 10 meter, side for side når de ikke kommer i ett svar.',
       kilde: KILDE.nin,
       husk: 0,
       etl: mdirNatur.kartlagt
@@ -496,7 +526,7 @@ export const katalog = {
       tittel: 'Egne områder',
       om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, slik brukeren laget dem: tegnede områder med typen brukeren valgte, og opplastede planer med arealformål og status per flate, i UTM33. En kilde fra brukeren, som datamotoren fyller.',
       forklaring:
-        'Egne områder brukeren tegner i kartet, eller en GeoJSON-fil i samme format som DiBKs nedlasting av plandata. Filen leses i nettleseren og sendes ingen steder. Projeksjonen leses fra filen. Mangler den, gjettes grader eller den UTM-sonen som legger planen nærmest kommunen. Tegnede områder under 400 m² avvises.',
+        'Områder brukeren tegner, eller en GeoJSON-fil i samme format som plandata fra DiBK. Filen leses i nettleseren og sendes ingen steder. Projeksjonen leses fra filen, eller gjettes. Tegnede områder under 400 m² avvises.',
       husk: 30
     })
   },
@@ -506,8 +536,7 @@ export const katalog = {
       navn: 'grense',
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen som flerflate i UTM33, med utsnitt og flate i km²',
-      forklaring:
-        'Kommunegrensen i UTM sone 33, og kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).',
+      forklaring: 'Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).',
       husk: 6,
       etl: solvKommune.grense
     }),
@@ -517,7 +546,7 @@ export const katalog = {
       tittel: 'Arealtall per klasse',
       om: 'arealet per klasse i nyeste år, med landareal, innsjø og elv',
       forklaring:
-        'SSBs arealklasser summeres til bebygd, jordbruk og natur (se Arealklassene), og innsjø og elv tas ut for seg. Landarealet er summen av de tre klassene på land.',
+        'Arealklassene summeres til bebygd, jordbruk og natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.',
       husk: 6,
       etl: solvSsb.arealtall
     }),
@@ -527,7 +556,7 @@ export const katalog = {
       tittel: 'Arealtall i 2017 og nå',
       om: 'arealet per klasse i 2017 og i nyeste år',
       forklaring:
-        'Arealet per klasse i 2017 og i nyeste år, summert på samme måte. Avviker kommunens samlede areal med mer enn 0,5 % mellom årgangene, er grensen trolig flyttet, og årgangene sammenlignes ikke.',
+        'Arealet per klasse i 2017 og i nyeste år. Avviker kommunens samlede areal med mer enn 0,5 %, er grensen trolig flyttet, og årene sammenlignes ikke.',
       usikkerhet: [
         'SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. Forskjellen fra 2017 er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der tallet står.',
         'Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved deling.'
@@ -573,7 +602,7 @@ export const katalog = {
       tittel: 'Dagens klasser per blokk',
       om: 'dagens klasse per rute i en blokk, kalt med blokken [z, x, y]: på nivå 9 er ruta 21 meter, laget av de fire kartbildene fra NIBIO som dekker blokken, og på nivå 10 er ruta 10,6 meter og blokken ett kartbilde. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
       forklaring:
-        'Dagens klasse per rute i en blokk på 512 × 512 ruter (se Arealklassene). På 21 meter er den laget av de fire kartbildene fra NIBIO som dekker blokken, og på 10,6 meter av ett. For 42 kommuner ligger svaret lagret sammen med siden. For de andre, og for en lagret blokk som ikke kan leses, lages det av kartbildene når kommunen velges.',
+        'Dagens klasse per rute i blokker på 512 × 512 ruter, av fire kartbilder på 21 meter eller ett på 10,6 meter (se Arealklassene). For 42 kommuner er blokkene lagret sammen med siden.',
       husk: 0,
       nokkel: flisnavn,
       etl: solvGrunnkart.klasser,
@@ -632,7 +661,7 @@ export const katalog = {
       tittel: 'Sammensatt kart',
       om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet. Kartet viser det mens blokkene for hele kommunen hentes, og tallene bygger på det når blokkene ikke kan lages. Datamotoren legger inn nye fliser etter hvert som de hentes.',
       forklaring:
-        'Dagens klasser satt sammen av kartbildene som er hentet, flis for flis. Kartet viser det mens blokkene hentes. Tallene bygger bare på det når blokkene ikke kan lages, og gjelder da den delen av kommunen brukeren har sett på i kartet. En piksel leses når den er minst 100 av 255 dekket, og får klassen det er mest av.',
+        'Kartbildene satt sammen flis for flis mens blokkene hentes. Tallene bruker det bare når blokkene ikke kan lages, og gjelder da det brukeren har sett i kartet. En piksel som er minst 100 av 255 dekket, får klassen det er mest av.',
       usikkerhet: [
         'Kan ikke blokkene hentes fra NIBIO, er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte kartet er grovere enn rutene på 21 meter i store kommuner. Siden sier fra når det gjelder.'
       ],
@@ -646,7 +675,7 @@ export const katalog = {
       tittel: 'Egne områder, tolket',
       om: 'de egne områdene i kommunen med om hver flate er utbygging. Tegnede områder har typen brukeren valgte, og flatene i en opplastet plan får typen etter arealformål og status.',
       forklaring:
-        'Hver flate er utbygging eller ikke. I en opplastet fil er arealformål i 1000- og 2000-serien med status framtidig, eller uten status, utbygging, slik som for kommuneplanen. Andre flater med arealformål er ikke utbygging. Har filen ingen arealformål, er alle flatene utbygging. Et tegnet område er utbygging, og kan settes til ikke utbygging.',
+        'Hver flate er utbygging eller ikke. Arealformål i 1000- og 2000-serien med status framtidig, eller uten status, er utbygging, som i kommuneplanen. Uten arealformål er alle flatene utbygging. Et tegnet område er utbygging til brukeren sier noe annet.',
       husk: 30,
       brukerstyrt: true,
       etl: solvEgne.egne
@@ -657,7 +686,7 @@ export const katalog = {
       tittel: 'Egne områder per rute',
       om: 'de egne områdene i kommunen som planen per rute, i samme datamodell som kommuneplanen: utbygging eller ikke, og hvilket område ruta hører til. Over utsnittet rundt alle områdene.',
       forklaring:
-        'Flatene legges i planrutenettet etter halvregelen, i samme datamodell som kommuneplanen. Der flater i samme område overlapper, vinner utbygging. Der områder overlapper, gjelder det siste.',
+        'Flatene legges i planrutenettet etter halvregelen. Overlapper flater i samme område, vinner utbygging. Overlapper områder, gjelder det siste.',
       husk: 6,
       brukerstyrt: true,
       etl: solvEgne.egneruter
@@ -668,7 +697,7 @@ export const katalog = {
       tittel: 'Hvor mye planen dekker',
       om: 'hvor stor del av kommunen kommuneplanen dekker, og rutene med plan',
       forklaring:
-        'Hvor stor del av kommunen kommuneplanen dekker, fra bildet over hele kommunen. Langs grensen stikker naboenes planer litt inn, så under 15 % regnes som at DiBK ikke har kommuneplanen.',
+        'Andelen av kommunen planen dekker. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.',
       husk: 6,
       etl: solvPlan.plandekning
     }),
@@ -677,8 +706,7 @@ export const katalog = {
       navn: 'planinfo',
       tittel: 'Kommuneplanen',
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
-      forklaring:
-        'Om DiBK har kommuneplanen for kommunen, hvor stor del av kommunen den dekker, og hvilken plan det er.',
+      forklaring: 'Om DiBK har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.',
       usikkerhet: ['Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.'],
       husk: 6,
       etl: solvPlan.planinfo
@@ -700,7 +728,7 @@ export const katalog = {
       tittel: 'Kommuneplanen per rute',
       om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y]. Lagres ikke: blokkene i utbyggingen lagres, og kartbildet i bronse holder for å lage den på nytt.',
       forklaring:
-        'Kommuneplanen per rute: en rute er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.',
+        'En rute er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.',
       husk: 0,
       nokkel: flisnavn,
       etl: solvPlan.kommuneplanruter,
@@ -712,7 +740,7 @@ export const katalog = {
       tittel: 'Inngrepsfri natur per rute',
       om: 'sonen per rute i bildet av kommunen, og antall ruter per sone innenfor kommunen',
       forklaring:
-        'Hver rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (5 km eller mer). Rutene innenfor kommunegrensen telles per sone.',
+        'En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst 5 km). Rutene i kommunen telles per sone.',
       husk: 3,
       etl: solvInon.inon
     }),
@@ -722,7 +750,7 @@ export const katalog = {
       tittel: 'Grått areal per rute',
       om: 'trinnet per rute i bildet av kommunen, og antall ruter per trinn innenfor kommunen',
       forklaring:
-        'Hver rute får et trinn etter andel vegetasjon i flaten: under 1 %, 1–25 %, 25–50 %, 50–75 % eller 75–100 %. Grått areal uten oppgitt andel, som veier, er et eget trinn. En rute er grå når den er minst halvt dekket. Rutene innenfor kommunen telles per trinn.',
+        'En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått uten oppgitt andel, som veier, for seg. Rutene i kommunen telles per trinn.',
       husk: 3,
       etl: solvGraa.graa
     }),
@@ -773,7 +801,7 @@ export const katalog = {
       tittel: 'Verneområder, klippet',
       om: 'verneområdene klippet mot kommunen, med areal og opplysninger',
       forklaring:
-        'Hver flate klippes mot kommunegrensen, og arealet av det som ligger i kommunen, regnes ut. Feiler klippingen, tegnes flaten i et rutenett og klippes mot kommunen der, og arealet regnes av dekningen.',
+        'Flatene klippes mot kommunegrensen, og arealet i kommunen regnes ut. Feiler klippingen, regnes arealet i et rutenett.',
       husk: 30,
       etl: solvTemaer.verneomrader,
       glemt: (_, nr) => glemMasker('vern/' + nr + '/')
@@ -784,7 +812,7 @@ export const katalog = {
       tittel: 'Villreinområder, klippet',
       om: 'villreinområdene klippet mot kommunen, med areal og opplysninger',
       forklaring:
-        'Hver flate klippes mot kommunegrensen, og arealet av det som ligger i kommunen, regnes ut. Feiler klippingen, tegnes flaten i et rutenett og klippes mot kommunen der, og arealet regnes av dekningen.',
+        'Flatene klippes mot kommunegrensen, og arealet i kommunen regnes ut. Feiler klippingen, regnes arealet i et rutenett.',
       husk: 30,
       etl: solvTemaer.villrein,
       glemt: (_, nr) => glemMasker('rein/' + nr + '/')
@@ -795,7 +823,7 @@ export const katalog = {
       tittel: 'Lokaliteter med verdsatt natur',
       om: 'lokalitetene med verdsatt natur, uklippet, med areal, verdi og opplysninger',
       forklaring:
-        'Lokalitetene sorteres med høyest verdi først, og så etter areal, så en rute med planlagt utbygging der lokaliteter overlapper, regnes til den høyeste. Har to lokaliteter samme verdi og samme areal, avgjør rekkefølgen fra tjenesten.',
+        'Lokalitetene sorteres med høyest verdi først og så etter areal, så en rute der lokaliteter overlapper, regnes til den høyeste.',
       usikkerhet: [
         'Arealet per lokalitet i listen er arealet av hele lokaliteten, også en del som ligger utenfor kommunen. Summene per verdikategori er klippet mot kommunen.'
       ],
@@ -809,7 +837,7 @@ export const katalog = {
       tittel: 'Arealet av verdsatt natur',
       om: 'arealet av verdsatt natur i kommunen, samlet og per verdikategori',
       forklaring:
-        'Flatene tegnes i et rutenett over kommunen, én tegning per verdikategori, der alle flater med minst den verdien tegnes som én form og klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet også viser det, så ingenting telles to ganger.',
+        'Arealet per verdikategori regnes i et rutenett: én tegning per kategori av alle flater med minst den verdien, klippet mot kommunen. Der lokaliteter overlapper, teller den høyeste verdien, så ingenting telles to ganger.',
       husk: 30,
       etl: solvTemaer.verdsattNaturAreal
     }),
@@ -831,7 +859,7 @@ export const katalog = {
       tittel: 'Masker for områdene',
       om: 'hjelpetabell: områdene i naturtemaene og det kartlagte som masker i et rutenett, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området. Lages første gang en rute med planlagt utbygging treffer området.',
       forklaring:
-        'Hvert område, og det kartlagte, får en maske: et lite rutenett med dekningen per rute. Masken lages første gang en rute med planlagt utbygging treffer området.',
+        'Hvert område og det kartlagte får en maske med dekningen per rute, laget første gang planlagt utbygging treffer området.',
       husk: Infinity
     })
   },

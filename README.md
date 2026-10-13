@@ -165,6 +165,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | Fil | Innhold |
 |---|---|
 | `henting.ts` | Henting, kall-loggen, hvor sidens egne filer ligger, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `endepunkter.ts` | Endepunktene for alle kildene, samlet. Filene i bronse bygger kallene på dem, og katalogen viser dem ved hver kilde i infoknappene og METODE.md |
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 eller ett punkt |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve, summert til tre klasser og hver arealklasse for seg |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
