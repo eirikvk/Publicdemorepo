@@ -22,6 +22,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'bronse.planopplysninger': ['bronse.kommuner', 'solv.plandekning'],
   'bronse.planoversikt': ['bronse.kommuner', 'solv.grense'],
   'bronse.planflis': [],
+  'bronse.naturskogflis': [],
   'bronse.inonbilde': ['bronse.kommuner', 'solv.grense'],
   'bronse.graabilder': ['bronse.kommuner', 'solv.grense'],
   'bronse.graaflis': [],

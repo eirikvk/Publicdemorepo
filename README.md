@@ -172,6 +172,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
 | `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som ett bilde av kommunen og i ett punkt |
+| `mdir-naturskog.ts` | Kartet over naturskog (v1), som kartbilder til visning i tvillingen |
 | `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
@@ -319,6 +320,7 @@ med ekte tall, uten å endre hovedsiden.
 | `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
 | `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
 | `tall.ts` | Tallene sidene viser, lest fra datamotoren |
+| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper og tresatt myr fra detaljklassene, og to lag fra kartet over naturskog |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av |
 | `sider/` | Hovedsidene og temasidene |

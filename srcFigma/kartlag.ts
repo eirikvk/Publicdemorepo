@@ -1,8 +1,9 @@
-/* Kartlag som bare tvillingen har: lag av detaljklassene i grunnkartet, som skogtyper og tresatt myr. Flisene tegnes i nettleseren
-   av de lagrede detaljklassene (solv.detaljklasser), i kartets flisnett: en flis på nivå 10 er én blokk, en flis zoomet ut er flere
+/* Kartlag som bare tvillingen har. Lag av detaljklassene i grunnkartet, som skogtyper og tresatt myr: flisene tegnes i nettleseren
+   av de lagrede detaljklassene (solv.detaljklasser), i kartets flisnett. En flis på nivå 10 er én blokk, en flis zoomet ut er flere
    blokker forminsket, og en flis zoomet inn er en del av en blokk forstørret. Hver detaljklasse får fargen laget gir den, eller ingen.
-   Flisene klippes mot kommunen. Lagene finnes bare for kommunene med lagrede detaljklasser. Kartet (Kart.tsx) legger dem inn i det
-   felles kartet når siden vises, og tar dem ut igjen etterpå. */
+   De finnes bare for kommunene med lagrede detaljklasser. Og lag fra Miljødirektoratets kart over naturskog, bare til visning. Alle
+   flisene klippes mot kommunen. Kartet (Kart.tsx) legger lagene inn i det felles kartet når siden vises, og tar dem ut igjen
+   etterpå. */
 import type ImageTile from 'ol/ImageTile.js';
 import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
@@ -11,7 +12,7 @@ import { abonner } from '../src/data/motor/tilstand.ts';
 import { valgtNr, verdi } from '../src/data/motor/valgt.ts';
 import { FLISNIVA, type Flis } from '../src/data/solv/felles.ts';
 import { DETALJKLASSER, type Detaljklasse } from '../src/data/solv/klasser.ts';
-import { flislerret, sti, tegneflate } from '../src/data/solv/raster.ts';
+import { flislerret, lesBilde, sti, tegneflate } from '../src/data/solv/raster.ts';
 import { KILDER, TOM, friskOpp, nyttSiden, plannett, tegnetKilde, type Flistegner } from '../src/ui/kart/felles.ts';
 import { ol } from '../src/ui/kart/ol.ts';
 
@@ -127,11 +128,52 @@ export function detaljlag(tittel: string, farge: (k: Detaljklasse) => string | n
   return lag;
 }
 
-/* Lagene på skogsiden. Skogen samlet, skogen etter treslag, og tresatt myr og innmarksbeite. */
+/* Et kartlag fra Miljødirektoratets kart over naturskog (bronse.naturskogflis), klippet mot kommunen. Bare til visning. */
+type Naturskoglag = Parameters<typeof katalog.bronse.naturskogflis>[0][0];
+export function naturskoglag(tittel: string, navn: Naturskoglag): TileLayer<XYZ> {
+  async function tegn(tile: ImageTile) {
+    try {
+      const G = verdi(katalog.solv.grense),
+        tc = tile.getTileCoord() as Flis,
+        u = plannett.getTileCoordExtent(tc);
+      if (!G || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
+      const bm = await lesBilde(await katalog.bronse.naturskogflis([navn, tc])),
+        c = flislerret(),
+        g = c.getContext('2d')!;
+      g.drawImage(bm, 0, 0, 512, 512);
+      if (bm.close) bm.close();
+      g.globalCompositeOperation = 'destination-in';
+      sti(g, G.koord, u, 512 / (u[2] - u[0]));
+      g.fill('evenodd');
+      tile.setImage(c);
+    } catch (e) {
+      tile.setState(3);
+    }
+  }
+  const lag = new ol.layer.Tile({
+    className: 'figma-lag',
+    opacity: 0.85,
+    properties: { tittel },
+    source: tegnetKilde(tegn as Flistegner, [KILDER.mdir])
+  });
+  const ny = nyttSiden();
+  abonner(() => {
+    const G = verdi(katalog.solv.grense);
+    if (!ny('grense', G)) return;
+    if (G) lag.setExtent(G.ext);
+    friskOpp(lag);
+  });
+  return lag;
+}
+
+/* Lagene på skogsiden: skogen samlet, skogen etter treslag, og tresatt myr og innmarksbeite fra grunnkartet, og to lag fra kartet
+   over naturskog */
 export const SKOGLAG = {
   skog: detaljlag('Økosystemtype skog', k => (k.treslag ? 'skog' : null)),
   skogtyper: detaljlag('Skogtyper', k => (k.treslag ? 'skog-' + k.treslag : null)),
   tresatt: detaljlag('Tresatt myr og innmarksbeite', k =>
     k.underlag === 'myr' ? 'myr-tresatt' : k.underlag === 'beite' ? 'beite-tresatt' : null
-  )
+  ),
+  naerhet: naturskoglag('Naturskogsnærhet', 'naturskogsnaerhet'),
+  for1940: naturskoglag('Skog etablert før 1940, ikke flatehogd', 'skog_etablert_foer_1940_ikke_flatehogd')
 };

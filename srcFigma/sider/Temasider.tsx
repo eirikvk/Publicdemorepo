@@ -175,13 +175,35 @@ function Skog({ tema }: { tema: Tema }) {
           ],
           ol: SKOGLAG.tresatt
         },
+        {
+          id: 'naerhet',
+          navn: 'Naturskogsnærhet',
+          kilde: 'Naturskog (v1), Miljødirektoratet',
+          farger: [
+            ['Lav', 'ns-lav'],
+            ['Høy', 'ns-hoy']
+          ],
+          ol: SKOGLAG.naerhet,
+          av: true
+        },
+        {
+          id: 'for1940',
+          navn: 'Skog etablert før 1940, ikke flatehogd',
+          kilde: 'Naturskog (v1), Miljødirektoratet',
+          farger: [['Før 1940, ikke flatehogd', 'ns-1940']],
+          ol: SKOGLAG.for1940,
+          av: true
+        },
         { ...KLASSER, av: true },
         PLAN
       ]}
       lagEtter={
         <>
           {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
-          <p className="hint">Lagene for naturskog og naturtyper i skog fra skissene er ikke laget ennå.</p>
+          <p className="hint">
+            Skissene har ett lag for naturskog. Kartet over naturskog har flere; her er to av dem. Laget for naturtyper
+            i skog er ikke laget ennå.
+          </p>
         </>
       }
       sporsmal={[

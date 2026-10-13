@@ -20,6 +20,7 @@ import * as dibk from './bronse/dibk-kommuneplan.ts';
 import * as kartverket from './bronse/kartverket.ts';
 import * as mdirInon from './bronse/mdir-inon.ts';
 import * as mdirNatur from './bronse/mdir-naturtema.ts';
+import * as mdirNaturskog from './bronse/mdir-naturskog.ts';
 import * as nibioGraa from './bronse/nibio-graa.ts';
 import * as nibioGrunnkart from './bronse/nibio-grunnkart.ts';
 import * as ssb from './bronse/ssb.ts';
@@ -55,7 +56,8 @@ const flisMidt =
     u.midt ? flisVed(u.midt, z === undefined ? u.z : z) : null;
 
 /* Kildene: hvem som eier dataene, datasettet, hvor det er beskrevet (Geonorge eller data.norge.no) og lisensen. Lisensene er
-   kontrollert mot Geonorge og data.norge.no 11. oktober 2026. Brukes av tabellene i bronse (kilde) til infoknappene og METODE.md. */
+   kontrollert mot Geonorge og data.norge.no 11. oktober 2026, naturskog 13. oktober (produktarket på Geonorge). Brukes av tabellene
+   i bronse (kilde) til infoknappene og METODE.md. */
 export const KILDE = {
   kartverket: {
     navn: 'Kartverket',
@@ -115,6 +117,12 @@ export const KILDE = {
     navn: 'Miljødirektoratet',
     datasett: 'Inngrepsfri natur i Norge',
     adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b',
+    lisens: 'NLOD 2.0'
+  },
+  naturskog: {
+    navn: 'Miljødirektoratet',
+    datasett: 'Naturskog (v1)',
+    adresse: 'https://data.norge.no/datasets/faf40899-a6fe-38ce-9419-c4849530a98b',
     lisens: 'NLOD 2.0'
   }
 } satisfies Record<string, Kildeinfo>;
@@ -365,6 +373,18 @@ export const katalog = {
       husk: 400,
       nokkel: flisnavn,
       etl: dibk.planflis
+    }),
+    naturskogflis: tabell<[mdirNaturskog.Naturskoglag, Flis], ArrayBuffer>({
+      lag: 'bronse',
+      navn: 'naturskogflis',
+      tittel: 'Kartbilder av naturskog',
+      om: 'kartbilder av et lag i Miljødirektoratets kart over naturskog (v1), 512 x 512 piksler, kalt med [lag, flisen]. Bare til visning i kartet, foreløpig bare i tvillingen fra Figma. Nøkkel: «lag/z/x/y».',
+      forklaring:
+        'Kartbilder fra Miljødirektoratets kart over naturskog, versjon 1: naturskogsnærhet, eller skog etablert før 1940 som ikke er flatehogd. Bare til visning; ingen tall bygger på dem.',
+      kilde: KILDE.naturskog,
+      husk: 200,
+      nokkel: ([l, tc]) => `${l}/${flisnavn(tc)}`,
+      etl: mdirNaturskog.naturskogflis
     }),
     inonbilde: tabell({
       lag: 'bronse',
@@ -1120,6 +1140,7 @@ const ETL_FILER: [string, object][] = [
   ['bronse/dibk-kommuneplan.ts', dibk],
   ['bronse/mdir-inon.ts', mdirInon],
   ['bronse/mdir-naturtema.ts', mdirNatur],
+  ['bronse/mdir-naturskog.ts', mdirNaturskog],
   ['solv/kommune.ts', solvKommune],
   ['solv/ssb.ts', solvSsb],
   ['solv/grunnkart.ts', solvGrunnkart],

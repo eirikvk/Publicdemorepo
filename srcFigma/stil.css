@@ -23,6 +23,10 @@
   --myr-apen: #5b9bc4;
   --myr-tresatt: #2b8c8c;
   --beite-tresatt: #c99a2e;
+  /* Kartet over naturskog, i fargene fra Miljødirektoratets tegnforklaring */
+  --ns-lav: #ead8bc;
+  --ns-hoy: #9b504f;
+  --ns-1940: #4c71b9;
   --luft: 24px;
   color-scheme: light;
 }
