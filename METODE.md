@@ -355,8 +355,10 @@ oversettes til dem med en fast nøkkel (`ssbTilHovedokosystem`):
      bedre kartlegging: i Trondheim gikk åpen myr ned 7,1 km² og skog opp 9,2 km² fra 2017 til 2024. Fordeles økningen i bebygd
      etter nedgangen i hver klasse, havner mye av den på myr, og ingenting på skog.
    - Gikk bebygd ned, føres nedgangen tilbake til naturen etter arealet.
-3. Tvillingen summerer dem til natur, jordbruk og bebygd (`gull.oversiktKort`) og viser hvor mye av hver landklasse som er bygget
-   ned (`gull.nedbygging`). Arealet i 2017 er arealet i 2024 med det som gikk til og fra bebygd lagt tilbake.
+3. Tvillingen summerer dem til natur, jordbruk og bebygd (`gull.oversiktKort`), viser hvor mye av hver landklasse som er bygget
+   ned (`gull.nedbygging`), og setter dem opp som et regnskap per hovedøkosystem: inngående 2017, endringen mot bebygd og
+   utgående 2024 (`gull.okosystemregnskap`). Arealet i 2017 er arealet i 2024 med det som gikk til og fra bebygd lagt tilbake, så
+   summen for land er den samme begge år.
 
 **Hva tabellene ikke gir.** SSB gir bare endringen mellom bebygd og hvert av de andre hovedøkosystemene. Endring over tid på
 undernivåene, som tresatt myr, skogtypene eller hva det bebygde arealet ble brukt til, kommer ikke nå. Den venter på en kilde, som
@@ -1010,7 +1012,8 @@ Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knap
 naturregnskapet til 25. november (se SSB-tallene, Syntetiske tabeller). Tvillingens oversikt bruker dem til natur, jordbruk og bebygd og
 til hva som er bygget ned. Fremtiden i skissene, som «2025–2035», er vedtatt arealplan, altså kommuneplanen fra DiBK som siden
 allerede bruker. «Siste fem år» i skissene betyr 2017–2024. Endring over tid på undernivåer, som tresatt myr, venter på kilde, som
-Naturkart. Hovedsidens tall er ikke endret.
+Naturkart. Hva det bebygde arealet økte mest av (arealformålet) utgår, og regnskapet på tvillingens naturtap-side er nå det
+syntetiske regnskapet per hovedøkosystem. Hovedsidens tall er ikke endret.
 
 **Tvillingen er bare brukergrensesnitt, 13. oktober 2026.** Utregningene som lå i tvillingen fra Figma, er flyttet til datamotoren,
 så begge sidene bygger på én metode:

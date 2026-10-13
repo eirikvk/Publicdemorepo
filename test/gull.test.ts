@@ -4,7 +4,12 @@ import assert from 'node:assert/strict';
 import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felles.ts';
 import { byggInon } from '../src/data/gull/inon.ts';
 import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
-import { byggEndring as byggBebygdEndring, byggFordeling, byggHovedklasser } from '../src/data/gull/syntetisk.ts';
+import {
+  byggEndring as byggBebygdEndring,
+  byggFordeling,
+  byggHovedklasser,
+  byggRegnskap
+} from '../src/data/gull/syntetisk.ts';
 
 const rutebilde = { u: [0, 0, 1, 1], res: 1, w: 1, h: 1 };
 
@@ -93,5 +98,15 @@ test('syntetiske tabeller: fordeling på hovedøkosystemer og endring mellom beb
       ['jor', -2],
       ['nat', -2]
     ]
+  );
+  /* regnskapet: 2017 er 2024 med endringen lagt tilbake, og summen for land er den samme begge år */
+  const R = byggRegnskap(F, E.klasser),
+    rad = (kode: string) => R.find(r => r.kode === kode)!,
+    sum = (f: (r: (typeof R)[number]) => number) => Math.round(R.reduce((a, r) => a + f(r), 0) * 1000) / 1000;
+  assert.deepEqual([rad('bebygdOpparbeidetAreal').inngaende, rad('bebygdOpparbeidetAreal').endring], [11, 4]);
+  assert.deepEqual([rad('skog').inngaende, rad('skog').endring], [51.5, -1.67]);
+  assert.equal(
+    sum(r => r.inngaende),
+    sum(r => r.utgaende)
   );
 });

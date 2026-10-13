@@ -25,11 +25,10 @@ import {
 } from '../komponenter/deler.tsx';
 import { figma, velgKartTema } from '../navigasjon.ts';
 import {
-  nedbygging,
-  bebygdOkning,
   graaIPlan,
   naturtema,
-  oppstilling,
+  nedbygging,
+  okosystemregnskap,
   oversiktKort,
   planPerOkosystem,
   planlagt,
@@ -64,9 +63,7 @@ export function Oversikt() {
   const U = oversiktKort(),
     N = nedbygging(),
     P = plansum(),
-    O = bebygdOkning(),
-    PD = planPerOkosystem(),
-    okning = O ? O.klasser : [];
+    PD = planPerOkosystem();
   return (
     <>
       <div className="innhold">
@@ -202,28 +199,6 @@ export function Oversikt() {
           )}
         </Figur>
       </div>
-      {O && okning.length > 0 && (
-        <section className="baand">
-          <div className="innhold baand-innhold">
-            <p className="baand-tekst">
-              Av det bebygde arealet økte <Merket>{okning[0].navn.toLowerCase()}</Merket> mest fra {O.fra} til {O.til}
-              {okning.length > 1 && (
-                <>
-                  . Deretter kommer{' '}
-                  {okning.slice(1).map((o, i) => (
-                    <span key={o.navn}>
-                      {i > 0 && ' og '}
-                      <Merket>{o.navn.toLowerCase()}</Merket>
-                    </span>
-                  ))}
-                </>
-              )}
-              .
-            </p>
-            <p className="hint">Fra SSBs arealklasser. Forskjellen mellom årene er ikke målt endring.</p>
-          </div>
-        </section>
-      )}
       <div className="innhold">
         <Mangler
           tittel={`${kommunen()} sammenlignet med resten av Norge`}
@@ -245,7 +220,7 @@ export function Oversikt() {
 
 export function Naturtapet() {
   const P = planlagt(),
-    O = oppstilling(),
+    R = okosystemregnskap(),
     G = graaIPlan(),
     temaer = (
       [
@@ -312,27 +287,40 @@ export function Naturtapet() {
           tittel="Regnskapet fra SSB"
           tekst={
             <>
-              <p>Arealet i 2017 (inngående), forskjellen, og arealet i nyeste år (utgående), per klasse.</p>
-              <p className="hint">Forskjellen mellom årgangene er ikke målt endring.</p>
+              <p>
+                Arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd, og arealet i 2024
+                (utgående).
+              </p>
+              <p className="hint">{SYNTETISK_TEKST}</p>
             </>
           }
-          kilder={['ssb']}
+          kilder={['grunnkart', 'ssb']}
         >
-          {svar(
-            O,
-            o =>
-              o && (
+          {svar(R, r =>
+            r.endret ? (
+              <p>Kommunegrensen er flyttet, så årene kan ikke sammenlignes.</p>
+            ) : (
+              <>
                 <Tabell
-                  hva="Regnskapet"
-                  kolonner={[{ navn: '' }, ...o.kolonner.map(k => ({ navn: k, tall: true }))]}
-                  rader={[
-                    ['Inngående ' + o.fra, ...o.inngaende.map(v => dekar(v))],
-                    ['Forskjell', ...o.netto.map(v => (v < 0 ? '−' : v > 0 ? '+' : '') + dekar(Math.abs(v)))],
-                    ['Utgående ' + o.til, ...o.utgaende.map(v => dekar(v))]
+                  hva="Regnskapet per hovedøkosystem"
+                  kolonner={[
+                    { navn: 'Økosystemtype' },
+                    { navn: r.fra, tall: true, ikkeMobil: true },
+                    { navn: 'Endring', tall: true },
+                    { navn: r.til, tall: true }
                   ]}
+                  rader={r.rader
+                    .filter(x => x.utgaende > 0 || x.endring !== 0)
+                    .map(x => [
+                      x.navn,
+                      dekar(x.inngaende),
+                      (x.endring < 0 ? '−' : x.endring > 0 ? '+' : '') + dekar(Math.abs(x.endring)),
+                      dekar(x.utgaende)
+                    ])}
                 />
-              ),
-            'Kan ikke sammenlignes'
+                {r.syntetisk && <Syntetisk />}
+              </>
+            )
           )}
         </Figur>
         <Mangler

@@ -101,22 +101,3 @@ export async function landOgVann(nr: string): Promise<ReturnType<typeof byggLand
   const [g, T] = await Promise.all([katalog.solv.grense(nr), katalog.solv.arealtall(nr)]);
   return byggLandOgVann(g.km2, T.land, T.ferskvann);
 }
-
-/* Tabellen gull.bebygdOkning: de tre bebygde arealklassene hos SSB som økte mest fra 2017 til nyeste år, uten uklassifisert
-   bebyggelse, med økningen i km². Tom når ingen økte. */
-export async function bebygdOkning(
-  nr: string
-): Promise<{ fra: string; til: string; klasser: { navn: string; km2: number }[] }> {
-  const D = await katalog.solv.arealdetaljer(nr),
-    n = D.aar.length - 1;
-  return {
-    fra: D.aar[0],
-    til: D.aar[n],
-    klasser: D.klasser
-      .filter(k => k.klasse === 'beb' && k.kode !== '14')
-      .map(k => ({ navn: k.navn, km2: k.km2[n] - k.km2[0] }))
-      .filter(k => k.km2 > 0.0005)
-      .sort((a, b) => b.km2 - a.km2)
-      .slice(0, 3)
-  };
-}

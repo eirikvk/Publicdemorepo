@@ -203,8 +203,8 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes som ett bilde |
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
-| `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann. Til tvillingen også de bebygde klassene som økte mest. |
-| `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, og summene tvillingen viser. Merket syntetisk. |
+| `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
+| `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, og summene og regnskapet tvillingen viser. Merket syntetisk. |
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Foreløpig bare til tvillingen. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
@@ -312,10 +312,8 @@ med ekte tall, uten å endre hovedsiden.
     kommunene der detaljklassene er lagret, foreløpig Trondheim (se METODE.md, Arealklassene).
   - De syntetiske tabellene til SSBs naturregnskap kommer (`gull/syntetisk.ts`): arealet per hovedøkosystem i 2024
     (`gull.okosystemfordeling`) og endringen mellom bebygd og landklassene 2017–2024 (`gull.bebygdEndring`), og det tvillingen
-    summerer av dem: kortene på oversikten (`gull.oversiktKort`) og nedbyggingen per landklasse (`gull.nedbygging`). Se METODE.md,
-    SSB-tallene.
-  - SSB-tallene (`gull/regnskap.ts`): de bebygde klassene som økte mest (`gull.bebygdOkning`), av SSBs arealklasser hver for seg
-    (`solv.arealdetaljer`).
+    summerer av dem: kortene på oversikten (`gull.oversiktKort`), nedbyggingen per landklasse (`gull.nedbygging`) og regnskapet per
+    hovedøkosystem (`gull.okosystemregnskap`). Se METODE.md, SSB-tallene.
   - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per verneform (`gull.vernPerVerneform`), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
     villreinområdene (`gull.inonIVillrein`).

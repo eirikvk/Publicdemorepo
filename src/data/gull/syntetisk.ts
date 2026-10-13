@@ -247,3 +247,53 @@ export async function nedbygging(nr: string): Promise<Nedbygging | null> {
     uforklart: E.uforklart
   };
 }
+
+/* Regnskapet for hvert hovedøkosystem på land: arealet ved start (inngående), endringen mot bebygd og arealet ved slutt (utgående).
+   Arealet ved start er arealet ved slutt med det som gikk til og fra bebygd lagt tilbake, så summen for land er den samme begge år. */
+export interface Regnskapsrad {
+  kode: string;
+  navn: string;
+  gruppe: KlasseId;
+  inngaende: number;
+  endring: number;
+  utgaende: number;
+}
+export function byggRegnskap(F: Fordelingsrad[], E: Endringsrad[]): Regnskapsrad[] {
+  const netto = summen(E.map(r => r.tilBebygd - r.fraBebygd));
+  return F.filter(h => LAND.includes(h.gruppe)).map(h => {
+    const r = E.find(x => x.kode === h.kode),
+      endring = h.gruppe === 'beb' ? netto : r ? r.fraBebygd - r.tilBebygd : 0;
+    return {
+      kode: h.kode,
+      navn: h.navn,
+      gruppe: h.gruppe,
+      inngaende: tiDekar(h.km2 - endring),
+      endring: tiDekar(endring),
+      utgaende: h.km2
+    };
+  });
+}
+/* Tabellen gull.okosystemregnskap: regnskapet per hovedøkosystem på land fra 2017 til 2024, fra de to tabellene over. endret:
+   kommunegrensen er flyttet, så årene kan ikke sammenlignes. */
+export interface Okosystemregnskap {
+  fra: string;
+  til: string;
+  syntetisk: boolean;
+  kilde: string;
+  endret: boolean;
+  delvis: boolean;
+  rader: Regnskapsrad[];
+}
+export async function okosystemregnskap(nr: string): Promise<Okosystemregnskap | null> {
+  const [F, E] = await Promise.all([katalog.gull.okosystemfordeling(nr), katalog.gull.bebygdEndring(nr)]);
+  if (!F) return null;
+  return {
+    fra: E.fra,
+    til: E.til,
+    syntetisk: F.syntetisk || E.syntetisk,
+    kilde: SYNTETISK,
+    endret: E.endret,
+    delvis: F.delvis,
+    rader: byggRegnskap(F.klasser, E.klasser)
+  };
+}

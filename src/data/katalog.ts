@@ -858,15 +858,6 @@ export const katalog = {
       brukerstyrt: true,
       etl: gullOkosystemer.planPerOkosystem
     }),
-    bebygdOkning: tabell({
-      lag: 'gull',
-      navn: 'bebygdOkning',
-      tittel: 'Bebygde klasser som økte mest',
-      om: 'de tre bebygde arealklassene hos SSB som økte mest fra 2017 til nyeste år, uten uklassifisert bebyggelse. Brukes foreløpig bare av tvillingen fra Figma.',
-      forklaring: 'Forskjellen fra 2017 for hver bebygd arealklasse hos SSB, de tre største økningene.',
-      husk: 12,
-      etl: gullRegnskap.bebygdOkning
-    }),
     vernPerVerneform: tabell({
       lag: 'gull',
       navn: 'vernPerVerneform',
@@ -953,6 +944,17 @@ export const katalog = {
       husk: 1,
       brukerstyrt: true,
       etl: gullSyntetisk.nedbygging
+    }),
+    okosystemregnskap: tabell({
+      lag: 'gull',
+      navn: 'okosystemregnskap',
+      tittel: 'Regnskap per hovedøkosystem 2017–2024 (syntetisk)',
+      om: 'SYNTETISK: arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd og arealet i 2024 (utgående), satt opp som et regnskap fra de syntetiske tabellene. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Arealet i 2024 med det som gikk til og fra bebygd lagt tilbake gir arealet i 2017. Summen for land er den samme begge år.',
+      husk: 1,
+      brukerstyrt: true,
+      etl: gullSyntetisk.okosystemregnskap
     }),
     dagensKlasser: tabell({
       lag: 'gull',

@@ -66,12 +66,11 @@ export function inonIVillrein() {
 export const graa = () => bilde(valgt(katalog.gull.graa));
 export const graaIPlan = () => verdi(katalog.gull.graaIPlan);
 
-/* Kortene på oversikten (natur, jordbruk, bebygd nå og endringen fra 2017) og nedbyggingen per landklasse, fra de syntetiske
-   tabellene. De bebygde klassene som økte mest og regnskapsoppstillingen, fra SSB. Og planlagt utbygging. */
+/* Kortene på oversikten (natur, jordbruk, bebygd nå og endringen fra 2017), nedbyggingen per landklasse og regnskapet per
+   hovedøkosystem, fra de syntetiske tabellene. Og planlagt utbygging. */
 export const oversiktKort = () => fraKartet(katalog.gull.oversiktKort);
 export const nedbygging = () => fraKartet(katalog.gull.nedbygging);
-export const bebygdOkning = () => verdi(katalog.gull.bebygdOkning);
-export const oppstilling = () => fraRad(valgt(katalog.gull.oppstilling));
+export const okosystemregnskap = () => fraKartet(katalog.gull.okosystemregnskap);
 export const plansum = () => verdi(katalog.gull.plansum);
 export const planlagt = () => verdi(katalog.gull.planlagt);
 export const kommuneplan = () => verdi(katalog.gull.kommuneplan);
