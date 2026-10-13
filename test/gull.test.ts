@@ -8,7 +8,9 @@ import {
   byggEndring as byggBebygdEndring,
   byggFordeling,
   byggHovedklasser,
-  byggRegnskap
+  byggNorge,
+  byggRegnskap,
+  byggSammenligning
 } from '../src/data/gull/syntetisk.ts';
 
 const rutebilde = { u: [0, 0, 1, 1], res: 1, w: 1, h: 1 };
@@ -61,30 +63,31 @@ test('land og vann: en liten rest regnes ikke som hav', () => {
   assert.equal(byggLandOgVann(100, 80, { inn: 5, elv: 5 })!.hav, 10);
 });
 
+const kl = (kode: string, klasse: string, km2: number[]) => ({ kode, navn: kode, klasse, km2 });
+const D = {
+  nr: '1',
+  aar: ['2017', '2024'],
+  endret: false,
+  klasser: [
+    kl('01', 'beb', [10, 14]),
+    kl('15', 'jor', [6, 5]),
+    kl('16', 'jor', [4, 3]),
+    kl('17.01', 'nat', [50, 49]),
+    kl('19', 'nat', [10, 10]),
+    kl('22.01', 'vann', [5, 5])
+  ]
+};
+
 test('syntetiske tabeller: fordeling på hovedøkosystemer og endring mellom bebygd og landklassene', () => {
-  const kl = (kode: string, klasse: string, km2: number[]) => ({ kode, navn: kode, klasse, km2 });
-  const D = {
-    nr: '1',
-    aar: ['2017', '2024'],
-    endret: false,
-    klasser: [
-      kl('01', 'beb', [10, 14]),
-      kl('15', 'jor', [6, 5]),
-      kl('16', 'jor', [4, 3]),
-      kl('17.01', 'nat', [50, 49]),
-      kl('19', 'nat', [10, 10]),
-      kl('22.01', 'vann', [5, 5])
-    ]
-  };
-  /* grunnkartet: bebygd 15, jordbruk 10, natur 60, hav 0, innsjø 5, elv 0 */
-  const F = byggFordeling([15, 10, 60, 0, 5, 0], D, '2024'),
+  /* SSBs klasser for 2024 med nøkkelen, og havet som resten av flaten på 100 km² */
+  const F = byggFordeling(D, '2024', 100),
     km2 = (kode: string) => F.find(r => r.kode === kode)!.km2;
-  assert.equal(km2('bebygdOpparbeidetAreal'), 15);
-  assert.equal(km2('dyrketmark'), 6.25); /* 10 · 5/8 */
-  assert.equal(km2('grasmark'), 3.75);
-  assert.equal(km2('skog'), 49.83); /* 60 · 49/59 */
-  assert.equal(km2('vatmark'), 10.17);
-  assert.equal(km2('innsjoerVannmagasiner'), 5);
+  assert.deepEqual(
+    ['bebygdOpparbeidetAreal', 'dyrketmark', 'grasmark', 'skog', 'vatmark', 'innsjoerVannmagasiner', 'hav'].map(km2),
+    [14, 5, 3, 49, 10, 5, 14]
+  );
+  /* uten hei og lite vegetert mark er det ingenting å ta kyststrendene fra */
+  assert.equal(km2('kyststrenderSvabergDyner'), 0);
   /* bebygd opp 4: først fra jordbruket som gikk ned (dyrket mark 1, grasmark 1), resten fra naturen etter arealet i 2017 */
   const E = byggBebygdEndring(D, '2017', '2024'),
     til = (kode: string) => E.klasser.find(r => r.kode === kode)!.tilBebygd;
@@ -103,10 +106,38 @@ test('syntetiske tabeller: fordeling på hovedøkosystemer og endring mellom beb
   const R = byggRegnskap(F, E.klasser),
     rad = (kode: string) => R.find(r => r.kode === kode)!,
     sum = (f: (r: (typeof R)[number]) => number) => Math.round(R.reduce((a, r) => a + f(r), 0) * 1000) / 1000;
-  assert.deepEqual([rad('bebygdOpparbeidetAreal').inngaende, rad('bebygdOpparbeidetAreal').endring], [11, 4]);
-  assert.deepEqual([rad('skog').inngaende, rad('skog').endring], [51.5, -1.67]);
+  assert.deepEqual([rad('bebygdOpparbeidetAreal').inngaende, rad('bebygdOpparbeidetAreal').endring], [10, 4]);
+  assert.deepEqual([rad('skog').inngaende, rad('skog').endring], [50.67, -1.67]);
   assert.equal(
     sum(r => r.inngaende),
     sum(r => r.utgaende)
   );
+});
+
+test('syntetiske tabeller: kyststrender er en fast andel av havet, tatt fra hei og lite vegetert mark', () => {
+  const D2 = { ...D, klasser: [kl('18', 'nat', [5, 5]), kl('20', 'nat', [5, 5])] },
+    F = byggFordeling(D2, '2024', 1000),
+    km2 = (kode: string) => F.find(r => r.kode === kode)!.km2;
+  /* hav 990 km², kyst 0,1 % av det, tatt likt fra de to (avrundet til 10 dekar) */
+  assert.deepEqual(
+    ['hav', 'kyststrenderSvabergDyner', 'heiBuskmark', 'liteVegetertMark'].map(km2),
+    [990, 0.99, 4.51, 4.51]
+  );
+});
+
+test('syntetiske tabeller for Norge: summen tar bare med kommunene som kan sammenlignes', () => {
+  const B = {
+      ...D,
+      nr: '2',
+      klasser: [kl('01', 'beb', [5, 6]), kl('15', 'jor', [10, 10]), kl('17.01', 'nat', [20, 19])]
+    },
+    C = { ...D, nr: '3', endret: true, klasser: [kl('01', 'beb', [0, 8]), kl('17.01', 'nat', [0, 30])] },
+    N = byggNorge({ 1: D, 2: B, 3: C }, { 1: 100, 2: 35, 3: 38 }),
+    S = byggSammenligning(N, '1')!;
+  assert.equal(N.sammenlignbare, 2);
+  /* natur bygget ned: 2 km² i kommune 1 og 1 km² i kommune 2. Kommune 3 har flyttet grense. */
+  assert.equal(Math.round(S.naturtap.andelAvNorge! * 100) / 100, 66.67);
+  assert.equal(S.naturtap.snitt, 50);
+  assert.deepEqual([S.jordbruk.km2, S.jordbruk.plass, S.jordbruk.av], [2, 1, 2]);
+  assert.equal(byggSammenligning(N, '3')!.jordbruk.plass, null);
 });

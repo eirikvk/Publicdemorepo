@@ -4,6 +4,7 @@
 import type { Rad, Tabell } from '../src/data/cache.ts';
 import type { Bildetall } from '../src/data/gull/felles.ts';
 import type { PlanPerOkosystem } from '../src/data/gull/okosystemer.ts';
+import type { Sammenligning } from '../src/data/gull/syntetisk.ts';
 import type { TemaIPlan, Temaet } from '../src/data/gull/temaer.ts';
 import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
 import { bildetallet, valgt, verdi } from '../src/data/motor/valgt.ts';
@@ -21,12 +22,6 @@ function fraGrunnkart<T>(t: Tabell<string, T | null>): Svar<T> {
   const S = fraRad(valgt(t));
   if (S.s !== 'ok') return S;
   return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
-}
-/* Svarene som bygger på dagens klasser for hele kommunen (de syntetiske tabellene): mangler til kartet for kommunen er hentet */
-function fraKartet<T>(t: Tabell<string, T | null>): Svar<T> {
-  const S = fraRad(valgt(t));
-  if (S.s !== 'ok') return S;
-  return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnes ut når kartet for kommunen er hentet' };
 }
 export const skog = () => fraGrunnkart(katalog.gull.skog);
 export const vatmark = () => fraGrunnkart(katalog.gull.vatmark);
@@ -68,9 +63,14 @@ export const graaIPlan = () => verdi(katalog.gull.graaIPlan);
 
 /* Kortene på oversikten (natur, jordbruk, bebygd nå og endringen fra 2017), nedbyggingen per landklasse og regnskapet per
    hovedøkosystem, fra de syntetiske tabellene. Og planlagt utbygging. */
-export const oversiktKort = () => fraKartet(katalog.gull.oversiktKort);
-export const nedbygging = () => fraKartet(katalog.gull.nedbygging);
-export const okosystemregnskap = () => fraKartet(katalog.gull.okosystemregnskap);
+export const oversiktKort = () => fraRad(valgt(katalog.gull.oversiktKort));
+export const nedbygging = () => fraRad(valgt(katalog.gull.nedbygging));
+export const okosystemregnskap = () => fraRad(valgt(katalog.gull.okosystemregnskap));
+/* Kommunen sammenlignet med resten av Norge, fra de syntetiske tabellene for alle kommunene. Ingen når kommunen ikke er med. */
+export function sammenligning(): Svar<Sammenligning> {
+  const S = fraRad(valgt(katalog.gull.sammenligning));
+  return S.s === 'ok' && !S.v ? { s: 'ingen' } : (S as Svar<Sammenligning>);
+}
 export const plansum = () => verdi(katalog.gull.plansum);
 export const planlagt = () => verdi(katalog.gull.planlagt);
 export const kommuneplan = () => verdi(katalog.gull.kommuneplan);

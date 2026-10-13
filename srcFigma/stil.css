@@ -234,6 +234,12 @@ main > .innhold > h2 + ul {
 .mangler-tall {
   color: var(--dempet);
 }
+.tallkort dd .tall-under {
+  display: block;
+  font-size: var(--md-typography-body-m);
+  font-weight: 400;
+  color: var(--dempet);
+}
 @media (max-width: 720px) {
   .tallkort {
     grid-template-columns: 1fr 1fr;
@@ -392,6 +398,13 @@ main > .innhold > h2 + ul {
 }
 
 /* Det som ikke er laget ennå */
+/* Kommunen sammenlignet med resten av Norge på oversikten */
+.sammenligning {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
 .mangler {
   border: 2px dashed var(--md-color-beige-7);
   border-radius: 4px;

@@ -8,6 +8,8 @@ import { KL } from './klasser.ts';
 /* Svaret fra SSB i JSON-stat 2.0, så langt siden bruker det */
 type Indeks = string[] | Record<string, number>;
 export interface JsonStat {
+  id?: string[];
+  size?: number[];
   dimension: Record<string, { category: { index: Indeks } }>;
   value: number[];
 }
@@ -125,6 +127,39 @@ export function tolkDetaljer(j: JsonStat, nr: string): Arealdetaljer {
   };
 }
 
+/* Tolker svaret med arealklassene for alle kommunene (bronse.arealAlle): én Arealdetaljer per kommune, som tolkDetaljer gir for én.
+   Regionene som ikke er kommuner (resten, Svalbard og sokkelen), er ikke med. */
+export function tolkDetaljerAlle(j: JsonStat): Arealdetaljer[] {
+  const R = liste(j.dimension.Region.category.index),
+    K = liste(j.dimension.ArealKlasse.category.index),
+    T = liste(j.dimension.Tid.category.index),
+    ider = j.id || ['Region', 'ArealKlasse', 'ContentsCode', 'Tid'],
+    str = j.size || ider.map(d => liste(j.dimension[d].category.index).length),
+    /* plassen i value for region r, klasse k og år t, med ContentsCode fast */
+    plass = (r: number, k: number, t: number) => {
+      const p: Record<string, number> = { Region: r, ArealKlasse: k, ContentsCode: 0, Tid: t };
+      return ider.reduce((o, d, i) => o * str[i] + (p[d] || 0), 0);
+    };
+  return R.flatMap((kode, r) => {
+    const nr = /^K-(\d{4})$/.exec(kode);
+    if (!nr) return [];
+    const klasser = DETALJER.map(([k, navn, klasse]) => {
+      const i = K.indexOf(k);
+      return { kode: k, navn, klasse, km2: T.map((_, t) => (i < 0 ? 0 : j.value[plass(r, i, t)] || 0)) };
+    });
+    const alt = (t: number) => summen(klasser.map(k => k.km2[t])),
+      n = T.length;
+    return [
+      {
+        nr: nr[1],
+        aar: T,
+        klasser,
+        endret: n > 1 && (!alt(0) || Math.abs(alt(n - 1) - alt(0)) / alt(n - 1) > GRENSE_FLYTTET)
+      }
+    ];
+  });
+}
+
 /* Tabellen solv.arealtall: arealet per klasse fra SSB i nyeste år, med landareal, innsjø og elv */
 export async function arealtall(nr: string): Promise<Arealtall> {
   return tolkAreal(await katalog.bronse.arealtall(nr));
@@ -136,4 +171,8 @@ export async function historie(nr: string): Promise<Historie | null> {
 /* Tabellen solv.arealdetaljer: arealet per arealklasse hos SSB, hver for seg, i hvert år fra 2017 */
 export async function arealdetaljer(nr: string): Promise<Arealdetaljer> {
   return tolkDetaljer(await katalog.bronse.arealdetaljer(nr), nr);
+}
+/* Tabellen solv.arealdetaljerAlle: arealklassene hos SSB hver for seg i 2017 og 2024 for alle kommunene, etter kommunenummer */
+export async function arealdetaljerAlle(): Promise<Record<string, Arealdetaljer>> {
+  return Object.fromEntries(tolkDetaljerAlle(await katalog.bronse.arealAlle()).map(D => [D.nr, D]));
 }

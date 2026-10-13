@@ -1,6 +1,6 @@
 /* Datamotoren, kommunen: listen over kommuner, valg av kommune, og det sidene viser, som bes om med en gang. Alt hentes gjennom
    katalogen. Sidene spør selv etter det de trenger, men slik er det meste klart før noen spør, og sidene kan byttes uten å vente. */
-import { nårBrukerEndret, se } from '../cache.ts';
+import { nårBrukerEndret, se, type Tabell } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import type { Fylke, Kommune } from '../solv/felles.ts';
 import { oppdaterEgne } from './egne.ts';
@@ -32,9 +32,11 @@ export const finn = (nr: string): [Fylke, Kommune] | null => {
 };
 
 const stille = () => {}; /* en feil står i cachen, og siden viser den */
-/* Alt sidene viser for kommunen nr: alle tabellene i gull. De henter selv det de bygger på. */
+/* Alt sidene viser for kommunen nr: alle tabellene i gull, unntatt de som regnes etter behov. De henter selv det de bygger på. */
 function regnGull(nr: string) {
-  if (nr === valgtNr()) for (const t of Object.values(katalog.gull)) t(nr).catch(stille);
+  if (nr === valgtNr())
+    for (const t of Object.values(katalog.gull) as unknown as Tabell<string, unknown>[])
+      if (!t.etterBehov) t(nr).catch(stille);
 }
 /* Når brukeren har endret noe (egne områder, eller kartet som er hentet), regnes det sidene viser ut på nytt med en gang */
 nårBrukerEndret(regnGull);

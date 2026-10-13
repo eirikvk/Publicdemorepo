@@ -57,6 +57,7 @@ export interface Tabelldef<N, V> {
   fil?: string /* filen under src/data som ETL-funksjonen står i (settes av katalogen), eller som fyller tabellen */;
   voksende?: boolean /* verdien fylles på etter at den er lagt inn */;
   brukerstyrt?: boolean /* bygger på det brukeren gjør, og er utdatert når brukeren har endret noe i kommunen (nøkkelen) */;
+  etterBehov?: boolean /* i gull: regnes først når en side leser den, ikke sammen med de andre når kommunen velges */;
   glemt?: (v: V, nokkel: string) => void /* kalles når en verdi går ut av cachen */;
   lagret?: (
     n: N

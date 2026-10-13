@@ -94,3 +94,14 @@ export async function kommunen(nr: string): Promise<Kommune> {
 export async function kommunegrense(nr: string): Promise<GeoJsonFlate> {
   return hentKommunegrense(await kommunen(nr));
 }
+
+/* Tabellen bronse.kommuneareal: flaten til hver kommune i km² (land, ferskvann og hav), regnet av Kartverkets grenser én gang og lagret
+   sammen med siden (kommuneareal.json, laget av verktoy/kommuneareal.ts) */
+export interface Kommuneareal {
+  kilde: string;
+  hentet: string;
+  km2: Record<string, number>;
+}
+export async function kommuneareal(): Promise<Kommuneareal> {
+  return hent('Egen fil', 'Flaten til kommunene', 'kommuneareal.json') as Promise<Kommuneareal>;
+}

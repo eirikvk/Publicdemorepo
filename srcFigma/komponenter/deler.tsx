@@ -181,10 +181,10 @@ export function Liggende({ data, hva, tekst }: { data: Stolpe[]; hva: string; te
   );
 }
 
-/* Et felt i skissen som ikke er laget ennå: hva det skal vise, og hva som trengs */
-export const Mangler = ({ tittel, trenger }: { tittel: string; trenger: string }) => (
+/* Et felt i skissen som ikke er laget ennå: hva det skal vise, og hva som trengs. merke står øverst (til vanlig «Ikke laget ennå»). */
+export const Mangler = ({ tittel, trenger, merke }: { tittel: string; trenger: string; merke?: string }) => (
   <section className="mangler">
-    <span className="mangler-merke">Ikke laget ennå</span>
+    <span className="mangler-merke">{merke || 'Ikke laget ennå'}</span>
     <h2 className="md-typography-heading-s">{tittel}</h2>
     <p>Krever: {trenger}</p>
   </section>

@@ -54,8 +54,8 @@ export const HOVEDOKOSYSTEMER: { kode: string; navn: string; gruppe: KlasseId }[
 ];
 /* Den faste nøkkelen fra SSBs arealklasser (tabell 09594) til hovedøkosystemene. Bebygd (01–14) er bebygd, fulldyrka jord er dyrket
    mark, ikke fulldyrka jord er grasmark, skog er skog, åpen fastmark er hei og buskmark, åpen myr er våtmark, og bart fjell og snø og
-   is er lite vegetert mark. Uklassifisert ubebygd område (24) og vann (22) gir null: det første fordeles på naturen der det brukes,
-   og vann er ikke land. Kyststrender, svaberg og dyner har ingen egen klasse hos SSB. */
+   is er lite vegetert mark, innsjø og tjern er innsjøer og vannmagasiner, og elv er elver, bekker og kanaler. Uklassifisert ubebygd
+   område (24) gir null. Kyststrender, svaberg og dyner og hav har ingen egen klasse hos SSB. */
 export function ssbTilHovedokosystem(k: { kode: string; klasse: string }): string | null {
   if (k.klasse === 'beb') return 'bebygdOpparbeidetAreal';
   if (k.kode === '15') return 'dyrketmark';
@@ -64,6 +64,8 @@ export function ssbTilHovedokosystem(k: { kode: string; klasse: string }): strin
   if (k.kode === '18') return 'heiBuskmark';
   if (k.kode === '19') return 'vatmark';
   if (k.kode === '20' || k.kode === '21') return 'liteVegetertMark';
+  if (k.kode === '22.01') return 'innsjoerVannmagasiner';
+  if (k.kode === '22.02') return 'elverBekkerKanaler';
   return null;
 }
 

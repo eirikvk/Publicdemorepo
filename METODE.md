@@ -327,11 +327,12 @@ SSB publiserer to tabeller for naturregnskapet 25. november 2026: arealet per ko
 grunnkartet 2025), og endringen i areal fra 2017 til 2024 mellom bebygd og hver av de andre landklassene. Til de kommer, står to
 **syntetiske** tabeller i gull i stedet (`src/data/gull/syntetisk.ts`). De har samme form: kommune, hovedøkosystem og år eller
 periode, med areal i km², og feltet `syntetisk` sier at tallene er syntetiske, så sidene kan si det. Når SSBs tabeller kommer, hentes
-de i bronse og tolkes i sølv, og de to gull-tabellene leser dem i stedet. Det som bygger på dem, endres ikke.
+de i bronse og tolkes i sølv, og de to gull-tabellene leser dem i stedet. Det som bygger på dem, endres ikke. Tallene skal bare ha
+riktig størrelsesorden.
 
-Begge lages av det siden alt henter, uten nye kall: dagens klasser i grunnkartet for hele kommunen og SSBs arealklasser fra 2017.
-Hovedøkosystemene er økosystemtypene på nivå 1 i grunnkartet (`HOVEDOKOSYSTEMER` i `src/data/solv/klasser.ts`). SSBs arealklasser
-oversettes til dem med en fast nøkkel (`ssbTilHovedokosystem`):
+Begge lages av SSBs arealstatistikk (tabell 09594) alene, så de kan lages for alle kommunene av ett kall til SSB. Hovedøkosystemene
+er økosystemtypene på nivå 1 i grunnkartet (`HOVEDOKOSYSTEMER` i `src/data/solv/klasser.ts`). SSBs arealklasser oversettes til dem
+med en fast nøkkel (`ssbTilHovedokosystem`):
 
 | SSB, tabell 09594 | Hovedøkosystem |
 |---|---|
@@ -342,12 +343,18 @@ oversettes til dem med en fast nøkkel (`ssbTilHovedokosystem`):
 | 18 åpen fastmark | Hei og buskmark |
 | 19 åpen myr | Våtmark |
 | 20 bart fjell, grus- og blokkmark, og 21 varig snø, is og bre | Lite vegetert mark |
-| 24 uklassifisert ubebygd område, og 22 vann | Ikke med |
+| 22.01 innsjø og tjern | Innsjøer og vannmagasiner |
+| 22.02 elv | Elver, bekker og kanaler |
+| Ingen | Hav: resten av kommunens flate |
+| Ingen | Kyststrender, svaberg og dyner: 0,1 % av havet |
+| 24 uklassifisert ubebygd område | Ikke med |
 
-1. **Arealet per hovedøkosystem i 2024** (`gull.okosystemfordeling`). Bebygd, jordbruk, natur, hav, innsjøer og elver er
-   grunnkartets areal, talt i bildet av dagens klasser for kommunen (`gull.grunnkartAreal`). Jordbruket deles i dyrket mark og
-   grasmark, og naturen i skog, hei og buskmark, lite vegetert mark og våtmark, etter andelene i SSBs arealklasser for 2024.
-   Kyststrender, svaberg og dyner har ingen egen klasse hos SSB og blir 0.
+1. **Arealet per hovedøkosystem i 2024** (`gull.okosystemfordeling`). SSBs arealklasser for 2024 med nøkkelen. Havet er kommunens
+   flate minus land og ferskvann, og 0 når resten er så liten at den bare er avvik mellom grense og statistikk, som i Land og vann.
+   Flaten til alle kommunene ligger i `public/kommuneareal.json`, regnet av Kartverkets grenser én gang med
+   `verktoy/kommuneareal.ts` (`bronse.kommuneareal`), så siden slipper å hente grensene til alle kommunene. Kyststrender, svaberg og
+   dyner har ingen klasse hos SSB. De settes til 0,1 % av havet (`KYST_AV_HAV`), tatt fra hei og buskmark og lite vegetert mark etter
+   arealet. I grunnkartet for Trondheim er de 0,08 km² mot 187 km² hav (0,04 %).
 2. **Endringen mellom bebygd og landklassene fra 2017 til 2024** (`gull.bebygdEndring`), med en grådig tommelfingerregel:
    - Økningen i bebygd tas først fra jordbruket, så langt dyrket mark og grasmark gikk ned. Jordbruksarealet er godt kartlagt, og
      når det går ned, er det for det meste fordi det bygges ned.
@@ -359,20 +366,31 @@ oversettes til dem med en fast nøkkel (`ssbTilHovedokosystem`):
    ned (`gull.nedbygging`), og setter dem opp som et regnskap per hovedøkosystem: inngående 2017, endringen mot bebygd og
    utgående 2024 (`gull.okosystemregnskap`). Arealet i 2017 er arealet i 2024 med det som gikk til og fra bebygd lagt tilbake, så
    summen for land er den samme begge år.
+4. **Hele Norge** (`gull.okosystemerNorge`). Ett kall til SSB gir arealklassene i 2017 og 2024 for alle kommunene, med SSBs
+   sammenslåtte tidsserier, så tallene gjelder dagens kommuner (`bronse.arealAlle`, rundt 100 kB). De to tabellene lages for hver
+   kommune på samme måte som over, og summeres til Norge. Endringen summeres bare for kommunene der grensen ikke er flyttet siden
+   2017 (samlet areal som avviker mer enn 0,5 %): 316 av 357. Tabellen regnes først når en side ber om den (`etterBehov`), så
+   hovedsiden henter den ikke.
+5. **Kommunen mot Norge** (`gull.sammenligning`): kommunens andel av naturen som er bygget ned i Norge, og snittet for en kommune;
+   andelen av naturen som er bygget ned, i kommunen og i Norge; plassen for jordbruk og for våtmark som er bygget ned, der 1 bygget
+   ned mest, etter areal og etter andel av arealet i 2017; og skog og våtmark som andel av landarealet, i kommunen og i Norge.
 
 **Hva tabellene ikke gir.** SSB gir bare endringen mellom bebygd og hvert av de andre hovedøkosystemene. Endring over tid på
 undernivåene, som tresatt myr, skogtypene eller hva det bebygde arealet ble brukt til, kommer ikke nå. Den venter på en kilde, som
 Naturkart. Våtmark er her hovedøkosystemet våtmark: myr og annen våtmark uten trær. Tresatt myr hører til skog. Der skissene sier
-«siste fem år», betyr det 2017–2024.
+«siste fem år», betyr det 2017–2024. Sammenligninger som krever kartdata for alle kommuner (villreinområder, naturskog,
+kartleggingsgrad, inngrepsfri natur og gjennomsnittet for temaene), krever en dataplattform som regner dem ut på forhånd.
 
 **Usikkerhet.**
 
 - Tallene er syntetiske og skal byttes med SSBs tabeller. Endringen er et anslag av arealet i to år, ikke målte overganger, og SSB
   skriver at forskjellen mellom årgangene også kommer av bedre kartlegging.
-- Arealet i 2024 er talt i bildet av hele kommunen zoomet ut, med høyst 2048 piksler på lengste side. Mens kartet hentes for en
-  kommune uten lagrede klasser, gjelder det bare det som er hentet (`delvis`).
-- For Trondheim gir den syntetiske fordelingen 280,5 km² skog og 39,0 km² våtmark, mot 293,5 km² skog (med tresatt myr og beite)
-  og 38,2 km² åpen våtmark i detaljklassene.
+- SSBs tabeller bygger på grunnkartet, som kan gi andre tall enn arealstatistikken. For Trondheim i 2024: bebygd 73,5 km² i
+  arealstatistikken mot 80,8 km² i grunnkartet, skog 286,3 mot 280,5 km² (grunnkartets areal delt etter SSBs andeler), og våtmark
+  39,8 mot 39,0 km².
+- Kyststrender, svaberg og dyner er bare en fast andel av havet, og bør prøves mot grunnkartet i en kommune med åpen kyst.
+- Plassen i Norge avhenger av den grådige regelen: jordbruk som gikk ned, regnes som bygget ned først. I de syntetiske tallene er
+  Trondheim nr. 1 av 316 for jordbruk bygget ned (1 510 dekar).
 
 ## Planlagt utbygging
 
@@ -1007,6 +1025,13 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Syntetiske tabeller av arealstatistikken, og hele Norge, 13. oktober 2026.** De syntetiske tabellene lages nå av SSBs
+arealstatistikk alene, med alle de elleve hovedøkosystemene: havet er resten av kommunens flate, og kyststrender, svaberg og dyner en
+fast andel av havet. Slik kan de lages for alle kommunene av ett kall til SSB, og tvillingen sammenligner kommunen med Norge:
+andelen av naturtapet, plassen for jordbruk og våtmark som er bygget ned, og skog og våtmark. Flaten til alle kommunene er lagret i
+`public/kommuneareal.json`. Sammenligningene som krever kartdata for alle kommuner, er merket «Krever dataplattform». Hovedsidens tall
+er ikke endret.
 
 **Syntetiske tabeller og vedtatt arealplan, 13. oktober 2026.** To syntetiske tabeller står i stedet for SSBs tabeller for
 naturregnskapet til 25. november (se SSB-tallene, Syntetiske tabeller). Tvillingens oversikt bruker dem til natur, jordbruk og bebygd og

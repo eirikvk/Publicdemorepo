@@ -38,3 +38,8 @@ export async function tolketBilde<E>(
   for (const x of b) P.push(await bildePiksler(x, R.w, R.h));
   return { ...R, ...tolk(P, flatePiksler(g.koord, R)), nr, skala: m2PerKm2(g.ext) };
 }
+
+/* Tabellen solv.kommuneareal: flaten til hver kommune i km² (land, ferskvann og hav), etter kommunenummer */
+export async function kommuneareal(): Promise<Record<string, number>> {
+  return (await katalog.bronse.kommuneareal()).km2;
+}

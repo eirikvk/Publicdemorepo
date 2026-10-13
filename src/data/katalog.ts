@@ -31,6 +31,7 @@ import * as solvKommune from './solv/kommune.ts';
 import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvPunkt from './solv/punkt.ts';
 import * as solvSsb from './solv/ssb.ts';
+type solvSsbJson = solvSsb.JsonStat;
 import * as solvTemaer from './solv/temaer.ts';
 import { PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
 import * as solvEgne from './solv/egne.ts';
@@ -248,6 +249,28 @@ export const katalog = {
       kilde: KILDE.ssb,
       husk: 6,
       etl: ssb.arealdetaljer
+    }),
+    arealAlle: tabell<void, solvSsbJson>({
+      lag: 'bronse',
+      navn: 'arealAlle',
+      tittel: 'Arealklassene fra SSB for alle kommuner',
+      om: 'arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, som JSON-stat. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Det samme som arealdetaljer, men for alle kommunene og bare 2017 og 2024: rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner.',
+      kilde: KILDE.ssb,
+      husk: 1,
+      etl: ssb.arealAlle
+    }),
+    kommuneareal: tabell<void, kartverket.Kommuneareal>({
+      lag: 'bronse',
+      navn: 'kommuneareal',
+      tittel: 'Flaten til kommunene',
+      om: 'flaten til hver kommune i km², med land, ferskvann og hav, regnet av Kartverkets kommunegrenser én gang og lagret sammen med siden (kommuneareal.json). Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Flaten innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts.',
+      kilde: KILDE.kartverket,
+      husk: 1,
+      etl: kartverket.kommuneareal
     }),
     grunnkartflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
@@ -524,6 +547,25 @@ export const katalog = {
       ],
       husk: 6,
       etl: solvSsb.arealdetaljer
+    }),
+    arealdetaljerAlle: tabell<void, Record<string, solvSsb.Arealdetaljer>>({
+      lag: 'solv',
+      navn: 'arealdetaljerAlle',
+      tittel: 'Arealklassene for alle kommuner',
+      om: 'arealet per arealklasse hos SSB i 2017 og 2024 for alle kommunene, etter kommunenummer, i samme form som arealdetaljer. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Svaret for alle kommunene delt opp per kommune. Avviker kommunens samlede areal med mer enn 0,5 % fra 2017 til 2024, er grensen trolig flyttet.',
+      husk: 1,
+      etl: solvSsb.arealdetaljerAlle
+    }),
+    kommuneareal: tabell<void, Record<string, number>>({
+      lag: 'solv',
+      navn: 'kommuneareal',
+      tittel: 'Flaten til kommunene',
+      om: 'flaten til hver kommune i km² (land, ferskvann og hav), etter kommunenummer. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring: 'Flaten til hver kommune fra den lagrede filen.',
+      husk: 1,
+      etl: solvKommune.kommuneareal
     }),
     klasser: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
@@ -886,29 +928,17 @@ export const katalog = {
       husk: 12,
       etl: gullTemaer.verdsattPerNaturtype
     }),
-    grunnkartAreal: tabell({
-      lag: 'gull',
-      navn: 'grunnkartAreal',
-      tittel: 'Arealet per klasse i grunnkartet',
-      om: 'arealet i km² per klasse i grunnkartet for kommunen (bebygd, jordbruk, natur, hav, innsjø og elv), talt i bildet av dagens klasser zoomet ut. Henter ingenting i tillegg. Bare for valgt kommune.',
-      forklaring:
-        'Arealet per klasse i grunnkartet, talt i bildet av dagens klasser for hele kommunen, som kartet alt viser. En piksel teller når den er minst halvt dekket.',
-      husk: 1,
-      brukerstyrt: true,
-      etl: gullGrunnkart.grunnkartAreal
-    }),
     okosystemfordeling: tabell({
       lag: 'gull',
       navn: 'okosystemfordeling',
       tittel: 'Hovedøkosystemer per kommune 2024 (syntetisk)',
-      om: 'SYNTETISK: arealet per hovedøkosystem i kommunen i 2024, i samme form som SSBs tabell som publiseres 25. november 2026. Grunnkartets areal for bebygd, jordbruk, natur og vann, delt videre etter andelene i SSBs arealklasser for 2024. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'SYNTETISK: arealet per hovedøkosystem i kommunen i 2024, i samme form som SSBs tabell som publiseres 25. november 2026. SSBs arealklasser for 2024 med en fast nøkkel, havet som resten av kommunens flate, og kyststrender, svaberg og dyner som en fast andel av havet. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Syntetiske tall til SSBs tabell kommer. Bebygd, jordbruk, natur og vann er grunnkartets areal. Jordbruket og naturen deles på hovedøkosystemene etter andelene i SSBs arealklasser for 2024, med en fast nøkkel.',
+        'Syntetiske tall til SSBs tabell kommer. SSBs arealklasser for 2024 oversettes til hovedøkosystemer med en fast nøkkel. Havet er kommunens flate minus land og ferskvann. Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.',
       usikkerhet: [
-        'Syntetiske tall: en tommelfingerregel som står i stedet for SSBs tabell til den publiseres. Kyststrender, svaberg og dyner kan ikke skilles ut og blir 0.'
+        'Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i grunnkartet.'
       ],
-      husk: 1,
-      brukerstyrt: true,
+      husk: 12,
       etl: gullSyntetisk.okosystemfordeling
     }),
     bebygdEndring: tabell({
@@ -917,7 +947,7 @@ export const katalog = {
       tittel: 'Endring mellom bebygd og landklassene 2017–2024 (syntetisk)',
       om: 'SYNTETISK: arealet fra hver landklasse til bebygd, og fra bebygd til klassen, fra 2017 til 2024, i samme form som SSBs tabell som publiseres 25. november 2026. Anslått av SSBs arealklasser for de to årene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Syntetiske tall til SSBs tabell kommer. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel, og økningen i bebygd fordeles på landklassene som gikk ned, i forhold til hvor mye hver gikk ned.',
+        'Syntetiske tall til SSBs tabell kommer. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel. Økningen i bebygd tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet i 2017.',
       usikkerhet: [
         'Syntetiske tall: arealet i to år, ikke målte overganger. SSB skriver at forskjellen mellom årgangene også kommer av bedre kartlegging.'
       ],
@@ -931,8 +961,7 @@ export const katalog = {
       om: 'natur, jordbruk og bebygd i 2024 med andelen av landarealet og endringen fra 2017, summert fra de syntetiske tabellene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Hovedøkosystemene summert til natur, jordbruk og bebygd, og endringen mellom bebygd og de andre summert på samme måte.',
-      husk: 1,
-      brukerstyrt: true,
+      husk: 12,
       etl: gullSyntetisk.oversiktKort
     }),
     nedbygging: tabell({
@@ -941,8 +970,7 @@ export const katalog = {
       tittel: 'Nedbygd per landklasse 2017–2024 (syntetisk)',
       om: 'hvor mye av hver landklasse som ble bygget ned fra 2017 til 2024, med arealet i 2024 og andelen av arealet i 2017, og summen for natur og jordbruk, fra de syntetiske tabellene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring: 'Arealet fra hver landklasse til bebygd, med andelen av arealet klassen hadde i 2017.',
-      husk: 1,
-      brukerstyrt: true,
+      husk: 12,
       etl: gullSyntetisk.nedbygging
     }),
     okosystemregnskap: tabell({
@@ -952,9 +980,33 @@ export const katalog = {
       om: 'SYNTETISK: arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd og arealet i 2024 (utgående), satt opp som et regnskap fra de syntetiske tabellene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Arealet i 2024 med det som gikk til og fra bebygd lagt tilbake gir arealet i 2017. Summen for land er den samme begge år.',
-      husk: 1,
-      brukerstyrt: true,
+      husk: 12,
       etl: gullSyntetisk.okosystemregnskap
+    }),
+    okosystemerNorge: tabell<void, gullSyntetisk.OkosystemerNorge>({
+      lag: 'gull',
+      navn: 'okosystemerNorge',
+      tittel: 'Hovedøkosystemer i alle kommuner (syntetisk)',
+      om: 'SYNTETISK: de to syntetiske tabellene for alle kommunene i Norge, laget på samme måte som for én kommune, og summen for Norge. Endringen summeres bare for kommunene der grensen ikke er flyttet siden 2017. Ett kall til SSB. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene fra 2017, for hver kommune og for Norge, av SSBs arealklasser for alle kommunene og flaten til hver kommune.',
+      usikkerhet: [
+        'Syntetiske tall, som tabellene for én kommune. Kommunene der grensen er flyttet siden 2017, er ikke med i endringen for Norge.'
+      ],
+      etterBehov: true,
+      husk: 1,
+      etl: gullSyntetisk.okosystemerNorge
+    }),
+    sammenligning: tabell({
+      lag: 'gull',
+      navn: 'sammenligning',
+      tittel: 'Kommunen sammenlignet med Norge (syntetisk)',
+      om: 'SYNTETISK: kommunens andel av naturen som er bygget ned i Norge, andelen nedbygd natur i kommunen og i Norge, plassen for jordbruk og våtmark som er bygget ned, og skog og våtmark som andel av landarealet, fra de syntetiske tabellene for alle kommunene. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Kommunen mot summen for Norge. Plassen er blant kommunene der grensen ikke er flyttet siden 2017, der 1 bygget ned mest, etter areal og etter andel av arealet i 2017.',
+      etterBehov: true,
+      husk: 12,
+      etl: gullSyntetisk.sammenligning
     }),
     dagensKlasser: tabell({
       lag: 'gull',

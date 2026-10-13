@@ -1,5 +1,6 @@
 /* Bronse for SSB: tabell 09594, «Arealbruk og arealressurser», gjennom SSBs API. Svarene kommer urørt tilbake som JSON-stat 2.0 og
    gjøres om i solv/ssb.ts. */
+import { katalog } from '../katalog.ts';
 import type { Kommune } from '../solv/felles.ts';
 import { kommunen } from './kartverket.ts';
 import { KL, VANN } from '../solv/klasser.ts';
@@ -79,4 +80,19 @@ export async function arealtidsserie(nr: string): Promise<JsonStat> {
 /* Tabellen bronse.arealdetaljer: arealet fra 2017 for hver av SSBs arealklasser for seg, som JSON-stat */
 export async function arealdetaljer(nr: string): Promise<JsonStat> {
   return hentDetaljer(await kommunen(nr));
+}
+
+/* Tabellen bronse.arealAlle: arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, med de
+   samme sammenslåtte tidsseriene. Til de syntetiske tabellene for hele Norge. Det eldre API-et får kommunene fra listen over
+   kommuner. */
+export async function arealAlle(): Promise<JsonStat> {
+  const koder = DETALJER.map(d => d[0]),
+    alle = (await katalog.bronse.kommuner()).flatMap(f => f.kommuner.map(k => 'K-' + k.nr));
+  return hentSSB(
+    'Arealklassene i 2017 og 2024 for alle kommuner',
+    `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=*&valueCodes[ArealKlasse]=${koder.join(',')}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=2017,2024`,
+    ['agg:KommSummer', alle],
+    ['item', ['2017', '2024']],
+    koder
+  );
 }

@@ -7,6 +7,7 @@ import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { NATURTEMA } from '../../src/data/solv/temaer.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
+import type { Plassering } from '../../src/data/gull/syntetisk.ts';
 import { andelTekst, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
 import { MdRadioGroup } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
@@ -32,7 +33,8 @@ import {
   oversiktKort,
   planPerOkosystem,
   planlagt,
-  plansum
+  plansum,
+  sammenligning
 } from '../tall.ts';
 import { TEMAER } from '../temaer.ts';
 
@@ -55,13 +57,26 @@ const NATUR_JORDBRUK_BEBYGD = (
 );
 /* Hvor de syntetiske tallene kommer fra */
 const SYNTETISK_TEKST =
-  'Tallene er syntetiske, til SSBs tabeller for naturregnskapet kommer 25. november 2026. Arealet i 2024 er grunnkartet fra NIBIO, delt på økosystemtypene etter SSBs arealstatistikk. Det som er bygget ned, er anslått av SSBs arealstatistikk for 2017 og 2024, som ikke måler endring direkte.';
+  'Tallene er syntetiske, til SSBs tabeller for naturregnskapet kommer 25. november 2026. De er laget av SSBs arealstatistikk for 2017 og 2024, som ikke måler endring direkte, og hvor mye som er bygget ned, er anslått med en fast regel. De skal bare ha riktig størrelsesorden.';
 /* Merket som sier at tallene er syntetiske */
 const Syntetisk = () => <p className="syntetisk-merke">Syntetiske tall</p>;
+/* En andel med to desimaler, for de små andelene i sammenligningen med Norge */
+const pst2 = (a: number | null) => (a === null ? '–' : nf(a, 2) + ' %');
+/* Et tall i et tallkort med en linje under */
+const MedUnder = ({ tall, under }: { tall: string; under: string }) => (
+  <>
+    {tall}
+    <span className="tall-under">{under}</span>
+  </>
+);
+/* Plassen blant kommunene, der 1 bygget ned mest, med arealet under */
+const plassTekst = (p: Plassering) =>
+  p.plass === null ? 'Kan ikke sammenlignes' : <MedUnder tall={`Nr. ${p.plass} av ${p.av}`} under={iTekst(p.km2)} />;
 
 export function Oversikt() {
   const U = oversiktKort(),
     N = nedbygging(),
+    S = sammenligning(),
     P = plansum(),
     PD = planPerOkosystem();
   return (
@@ -70,11 +85,16 @@ export function Oversikt() {
         <section className="oversikt-topp">
           <div>
             <h1 className="md-typography-heading-l">Naturregnskap for {kommunen()} kommune</h1>
-            {N.s === 'ok' && (
+            {N.s === 'ok' && N.v.endret && (
+              <p className="ingress">
+                Kommunegrensen er flyttet siden {N.v.fra}, så hvor mye natur som er bygget ned, kan ikke regnes ut.
+              </p>
+            )}
+            {N.s === 'ok' && !N.v.endret && (
               <p className="ingress">
                 {iTekst(N.v.natur.nedbygd)} natur
-                {N.v.natur.andel !== null && <> ({andelTekst(N.v.natur.andel)})</>} ble bygget ned mellom {N.v.fra} og{' '}
-                {N.v.til}.
+                {N.v.natur.andel !== null && <> ({pst2(N.v.natur.andel)})</>} ble bygget ned mellom {N.v.fra} og{' '}
+                {N.v.til}.{S.s === 'ok' && !S.v.endret && <> I Norge var andelen {pst2(S.v.natur.norge)}.</>}
               </p>
             )}
             {svar(U, u => (
@@ -126,9 +146,19 @@ export function Oversikt() {
               'Hvor mye natur kommuneplanen setter av til utbygging, regnes ut når kartet for kommunen er hentet.'
             )}
           </p>
-          <p className="hint">
-            Hvor stor del av Norges naturtap det er, krever de samme tallene for alle kommuner, og er ikke laget ennå.
-          </p>
+          {S.s === 'ok' && !S.v.endret && S.v.naturtap.andelAvNorge !== null ? (
+            <p className="baand-tekst">
+              {kommunen()} står for <Merket>{pst2(S.v.naturtap.andelAvNorge)}</Merket> av naturen som ble bygget ned i
+              Norge fra {S.v.fra} til {S.v.til}. Snittet for en kommune er {pst2(S.v.naturtap.snitt)}.
+            </p>
+          ) : (
+            <p className="hint">
+              {S.s === 'henter'
+                ? 'Regner ut hvor stor del av Norges naturtap det er …'
+                : 'Hvor stor del av Norges naturtap det er, kan ikke regnes ut for kommunen.'}
+            </p>
+          )}
+          {S.s === 'ok' && S.v.syntetisk && <p className="hint">Syntetiske tall, til SSBs tabeller kommer.</p>}
           <Lenke til={{ side: 'naturtapet' }} className="pil-lenke">
             Mer om naturtapet →
           </Lenke>
@@ -146,25 +176,29 @@ export function Oversikt() {
               <p className="hint">{SYNTETISK_TEKST}</p>
             </>
           }
-          kilder={['grunnkart', 'ssb']}
+          kilder={['ssb']}
         >
-          {svar(N, n => (
-            <>
-              <Tabell
-                hva="Bygget ned per økosystemtype"
-                kolonner={[
-                  { navn: 'Økosystemtype' },
-                  { navn: n.til, tall: true },
-                  { navn: `Bygget ned ${n.fra}–${n.til}`, tall: true },
-                  { navn: 'Andel', tall: true, ikkeMobil: true }
-                ]}
-                rader={n.rader
-                  .filter(r => r.km2 > 0 || r.nedbygd > 0)
-                  .map(r => [r.navn, dekar(r.km2), dekar(r.nedbygd), r.andel !== null ? andelTekst(r.andel) : '–'])}
-              />
-              {n.syntetisk && <Syntetisk />}
-            </>
-          ))}
+          {svar(N, n =>
+            n.endret ? (
+              <p>Kommunegrensen er flyttet siden {n.fra}, så årene kan ikke sammenlignes.</p>
+            ) : (
+              <>
+                <Tabell
+                  hva="Bygget ned per økosystemtype"
+                  kolonner={[
+                    { navn: 'Økosystemtype' },
+                    { navn: n.til, tall: true },
+                    { navn: `Bygget ned ${n.fra}–${n.til}`, tall: true },
+                    { navn: 'Andel', tall: true, ikkeMobil: true }
+                  ]}
+                  rader={n.rader
+                    .filter(r => r.km2 > 0 || r.nedbygd > 0)
+                    .map(r => [r.navn, dekar(r.km2), dekar(r.nedbygd), r.andel !== null ? andelTekst(r.andel) : '–'])}
+                />
+                {n.syntetisk && <Syntetisk />}
+              </>
+            )
+          )}
         </Figur>
         <Figur
           tittel="Hva slags natur kommuneplanen setter av til utbygging"
@@ -200,10 +234,44 @@ export function Oversikt() {
         </Figur>
       </div>
       <div className="innhold">
-        <Mangler
-          tittel={`${kommunen()} sammenlignet med resten av Norge`}
-          trenger="de samme tallene regnet ut for alle kommuner, så kommunen kan rangeres. Datamotoren regner for én kommune om gangen."
-        />
+        <section className="sammenligning">
+          <h2 className="md-typography-heading-m">{kommunen()} sammenlignet med resten av Norge</h2>
+          {svar(
+            S,
+            s => (
+              <>
+                <Tallkort
+                  kort={[
+                    [`Jordbruk bygget ned ${s.fra}–${s.til}`, plassTekst(s.jordbruk)],
+                    [`Våtmark bygget ned ${s.fra}–${s.til}`, plassTekst(s.vatmark)],
+                    [
+                      'Skog av landarealet',
+                      <MedUnder tall={prosent(s.skog.kommune)} under={'Norge: ' + prosent(s.skog.norge)} />
+                    ],
+                    [
+                      'Våtmark av landarealet',
+                      <MedUnder
+                        tall={prosent(s.vatmarkAreal.kommune)}
+                        under={'Norge: ' + prosent(s.vatmarkAreal.norge)}
+                      />
+                    ]
+                  ]}
+                />
+                <p className="hint">
+                  Plassen er blant de {s.jordbruk.av} kommunene der grensen ikke er flyttet siden {s.fra}, og nr. 1
+                  bygget ned mest. Skog og våtmark er her SSBs arealklasser, ikke grunnkartet som på temasidene.
+                </p>
+                {s.syntetisk && <Syntetisk />}
+              </>
+            ),
+            'Kommunen er ikke med i SSBs tall for alle kommuner.'
+          )}
+          <Mangler
+            merke="Krever dataplattform"
+            tittel="Høydepunkter fra kartdata"
+            trenger="kartdata regnet ut på forhånd for alle kommuner: villreinområder, naturskog, kartleggingsgrad og inngrepsfri natur, og gjennomsnittet for temaene. Datamotoren regner kartdata for én kommune om gangen."
+          />
+        </section>
         <section className="utforsk-del">
           <div className="seksjonstopp">
             <h2 className="md-typography-heading-m">Utforsk naturen i {kommunen()}</h2>
@@ -294,7 +362,7 @@ export function Naturtapet() {
               <p className="hint">{SYNTETISK_TEKST}</p>
             </>
           }
-          kilder={['grunnkart', 'ssb']}
+          kilder={['ssb']}
         >
           {svar(R, r =>
             r.endret ? (

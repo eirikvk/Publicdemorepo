@@ -135,7 +135,7 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 | `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
 | `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
-| `public/` | Filer som legges ut som de er: listen over kommuner, dagens klasser lagret per blokk på 21 og 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for Trondheim (`detaljklasser/` og `detaljklasser.json`) |
+| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 21 og 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for Trondheim (`detaljklasser/` og `detaljklasser.json`) |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
@@ -204,7 +204,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
-| `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, og summene og regnskapet tvillingen viser. Merket syntetisk. |
+| `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer, av SSBs arealstatistikk alene: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, for kommunen og for alle kommunene i Norge, og summene, regnskapet og sammenligningen med Norge som tvillingen viser. Merket syntetisk. |
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Foreløpig bare til tvillingen. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
@@ -313,7 +313,9 @@ med ekte tall, uten å endre hovedsiden.
   - De syntetiske tabellene til SSBs naturregnskap kommer (`gull/syntetisk.ts`): arealet per hovedøkosystem i 2024
     (`gull.okosystemfordeling`) og endringen mellom bebygd og landklassene 2017–2024 (`gull.bebygdEndring`), og det tvillingen
     summerer av dem: kortene på oversikten (`gull.oversiktKort`), nedbyggingen per landklasse (`gull.nedbygging`) og regnskapet per
-    hovedøkosystem (`gull.okosystemregnskap`). Se METODE.md, SSB-tallene.
+    hovedøkosystem (`gull.okosystemregnskap`). De samme for alle kommunene (`gull.okosystemerNorge`, ett kall til SSB) gir
+    sammenligningen med Norge (`gull.sammenligning`). De to regnes først når tvillingen ber om dem (`etterBehov`), så hovedsiden
+    henter dem ikke. Se METODE.md, SSB-tallene.
   - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per verneform (`gull.vernPerVerneform`), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
     villreinområdene (`gull.inonIVillrein`).
@@ -648,6 +650,8 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
   `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og lagrer svaret. Siden bruker da den samme funksjonens svar som
   ferdig svar (`lagret` i katalogen). En blokk koster fire kall mot NIBIO på 21 meter og ett på 10 meter, og de samme kartbildene
   brukes til begge.
+- `kommuneareal.ts` lager `public/kommuneareal.json`: flaten til hver kommune med land, ferskvann og hav, regnet av Kartverkets
+  grenser én gang. De syntetiske tabellene bruker den til havet i alle kommunene. Den må lages på nytt når kommunene endres.
 - `figma-roykt.ts` er røyktesten for tvillingen fra Figma, se over.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.
 
