@@ -202,7 +202,7 @@ function Skog({ tema }: { tema: Tema }) {
           {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
           <p className="hint">
             Skissene har ett lag for naturskog. Kartet over naturskog har flere; her er to av dem. Laget for naturtyper
-            i skog er ikke laget ennå.
+            i skog venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart ennå.
           </p>
         </>
       }
@@ -346,7 +346,10 @@ function Vatmark({ tema }: { tema: Tema }) {
       lagEtter={
         <>
           {D.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
-          <p className="hint">Laget for naturtyper i våtmark fra skissene er ikke laget ennå.</p>
+          <p className="hint">
+            Laget for naturtyper i våtmark venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart
+            ennå.
+          </p>
         </>
       }
       sporsmal={[
