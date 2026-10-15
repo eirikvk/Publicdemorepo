@@ -6,6 +6,7 @@ import { KILDE } from '../../src/data/katalog.ts';
 import { MdAccordionItem, MdIconArrowForward, MdIconChevronForward, MdIconOpenInNew } from '../md.ts';
 import { iTekst, pst } from '../../src/ui/tekst.ts';
 import { lenke, type Rute } from '../navigasjon.ts';
+import { Illustrasjon } from '../illustrasjoner.tsx';
 import { GRUPPER, TEMAER, type Tema } from '../temaer.ts';
 import { temaflis, type Svar } from '../tall.ts';
 
@@ -45,14 +46,14 @@ export function Brodsmuler({ tema }: { tema: Tema }) {
   );
 }
 
-/* Plassholder for et bilde, i temaets farge */
-export const Bilde = ({ farge, liten }: { farge: string; liten?: boolean }) => (
+/* Bildet for temaet: illustrasjonen (illustrasjoner.tsx), på temaets farge mens den tegnes */
+export const Bilde = ({ tema, farge, liten }: { tema: string; farge: string; liten?: boolean }) => (
   <div
     className={'bilde' + (liten ? ' liten' : '')}
     style={{ ['--farge' as string]: `var(--${farge})` }}
     aria-hidden="true"
   >
-    {!liten && <span>Bilde kommer</span>}
+    <Illustrasjon tema={tema} />
   </div>
 );
 
@@ -64,7 +65,7 @@ export function Helt({ tema, children }: { tema: Tema; children?: ReactNode }) {
         <h1 className="md-typography-heading-l">{tema.navn}</h1>
         <p className="ingress">{tema.ingress}</p>
       </div>
-      <Bilde farge={tema.farge} />
+      <Bilde tema={tema.id} farge={tema.farge} />
       {children && <div className="trekkspill-liste">{children}</div>}
     </section>
   );
@@ -243,7 +244,7 @@ export function NestePerspektiv({ unntatt }: { unntatt: string }) {
         {TEMAER.filter(t => t.id !== unntatt).map(t => (
           <li key={t.id}>
             <Lenke til={{ side: 'utforsk', tema: t.id }} className="flis">
-              <Bilde farge={t.farge} liten />
+              <Bilde tema={t.id} farge={t.farge} liten />
               <span className="flis-navn">{t.navn}</span>
               <MdIconArrowForward aria-hidden="true" />
             </Lenke>
@@ -267,7 +268,7 @@ export function Temagrupper() {
               return (
                 <li key={t.id}>
                   <Lenke til={{ side: 'utforsk', tema: t.id }} className="temakort-lenke">
-                    <Bilde farge={t.farge} />
+                    <Bilde tema={t.id} farge={t.farge} />
                     <span className="temakort-tekst">
                       <b>{t.navn}</b>
                       <span>

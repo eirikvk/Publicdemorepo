@@ -283,6 +283,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter ETL-filen, med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `Datavisning.tsx` | Innholdet i en rad i cachen, etter formen det har: bilder fra kildene slik de kom, rutenett som bilde med én farge per verdi, lister som tabell, flater som omriss, og de enkle feltene. Formen finnes ut fra dataene, uten oppsett per tabell. |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
+| `illustrasjoner.tsx` | Tegningene til temaene, i stedet for bildene i skissene: flate landskap i samme stil, ett per tema |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |
 | `lager.ts` | Kroken som kobler komponentene til tilstanden |
 
@@ -324,7 +325,8 @@ med ekte tall, uten å endre hovedsiden.
 - Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra
-  skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro.
+  skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro. Temaene har i stedet
+  en enkel tegnet illustrasjon hver (`srcFigma/illustrasjoner.tsx`).
 - `npm run roykt-figma` åpner hver side i en mobilnettleser og sjekker overskrift, bredde, feil og Tilbake (`verktoy/figma-roykt.ts`).
 
 | Fil i `srcFigma/` | Innhold |

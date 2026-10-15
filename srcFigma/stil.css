@@ -163,23 +163,13 @@ main > .innhold > h2 + ul {
   }
 }
 
-/* Plassholderen for et bilde: striper i temaets farge */
+/* Bildet for et tema: illustrasjonen fyller boksen, på temaets farge */
 .bilde {
   --farge: var(--nat);
   aspect-ratio: 4 / 3;
   border-radius: 4px;
-  background:
-    repeating-linear-gradient(135deg, transparent 0 14px, rgb(255 255 255 / 0.25) 14px 28px),
-    color-mix(in srgb, var(--farge) 70%, white);
-  display: grid;
-  place-items: center;
-  color: var(--md-color-grey-7);
-  font-size: var(--md-typography-body-s);
-}
-.bilde span {
-  background: rgb(255 255 255 / 0.85);
-  padding: 2px 8px;
-  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--farge) 40%, white);
 }
 @media (max-width: 720px) {
   .helt .bilde {
@@ -592,6 +582,12 @@ main > .innhold > h2 + ul {
   width: 20px;
   height: 20px;
 }
+/* Illustrasjonen fyller bildet, også i flisene, der ikonene ellers er 20 piksler */
+.bilde svg.illustrasjon {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 
 /* Temaene i grupper, på oversikten og «Utforsk naturen» */
 .temagrupper {
@@ -627,9 +623,6 @@ main > .innhold > h2 + ul {
   grid-column: 1 / -1;
   aspect-ratio: 16 / 7;
   border-radius: 0;
-}
-.temakort-lenke .bilde span {
-  display: none;
 }
 .temakort-tekst {
   display: flex;
