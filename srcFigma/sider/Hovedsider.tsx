@@ -142,6 +142,12 @@ export function Oversikt() {
               </ul>
             ))}
             {U.s === 'ok' && U.v.syntetisk && <Syntetisk />}
+            {N.s === 'ok' && N.v.flyttet && (
+              <p className="hint">
+                Kommunegrensen er flyttet siden {N.v.fra}. Endringen er regnet likevel, med forskjellen i samlet areal
+                regnet som natur og vann, så den er mer usikker.
+              </p>
+            )}
             <div className="trekkspill-liste">
               <Trekkspill tittel="Hva legger vi i natur, jordbruk og bebygd?">{NATUR_JORDBRUK_BEBYGD}</Trekkspill>
               <Trekkspill tittel="Hva er et naturregnskap?">
@@ -294,8 +300,8 @@ export function Oversikt() {
                   ]}
                 />
                 <p className="hint">
-                  Plassen er blant de {s.jordbruk.av} kommunene der grensen ikke er flyttet siden {s.fra}, og nr. 1
-                  bygget ned mest. Skog og våtmark er her SSBs arealklasser, ikke grunnkartet som på temasidene.
+                  Plassen er blant de {s.jordbruk.av} kommunene som kan sammenlignes med {s.fra}, og nr. 1 bygget ned
+                  mest. Skog og våtmark er her SSBs arealklasser, ikke grunnkartet som på temasidene.
                 </p>
                 {s.syntetisk && <Syntetisk />}
               </>

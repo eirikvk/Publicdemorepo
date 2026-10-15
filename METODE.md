@@ -373,9 +373,14 @@ med en fast nøkkel (`ssbTilHovedokosystem`):
    summen for land er den samme begge år.
 4. **Hele Norge** (`gull.okosystemerNorge`). Ett kall til SSB gir arealklassene i 2017 og 2024 for alle kommunene, med SSBs
    sammenslåtte tidsserier, så tallene gjelder dagens kommuner (`bronse.arealAlle`, rundt 100 kB). De to tabellene lages for hver
-   kommune på samme måte som over, og summeres til Norge. Endringen summeres bare for kommunene der grensen ikke er flyttet siden
-   2017 (samlet areal som avviker mer enn 0,5 %): 316 av 357. Tabellen regnes først når en side ber om den (`etterBehov`), så
-   hovedsiden henter den ikke.
+   kommune på samme måte som over, og summeres til Norge. Endringen summeres for 352 av 357 kommuner: de fem som ikke hadde noe
+   areal i 2017, fordi de ble laget av deler av andre kommuner, er ikke med. Tabellen regnes først når en side ber om den
+   (`etterBehov`), så hovedsiden henter den ikke.
+   Der grensen er flyttet siden 2017 (samlet areal som avviker mer enn 0,5 %, 41 kommuner), regnes endringen likevel, og forskjellen
+   i samlet areal regnes som natur og vann. Regelen bruker bare endringen i bebygd og jordbruk og naturens andeler, så det gir riktig
+   størrelsesorden når det som er lagt til eller tatt fra kommunen, mest er natur. Å skalere arealet i 2017 til samme samlede areal
+   ga for Stavanger, der skog og innsjøer økte med 21 km², en økning i bebygd på 0,38 km² mot 2,08 km² uten. Sidene sier fra at
+   tallene da er mer usikre.
 5. **Kommunen mot Norge** (`gull.sammenligning`): kommunens andel av naturen som er bygget ned i Norge, og snittet for en kommune;
    andelen av naturen som er bygget ned, i kommunen og i Norge; plassen for jordbruk og for våtmark som er bygget ned, der 1 bygget
    ned mest, etter areal og etter andel av arealet i 2017; og skog og våtmark som andel av landarealet, i kommunen og i Norge.
@@ -395,7 +400,7 @@ kartleggingsgrad, inngrepsfri natur og gjennomsnittet for temaene), krever en da
   39,8 mot 39,0 km².
 - Kyststrender, svaberg og dyner er bare en fast andel av havet, og bør prøves mot grunnkartet i en kommune med åpen kyst.
 - Plassen i Norge avhenger av den grådige regelen: jordbruk som gikk ned, regnes som bygget ned først. I de syntetiske tallene er
-  Trondheim nr. 2 av 316 for jordbruk bygget ned (1 510 dekar).
+  Trondheim nr. 4 av 352 for jordbruk bygget ned (1 510 dekar), etter Stavanger og Sandnes.
 
 ## Planlagt utbygging
 
@@ -1023,6 +1028,11 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Kommuner med flyttet grense i de syntetiske tallene, 15. oktober 2026.** Endringen regnes nå også der kommunegrensen er flyttet
+siden 2017, med forskjellen i samlet areal regnet som natur og vann. Bare de fem kommunene som ikke hadde noe areal i 2017, mangler.
+Stavanger og Sandnes har nå tall: begge bygget ned rundt 2 000 dekar, nesten bare jordbruk. Sammenligningen med Norge gjelder 352
+kommuner, og Trondheim står for 1,27 % av naturen som er bygget ned. Hovedsidens tall er ikke endret.
 
 **Bebygd går ikke tilbake i de syntetiske tallene, 15. oktober 2026.** Økningen i bebygd er nå summen av økningene i hver av SSBs
 bebygde klasser. Før ble en nedgang i bebygd ført tilbake til naturen, og på Røros, der transport og fritidsboliger gikk ned fra 2017

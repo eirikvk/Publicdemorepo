@@ -1022,11 +1022,11 @@ export const katalog = {
       lag: 'gull',
       navn: 'okosystemerNorge',
       tittel: 'Hovedøkosystemer i alle kommuner (syntetisk)',
-      om: 'SYNTETISK: de to syntetiske tabellene for alle kommunene i Norge, laget på samme måte som for én kommune, og summen for Norge. Endringen summeres bare for kommunene der grensen ikke er flyttet siden 2017. Ett kall til SSB. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'SYNTETISK: de to syntetiske tabellene for alle kommunene i Norge, laget på samme måte som for én kommune, og summen for Norge. Endringen summeres for alle kommuner unntatt de som ikke hadde noe areal i 2017. Ett kall til SSB. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene fra 2017, for hver kommune og for Norge, av SSBs arealklasser for alle kommunene og flaten til hver kommune.',
       usikkerhet: [
-        'Syntetiske tall, som tabellene for én kommune. Kommunene der grensen er flyttet siden 2017, er ikke med i endringen for Norge.'
+        'Syntetiske tall, som tabellene for én kommune. Der grensen er flyttet siden 2017, er endringen mer usikker.'
       ],
       etterBehov: true,
       husk: 1,
@@ -1038,7 +1038,7 @@ export const katalog = {
       tittel: 'Kommunen sammenlignet med Norge (syntetisk)',
       om: 'SYNTETISK: kommunens andel av naturen som er bygget ned i Norge, andelen nedbygd natur i kommunen og i Norge, plassen for jordbruk og våtmark som er bygget ned, og skog og våtmark som andel av landarealet, fra de syntetiske tabellene for alle kommunene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Kommunen mot summen for Norge. Plassen er blant kommunene der grensen ikke er flyttet siden 2017, der 1 bygget ned mest, etter areal og etter andel av arealet i 2017.',
+        'Kommunen mot summen for Norge. Plassen er blant kommunene som kan sammenlignes med 2017, der 1 bygget ned mest, etter areal og etter andel av arealet i 2017.',
       etterBehov: true,
       husk: 12,
       etl: gullSyntetisk.sammenligning

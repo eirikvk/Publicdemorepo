@@ -88,11 +88,16 @@ export interface Endringsrad extends Hovedokosystem {
       og når det går ned, er det for det meste fordi det bygges ned.
    3. Resten tas fra naturen, fordelt etter arealet hver naturklasse hadde ved start. Endringene i naturklassene hos SSB kommer mest
       av bedre kartlegging (i Trondheim gikk åpen myr ned og skog opp), så de brukes ikke.
-   Gir radene, årene som er brukt, og det som ikke kunne fordeles (uforklart, km²), som bare er noe når kommunen ikke har natur hos
-   SSB. */
+   Er kommunegrensen flyttet i perioden (D.endret), regnes endringen likevel (flyttet), og forskjellen i samlet areal regnes som natur
+   og vann. Regelen bruker bare endringen i bebygd og jordbruk, og naturens andeler, så det gir riktig størrelsesorden når det som er
+   lagt til eller tatt fra kommunen, mest er natur. (Å skalere arealet i 2017 til samme samlede areal ga for Stavanger, der skogen
+   og innsjøene økte, nesten ingen økning i bebygd.) Det går ikke når kommunen ikke har noe areal ved start.
+   Gir radene, årene som er brukt, om grensen er flyttet, og det som ikke kunne fordeles (uforklart, km²), som bare er noe når
+   kommunen ikke har natur hos SSB. */
 export function byggEndring(D: Arealdetaljer, fra: string, til: string) {
   const i0 = aaret(D, fra),
     i1 = aaret(D, til),
+    flyttet = D.endret && summen(D.klasser.map(k => k.km2[i0])) > 0,
     a0 = perHovedokosystem(D, i0),
     a1 = perHovedokosystem(D, i1),
     land = HOVEDOKOSYSTEMER.filter(h => h.gruppe === 'jor' || h.gruppe === 'nat'),
@@ -119,7 +124,8 @@ export function byggEndring(D: Arealdetaljer, fra: string, til: string) {
       tilBebygd: tiDekar(tilB.get(h.kode) || 0),
       fraBebygd: 0
     })),
-    uforklart: tiDekar(rest)
+    uforklart: tiDekar(rest),
+    flyttet
   };
 }
 
@@ -136,7 +142,7 @@ export async function okosystemfordeling(nr: string): Promise<Okosystemfordeling
   return { kommune: nr, aar: '2024', syntetisk: true, kilde: SYNTETISK, klasser: byggFordeling(D, '2024', F[nr] || 0) };
 }
 /* Tabellen gull.bebygdEndring: arealet mellom bebygd og hver av de andre landklassene i kommunen fra 2017 til 2024, som SSBs tabell.
-   endret: kommunegrensen er flyttet, så årene kan ikke sammenlignes. */
+   endret: kommunegrensen er flyttet, og årene kan ikke sammenlignes. flyttet: grensen er flyttet, men endringen er regnet likevel. */
 export interface BebygdEndring {
   fra: string;
   til: string;
@@ -146,10 +152,12 @@ export interface BebygdEndring {
   syntetisk: boolean;
   kilde: string;
   endret: boolean;
+  flyttet: boolean;
 }
 export async function bebygdEndring(nr: string): Promise<BebygdEndring> {
-  const D = await katalog.solv.arealdetaljer(nr);
-  return { kommune: nr, syntetisk: true, kilde: SYNTETISK, endret: D.endret, ...byggEndring(D, '2017', '2024') };
+  const D = await katalog.solv.arealdetaljer(nr),
+    E = byggEndring(D, '2017', '2024');
+  return { kommune: nr, syntetisk: true, kilde: SYNTETISK, endret: D.endret && !E.flyttet, ...E };
 }
 
 /* Natur, jordbruk og bebygd i dag og endringen fra 2017, summert fra de to tabellene: arealet i 2024, andelen av landarealet, endringen
@@ -243,6 +251,7 @@ export interface Nedbygging extends ReturnType<typeof byggNedbygging> {
   syntetisk: boolean;
   kilde: string;
   endret: boolean;
+  flyttet: boolean;
   uforklart: number;
 }
 export async function nedbygging(nr: string): Promise<Nedbygging> {
@@ -253,6 +262,7 @@ export async function nedbygging(nr: string): Promise<Nedbygging> {
     syntetisk: F.syntetisk || E.syntetisk,
     kilde: SYNTETISK,
     endret: E.endret,
+    flyttet: E.flyttet,
     uforklart: E.uforklart,
     ...byggNedbygging(F.klasser, E.klasser)
   };
@@ -306,10 +316,12 @@ export async function okosystemregnskap(nr: string): Promise<Okosystemregnskap> 
 }
 
 /* De to tabellene for alle kommunene i Norge, laget på samme måte som for én kommune, og summen for Norge. Summen av endringen tar
-   bare med kommunene som kan sammenlignes (sammenlignbare): de der grensen ikke er flyttet siden 2017. */
+   bare med kommunene som kan sammenlignes (sammenlignbare): alle unntatt de som ikke hadde noe areal i 2017, fordi grensen er
+   flyttet (se byggEndring). */
 export interface KommuneISum {
   nr: string;
   endret: boolean;
+  flyttet: boolean;
   fordeling: Fordelingsrad[];
   endring: Endringsrad[];
 }
@@ -329,7 +341,8 @@ export function byggNorge(alle: Record<string, Arealdetaljer>, flater: Record<st
         const E = byggEndring(D, '2017', '2024');
         return {
           nr: D.nr,
-          endret: D.endret,
+          endret: D.endret && !E.flyttet,
+          flyttet: E.flyttet,
           fordeling: byggFordeling(D, '2024', flater[D.nr] || 0),
           endring: E.klasser
         };
