@@ -503,7 +503,9 @@ function Vern({ tema }: { tema: Tema }) {
             <>
               <Liggende
                 hva="Vernet areal per økosystemtype"
-                data={d.perOkosystem.map(x => ({ navn: x.navn, km2: x.km2, farge: 'vern' }))}
+                data={[...d.perOkosystem]
+                  .sort((a, b) => b.km2 - a.km2)
+                  .map(x => ({ navn: x.navn, km2: x.km2, farge: 'vern' }))}
               />
               <p>
                 Av det vernede arealet er {iTekst(d.land)} på land, {iTekst(d.hav)} i sjø og {iTekst(d.ferskvann)} i

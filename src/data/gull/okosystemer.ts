@@ -1,7 +1,8 @@
 /* Gull for grunnkartets økosystemtyper: de ferdige svarene om skog, våtmark, naturen i verneområdene og planlagt utbygging per
    økosystemtype, regnet ut av arealet per detaljklasse (gull/grunnkart.ts og gull/planlagt.ts). Hva som regnes som skog, våtmark og
-   land, står i solv/klasser.ts. Alle arealer er i km², andeler i prosent. Svarene finnes bare for kommunene med lagrede
-   detaljklasser; ellers er de null. Foreløpig bruker bare tvillingen fra Figma dem. */
+   land, står i solv/klasser.ts. Alle arealer er i km², andeler i prosent. Økosystemtypene er hovedøkosystemene (HOVEDOKOSYSTEMER),
+   med de samme navnene og i samme rekkefølge som i de syntetiske tabellene fra SSB (gull/syntetisk.ts), så tabellene kan
+   sammenlignes. Foreløpig bruker bare tvillingen fra Figma dem. */
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import {
@@ -11,8 +12,9 @@ import {
   erLand,
   erSkog,
   erVatmark,
-  okosystemNavn,
+  HOVEDOKOSYSTEMER,
   type Detaljklasse,
+  type KlasseId,
   type Treslag,
   type Underlag
 } from '../solv/klasser.ts';
@@ -21,14 +23,17 @@ import { andel } from './felles.ts';
 /* Arealet av detaljklassene som passer, fra km² per detaljklasse */
 export const arealAv = (km2: number[], passer: (k: Detaljklasse) => boolean) =>
   summen(DETALJKLASSER.map((k, i) => (passer(k) ? km2[i] : 0)));
-/* Arealet per økosystemtype på nivå 1, med skogen samlet. Størst først, og uten de som er 0. */
-export function perOkosystem(km2: number[]): { navn: string; km2: number }[] {
+/* Arealet per hovedøkosystem (økosystemtypene på nivå 1), med skogen samlet, i rekkefølgen i HOVEDOKOSYSTEMER, uten de som er 0 */
+export interface Okosystemrad {
+  kode: string;
+  navn: string;
+  gruppe: KlasseId;
+  km2: number;
+}
+export function perOkosystem(km2: number[]): Okosystemrad[] {
   const m = new Map<string, number>();
-  DETALJKLASSER.forEach((k, i) => m.set(okosystemNavn(k), (m.get(okosystemNavn(k)) || 0) + km2[i]));
-  return [...m]
-    .map(([navn, v]) => ({ navn, km2: v }))
-    .filter(r => r.km2 > 0)
-    .sort((a, b) => b.km2 - a.km2);
+  DETALJKLASSER.forEach((k, i) => m.set(k.okosystem, (m.get(k.okosystem) || 0) + km2[i]));
+  return HOVEDOKOSYSTEMER.map(h => ({ ...h, km2: m.get(h.kode) || 0 })).filter(r => r.km2 > 0);
 }
 
 /* Skogen i kommunen: arealet, andelen av landarealet i grunnkartet, og arealet per treslag og per underlag */
@@ -107,17 +112,21 @@ export interface PlanPerOkosystem {
   delvis: boolean;
 }
 /* Tabellen gull.planPerOkosystem: planlagt utbygging i kommunen nr per økosystemtype, av gull.planlagtPerDetaljklasse og
-   gull.detaljareal. Planlagt utbygging der ingen detaljklasse passer, står som en egen rad. */
+   gull.detaljareal. Radene er alle typene natur og jordbruk, også de uten planlagt utbygging, i samme rekkefølge som tabellen over
+   hva som er bygget ned. Planlagt utbygging der ingen detaljklasse passer, står som en egen rad. */
 export async function planPerOkosystem(nr: string): Promise<PlanPerOkosystem | null> {
   const D = await katalog.gull.detaljareal(nr);
   if (!D) return null;
   const P = await katalog.gull.planlagtPerDetaljklasse(nr);
   if (!P) return { rader: [], vatmark: { km2: 0, apen: 0, tresatt: 0 }, ingenPlan: true, delvis: false };
-  const iDag = perOkosystem(D.km2),
-    rader = perOkosystem(P.km2).map(r => {
-      const av = iDag.find(x => x.navn === r.navn);
-      return { ...r, andel: av ? andel(r.km2, av.km2) : null };
-    });
+  const plan = perOkosystem(P.km2),
+    iDag = perOkosystem(D.km2),
+    km2 = (R: Okosystemrad[], kode: string) => (R.find(x => x.kode === kode) || { km2: 0 }).km2,
+    rader = HOVEDOKOSYSTEMER.filter(h => h.gruppe === 'jor' || h.gruppe === 'nat').map(h => ({
+      navn: h.navn,
+      km2: km2(plan, h.kode),
+      andel: andel(km2(plan, h.kode), km2(iDag, h.kode))
+    }));
   if (P.ukjent > 0) rader.push({ navn: 'Uten type i grunnkartet', km2: P.ukjent, andel: null });
   return { rader, vatmark: vatmarkAv(P.km2), ingenPlan: false, delvis: P.delvis };
 }

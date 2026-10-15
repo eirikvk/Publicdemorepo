@@ -206,7 +206,6 @@ export const UNDERLAGNAVN: [Underlag, string][] = [
 export const erSkog = (k: Detaljklasse) => !!k.treslag;
 export const erVatmark = (k: Detaljklasse) => k.id === 'vat' || k.underlag === 'myr';
 export const erLand = (k: Detaljklasse) => k.gruppe === 'beb' || k.gruppe === 'jor' || k.gruppe === 'nat';
-export const okosystemNavn = (k: Detaljklasse) => (k.treslag ? 'Skog' : k.navn);
 
 /* Fargene NIBIO bes tegne klassene i, i samme rekkefølge. Valgt ved å prøve: for hvert par av klasser som grenser til hverandre i
    testflisene, skal blandingen ligge langt fra blandingene av alle andre par. */

@@ -219,14 +219,12 @@ export function Oversikt() {
                     { navn: `Bygget ned ${n.fra}–${n.til}`, tall: true },
                     { navn: 'Andel', tall: true, ikkeMobil: true }
                   ]}
-                  rader={n.rader
-                    .filter(r => r.km2 > 0 || r.nedbygd > 0)
-                    .map(r => [
-                      r.navn,
-                      dekar(r.km2),
-                      r.nedbygd > 0 ? dekar(r.nedbygd) : '0 daa',
-                      r.andel !== null ? andelTekst(r.andel) : '–'
-                    ])}
+                  rader={n.rader.map(r => [
+                    r.navn,
+                    r.km2 > 0 ? dekar(r.km2) : '0 daa',
+                    r.nedbygd > 0 ? dekar(r.nedbygd) : '0 daa',
+                    r.andel !== null ? andelTekst(r.andel) : '–'
+                  ])}
                 />
                 {n.syntetisk && <Syntetisk />}
               </>
@@ -239,7 +237,8 @@ export function Oversikt() {
             <>
               <p>
                 Natur og jordbruk som kommuneplanen setter av til utbygging, per økosystemtype i grunnkartet, og hvor
-                stor del av typen i kommunen det er. Myr og beite med trær er med i skogen. Smale striper er ikke med.
+                stor del av typen i kommunen det er, med de samme økosystemtypene som tabellen over. Myr og beite med
+                trær er med i skogen. Smale striper er ikke med.
               </p>
               <p className="hint">Summen er den samme som i båndet over.</p>
             </>
@@ -249,7 +248,7 @@ export function Oversikt() {
           {svar(
             PD,
             p =>
-              p.rader.length ? (
+              p.rader.some(r => r.km2 > 0) ? (
                 <Tabell
                   hva="Satt av til utbygging per økosystemtype"
                   kolonner={[
@@ -257,7 +256,11 @@ export function Oversikt() {
                     { navn: 'Satt av', tall: true },
                     { navn: 'Andel av typen', tall: true }
                   ]}
-                  rader={p.rader.map(r => [r.navn, dekar(r.km2), r.andel !== null ? andelTekst(r.andel) : '–'])}
+                  rader={p.rader.map(r => [
+                    r.navn,
+                    r.km2 > 0 ? dekar(r.km2) : '0 daa',
+                    r.andel !== null ? andelTekst(r.andel) : '–'
+                  ])}
                 />
               ) : (
                 <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
