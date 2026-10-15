@@ -359,12 +359,14 @@ med en fast nøkkel (`ssbTilHovedokosystem`):
    dyner har ingen klasse hos SSB. De settes til 0,1 % av havet (`KYST_AV_HAV`), tatt fra hei og buskmark og lite vegetert mark etter
    arealet. I grunnkartet for Trondheim er de 0,08 km² mot 187 km² hav (0,04 %).
 2. **Endringen mellom bebygd og landklassene fra 2017 til 2024** (`gull.bebygdEndring`), med en grådig tommelfingerregel:
-   - Økningen i bebygd tas først fra jordbruket, så langt dyrket mark og grasmark gikk ned. Jordbruksarealet er godt kartlagt, og
+   - Økningen i bebygd er summen av økningene i hver av SSBs bebygde klasser (01–14). En nedgang i en bebygd klasse regnes som
+     bedre kartlegging, ikke som at arealet blir natur igjen, så bebygd går aldri ned. På Røros gikk transport og fritidsboliger ned
+     fra 2017 til 2024, og bebygd samlet med 0,6 km², selv om boliger og næring økte. Med regelen er økningen 0,55 km².
+   - Økningen tas først fra jordbruket, så langt dyrket mark og grasmark gikk ned. Jordbruksarealet er godt kartlagt, og
      når det går ned, er det for det meste fordi det bygges ned.
    - Resten tas fra naturen, fordelt etter arealet hver naturklasse hadde i 2017. Endringene i naturklassene hos SSB kommer mest av
      bedre kartlegging: i Trondheim gikk åpen myr ned 7,1 km² og skog opp 9,2 km² fra 2017 til 2024. Fordeles økningen i bebygd
      etter nedgangen i hver klasse, havner mye av den på myr, og ingenting på skog.
-   - Gikk bebygd ned, føres nedgangen tilbake til naturen etter arealet.
 3. Tvillingen summerer dem til natur, jordbruk og bebygd (`gull.oversiktKort`), viser hvor mye av hver landklasse som er bygget
    ned (`gull.nedbygging`), og setter dem opp som et regnskap per hovedøkosystem: inngående 2017, endringen mot bebygd og
    utgående 2024 (`gull.okosystemregnskap`). Arealet i 2017 er arealet i 2024 med det som gikk til og fra bebygd lagt tilbake, så
@@ -393,7 +395,7 @@ kartleggingsgrad, inngrepsfri natur og gjennomsnittet for temaene), krever en da
   39,8 mot 39,0 km².
 - Kyststrender, svaberg og dyner er bare en fast andel av havet, og bør prøves mot grunnkartet i en kommune med åpen kyst.
 - Plassen i Norge avhenger av den grådige regelen: jordbruk som gikk ned, regnes som bygget ned først. I de syntetiske tallene er
-  Trondheim nr. 1 av 316 for jordbruk bygget ned (1 510 dekar).
+  Trondheim nr. 2 av 316 for jordbruk bygget ned (1 510 dekar).
 
 ## Planlagt utbygging
 
@@ -1021,6 +1023,11 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Bebygd går ikke tilbake i de syntetiske tallene, 15. oktober 2026.** Økningen i bebygd er nå summen av økningene i hver av SSBs
+bebygde klasser. Før ble en nedgang i bebygd ført tilbake til naturen, og på Røros, der transport og fritidsboliger gikk ned fra 2017
+til 2024, økte da naturen og ingenting var bygget ned. Nå er 550 dekar bygget ned der, 310 av dem jordbruk. For Norge er det 220 km²
+natur, mot 134 km² før, og Trondheim står for 1,46 % av det. Hovedsidens tall er ikke endret.
 
 **Detaljklassene for alle kommuner, 15. oktober 2026.** Detaljklassene og tallene som bygger på dem (skog, våtmark, naturen i
 verneområdene og planlagt utbygging per økosystemtype) regnes nå på samme måte for alle kommuner som for Trondheim. Blokkene er

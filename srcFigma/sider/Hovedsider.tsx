@@ -123,14 +123,17 @@ export function Oversikt() {
                     <button type="button" aria-pressed={k.id === vist} onClick={() => settVist(k.id as Klassevalg)}>
                       <div className="klassekort-topp">
                         <b>{k.navn}</b>
-                        {k.endring !== null && <Endringsmerke d={k.endring} pst={k.pst} />}
+                        {k.endring !== null && k.endring !== 0 && <Endringsmerke d={k.endring} pst={k.pst} />}
                       </div>
                       <span>
                         {prosent(k.andel)} av landarealet, {iTekst(k.km2)}
                       </span>
                       {k.endring !== null && (
                         <span>
-                          {k.endring < 0 ? 'Ned' : 'Opp'} {iTekst(Math.abs(k.endring))} ({u.fra}–{u.til})
+                          {k.endring === 0
+                            ? 'Uendret'
+                            : `${k.endring < 0 ? 'Ned' : 'Opp'} ${iTekst(Math.abs(k.endring))}`}{' '}
+                          ({u.fra}–{u.til})
                         </span>
                       )}
                     </button>
@@ -218,7 +221,12 @@ export function Oversikt() {
                   ]}
                   rader={n.rader
                     .filter(r => r.km2 > 0 || r.nedbygd > 0)
-                    .map(r => [r.navn, dekar(r.km2), dekar(r.nedbygd), r.andel !== null ? andelTekst(r.andel) : '–'])}
+                    .map(r => [
+                      r.navn,
+                      dekar(r.km2),
+                      r.nedbygd > 0 ? dekar(r.nedbygd) : '0 daa',
+                      r.andel !== null ? andelTekst(r.andel) : '–'
+                    ])}
                 />
                 {n.syntetisk && <Syntetisk />}
               </>

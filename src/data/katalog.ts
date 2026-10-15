@@ -982,7 +982,7 @@ export const katalog = {
       tittel: 'Endring mellom bebygd og landklassene 2017–2024 (syntetisk)',
       om: 'SYNTETISK: arealet fra hver landklasse til bebygd, og fra bebygd til klassen, fra 2017 til 2024, i samme form som SSBs tabell som publiseres 25. november 2026. Anslått av SSBs arealklasser for de to årene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Syntetiske tall til SSBs tabell kommer. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel. Økningen i bebygd tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet i 2017.',
+        'Syntetiske tall til SSBs tabell kommer. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet i 2017.',
       usikkerhet: [
         'Syntetiske tall: arealet i to år, ikke målte overganger. SSB skriver at forskjellen mellom årgangene også kommer av bedre kartlegging.'
       ],

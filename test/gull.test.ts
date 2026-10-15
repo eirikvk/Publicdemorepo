@@ -114,6 +114,14 @@ test('syntetiske tabeller: fordeling på hovedøkosystemer og endring mellom beb
   );
 });
 
+test('syntetiske tabeller: en nedgang i en bebygd klasse gir ikke natur tilbake', () => {
+  /* boliger opp 1, transport ned 1: bebygd samlet er uendret, men økningen er 1 */
+  const D3 = { ...D, klasser: [kl('01', 'beb', [10, 11]), kl('08-09', 'beb', [5, 4]), kl('17.01', 'nat', [50, 49])] },
+    E = byggBebygdEndring(D3, '2017', '2024'),
+    skog = E.klasser.find(r => r.kode === 'skog')!;
+  assert.deepEqual([skog.tilBebygd, skog.fraBebygd], [1, 0]);
+});
+
 test('syntetiske tabeller: kyststrender er en fast andel av havet, tatt fra hei og lite vegetert mark', () => {
   const D2 = { ...D, klasser: [kl('18', 'nat', [5, 5]), kl('20', 'nat', [5, 5])] },
     F = byggFordeling(D2, '2024', 1000),

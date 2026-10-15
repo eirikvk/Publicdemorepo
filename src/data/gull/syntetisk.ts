@@ -9,7 +9,8 @@
       trukket fra. Kyststrender, svaberg og dyner er en fast andel av havet (KYST_AV_HAV), tatt fra hei og buskmark og lite
       vegetert mark.
    2. Arealet mellom bebygd og hver av de andre landklassene fra 2017 til 2024 (gull.bebygdEndring, byggEndring), med en grådig
-      tommelfingerregel: økningen i bebygd tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet.
+      tommelfingerregel: økningen i hver bebygd klasse hos SSB tas først fra jordbruket, så langt det gikk ned, og resten fra naturen
+      etter arealet.
       Arealet er tall for to år, ikke målte overganger, og SSB skriver at forskjellen mellom årgangene også kommer av bedre
       kartlegging. Det er et grovt anslag.
 
@@ -80,12 +81,15 @@ export interface Endringsrad extends Hovedokosystem {
 }
 /* Endringen mellom bebygd og de andre landklassene fra året fra til året til, av SSBs arealklasser D, med en grådig
    tommelfingerregel:
-   1. Økningen i bebygd tas først fra jordbruket (dyrket mark og grasmark), så langt hver av dem gikk ned. Jordbruksarealet er godt
-      kartlagt, og når det går ned, er det for det meste fordi det bygges ned.
-   2. Resten tas fra naturen, fordelt etter arealet hver naturklasse hadde ved start. Endringene i naturklassene hos SSB kommer mest
+   1. Økningen i bebygd er summen av økningene i SSBs bebygde klasser (01–14) hver for seg. En nedgang i en bebygd klasse regnes som
+      bedre kartlegging, ikke som at arealet blir natur igjen: på Røros gikk transport og fritidsboliger ned fra 2017 til 2024, så
+      bebygd samlet gikk ned, selv om boliger og næring økte. Det bebygde arealet går derfor aldri tilbake (fraBebygd er 0).
+   2. Økningen tas først fra jordbruket (dyrket mark og grasmark), så langt hver av dem gikk ned. Jordbruksarealet er godt kartlagt,
+      og når det går ned, er det for det meste fordi det bygges ned.
+   3. Resten tas fra naturen, fordelt etter arealet hver naturklasse hadde ved start. Endringene i naturklassene hos SSB kommer mest
       av bedre kartlegging (i Trondheim gikk åpen myr ned og skog opp), så de brukes ikke.
-   Gikk bebygd ned, føres nedgangen tilbake til naturen etter arealet. Gir radene, årene som er brukt, og det som ikke kunne fordeles
-   (uforklart, km²), som bare er noe når kommunen ikke har natur hos SSB. */
+   Gir radene, årene som er brukt, og det som ikke kunne fordeles (uforklart, km²), som bare er noe når kommunen ikke har natur hos
+   SSB. */
 export function byggEndring(D: Arealdetaljer, fra: string, til: string) {
   const i0 = aaret(D, fra),
     i1 = aaret(D, til),
@@ -93,20 +97,18 @@ export function byggEndring(D: Arealdetaljer, fra: string, til: string) {
     a1 = perHovedokosystem(D, i1),
     land = HOVEDOKOSYSTEMER.filter(h => h.gruppe === 'jor' || h.gruppe === 'nat'),
     endring = (kode: string) => (a1.get(kode) || 0) - (a0.get(kode) || 0),
-    dB = endring('bebygdOpparbeidetAreal'),
-    tilB = new Map<string, number>(),
-    fraB = new Map<string, number>();
-  let rest = Math.abs(dB);
-  if (dB > 0)
-    for (const h of land.filter(x => x.gruppe === 'jor')) {
-      const v = Math.min(rest, Math.max(0, -endring(h.kode)));
-      tilB.set(h.kode, v);
-      rest -= v;
-    }
+    okning = summen(D.klasser.filter(k => k.klasse === 'beb').map(k => Math.max(0, k.km2[i1] - k.km2[i0]))),
+    tilB = new Map<string, number>();
+  let rest = okning;
+  for (const h of land.filter(x => x.gruppe === 'jor')) {
+    const v = Math.min(rest, Math.max(0, -endring(h.kode)));
+    tilB.set(h.kode, v);
+    rest -= v;
+  }
   const natur = land.filter(h => h.gruppe === 'nat'),
     naturAreal = summen(natur.map(h => a0.get(h.kode) || 0));
   if (rest > 0 && naturAreal > 0) {
-    natur.forEach(h => (dB > 0 ? tilB : fraB).set(h.kode, (rest * (a0.get(h.kode) || 0)) / naturAreal));
+    natur.forEach(h => tilB.set(h.kode, (rest * (a0.get(h.kode) || 0)) / naturAreal));
     rest = 0;
   }
   return {
@@ -115,7 +117,7 @@ export function byggEndring(D: Arealdetaljer, fra: string, til: string) {
     klasser: land.map((h): Endringsrad => ({
       ...h,
       tilBebygd: tiDekar(tilB.get(h.kode) || 0),
-      fraBebygd: tiDekar(fraB.get(h.kode) || 0)
+      fraBebygd: 0
     })),
     uforklart: tiDekar(rest)
   };
