@@ -409,7 +409,7 @@ function Vern({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Vernet natur i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av landarealet som er vernet', svar(T, x => prosent(x.andelLand))],
+        ['Andel av landarealet som er vernet', svar(V, x => prosent(x.andelLand))],
         ['Antall verneområder', svar(T, x => nf(x.antall, 0))]
       ]}
       kilde={

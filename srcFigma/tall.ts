@@ -87,10 +87,19 @@ export function temaflis(id: string): Svar<{ km2: number; andel: number | null }
       return fra(skog(), v => ({ km2: v.km2, andel: v.andel }));
     case 'vatmark':
       return fra(vatmark(), v => ({ km2: v.km2, andel: v.andel }));
-    case 'verneomrader':
+    /* Andelen vernet er bare land: grunnkartets land innenfor verneområdene av landarealet (avklart 15. oktober). Arealet er alt
+       som er vernet, også sjø. */
+    case 'verneomrader': {
+      const T = naturtema('vern').T,
+        V = vernetNatur();
+      if (T.s === 'ok' && !T.v.antall) return { s: 'ingen' };
+      return T.s === 'ok'
+        ? fra(V, v => ({ km2: T.v.sum, andel: v.andelLand }))
+        : fra(T, () => ({ km2: 0, andel: null }));
+    }
     case 'villrein':
     case 'verdsatte-naturtyper': {
-      const T = naturtema(id === 'verneomrader' ? 'vern' : id === 'villrein' ? 'rein' : 'verdi').T;
+      const T = naturtema(id === 'villrein' ? 'rein' : 'verdi').T;
       return T.s === 'ok' && !T.v.antall ? { s: 'ingen' } : fra(T, v => ({ km2: v.sum, andel: v.andelLand }));
     }
     case 'inngrepsfri-natur':

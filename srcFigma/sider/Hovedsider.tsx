@@ -526,7 +526,7 @@ export function Hjelp() {
       <p>
         Alle tall på sidene er ekte og gjelder kommunen du har valgt. Der skissene viser noe datamotoren ikke har ennå,
         står det en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra skissene er ikke med, fordi
-        rettighetene ikke er avklart.
+        rettighetene ikke er avklart. Temaene har i stedet en enkel illustrasjon som er laget med KI, og merket med det.
       </p>
       <h2 className="md-typography-heading-s">Kildene</h2>
       <ul className="kildeliste">

@@ -166,10 +166,29 @@ main > .innhold > h2 + ul {
 /* Bildet for et tema: illustrasjonen fyller boksen, på temaets farge */
 .bilde {
   --farge: var(--nat);
+  position: relative;
   aspect-ratio: 4 / 3;
   border-radius: 4px;
   overflow: hidden;
   background: color-mix(in srgb, var(--farge) 40%, white);
+}
+/* Merket for at illustrasjonen er laget med KI, nede til høyre i bildet */
+.ki-merke {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.88);
+  color: var(--md-color-text-primary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.bilde.liten .ki-merke {
+  right: 3px;
+  bottom: 3px;
+  padding: 1px 4px;
+  font-size: 9px;
 }
 @media (max-width: 720px) {
   .helt .bilde {

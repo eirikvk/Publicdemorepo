@@ -3,7 +3,8 @@
    skogen, myrull og pytter på myra, verneområdets grense over fjellet, blomstereng, elv uten veier, rein på vidda, park i byen).
    Alt viktig ligger i midten av bildet, mellom y = 90 og 210, så det tåler å bli beskåret bredt (temaflisene på oversikten) og
    smalt (flisene i «Utforsk neste perspektiv»). Tegnet for tvillingen; fargene er valgt for hvert tema og henger sammen med
-   kartfargene der temaet har en (vern, villrein, verdsatt natur, vann). */
+   kartfargene der temaet har en (vern, villrein, verdsatt natur, vann). Tegningene er laget med KI, så Bilde (komponenter/deler.tsx)
+   merker dem «KI-generert». */
 import type { ReactNode } from 'react';
 
 const B = 400,

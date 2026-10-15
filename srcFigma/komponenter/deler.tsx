@@ -1,6 +1,6 @@
 /* Delene sidene i tvillingen er bygd av, etter Figma-skissene: brødsmuler, toppen av en temaside, tallkort, trekkspill, figurer med
    tekst og kilde, stolper, flisene for temaene, ressurser, og en ramme for det som ikke er laget ennå. Bildene fra skissene er ikke med
-   (rettighetene er ikke avklart), så det står en plassholder i temaets farge der. */
+   (rettighetene er ikke avklart), så hvert tema har en KI-generert illustrasjon i stedet, merket med det. */
 import type { ReactNode } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { MdAccordionItem, MdIconArrowForward, MdIconChevronForward, MdIconOpenInNew } from '../md.ts';
@@ -46,7 +46,7 @@ export function Brodsmuler({ tema }: { tema: Tema }) {
   );
 }
 
-/* Bildet for temaet: illustrasjonen (illustrasjoner.tsx), på temaets farge mens den tegnes */
+/* Bildet for temaet: illustrasjonen (illustrasjoner.tsx), på temaets farge mens den tegnes, merket som KI-generert */
 export const Bilde = ({ tema, farge, liten }: { tema: string; farge: string; liten?: boolean }) => (
   <div
     className={'bilde' + (liten ? ' liten' : '')}
@@ -54,6 +54,7 @@ export const Bilde = ({ tema, farge, liten }: { tema: string; farge: string; lit
     aria-hidden="true"
   >
     <Illustrasjon tema={tema} />
+    <span className="ki-merke">{liten ? 'KI-generert' : 'KI-generert illustrasjon'}</span>
   </div>
 );
 
