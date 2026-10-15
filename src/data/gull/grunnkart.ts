@@ -49,8 +49,8 @@ export interface Detaljareal {
   versjon: string;
 }
 /* Tabellen gull.detaljareal: arealet per detaljklasse i kommunen nr, av blokkene på 10,6 meter (solv.detaljklasser) klippet til
-   kommunen etter halvregelen. Bare for kommunene med lagrede detaljklasser (bronse.detaljregister): for de andre ville det koste ett
-   kall mot NIBIO per blokk, og da er svaret null. */
+   kommunen etter halvregelen. For kommunene med lagrede detaljklasser (bronse.detaljregister) leses blokkene fra filene. For de
+   andre hentes de fra NIBIO, ett kall per blokk, så det tar lenger tid. */
 export async function detaljareal(nr: string): Promise<Detaljareal | null> {
   return tellDetaljer(nr, null);
 }
@@ -60,12 +60,14 @@ export async function detaljerIVerneomrader(nr: string): Promise<Detaljareal | n
   return tellDetaljer(nr, (await katalog.solv.verneomrader(nr)).omrader);
 }
 /* Arealet per detaljklasse i kommunen nr, eller bare innenfor flatene. Blokkene utenfor flatene hoppes over, og blokkene leses seks
-   om gangen. null når kommunen ikke har lagrede detaljklasser. */
+   om gangen. hentet og versjon er fra registeret når kommunen har lagrede detaljklasser, ellers tomme. null når kommunen ikke har
+   noen blokker. */
 async function tellDetaljer(
   nr: string,
   flater: { koord: Flerflate; ext: Utsnitt }[] | null
 ): Promise<Detaljareal | null> {
-  const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.detaljblokker(nr)]);
+  const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.detaljblokker(nr)]),
+    lagret = !!(reg && reg.kommuner && reg.kommuner[nr]);
   if (!L.length) return null;
   const g = await katalog.solv.grense(nr),
     n = new Array<number>(DETALJKLASSER.length + 1).fill(0),
@@ -86,7 +88,7 @@ async function tellDetaljer(
     km2,
     sum,
     ukjent: tiDekar((n[0] * res * res) / skala),
-    hentet: (reg && reg.hentet) || '',
-    versjon: (reg && reg.versjon) || ''
+    hentet: (lagret && reg && reg.hentet) || '',
+    versjon: (lagret && reg && reg.versjon) || ''
   };
 }

@@ -206,7 +206,7 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
      blir summen den samme som natur og jordbruk satt av. Finnes ingen klasse av riktig slag i ruta, telles den som ukjent.
 
 **Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 21 meter (eller 10,6
-meter) i hver blokk. For kommuner med lagrede detaljklasser: arealet per detaljklasse i kommunen.
+meter) i hver blokk. Og arealet per detaljklasse i kommunen.
 
 **Usikkerhet.**
 
@@ -229,8 +229,10 @@ meter) i hver blokk. For kommuner med lagrede detaljklasser: arealet per detaljk
 
   For hele Trondheim gir detaljklassene, summert til seks klasser, innenfor 0,7 % av dagens klasser for bebygd, jordbruk, natur og
   hav. Innsjø er 1,4 % og elv 2,6 % større. Lite vegetert mark er bare prøvd i Trondheim, og bør prøves i en fjellkommune.
-- Detaljklassene er lagret bare for Trondheim (`public/detaljklasser/`, 40 blokker og 630 kB, laget med
-  `verktoy/klasser.ts --detalj`). For andre kommuner regnes de ikke ut, for det ville koste ett kall mot NIBIO per blokk.
+- Detaljklassene regnes på samme måte for alle kommuner. For seks kommuner er blokkene lagret sammen med siden
+  (`public/detaljklasser/`, laget med `verktoy/klasser.ts --detalj`): Trondheim (40 blokker), Malvik (17), Røros (91), Stavanger (47),
+  Sandnes (66) og Bodø (209), til sammen 457 filer og 5,1 MB. For de andre kommunene hentes de fra NIBIO når tvillingen trenger
+  dem, ett kall per blokk på rundt 5 × 5 km, så det tar lenger tid. Hovedsiden henter dem ikke (`etterBehov`).
 
 **Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
 kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser per blokk og for hele kommunen: `solv.klasser`, `solv.blokker`,
@@ -1019,6 +1021,11 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Detaljklassene for alle kommuner, 15. oktober 2026.** Detaljklassene og tallene som bygger på dem (skog, våtmark, naturen i
+verneområdene og planlagt utbygging per økosystemtype) regnes nå på samme måte for alle kommuner som for Trondheim. Blokkene er
+lagret for Trondheim, Malvik, Røros, Stavanger, Sandnes og Bodø. For de andre hentes de fra NIBIO når tvillingen trenger dem.
+Tabellene i gull som bygger på dem, regnes etter behov, så hovedsiden henter dem ikke. Hovedsidens tall er ikke endret.
 
 **Syntetiske tabeller av arealstatistikken, og hele Norge, 13. oktober 2026.** De syntetiske tabellene lages nå av SSBs
 arealstatistikk alene, med alle de elleve hovedøkosystemene: havet er resten av kommunens flate, og kyststrender, svaberg og dyner en

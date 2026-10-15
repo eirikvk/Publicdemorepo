@@ -626,9 +626,10 @@ export const katalog = {
       lag: 'solv',
       navn: 'detaljblokker',
       tittel: 'Blokkene med detaljklasser',
-      om: 'blokkene på nivå 10 med lagrede detaljklasser for kommunen, som [10, x, y], fra registeret (bronse.detaljregister). Tom når kommunen ikke har lagrede detaljklasser.',
+      om: 'blokkene på nivå 10 for kommunen, som [10, x, y]: de lagrede i registeret (bronse.detaljregister), eller ellers blokkene kommunen har ruter i (solv.blokker), som hentes fra NIBIO.',
       teknisk: true,
-      forklaring: 'Blokkene der detaljklassene er lagret sammen med siden, for kommunen.',
+      forklaring:
+        'Blokkene med detaljklasser for kommunen: de som er lagret sammen med siden, eller ellers alle blokkene kommunen har ruter i.',
       husk: 12,
       etl: solvGrunnkart.detaljblokker
     }),
@@ -868,12 +869,13 @@ export const katalog = {
       lag: 'gull',
       navn: 'detaljareal',
       tittel: 'Areal per detaljklasse',
-      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter klippet til kommunen etter halvregelen. Bare for kommunene med lagrede detaljklasser, ellers null. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter klippet til kommunen etter halvregelen. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Bare for kommuner der detaljklassene er lagret.',
+        'Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
       usikkerhet: [
         'Klassen leses av fargen i kartbildet, og i kanten mellom to flater blander NIBIO fargene. Smale flater, som elver og bekker, blir derfor for små.'
       ],
+      etterBehov: true,
       husk: 12,
       etl: gullGrunnkart.detaljareal
     }),
@@ -881,9 +883,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'detaljerIVerneomrader',
       tittel: 'Areal per detaljklasse i verneområdene',
-      om: 'arealet i km² per detaljklasse innenfor verneområdene i kommunen, av blokkene på 10,6 meter. Ruter teller når verneområdene dekker minst halve ruta. Bare for kommunene med lagrede detaljklasser, ellers null. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet i km² per detaljklasse innenfor verneområdene i kommunen, av blokkene på 10,6 meter. Ruter teller når verneområdene dekker minst halve ruta. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Grunnkartets økosystemtyper i verneområdene: hvor mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Bare for kommuner der detaljklassene er lagret.',
+        'Grunnkartets økosystemtyper i verneområdene: hvor mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
+      etterBehov: true,
       husk: 12,
       etl: gullGrunnkart.detaljerIVerneomrader
     }),
@@ -891,9 +894,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'skog',
       tittel: 'Skog i grunnkartet',
-      om: 'skogen i kommunen fra grunnkartet: arealet, andelen av landarealet i grunnkartet, og arealet per treslag og per underlag (fastmark, tresatt myr, tresatt innmarksbeite). Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'skogen i kommunen fra grunnkartet: arealet, andelen av landarealet i grunnkartet, og arealet per treslag og per underlag (fastmark, tresatt myr, tresatt innmarksbeite). Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Skog er økosystemtypen skog i grunnkartet, også tresatt myr og tresatt innmarksbeite. Arealet summeres fra detaljklassene, og andelen er av landarealet i grunnkartet (alt unntatt hav, innsjøer og elver).',
+      etterBehov: true,
       husk: 12,
       etl: gullOkosystemer.skog
     }),
@@ -901,9 +905,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'vatmark',
       tittel: 'Våtmark i grunnkartet',
-      om: 'våtmarken i kommunen fra grunnkartet: åpen våtmark og tresatt myr, samlet og hver for seg, og andelen av landarealet i grunnkartet. Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'våtmarken i kommunen fra grunnkartet: åpen våtmark og tresatt myr, samlet og hver for seg, og andelen av landarealet i grunnkartet. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr, som skissene regner med i våtmarken. Tresatt myr er dermed både skog og våtmark.',
+      etterBehov: true,
       husk: 12,
       etl: gullOkosystemer.vatmark
     }),
@@ -911,9 +916,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'vernetNatur',
       tittel: 'Naturen i verneområdene',
-      om: 'det vernede arealet per økosystemtype i grunnkartet, på land, i sjø og i ferskvann, andelen vernet land av landarealet i grunnkartet, og skogen som er vernet. Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'det vernede arealet per økosystemtype i grunnkartet, på land, i sjø og i ferskvann, andelen vernet land av landarealet i grunnkartet, og skogen som er vernet. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Arealet per detaljklasse innenfor verneområdene, summert til økosystemtypene på nivå 1 og til land, sjø og ferskvann.',
+      etterBehov: true,
       husk: 12,
       etl: gullOkosystemer.vernetNatur
     }),
@@ -921,9 +927,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'planPerOkosystem',
       tittel: 'Planlagt utbygging per økosystemtype',
-      om: 'natur og jordbruk satt av til utbygging per økosystemtype i grunnkartet, med andelen av typen i kommunen, og våtmarken som er satt av. Bare for kommunene med lagrede detaljklasser. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'natur og jordbruk satt av til utbygging per økosystemtype i grunnkartet, med andelen av typen i kommunen, og våtmarken som er satt av. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Planlagt utbygging per detaljklasse, summert til økosystemtypene på nivå 1. Andelen er arealet satt av delt på arealet av typen i kommunen.',
+      etterBehov: true,
       husk: 6,
       brukerstyrt: true,
       etl: gullOkosystemer.planPerOkosystem
@@ -1138,9 +1145,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'planlagtPerDetaljklasse',
       tittel: 'Planlagt utbygging per detaljklasse',
-      om: 'natur og jordbruk satt av til utbygging, fordelt på detaljklassene i grunnkartet: hver rute får den detaljklassen av riktig slag det er mest av i ruta. Summen er den samme som i gull.plansum. Bare for kommunene med lagrede detaljklasser, ellers null. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'natur og jordbruk satt av til utbygging, fordelt på detaljklassene i grunnkartet: hver rute får den detaljklassen av riktig slag det er mest av i ruta. Summen er den samme som i gull.plansum. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Planlagt utbygging per økosystemtype i grunnkartet: hvor mye av naturen som settes av, er skog, våtmark, tresatt myr og så videre. Hver rute med planlagt utbygging får den typen det er mest av i ruta, så summen er den samme som natur og jordbruk satt av. Bare for kommuner der detaljklassene er lagret.',
+        'Planlagt utbygging per økosystemtype i grunnkartet: hvor mye av naturen som settes av, er skog, våtmark, tresatt myr og så videre. Hver rute med planlagt utbygging får den typen det er mest av i ruta, så summen er den samme som natur og jordbruk satt av. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
+      etterBehov: true,
       husk: 6,
       brukerstyrt: true,
       etl: gullPlan.planlagtPerDetaljklasse

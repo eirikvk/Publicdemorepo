@@ -120,8 +120,8 @@ const UNDERLAGFARGE: Record<string, string> = { vanlig: 'skog-bar', myr: 'myr-tr
 const GRUNNKART_KILDE = (
   <p>
     {KILDE.grunnkart.navn}, {KILDE.grunnkart.datasett}. Tallene er regnet ut fra grunnkartet på 10 meter, klippet til
-    kommunen. Andelen er av landarealet i grunnkartet, det vil si alt unntatt hav, innsjøer og elver. Foreløpig er det
-    regnet ut bare for Trondheim.
+    kommunen. Andelen er av landarealet i grunnkartet, det vil si alt unntatt hav, innsjøer og elver. For noen kommuner
+    er grunnkartet lagret sammen med siden. For de andre hentes det fra NIBIO når siden vises, og da tar det litt tid.
   </p>
 );
 
@@ -199,7 +199,7 @@ function Skog({ tema }: { tema: Tema }) {
       ]}
       lagEtter={
         <>
-          {S.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
+          {S.s === 'mangler' && <p className="hint">Lagene fra grunnkartet kunne ikke lages for kommunen.</p>}
           <p className="hint">
             Skissene har ett lag for naturskog. Kartet over naturskog har flere; her er to av dem. Laget for naturtyper
             i skog venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart ennå.
@@ -335,7 +335,7 @@ function Vatmark({ tema }: { tema: Tema }) {
       ]}
       lagEtter={
         <>
-          {W.s === 'mangler' && <p className="hint">Lagene fra grunnkartet finnes foreløpig bare for Trondheim.</p>}
+          {W.s === 'mangler' && <p className="hint">Lagene fra grunnkartet kunne ikke lages for kommunen.</p>}
           <p className="hint">
             Laget for naturtyper i våtmark venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart
             ennå.

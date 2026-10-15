@@ -16,12 +16,13 @@ export type Svar<T> =
 export const fraRad = <T>(r: Rad<T> | null): Svar<T> =>
   !r || r.status === 'henter' ? { s: 'henter' } : r.status === 'feil' ? { s: 'feil' } : { s: 'ok', v: r.verdi as T };
 
-/* Svarene fra grunnkartet med detaljklassene (gull/okosystemer.ts). De mangler når kommunen ikke har lagrede detaljklasser (svaret
-   er null). Planlagt utbygging per økosystemtype er ingen når kommunen ikke har planlagt utbygging. */
+/* Svarene fra grunnkartet med detaljklassene (gull/okosystemer.ts). Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO,
+   og da tar det litt tid. De mangler bare når kommunen ikke har noen blokker (svaret er null). Planlagt utbygging per økosystemtype
+   er ingen når kommunen ikke har planlagt utbygging. */
 function fraGrunnkart<T>(t: Tabell<string, T | null>): Svar<T> {
   const S = fraRad(valgt(t));
   if (S.s !== 'ok') return S;
-  return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Regnet ut bare for Trondheim foreløpig' };
+  return S.v ? { s: 'ok', v: S.v } : { s: 'mangler', hvorfor: 'Kunne ikke regnes ut for kommunen' };
 }
 export const skog = () => fraGrunnkart(katalog.gull.skog);
 export const vatmark = () => fraGrunnkart(katalog.gull.vatmark);
