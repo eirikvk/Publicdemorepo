@@ -1,12 +1,14 @@
-/* Temasidene under «Utforsk naturen», etter malen i Figma: brødsmuler, toppen med ingress og bilde, tallkort, kartet med lagvelgeren,
-   figurer med tekst og kilde, ofte stilte spørsmål, ressurser og flisene til de andre temaene. Tallene kommer fra datamotoren (se
-   tall.ts). Det skissene viser som datamotoren ikke har ennå, står i en ramme som sier hva som trengs. */
+/* Temasidene under «Utforsk naturen», etter skissene fra 17. oktober: brødsmuler, toppen med ikon, ingress, trekkspill og bilde,
+   tallkort, kartet med lagvelgeren og trekkspill under den, figurer med tekst og kilde, ofte stilte spørsmål, ressurser og flisene
+   til alle temaene. Tallene kommer fra datamotoren (se tall.ts). Det skissene viser som datamotoren ikke har ennå, står tomt, med et
+   merke som sier hva som trengs. Kartlagene og tallene som ikke er i skissene (dagens arealklasser, planlagt utbygging, naturskog og
+   listene over områdene), er beholdt. */
 import { useState, type ReactNode } from 'react';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { NATURTEMA } from '../../src/data/solv/temaer.ts';
-import { antallOrd, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
+import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
 import { MdCheckbox } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
@@ -15,6 +17,7 @@ import {
   Figur,
   Fremhevet,
   Helt,
+  Kake,
   Liggende,
   Mangler,
   NestePerspektiv,
@@ -47,6 +50,8 @@ import { KILDE } from '../../src/data/katalog.ts';
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
 const iDagens = (side: string) => `../#${app.valgt ? app.valgt.nr : ''}${side ? '/' + side : ''}`;
 const prosent = (a: number | null) => (a === null ? '–' : pst(a) + ' %');
+/* Merket på trekkspill og figurer som mangler kilde */
+const MANGLER_KILDE = 'Mangler kilde';
 
 interface Temasideinnhold {
   tema: Tema;
@@ -68,7 +73,7 @@ function Temaside(p: Temasideinnhold) {
         <Brodsmuler tema={p.tema} />
         <Helt tema={p.tema}>{p.trekkspill}</Helt>
         <Tallkort kort={p.kort} />
-        <div className="trekkspill-liste">
+        <div className="trekkspill-liste etter-tallkort">
           <Trekkspill tittel="Hvor er tallene hentet fra?">{p.kilde}</Trekkspill>
         </div>
         {p.fremhevet}
@@ -78,7 +83,7 @@ function Temaside(p: Temasideinnhold) {
         {p.children}
         <Sporsmal liste={p.sporsmal} />
         <Ressurser lenker={p.ressurser} />
-        <NestePerspektiv unntatt={p.tema.id} />
+        <NestePerspektiv />
       </div>
     </>
   );
@@ -113,9 +118,7 @@ function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; 
 }
 
 /* Kilden til lagene fra grunnkartet, i lagvelgeren */
-const GK = 'Grunnkart for arealanalyse, NIBIO';
-/* Fargen for hvert underlag i skogen, til figuren */
-const UNDERLAGFARGE: Record<string, string> = { vanlig: 'skog-bar', myr: 'myr-tresatt', beite: 'beite-tresatt' };
+const GK = 'Grunnkart for arealanalyse';
 /* Kilden for tallene fra grunnkartet med detaljklassene */
 const GRUNNKART_KILDE = (
   <p>
@@ -123,6 +126,33 @@ const GRUNNKART_KILDE = (
     kommunen. Andelen er av landarealet i grunnkartet, det vil si alt unntatt hav, innsjøer og elver. For noen kommuner
     er grunnkartet lagret sammen med siden. For de andre hentes det fra NIBIO når siden vises, og da tar det litt tid.
   </p>
+);
+/* Trekkspillene under figurene om skog og våtmark */
+const OVERLAPP = (
+  <>
+    <Trekkspill tittel="Hvorfor overlapper verdiene?">
+      <p>
+        Tresatt myr og tresatt innmarksbeite er skog i grunnkartet, men myr og jordbruk i arealdekket. Derfor står
+        tresatt myr både i tallene for skog og for våtmark.
+      </p>
+    </Trekkspill>
+    <Trekkspill tittel="Hvordan brukes dataene i grafen?">
+      <p>
+        Hver bit er arealet i grunnkartet for kommunen, i dekar, og andelen av det samlede arealet i figuren. Arealet er
+        regnet ut fra grunnkartet på 10 meter, klippet til kommunen.
+      </p>
+    </Trekkspill>
+  </>
+);
+const TRESATT_MED = (tittel: string) => (
+  <div className="trekkspill-liste">
+    <Trekkspill tittel={tittel}>
+      <p>
+        I grunnkartet er myr og innmarksbeite med trær skog. De er likevel myr og jordbruk i arealdekket, og har mye av
+        naturen og karbonet til myra og beitet. Derfor vises de som egne lag.
+      </p>
+    </Trekkspill>
+  </div>
 );
 
 function Skog({ tema }: { tema: Tema }) {
@@ -132,12 +162,17 @@ function Skog({ tema }: { tema: Tema }) {
     <Temaside
       tema={tema}
       trekkspill={
-        <Trekkspill tittel="Mer om skog">
-          <p>
-            Tallene er skog i grunnkartet fra NIBIO: økosystemtypen skog, også skog på myr og på innmarksbeite, delt
-            etter treslaget som dominerer. Kartet viser dagens arealklasser fra NIBIO, der skog er en del av naturen.
-          </p>
-        </Trekkspill>
+        <>
+          <Trekkspill tittel="Mer om skog">
+            <p>
+              Tallene er skog i grunnkartet fra NIBIO: økosystemtypen skog, også skog på myr og på innmarksbeite, delt
+              etter treslaget som dominerer. Kartet viser skogen og skogtypene fra grunnkartet.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Dette får vi fra skogen (økosystemtjenester)" merke="–">
+            <p>Hvilke økosystemtjenester skogen gir, og hvor mange, mangler kilde ennå.</p>
+          </Trekkspill>
+        </>
       }
       kort={[
         ['Skog i kommunen', svar(S, s => iTekst(s.km2))],
@@ -146,34 +181,25 @@ function Skog({ tema }: { tema: Tema }) {
       ]}
       kilde={GRUNNKART_KILDE}
       lag={[
-        {
-          id: 'skog',
-          navn: 'Økosystemtype skog',
-          kilde: GK,
-          farger: [['Skog', 'skog']],
-          ol: SKOGLAG.skog,
-          av: true
-        },
+        { id: 'skog', navn: 'Økosystemtype skog', kilde: GK, farger: [['Skog', 'skog']], ol: SKOGLAG.skog, av: true },
         {
           id: 'skogtyper',
           navn: 'Skogtyper',
           kilde: GK,
           farger: [
-            ['Barskog', 'skog-bar'],
             ['Blandingsskog', 'skog-bland'],
+            ['Barskog', 'skog-bar'],
             ['Lauvskog', 'skog-lauv']
           ],
           ol: SKOGLAG.skogtyper
         },
+        { id: 'myr', navn: 'Tresatt myr', kilde: GK, farger: [['Tresatt myr', 'myr-tresatt']], ol: SKOGLAG.myr },
         {
-          id: 'tresatt',
-          navn: 'Tresatt myr og innmarksbeite',
+          id: 'beite',
+          navn: 'Tresatt innmarksbeite',
           kilde: GK,
-          farger: [
-            ['Tresatt myr', 'myr-tresatt'],
-            ['Tresatt innmarksbeite', 'beite-tresatt']
-          ],
-          ol: SKOGLAG.tresatt
+          farger: [['Tresatt innmarksbeite', 'beite-tresatt']],
+          ol: SKOGLAG.beite
         },
         {
           id: 'naerhet',
@@ -195,15 +221,12 @@ function Skog({ tema }: { tema: Tema }) {
           av: true
         },
         { ...KLASSER, av: true },
-        PLAN
+        { ...PLAN, av: true }
       ]}
       lagEtter={
         <>
           {S.s === 'mangler' && <p className="hint">Lagene fra grunnkartet kunne ikke lages for kommunen.</p>}
-          <p className="hint">
-            Skissene har ett lag for naturskog. Kartet over naturskog har flere; her er to av dem. Laget for naturtyper
-            i skog venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart ennå.
-          </p>
+          {TRESATT_MED('Hvorfor er tresatt myr og tresatt innmarksbeite med?')}
         </>
       }
       sporsmal={[
@@ -212,6 +235,14 @@ function Skog({ tema }: { tema: Tema }) {
           <p>
             SSB har egne arealklasser, mens tallene her er NIBIOs grunnkart for arealanalyse, med økosystemtyper. De to
             deler arealet inn på ulike måter, så de gir ikke helt samme areal for skog.
+          </p>
+        ],
+        [
+          'Hvorfor er naturskog med i kartet?',
+          <p>
+            Kartet over naturskog fra Miljødirektoratet viser skog som har fått utvikle seg lenge uten flatehogst. Det
+            er med som to lag, av til du slår dem på. Laget for naturtyper i skog venter på Naturkart, et heldekkende
+            kart over naturtyper som ikke er klart ennå.
           </p>
         ]
       ]}
@@ -225,8 +256,11 @@ function Skog({ tema }: { tema: Tema }) {
         tittel={`Typer skog i ${kommunen()}`}
         tekst={
           <p>
-            Skogen i kommunen deles inn etter hvilke treslag som dominerer. Det er vanlig å skille mellom barskog og
-            lauvskog. I barskogen er gran og furu de viktigste treslagene. Der begge vokser, er det blandingsskog.
+            Skogen i kommunen deles inn etter hvilke typer treslag som dominerer. Det er vanlig å skille mellom barskog
+            og lauvskog. I barskogen er gran og furu de viktigste treslagene, mens i lauvskogen vokser ulike typer
+            lauvtrær. Enkelte steder finner du både bartrær og lauvtrær i samme skog. Mange arter av sopp, lav og andre
+            artsgrupper er avhengige av skogen og er tilpasset spesifikke treslag. Derfor gir kunnskap om hvilke treslag
+            og skogtyper vi har i kommunen viktig informasjon om naturmangfoldet.
           </p>
         }
         kilder={['grunnkart']}
@@ -234,7 +268,9 @@ function Skog({ tema }: { tema: Tema }) {
         {svar(S, s => (
           <Stolper
             hva="Skog etter treslag"
-            data={s.treslag.map(t => ({ navn: t.navn, km2: t.km2, farge: 'skog-' + t.id }))}
+            data={[...s.treslag]
+              .sort((a, b) => b.km2 - a.km2)
+              .map(t => ({ navn: t.navn, km2: t.km2, farge: 'skog-' + t.id }))}
           />
         ))}
       </Figur>
@@ -242,20 +278,22 @@ function Skog({ tema }: { tema: Tema }) {
         tittel={`Dette dekker skogen i ${kommunen()}`}
         tekst={
           <p>
-            Skogen i grunnkartet fra NIBIO står på fastmark, på myr eller på innmarksbeite. Myr og beite med trær er
-            skog i grunnkartet, og er med i tallene for skog over.
+            Figuren viser hva skogarealet i {kommunen()} står på: fastmark, myr eller innmarksbeite. Jo større en sektor
+            er, desto større del av skogarealet dekker den.
           </p>
         }
         kilder={['grunnkart']}
+        etter={OVERLAPP}
       >
         {svar(S, s => (
-          <>
-            <Liggende
-              hva="Skog i grunnkartet etter underlag"
-              data={s.underlag.map(u => ({ navn: u.navn, km2: u.km2, farge: UNDERLAGFARGE[u.id] }))}
-            />
-            <p>Til sammen {iTekst(s.km2)} skog.</p>
-          </>
+          <Kake
+            hva="Skog i grunnkartet etter underlag"
+            data={s.underlag.map(u =>
+              u.id === 'vanlig'
+                ? { navn: 'Skog på fastmark', km2: u.km2, farge: 'kake-graa' }
+                : { navn: u.navn, km2: u.km2, farge: u.id === 'myr' ? 'myr-tresatt' : 'beite-tresatt', prikker: true }
+            )}
+          />
         ))}
       </Figur>
     </Temaside>
@@ -302,12 +340,17 @@ function Vatmark({ tema }: { tema: Tema }) {
     <Temaside
       tema={tema}
       trekkspill={
-        <Trekkspill tittel="Mer om våtmark">
-          <p>
-            Tallene er våtmark i grunnkartet fra NIBIO: økosystemtypen våtmark, som er åpen myr og annen åpen våtmark,
-            og tresatt myr.
-          </p>
-        </Trekkspill>
+        <>
+          <Trekkspill tittel="Hva betyr verdiene?">
+            <p>
+              Tallene er våtmark i grunnkartet fra NIBIO: økosystemtypen våtmark, som er åpen myr og annen åpen våtmark,
+              og tresatt myr.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Potensielle økosystemtjenester fra våtmark" merke="–">
+            <p>Hvilke økosystemtjenester våtmarken gir, mangler kilde ennå.</p>
+          </Trekkspill>
+        </>
       }
       kort={[
         ['Våtmark i kommunen', svar(W, w => iTekst(w.km2))],
@@ -318,7 +361,7 @@ function Vatmark({ tema }: { tema: Tema }) {
       lag={[
         {
           id: 'vatmark',
-          navn: 'Økosystemtype våtmark',
+          navn: 'Økosystemtype våtmark (myr)',
           kilde: GK,
           farger: [['Åpen myr og annen åpen våtmark', 'myr-apen']],
           ol: VATMARKLAG.apen
@@ -331,15 +374,12 @@ function Vatmark({ tema }: { tema: Tema }) {
           ol: VATMARKLAG.tresatt
         },
         { ...KLASSER, av: true },
-        PLAN
+        { ...PLAN, av: true }
       ]}
       lagEtter={
         <>
           {W.s === 'mangler' && <p className="hint">Lagene fra grunnkartet kunne ikke lages for kommunen.</p>}
-          <p className="hint">
-            Laget for naturtyper i våtmark venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart
-            ennå.
-          </p>
+          {TRESATT_MED('Hvorfor er tresatt myr med?')}
         </>
       }
       sporsmal={[
@@ -348,6 +388,13 @@ function Vatmark({ tema }: { tema: Tema }) {
           <p>
             Grunnkartet regner myr med trær som skog. Skissene har den med i våtmarken, så her telles den både i
             våtmarken og i skogen.
+          </p>
+        ],
+        [
+          'Hvorfor mangler naturtyper i våtmark i kartet?',
+          <p>
+            Laget for naturtyper i våtmark venter på Naturkart, et heldekkende kart over naturtyper som ikke er klart
+            ennå.
           </p>
         ]
       ]}
@@ -360,23 +407,21 @@ function Vatmark({ tema }: { tema: Tema }) {
         tittel={`Dette dekker våtmarken i ${kommunen()}`}
         tekst={
           <p>
-            Våtmarken i grunnkartet fra NIBIO: økosystemtypen våtmark, som er åpen myr og annen åpen våtmark, og tresatt
-            myr. Grunnkartet regner tresatt myr som skog, så den står også på siden om skog.
+            Figuren viser hva som dekker våtmarksarealet i kommunen. Mye av våtmarka har trær, enten som skog eller som
+            myr med spredte trær. Jo større en sektor er, desto større del av våtmarksarealet dekker den.
           </p>
         }
         kilder={['grunnkart']}
+        etter={OVERLAPP}
       >
         {svar(W, w => (
-          <>
-            <Liggende
-              hva="Våtmark i grunnkartet"
-              data={[
-                { navn: 'Åpen våtmark', km2: w.apen, farge: 'myr-apen' },
-                { navn: 'Tresatt myr', km2: w.tresatt, farge: 'myr-tresatt' }
-              ]}
-            />
-            <p>Til sammen {iTekst(w.km2)}.</p>
-          </>
+          <Kake
+            hva="Våtmark i grunnkartet"
+            data={[
+              { navn: 'Våtmark i grunnkartet', km2: w.apen, farge: 'kake-vatmark' },
+              { navn: 'Tresatt myr', km2: w.tresatt, farge: 'kake-myr', prikker: true }
+            ]}
+          />
         ))}
       </Figur>
     </Temaside>
@@ -390,40 +435,93 @@ const verneform = (v: unknown) =>
     .toLowerCase()
     .replace(/omraade/g, 'område')
     .replace(/^./, c => c.toUpperCase());
+/* Fargen for en verneform i figuren, som i skissene: nasjonalpark, naturreservat, landskapsvernområde og marint verneområde har
+   hver sin, artsfredning (dyre- og plantefredning) og annen fredning har sin */
+const verneformFarge = (navn: string) =>
+  /nasjonalpark/i.test(navn)
+    ? 'vf-nasjonalpark'
+    : /naturreservat/i.test(navn)
+      ? 'vf-naturreservat'
+      : /landskapsvern/i.test(navn)
+        ? 'vf-landskap'
+        : /marint/i.test(navn)
+          ? 'vf-marint'
+          : /fredning/i.test(navn)
+            ? 'vf-arts'
+            : 'vf-annen';
+/* Fargen for et hovedøkosystem i figuren om naturen som er vernet, som i skissene */
+const OKOFARGE: Record<string, string> = {
+  Skog: 'oko-skog',
+  Våtmark: 'oko-vatmark',
+  'Innsjøer og vannmagasiner': 'oko-innsjo',
+  'Hei og buskmark': 'oko-hei',
+  Grasmark: 'oko-gras',
+  'Elver, bekker og kanaler': 'oko-elv',
+  'Lite vegetert mark': 'oko-lite',
+  'Kyststrender, svaberg og dyner': 'oko-kyst',
+  'Dyrket mark': 'oko-dyrket',
+  'Bebygd og opparbeidet areal': 'oko-bebygd',
+  Hav: 'oko-hav'
+};
 
 function Vern({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('vern'),
     v = T.s === 'ok' ? T.v : null,
     F = vernPerVerneform(),
-    V = vernetNatur();
+    V = vernetNatur(),
+    [hav, settHav] = useState(true);
   return (
     <Temaside
       tema={tema}
       trekkspill={
-        <Trekkspill tittel="Mer om verneområder">
-          <p>
-            Områdene er vernet etter naturmangfoldloven eller eldre lover. Verneformen sier hvor strenge reglene er:
-            naturreservat er strengest, landskapsvernområde minst strengt.
-          </p>
-        </Trekkspill>
+        <>
+          <Trekkspill tittel="Mer om verneområder">
+            <p>
+              Områdene er vernet etter naturmangfoldloven eller eldre lover. Verneformen sier hvor strenge reglene er:
+              naturreservat er strengest, landskapsvernområde minst strengt.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Datagrunnlaget bak verneområder">
+            <p>
+              {KILDE.vern.datasett}, {KILDE.vern.navn}, med alle områdene som er vernet etter naturmangfoldloven og
+              eldre lover.
+            </p>
+          </Trekkspill>
+        </>
       }
       kort={[
         ['Vernet natur i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av landarealet som er vernet', svar(V, x => prosent(x.andelLand))],
-        ['Antall verneområder', svar(T, x => nf(x.antall, 0))]
+        ['Andel av landarealet som er vernet', svar(V, x => prosent(x.andelLand))]
       ]}
       kilde={
         <p>
-          {KILDE.vern.datasett}, {KILDE.vern.navn}. Arealet er den delen av hvert område som ligger i kommunen. Der
-          områder overlapper, telles arealet én gang.
+          {KILDE.vern.datasett}, {KILDE.vern.navn}. Arealet er den delen av hvert område som ligger i kommunen, også i
+          sjø. Andelen er bare det vernede på land, av landarealet i grunnkartet. Der områder overlapper, telles arealet
+          én gang.
         </p>
       }
       fremhevet={<PlanITema plan={plan} hva="verneområder" />}
       lag={[
-        { id: 'tema', navn: 'Verneområder', kilde: KILDE.vern.datasett, farger: [['Verneområde', 'vern']] },
-        KLASSER,
-        PLAN
+        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', farger: [['Verneområde', 'vern']] },
+        { ...KLASSER, av: true },
+        { ...PLAN, av: true }
       ]}
+      lagEtter={
+        <div className="trekkspill-liste">
+          <Trekkspill tittel="Hvordan deles verneområder inn?">
+            <p>
+              Verneområdene deles inn etter verneform, som nasjonalpark, naturreservat, landskapsvernområde og marint
+              verneområde. Hvert område har sin egen verneforskrift.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Hva er forskjellen på verneformene?">
+            <p>
+              Naturreservat har det strengeste vernet. Nasjonalparker verner store naturområder, og landskapsvernområder
+              verner landskapet, der vanlig bruk ofte kan fortsette. Marine verneområder verner natur i sjø.
+            </p>
+          </Trekkspill>
+        </div>
+      }
       sporsmal={[
         [
           'Kan det bygges i et verneområde?',
@@ -439,87 +537,96 @@ function Vern({ tema }: { tema: Tema }) {
       ]}
     >
       {v && v.antall > 0 && (
-        <>
-          <Figur
-            tittel={`Slik er naturen vernet i ${kommunen()}`}
-            tekst={
-              <p>
-                Figuren viser hvor mye areal som er vernet i kommunen, fordelt på verneform. Ulike verneformer har ulike
-                formål og regler.
-              </p>
-            }
-            kilder={['vern']}
-          >
-            {svar(F, f => (
-              <Liggende
-                hva="Vernet areal per verneform"
-                data={f.map(x => ({ navn: verneform(x.verneform), km2: x.km2, farge: 'vern' }))}
-              />
-            ))}
-          </Figur>
-          <Figur
-            tittel={`Verneområdene i ${kommunen()}`}
-            tekst={<p>Alle verneområdene som ligger helt eller delvis i kommunen, med det største først.</p>}
-            kilder={['vern']}
-          >
-            <Tabell
-              hva="Verneområdene"
-              kolonner={[
-                { navn: 'Område' },
-                { navn: 'Verneform' },
-                { navn: 'I kommunen', tall: true },
-                { navn: 'Faktaark' }
-              ]}
-              rader={[...v.omrader]
-                .sort((a, b) => b.km2 - a.km2)
-                .map(o => [
-                  o.navn,
-                  verneform(o.egenskaper.verneform),
-                  dekar(o.km2),
-                  o.url ? (
-                    <a href={o.url} target="_blank" rel="noopener">
-                      Åpne
-                    </a>
-                  ) : (
-                    ''
-                  )
-                ])}
+        <Figur
+          tittel={`Slik er naturen vernet i ${kommunen()}`}
+          tekst={
+            <p>
+              Figuren viser hvor mye areal som er vernet i {kommunen()}, fordelt på verneform. Det kan være nyttig å se
+              fordelingen av verneformer, fordi forskjellige verneformer har ulike formål med vernet og ulikt
+              restriksjonsnivå. For eksempel har naturreservater den strengeste formen for områdevern etter
+              naturmangfoldloven.
+            </p>
+          }
+          kilder={['vern']}
+        >
+          {svar(F, f => (
+            <Stolper
+              hva="Vernet areal per verneform"
+              data={f.map(x => {
+                const navn = verneform(x.verneform);
+                return { navn, km2: x.km2, farge: verneformFarge(navn) };
+              })}
             />
-          </Figur>
-        </>
+          ))}
+        </Figur>
       )}
       <Figur
         tittel={`Naturen som er vernet i ${kommunen()}`}
         tekst={
           <p>
-            Grunnkartets økosystemtyper innenfor verneområdene. Myr og beite med trær er med i skogen. Der områder
-            overlapper, telles arealet én gang.
+            Figuren viser hva slags natur som er vernet i {kommunen()}, og hvor mye det er av hver type. Prosenten viser
+            hvor stor del av det vernede arealet hver type utgjør. Verneområder kan også ha dyrket mark og bebyggelse,
+            derfor er disse med i oversikten.
           </p>
         }
         kilder={['grunnkart', 'vern']}
       >
-        {svar(V, d =>
-          d.sum > 0 ? (
+        {svar(V, d => {
+          if (d.sum <= 0) return <p>Kommunen har ingen verneområder.</p>;
+          const rader = [...d.perOkosystem].filter(x => hav || x.navn !== 'Hav').sort((a, b) => b.km2 - a.km2),
+            sum = rader.reduce((a, x) => a + x.km2, 0) || 1;
+          return (
             <>
+              <div className="figur-valg">
+                <MdCheckbox label="Vis «hav» i oversikten" checked={hav} onChange={e => settHav(e.target.checked)} />
+              </div>
               <Liggende
                 hva="Vernet areal per økosystemtype"
-                data={[...d.perOkosystem]
-                  .sort((a, b) => b.km2 - a.km2)
-                  .map(x => ({ navn: x.navn, km2: x.km2, farge: 'vern' }))}
+                data={rader.map(x => ({ navn: x.navn, km2: x.km2, farge: OKOFARGE[x.navn] || 'oko-annen' }))}
+                tekst={x => `${iTekst(x.km2)} (${andelTekst((x.km2 / sum) * 100)})`}
               />
-              <p>
-                Av det vernede arealet er {iTekst(d.land)} på land, {iTekst(d.hav)} i sjø og {iTekst(d.ferskvann)} i
-                innsjøer og elver.
-                {d.andelLand !== null && (
-                  <> Det vernede på land er {prosent(d.andelLand)} av landarealet i grunnkartet.</>
-                )}
-              </p>
             </>
-          ) : (
-            <p>Kommunen har ingen verneområder.</p>
-          )
-        )}
+          );
+        })}
       </Figur>
+      <Figur
+        tittel={`Naturen i verneområdene i ${kommunen()}, i kart`}
+        tekst={<p>Grunnkartets økosystemtyper inne i verneområdene, med én farge per type.</p>}
+        kilder={['grunnkart', 'vern']}
+        merke="Kan regnes ut"
+        tom="grunnkartet med elleve farger, klippet til verneområdene. Begge finnes i datamotoren, men kartet er ikke laget."
+      />
+      {v && v.antall > 0 && (
+        <Figur
+          tittel={`Verneområdene i ${kommunen()}`}
+          tekst={<p>Alle verneområdene som ligger helt eller delvis i kommunen, med det største først.</p>}
+          kilder={['vern']}
+        >
+          <Tabell
+            hva="Verneområdene"
+            kolonner={[
+              { navn: 'Område' },
+              { navn: 'Verneform' },
+              { navn: 'I kommunen', tall: true },
+              { navn: 'Faktaark' }
+            ]}
+            rader={[...v.omrader]
+              .sort((a, b) => b.km2 - a.km2)
+              .map(o => [
+                o.navn,
+                verneform(o.egenskaper.verneform),
+                dekar(o.km2),
+                o.url ? (
+                  <a href={o.url} target="_blank" rel="noopener">
+                    Åpne
+                  </a>
+                ) : (
+                  ''
+                )
+              ])}
+          />
+        </Figur>
+      )}
     </Temaside>
   );
 }
@@ -537,12 +644,20 @@ function Verdi({ tema }: { tema: Tema }) {
     <Temaside
       tema={tema}
       trekkspill={
-        <Trekkspill tittel="Hvordan kartlegges det etter Miljødirektoratets instruks?">
-          <p>
-            Naturtypene kartlegges i felt etter Miljødirektoratets instruks, og hver lokalitet får en verdi fra noe
-            verdi til svært stor verdi. Bare deler av landet er kartlagt.
-          </p>
-        </Trekkspill>
+        <>
+          <Trekkspill tittel="Hvilke naturtyper er verdsatte?">
+            <p>
+              Alle naturtyper som er kartlagt etter Miljødirektoratets instruks, får en verdi. Her er alle lokalitetene
+              med verdi med, fra noe verdi til svært stor verdi.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Hvordan kartlegges det etter Miljødirektoratets instruks?">
+            <p>
+              Naturtypene kartlegges i felt etter Miljødirektoratets instruks, og hver lokalitet får en verdi fra noe
+              verdi til svært stor verdi. Bare deler av landet er kartlagt.
+            </p>
+          </Trekkspill>
+        </>
       }
       kort={[
         ['Andel av kommunen kartlagt', svar(K, x => (x && x.kartlagt ? prosent(x.kartlagt.andelLand) : '–'))],
@@ -559,8 +674,12 @@ function Verdi({ tema }: { tema: Tema }) {
             <Fremhevet varsel>
               <b>Datasettet er ikke heldekkende, bare {prosent(kartlagt.andelLand)} er kartlagt</b>
               <span>
-                Det vil si at kartleggingen kan være mangelfull i kommunen. Tomme områder i kartet betyr ikke
-                nødvendigvis at det ikke finnes verdifull natur der, bare at ingen har sjekket ennå.
+                Det vil si at kartleggingen kan være mangelfull i din kommune. Tomme områder i kartet betyr ikke
+                nødvendigvis at det ikke finnes verdifull natur der, det er bare at ingen har sjekket der enda.
+              </span>
+              <span>
+                Risikoen med mangelfull kartlegging i kommunen kan være at de tomme områdene blir oversett eller
+                undervurdert.
               </span>
             </Fremhevet>
           )}
@@ -571,12 +690,34 @@ function Verdi({ tema }: { tema: Tema }) {
         {
           id: 'tema',
           navn: 'Verdsatte naturtyper',
-          kilde: KILDE.verdsatt.datasett,
+          kilde: 'Naturtyper – verdsatte',
           farger: klasser.map(([navn, farge]) => [navn, farge] as [string, string])
         },
-        KLASSER,
-        PLAN
+        {
+          id: 'dekning',
+          navn: 'Dekningskart for kartlegging',
+          kilde: 'Naturtyper på land (NiN)',
+          farger: [['Ikke kartlagt (slør)', 'slor-merke']]
+        },
+        { ...KLASSER, av: true },
+        { ...PLAN, av: true }
       ]}
+      lagEtter={
+        <div className="trekkspill-liste">
+          <Trekkspill tittel="Hva betyr verdiene?">
+            <p>
+              Verdien sier hvor viktig lokaliteten er: svært stor og stor verdi er av nasjonal eller vesentlig regional
+              betydning, middels og noe verdi er av mer lokal betydning.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Hva er dekningskart?">
+            <p>
+              Dekningskartet viser hvor det er kartlagt naturtyper etter Miljødirektoratets instruks. Det som ikke er
+              kartlagt, har et lyst slør i kartet.
+            </p>
+          </Trekkspill>
+        </div>
+      }
       sporsmal={[
         [
           'Hvorfor bør man passe på verdsatte naturtyper?',
@@ -597,11 +738,21 @@ function Verdi({ tema }: { tema: Tema }) {
           tittel="Fordeling av verdiene"
           tekst={
             <p>
-              Verdien settes etter kriterier for hver naturtype: blant annet lokalitetens kvalitet, om naturtypen er
-              truet, og om den er sjelden.
+              Det er flere faktorer som bestemmer hvilken verdi en naturtype får, det avhenger blant annet av:
+              naturtypelokalitetens kvalitet, om naturtypen er en utvalgt naturtype etter naturmangfoldloven, om
+              naturtypen har en sentral økosystemfunksjon, om den er truet, nær truet eller har status som spesielt
+              dårlig kartlagt på rødlista for naturtyper.
             </p>
           }
           kilder={['verdsatt']}
+          etter={
+            <Trekkspill tittel="Hva betyr verdiene?">
+              <p>
+                Svært stor og stor verdi er av nasjonal eller vesentlig regional betydning. Middels og noe verdi er av
+                mer lokal betydning. Lokaliteter som vurderes per lokalitet eller per naturtype, er ikke med.
+              </p>
+            </Trekkspill>
+          }
         >
           <Stolper
             hva="Areal per verdikategori"
@@ -613,12 +764,35 @@ function Verdi({ tema }: { tema: Tema }) {
         <Figur
           tittel={`Verdsatte naturtyper funnet i ${kommunen()}`}
           tekst={
-            <p>
-              Listen viser hvilke naturtyper som er funnet i kommunen og hvor mye det er av hver. Tallene gjelder bare
-              det som er kartlagt.
-            </p>
+            <>
+              <p>
+                Miljødirektoratet regner over 120 naturtyper som verdsatte. Listen viser hvilke av dem som er funnet i
+                kommunen og hvor mye det er av hver.
+              </p>
+              <p>
+                Tallene gjelder bare det som er kartlagt. Verken kommunen eller resten av landet er ferdig kartlagt, så
+                det kan finnes mer enn det listen viser. Andelen av det som er kartlagt i Norge krever en dataplattform,
+                og står tom.
+              </p>
+            </>
           }
           kilder={['verdsatt']}
+          etter={
+            <>
+              <Trekkspill tittel="Hva betyr det å ha mye av en naturtype?">
+                <p>
+                  Har kommunen mye av en naturtype, har den et særlig ansvar for den. Det gjelder særlig naturtyper som
+                  er sjeldne eller truet.
+                </p>
+              </Trekkspill>
+              <Trekkspill tittel="Hvordan er dataene brukt i tabellen?">
+                <p>
+                  Arealet er summen av lokalitetene med naturtypen i kommunen, klippet mot kommunen. Arealet i Norge
+                  krever kartdata for alle kommuner.
+                </p>
+              </Trekkspill>
+            </>
+          }
         >
           <MdCheckbox
             label="Vis kun stor og svært stor verdi"
@@ -627,14 +801,22 @@ function Verdi({ tema }: { tema: Tema }) {
           />
           <Tabell
             hva="Naturtypene"
-            kolonner={[{ navn: 'Naturtype' }, { navn: 'Antall', tall: true }, { navn: 'Areal', tall: true }]}
-            rader={typer.map(t => [
+            kolonner={[
+              { navn: 'Nr', tall: true },
+              { navn: 'Naturtype' },
+              { navn: `Dekar ${kommunen()}`, tall: true },
+              { navn: 'Andel av kartlagt i Norge', tall: true, ikkeMobil: true }
+            ]}
+            rader={typer.map((t, i) => [
+              String(i + 1),
               <span className="med-farge">
                 <i style={{ background: `var(--${klasser[t.v][1]})` }} title={klasser[t.v][0]} />
                 {t.navn}
               </span>,
-              nf(t.antall, 0),
-              dekar(t.km2)
+              dekar(t.km2, 'dekar'),
+              <span className="tom-celle" title="Krever dataplattform">
+                –
+              </span>
             ])}
           />
         </Figur>
@@ -649,12 +831,26 @@ function Inon({ tema }: { tema: Tema }) {
     <Temaside
       tema={tema}
       trekkspill={
-        <Trekkspill tittel="Hvordan inngrepsfri natur deles inn">
-          <p>
-            Inngrepsfri natur deles i tre soner etter avstanden til nærmeste tyngre tekniske inngrep: sone 2 (1–3 km),
-            sone 1 (3–5 km) og villmarkspreget natur (5 km eller mer).
-          </p>
-        </Trekkspill>
+        <>
+          <Trekkspill tittel="Mer om inngrepsfri natur">
+            <p>
+              Inngrepsfri natur er områder som ligger minst én kilometer fra tyngre tekniske inngrep. Miljødirektoratet
+              har status for 1988, 2008, 2013, 2018 og 2023.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Hvordan inngrepsfri natur deles inn">
+            <p>
+              Inngrepsfri natur deles i tre soner etter avstanden til nærmeste tyngre tekniske inngrep: sone 2 (1–3 km),
+              sone 1 (3–5 km) og villmarkspreget natur (5 km eller mer).
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Datagrunnlaget bak inngrepsfri natur">
+            <p>
+              {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra et bilde av kommunen med ruter på noen
+              titalls meter.
+            </p>
+          </Trekkspill>
+        </>
       }
       kort={[
         ['Inngrepsfri natur i kommunen', svar(I, x => iTekst(x.sum), 'Ingen')],
@@ -663,18 +859,18 @@ function Inon({ tema }: { tema: Tema }) {
       kilde={
         <p>
           {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra et bilde av kommunen med ruter på noen
-          titalls meter.
+          titalls meter. Andelen er av landarealet.
         </p>
       }
       lag={[
         {
           id: 'tema',
           navn: 'Inngrepsfri natur',
-          kilde: KILDE.inon.datasett,
+          kilde: 'Inngrepsfri natur i Norge',
           farger: [2, 1, 0].map(i => [INONSONER[i][4], INONSONER[i][1]] as [string, string])
         },
-        KLASSER,
-        PLAN
+        { ...KLASSER, av: true },
+        { ...PLAN, av: true }
       ]}
       sporsmal={[
         [
@@ -695,9 +891,9 @@ function Inon({ tema }: { tema: Tema }) {
           tittel={`Den inngrepsfrie naturen i ${kommunen()} fordelt i soner`}
           tekst={
             <p>
-              Figuren viser hvor mye inngrepsfri natur det er i kommunen, delt inn etter avstand til nærmeste inngrep.
-              Det er sjelden mulig å reversere inngrep, så når inngrepsfri natur først er tapt, er den som regel borte
-              for godt.
+              Figuren viser hvor mye inngrepsfri natur det er i {kommunen()}, delt inn etter avstand til nærmeste
+              inngrep. Det er sjelden mulig å reversere slike inngrep, så når inngrepsfri natur først er tapt, er den
+              som regel borte for godt.
             </p>
           }
           kilder={['inon']}
@@ -706,18 +902,44 @@ function Inon({ tema }: { tema: Tema }) {
             hva="Inngrepsfri natur per sone"
             data={[2, 1, 0].map(i => ({
               navn: INONSONER[i][4],
-              under: INONSONER[i][3],
+              under: `(${INONSONER[i][3]})`,
               km2: I.v.soner[i],
               farge: INONSONER[i][1]
             }))}
           />
         </Figur>
       )}
-      <Mangler
+      <Figur
         tittel={`Slik har den inngrepsfrie naturen endret seg i ${kommunen()}`}
-        trenger="Miljødirektoratets kart over inngrepsfri natur for tidligere år (1988–2023)."
+        tekst={
+          <p>
+            Figuren viser hvordan arealet med inngrepsfri natur i {kommunen()} har endret seg siden 1988.
+            Miljødirektoratet har oppdatert status for inngrepsfri natur hvert femte år siden 2008. Når arealet blir
+            mindre, skyldes det nye inngrep som veier, kraftlinjer eller vannkraftutbygging.
+          </p>
+        }
+        kilder={['inon']}
+        merke="Kilde finnes"
+        tom="Miljødirektoratets kart over inngrepsfri natur for 1988, 2008, 2013, 2018 og 2023. De finnes i det samme datasettet, men er ikke koblet."
       />
-      <Mangler tittel="Endringer per sone" trenger="de samme kartene for tidligere år." />
+      <Figur
+        tittel="Endringer per sone"
+        tekst={
+          <>
+            <p>
+              Figuren viser hvordan arealet i hver sone har endret seg i hver femårsperiode. Søyler over null betyr at
+              sonen har blitt større, og søyler under null betyr at den har blitt mindre.
+            </p>
+            <p>
+              Når det kommer et nytt inngrep, flytter naturen rundt seg ned en sone: villmark blir til sone 1, sone 1
+              blir til sone 2, og sone 2 blir til inngrepsnær natur, som ligger mindre enn én kilometer fra et inngrep.
+            </p>
+          </>
+        }
+        kilder={['inon']}
+        merke="Kilde finnes"
+        tom="de samme kartene for tidligere år."
+      />
     </Temaside>
   );
 }
@@ -737,30 +959,66 @@ function Rein({ tema }: { tema: Tema }) {
     <Temaside
       tema={tema}
       trekkspill={
-        <Trekkspill tittel="Mer om villreinområder">
-          <p>
-            Villreinområdene er fjellområdene der villreinen lever og trekker. Et område strekker seg ofte over flere
-            kommuner.
-          </p>
-        </Trekkspill>
+        <>
+          <Trekkspill tittel="Mer om villreinområder">
+            <p>
+              Villreinområdene er fjellområdene der villreinen lever og trekker. Et område strekker seg ofte over flere
+              kommuner.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Datagrunnlaget bak villreinområder">
+            <p>
+              {KILDE.villrein.datasett}, {KILDE.villrein.navn}. Arealet er den delen av hvert område som ligger i
+              kommunen.
+            </p>
+          </Trekkspill>
+        </>
       }
       kort={[
         ['Villreinområder i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
         ['Andel av landarealet som er villreinområde', svar(T, x => prosent(x.andelLand))],
-        ['Andel villreinområde som er inngrepsfri natur', svar(IV, x => prosent(x!.andel), 'Ingen villreinområder')]
+        [
+          'Andel villreinområde som er inngrepsfri natur',
+          <span className="tallkort-to">
+            <b>{svar(IV, x => prosent(x!.andel), 'Ingen villreinområder')}</b>
+            <span className="tallkort-etikett">Andel villreinområde som er grå arealer</span>
+            <b className="mangler-tall" title="Kan regnes ut, ikke laget">
+              –
+            </b>
+          </span>
+        ]
       ]}
       kilde={
         <p>
           {KILDE.villrein.datasett}, {KILDE.villrein.navn}. Arealet er den delen av hvert område som ligger i kommunen.
+          Grå arealer i villreinområdene kan regnes ut av data datamotoren har, men er ikke laget.
         </p>
       }
       fremhevet={<PlanITema plan={plan} hva="villreinområder" />}
       lag={[
-        { id: 'tema', navn: 'Villreinområder', kilde: KILDE.villrein.datasett, farger: [['Villreinområde', 'rein']] },
-        KLASSER,
-        PLAN
+        { id: 'tema', navn: 'Villreinområder', kilde: 'Villreinområder', farger: [['Villreinområde', 'rein']] },
+        { ...KLASSER, av: true },
+        { ...PLAN, av: true }
       ]}
+      lagEtter={
+        <div className="trekkspill-liste">
+          <Trekkspill tittel="Hva er sammenhengen mellom villreinområder og grå areal?">
+            <p>
+              Grått areal er areal som er tatt i bruk, som veier, hytter og anlegg. Villreinen holder seg unna slike
+              inngrep, så grått areal i villreinområdene gjør området mindre brukbart for villreinen. Laget for grått
+              areal i villreinområdene er ikke laget ennå.
+            </p>
+          </Trekkspill>
+        </div>
+      }
       sporsmal={[
+        [
+          'Hvorfor har Norge et særlig ansvar for villreinen?',
+          <p>
+            De siste gjenværende bestandene av vill fjellrein i Europa lever i Norge. Derfor har Norge et særlig ansvar
+            for å ta vare på dem og områdene de lever i.
+          </p>
+        ],
         [
           'Hva betyr villreinområder for kommunens arealplanlegging?',
           <p>
@@ -776,11 +1034,12 @@ function Rein({ tema }: { tema: Tema }) {
     >
       {v && v.antall > 0 && (
         <Figur
-          tittel={`Villreinområdene i ${kommunen()}`}
+          tittel={`${kommunen()}s villreinområder`}
           tekst={
             <p>
-              Tabellen viser villreinområdene som ligger helt eller delvis i kommunen. Arealet og andelen gjelder delen
-              som ligger i kommunen.
+              Tabellen viser villreinområdene som ligger helt eller delvis i {kommunen()}. Et villreinområde strekker
+              seg ofte over flere kommuner. Dekar og andel viser hvor mye av området som ligger i kommunen. Tilstanden
+              etter kvalitetsnormen for villrein mangler kilde, og står tom.
             </p>
           }
           kilder={['villrein']}
@@ -789,16 +1048,20 @@ function Rein({ tema }: { tema: Tema }) {
             hva="Villreinområdene"
             kolonner={[
               { navn: 'Område' },
-              { navn: 'I kommunen', tall: true },
-              { navn: 'Andel', tall: true, ikkeMobil: true },
+              { navn: 'Dekar', tall: true },
+              { navn: 'Andel (%)', tall: true, ikkeMobil: true },
               { navn: 'Kommuner', ikkeMobil: true },
-              { navn: 'Faktaark' }
+              { navn: 'Tilstand', tall: true },
+              { navn: 'Faktaark', tall: true }
             ]}
             rader={(R.s === 'ok' ? R.v : []).map(o => [
               o.navn,
-              dekar(o.km2),
+              nf(o.km2 * 1000, 0),
               prosent(o.andel),
               kommunenavn(o.kommuner),
+              <span className="tom-celle" title={MANGLER_KILDE}>
+                –
+              </span>,
               o.url ? (
                 <a href={o.url} target="_blank" rel="noopener">
                   Åpne
@@ -810,20 +1073,23 @@ function Rein({ tema }: { tema: Tema }) {
           />
         </Figur>
       )}
-      <Mangler
-        tittel="Tilstand for villreinen"
-        trenger="vurderingen etter kvalitetsnormen for villrein, som skissene viser per område."
-      />
-      {IV.s === 'ok' && IV.v && (
+      {IV.s === 'ok' && IV.v ? (
         <Figur
           tittel="Inngrepsfri natur i villreinområdene"
           tekst={
-            <p>
-              Hvor mye av villreinområdene i kommunen som er inngrepsfri natur, per sone. Sonene sier hvor langt fra
-              tyngre tekniske inngrep naturen ligger.
-            </p>
+            <>
+              <p>
+                Villrein er sky og holder seg unna veier, hytter, kraftlinjer og andre inngrep. Derfor trenger
+                villreinen store områder uten slike inngrep. Inngrepsfri natur er områder som ligger mer enn én
+                kilometer fra tyngre tekniske inngrep.
+              </p>
+              <p>
+                Figuren viser hvor mye inngrepsfri natur det er i villreinområdene i {kommunen()} i dag, per sone.
+                Hvordan dette har endret seg over tid, krever kartene for tidligere år, som ikke er koblet.
+              </p>
+            </>
           }
-          kilder={['villrein', 'inon']}
+          kilder={['inon', 'villrein']}
         >
           <Liggende
             hva="Inngrepsfri natur i villreinområdene per sone"
@@ -833,11 +1099,17 @@ function Rein({ tema }: { tema: Tema }) {
             {iTekst(IV.v.sum)} av {iTekst(IV.v.villrein)} villreinområde i kommunen er inngrepsfri natur.
           </p>
         </Figur>
+      ) : (
+        <Figur
+          tittel="Inngrepsfri natur i villreinområdene"
+          tekst={
+            <p>Hvor mye av villreinområdene i kommunen som er inngrepsfri natur, og hvordan det har endret seg.</p>
+          }
+          kilder={['inon', 'villrein']}
+        >
+          <p>{svar(IV, () => '', 'Kommunen har ingen villreinområder.')}</p>
+        </Figur>
       )}
-      <Mangler
-        tittel="Inngrepsfri natur i villreinområdene over tid"
-        trenger="kartene over inngrepsfri natur for tidligere år, som finnes i det samme datasettet hos Miljødirektoratet."
-      />
     </Temaside>
   );
 }

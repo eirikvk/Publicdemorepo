@@ -1029,6 +1029,10 @@ skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Ar
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
 
+**Tvillingen etter de nye skissene, 17. oktober 2026.** Utseendet i tvillingen følger nå de oppdaterte Figma-skissene så nær som
+mulig, side for side. Tallene og metoden er de samme. Det skissene viser som krever en dataplattform eller mangler kilde, står tomt
+og merket. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
 **Kommuner med flyttet grense i de syntetiske tallene, 15. oktober 2026.** Endringen regnes nå også der kommunegrensen er flyttet
 siden 2017, med forskjellen i samlet areal regnet som natur og vann. Bare de fem kommunene som ikke hadde noe areal i 2017, mangler.
 Stavanger og Sandnes har nå tall: begge bygget ned rundt 2 000 dekar, nesten bare jordbruk. Sammenligningen med Norge gjelder 352

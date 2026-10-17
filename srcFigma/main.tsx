@@ -2,6 +2,7 @@
    kartet kommer fra den samme datamotoren som hovedsiden (src/data og src/ui/kart). */
 import '@fontsource/open-sans/400.css';
 import '@fontsource/open-sans/600.css';
+import '@fontsource/open-sans/700.css';
 import '@miljodirektoratet/md-css/src/tokens/index.css';
 import '@miljodirektoratet/md-css/src/typography.css';
 import '@miljodirektoratet/md-css/src/utils.css';

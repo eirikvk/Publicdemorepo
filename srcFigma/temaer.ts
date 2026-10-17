@@ -1,7 +1,7 @@
 /* Temasidene under «Utforsk naturen», i gruppene fra Figma. id står i adressen (#5001/utforsk/skog). kartside er siden i
    hovedsiden som bestemmer hva kartet viser (ui.side): temaets lag for verneområder, villrein, verdsatt natur, inngrepsfri natur og
    grått areal, og ellers bare dagens arealklasser og planlagt utbygging. farge er en av kartets farger (src/ui/farger.ts), til
-   plassholderen for bildet. */
+   flaten bak bildet. Ingressen er fra skissene; en tom linje (\n\n) skiller avsnitt. */
 export interface Tema {
   id: string;
   navn: string;
@@ -45,7 +45,7 @@ export const TEMAER: Tema[] = [
     kartside: 'verdi',
     farge: 'verdi2',
     ingress:
-      'Verdsatte naturtyper sier noe om hvor du finner den særlig viktige naturen. Når du kartlegger natur, gir du naturen verdi etter fastsatte kriterier. Områder med naturtyper som har stor og svært stor verdi, er av nasjonal eller vesentlig regional betydning.'
+      'Verdsatte naturtyper sier noe om hvor du finner den særlig viktige naturen. Når du kartlegger natur, gir du naturen verdi etter fastsatte kriterier.\n\nOmråder med naturtyper som har stor og svært stor verdi, er av nasjonal eller vesentlig regional betydning, og er verdifulle områder for biologisk mangfold. Disse områdene er svært viktige i arealplanlegging og ved vurdering av sektortiltak.'
   },
   {
     id: 'inngrepsfri-natur',
@@ -54,7 +54,7 @@ export const TEMAER: Tema[] = [
     kartside: 'inon',
     farge: 'inonv',
     ingress:
-      'Inngrepsfri natur er områder som ligger minst én kilometer i luftlinje fra tyngre tekniske inngrep, som veier, jernbane, kraftlinjer og regulerte vassdrag. Der får naturen utvikle seg uten menneskelig påvirkning.'
+      'Inngrepsfri natur er områder som ligger minst én kilometer i luftlinje fra større naturinngrep, som veg, jernbane, steinbrudd og energianlegg. Slike områder er viktige fordi naturen der får utvikle seg uten menneskelig påvirkning, med plass til artsmangfold og et landskap som ikke er forstyrret.'
   },
   {
     id: 'villrein',

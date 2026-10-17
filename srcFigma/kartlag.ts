@@ -189,14 +189,13 @@ export function naturskoglag(tittel: string, navn: Naturskoglag): TileLayer<XYZ>
   return lag;
 }
 
-/* Lagene på skogsiden: skogen samlet, skogen etter treslag, og tresatt myr og innmarksbeite fra grunnkartet, og to lag fra kartet
-   over naturskog */
+/* Lagene på skogsiden: skogen samlet, skogen etter treslag, tresatt myr og tresatt innmarksbeite fra grunnkartet (hvert sitt lag, som i
+   skissene), og to lag fra kartet over naturskog */
 export const SKOGLAG = {
   skog: detaljlag('Økosystemtype skog', k => (k.treslag ? 'skog' : null)),
   skogtyper: detaljlag('Skogtyper', k => (k.treslag ? 'skog-' + k.treslag : null)),
-  tresatt: detaljlag('Tresatt myr og innmarksbeite', k =>
-    k.underlag === 'myr' ? 'myr-tresatt' : k.underlag === 'beite' ? 'beite-tresatt' : null
-  ),
+  myr: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null)),
+  beite: detaljlag('Tresatt innmarksbeite', k => (k.underlag === 'beite' ? 'beite-tresatt' : null)),
   naerhet: naturskoglag('Naturskogsnærhet', 'naturskogsnaerhet'),
   for1940: naturskoglag('Skog etablert før 1940, ikke flatehogd', 'skog_etablert_foer_1940_ikke_flatehogd')
 };

@@ -1,28 +1,72 @@
 /* Stilen for tvillingen fra Figma: grunnlaget, sidebredden og delene sidene er bygd av (deler.tsx, Tabell.tsx). Toppen og kartet
-   har egne filer. Fargene er designsystemets variabler (--md-*) og kartets farger (--nat, --vern og så videre, satt i main.tsx).
-   Bredden følger skissene: innholdet står i en spalte på opptil 1040 px, og båndene (kartet og de blå feltene) går over hele
-   bredden. På mobil er luften på sidene 16 px. */
+   har egne filer. Fargene er designsystemets variabler (--md-*), fargene målt i skissene fra 17. oktober (under) og kartets farger
+   (--nat, --vern og så videre, satt i main.tsx). Bredden følger skissene: innholdet står i en spalte på opptil 1200 px, og båndene
+   (kartet og de blå feltene) går over hele bredden. Overskriftene er fete, som i skissene; skriften er Open Sans i stedet for Sofia
+   Pro, som er lisensiert. På mobil er luften på sidene 16 px. */
 :root {
   --md-typography-family-heading: 'Open Sans', sans-serif;
   --md-typography-weight-semibold: 600;
+  /* Fargene i skissene */
+  --topp: #196d6c;
+  --tekst: #222222;
+  --teal-lys: #e5eeee;
+  --teal-merke: #ccdfde;
+  --teal-kant: #99bebe;
+  --teal-lenke: #005e5d;
+  --teal-ikon: #337e7d;
+  --beige-kort: #f5f1e5;
+  --beige-flis: #f3f0e4;
+  --beige-kant: #d4d0bd;
+  --beige-flate: #fbfaf6;
+  --beige-baand: #fcfaf6;
+  --beige-sporsmal: #f7f5ed;
+  --sporsmal-kant: #c2c0ba;
+  --gronn-merke: #80d1b1;
+  --oransje-merke: #efbe7d;
+  /* Kakediagrammene om skog og våtmark */
+  --kake-graa: #a9aaaa;
+  --kake-vatmark: #72d4bc;
+  --kake-myr: #b8b7e2;
+  /* Verneformene i figuren «Slik er naturen vernet» */
+  --vf-nasjonalpark: #007a00;
+  --vf-naturreservat: #ad0000;
+  --vf-landskap: #00e000;
+  --vf-marint: #ff8000;
+  --vf-arts: #ffc966;
+  --vf-annen: #e0e000;
+  /* Hovedøkosystemene i figuren «Naturen som er vernet» */
+  --oko-skog: #9ecc73;
+  --oko-vatmark: #c9b0ec;
+  --oko-innsjo: #63a8d9;
+  --oko-hei: #e2c88e;
+  --oko-gras: #ffff99;
+  --oko-elv: #0d4fa3;
+  --oko-lite: #ffe5b4;
+  --oko-kyst: #00594f;
+  --oko-dyrket: #ffcc66;
+  --oko-bebygd: #e8606e;
+  --oko-hav: #bfd8ec;
+  --oko-annen: #c9c4b3;
+  /* Sløret over det som ikke er kartlagt, i lagvelgeren */
+  --slor-merke: #e4e4de;
   --linje: var(--md-color-border-secondary);
   --dempet: var(--md-color-grey-6);
   --kort: var(--md-color-primary-10);
   --beige: var(--md-color-beige-2);
   --beige-mork: var(--md-color-beige-3);
-  --blaa: var(--md-color-attention-info-1);
-  --blaa-merke: #1f6fb2;
+  --blaa: #d6e8f4;
+  --blaa-merke: #0072ce;
   --gul: #fdf1cf;
-  /* Skogen i figurene og kartlagene: samlet, og treslagene fra mørk til lys grønn */
-  --skog: #4f8a35;
-  --skog-bar: #3f7a2a;
-  --skog-bland: #7aa63c;
-  --skog-lauv: #b7d47a;
+  /* Skogen i figurene og kartlagene, i fargene fra skissene: samlet, og barskog, blandingsskog og lauvskog */
+  --skog: #9ecc73;
+  --skog-bar: #a7d551;
+  --skog-bland: #ffb800;
+  --skog-lauv: #f7d776;
   --skog-ukjent: #c9c4b3;
-  /* Våtmarken i figuren for våtmark: åpen våtmark og tresatt myr */
-  --myr-apen: #5b9bc4;
-  --myr-tresatt: #2b8c8c;
-  --beite-tresatt: #c99a2e;
+  /* Våtmarken i kartlagene: åpen våtmark, tresatt myr og tresatt innmarksbeite */
+  --myr-apen: #c9b0ec;
+  --myr-tresatt: #9c7fd6;
+  --beite-tresatt: #ffd16e;
   /* Kartet over naturskog, i fargene fra Miljødirektoratets tegnforklaring */
   --ns-lav: #ead8bc;
   --ns-hoy: #9b504f;
@@ -44,10 +88,32 @@ html {
 body {
   margin: 0;
   background: var(--md-color-background-primary);
-  color: var(--md-color-text-primary);
+  color: var(--tekst);
   font-family: var(--md-typography-family-body);
-  font-size: var(--md-typography-body-m);
-  line-height: var(--md-typography-line-height-medium);
+  font-size: 1.0625rem;
+  line-height: 1.45;
+}
+/* Overskriftene som i skissene: fete, og større enn designsystemets */
+.tvilling h1 {
+  font-size: 2.125rem;
+  line-height: 1.18;
+  font-weight: 700;
+}
+.tvilling h2.md-typography-heading-m,
+.tvilling .seksjonstopp h2 {
+  font-size: 2.125rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+.tvilling h2.md-typography-heading-s {
+  font-size: 1.625rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.tvilling h3 {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
 }
 h1,
 h2,
@@ -65,7 +131,7 @@ ul {
   list-style: none;
 }
 a {
-  color: var(--md-color-text-secondary);
+  color: var(--teal-lenke);
 }
 :focus-visible {
   outline: 2px solid var(--md-color-primary-100);
@@ -95,7 +161,7 @@ p + p {
 
 /* Spalten og luften */
 .innhold {
-  max-width: calc(1040px + 2 * var(--luft));
+  max-width: calc(1200px + 2 * var(--luft));
   margin: 0 auto;
   padding: 0 var(--luft);
 }
@@ -103,13 +169,12 @@ p + p {
   max-width: calc(720px + 2 * var(--luft));
 }
 main {
-  padding-bottom: 48px;
+  padding-bottom: 80px;
 }
 main > .innhold > section,
 main > .innhold > .tallkort,
 main > .innhold > .trekkspill-liste,
 main > .innhold > .fremhevet,
-main > .innhold > .brodsmuler,
 main > .innhold > h2,
 main > .innhold > p,
 main > .innhold > ul {
@@ -119,47 +184,108 @@ main > .innhold > h2 + p,
 main > .innhold > h2 + ul {
   margin-top: 8px;
 }
+main > .innhold > .brodsmuler {
+  margin-top: 28px;
+}
 .brodsmuler {
   display: flex;
   gap: 8px;
-  font-size: var(--md-typography-body-s);
+  font-size: 1.0625rem;
+  color: var(--teal-lenke);
+  padding-left: 9px;
 }
 .brodsmuler a {
-  color: var(--md-color-text-secondary);
+  color: var(--teal-lenke);
+  text-decoration: none;
+}
+.brodsmuler a:hover {
+  text-decoration: underline;
 }
 .sidetopp h1 {
   margin-bottom: 12px;
 }
 .ingress {
-  font-size: 1.125rem;
-  line-height: 1.5;
-  max-width: 40em;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+.ingress + .ingress {
+  margin-top: 12px;
 }
 
-/* Toppen av en temaside: tekst og trekkspill til venstre, bildet til høyre */
+/* Toppen av en temaside: ikonet og tittelen, ingressen og trekkspillene til venstre, bildet til høyre, med målene fra skissene */
+main > .innhold > .helt {
+  margin-top: 76px;
+}
 .helt {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 795fr) minmax(0, 390fr);
   grid-template-areas: 'tekst bilde' 'trekk bilde';
-  gap: 16px 24px;
+  grid-template-rows: auto 1fr;
+  gap: 0 16px;
   align-items: start;
 }
 .helt-tekst {
   grid-area: tekst;
 }
 .helt-tekst h1 {
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+  font-size: 3rem;
+  line-height: 1.1;
+}
+.temaikon {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--teal-lys);
+  color: var(--teal-ikon);
+  display: grid;
+  place-items: center;
+}
+.temaikon svg {
+  width: 36px;
+  height: 36px;
 }
 .helt .bilde {
   grid-area: bilde;
+  aspect-ratio: 390 / 374;
 }
 .helt .trekkspill-liste {
   grid-area: trekk;
+  margin-top: 40px;
 }
-@media (max-width: 720px) {
+@media (max-width: 900px) {
+  main > .innhold > .helt {
+    margin-top: 32px;
+  }
   .helt {
     grid-template-columns: 1fr;
     grid-template-areas: 'tekst' 'bilde' 'trekk';
+    grid-template-rows: auto;
+    gap: 16px;
+  }
+  .helt-tekst h1 {
+    font-size: 2rem;
+  }
+  .temaikon {
+    width: 48px;
+    height: 48px;
+  }
+  .temaikon svg {
+    width: 28px;
+    height: 28px;
+  }
+  .ingress {
+    font-size: 1.1875rem;
+  }
+  .helt .bilde {
+    aspect-ratio: 16 / 9;
+  }
+  .helt .trekkspill-liste {
+    margin-top: 0;
   }
 }
 
@@ -180,7 +306,7 @@ main > .innhold > h2 + ul {
   padding: 2px 6px;
   border-radius: 3px;
   background: rgb(255 255 255 / 0.88);
-  color: var(--md-color-text-primary);
+  color: var(--tekst);
   font-size: 11px;
   line-height: 1.3;
 }
@@ -190,20 +316,22 @@ main > .innhold > h2 + ul {
   padding: 1px 4px;
   font-size: 9px;
 }
-@media (max-width: 720px) {
-  .helt .bilde {
-    aspect-ratio: 16 / 9;
-  }
+/* Illustrasjonen fyller bildet, også i flisene */
+.bilde svg.illustrasjon {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-/* Trekkspill med pluss, uten kant rundt */
-.trekkspill-liste {
-  border-top: 1px solid var(--linje);
-}
+/* Trekkspill med pluss, med en strek over og under hvert */
 .trekkspill-liste .md-accordion-item {
-  border-width: 0 0 1px;
-  border-color: var(--linje);
+  border-width: 1px 0 0;
+  border-style: solid;
+  border-color: var(--md-color-grey-4, #d2d2d2);
   border-radius: 0;
+}
+.trekkspill-liste .md-accordion-item:last-child {
+  border-bottom-width: 1px;
 }
 .trekkspill-innhold {
   max-width: 44em;
@@ -211,28 +339,42 @@ main > .innhold > h2 + ul {
 .trekkspill-innhold p + p {
   margin-top: 0.75em;
 }
+.trekk-merke {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--teal-merke);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
 
 /* Tallkortene: to eller tre side om side, under hverandre på mobil */
+main > .innhold > .tallkort {
+  margin-top: 70px;
+}
 .tallkort {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 8px;
 }
 .tallkort > div {
-  background: var(--kort);
-  border-radius: 4px;
-  padding: 12px 16px 16px;
+  background: var(--teal-lys);
+  padding: 30px 20px 16px;
+  min-height: 126px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 .tallkort dt {
-  font-size: var(--md-typography-body-s);
+  font-size: 0.9375rem;
+  font-weight: 600;
 }
 .tallkort dd {
-  font-size: 1.75rem;
-  line-height: 1.2;
+  font-size: 2.375rem;
+  line-height: 1.15;
   font-weight: 600;
 }
 .tallkort dd .henter,
@@ -249,121 +391,232 @@ main > .innhold > h2 + ul {
   font-weight: 400;
   color: var(--dempet);
 }
+/* Et tallkort med to tall under hverandre, som villrein */
+.tallkort-to {
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.tallkort-to b {
+  font-weight: 600;
+}
+.tallkort-to .mangler-tall {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+.tallkort-etikett {
+  margin-top: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+main > .innhold > .etter-tallkort {
+  margin-top: 16px;
+}
 @media (max-width: 720px) {
   .tallkort {
     grid-template-columns: 1fr 1fr;
   }
+  .tallkort > div {
+    padding: 16px;
+    min-height: 0;
+  }
   .tallkort dd {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
   }
 }
 
-/* En fremhevet melding (gul), eller et varsel med kant */
+/* En fremhevet melding (gul), eller et varsel med kant og varseltegn, som i skissene */
 .fremhevet {
   background: var(--gul);
   border-radius: 4px;
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .fremhevet.varsel {
-  background: var(--md-color-attention-warning-1);
-  border: 1px solid var(--md-color-attention-warning-2);
+  position: relative;
+  background: #fdf0e3;
+  border: 1px solid #e8a35e;
+  padding: 18px 24px 20px 56px;
+}
+.fremhevet.varsel::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  width: 22px;
+  height: 22px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1 21h22L12 2 1 21zm2.6-1.5L12 5l8.4 14.5H3.6zM11 10h2v5h-2zm0 6h2v2h-2z' fill='%23222'/%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 .fremhevet + .fremhevet {
   margin-top: 8px;
 }
 
-/* En figur: tekst til venstre, figuren i en beige flate til høyre */
+/* En figur: tekst til venstre, figuren i en lys flate til høyre, og trekkspill under */
+main > .innhold > .figur {
+  margin-top: 64px;
+}
+.kartbaand + .innhold > .figur:first-child {
+  margin-top: 64px;
+}
 .figur {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 405fr) minmax(0, 795fr);
   align-items: start;
 }
 .figur-tekst {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 16px;
+  gap: 16px;
+  padding: 36px 40px 0 16px;
+}
+.figur-tittel {
+  font-size: 1.3125rem;
+  line-height: 1.3;
+  font-weight: 700;
 }
 .figur-forklaring {
-  font-size: var(--md-typography-body-s);
+  font-size: 0.9375rem;
+  line-height: 1.25;
+}
+.figur-forklaring p + p {
+  margin-top: 1em;
 }
 .figur-flate {
   min-width: 0;
-  background: var(--md-color-beige-1);
-  border-radius: 4px;
-  padding: 24px;
-  min-height: 160px;
+  background: var(--beige-flate);
+  padding: 40px;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
+.figur-flate.tom {
+  min-height: 260px;
+  justify-content: center;
+  align-items: center;
+  border: 2px dashed var(--beige-kant);
+  background: none;
+}
+.figur-tom {
+  max-width: 30em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--md-color-grey-7);
+  font-size: 0.9375rem;
+}
+.figur-valg {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+}
 .figur-etter {
   grid-column: 1 / -1;
+  margin-top: 20px;
 }
 .kilde {
   display: flex;
   flex-direction: column;
-  font-size: var(--md-typography-body-s);
+  gap: 4px;
+  font-size: 0.9375rem;
 }
-@media (max-width: 720px) {
+.kilde a {
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  main > .innhold > .figur {
+    margin-top: 40px;
+  }
   .figur {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
+  .figur-tekst {
+    padding: 0;
+  }
   .figur-flate {
-    padding: 16px;
+    padding: 20px 16px;
+    min-height: 0;
   }
 }
 
 /* Stående stolper: tallet rett over stolpen, navnet under streken */
 .stolper {
   display: flex;
-  gap: 16px;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px 40px 8px;
 }
 .stolpe {
-  flex: 1 1 0;
+  flex: 0 1 140px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   text-align: center;
 }
 .stolpe-ramme {
-  height: 200px;
+  height: 320px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
-  border-bottom: 1px solid var(--md-color-grey-5);
+  border-bottom: 1px solid #777;
+  margin: 0 -12px;
 }
 .stolpe-tall {
-  font-size: var(--md-typography-body-s);
-  margin-bottom: 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  white-space: nowrap;
 }
 .stolpe-fyll {
-  width: min(100%, 72px);
+  width: min(100%, 118px);
 }
 .stolpe-navn {
-  font-size: var(--md-typography-body-s);
+  font-size: 0.9375rem;
   font-weight: 600;
-  padding-top: 6px;
+  padding-top: 12px;
   display: flex;
   flex-direction: column;
   overflow-wrap: anywhere;
 }
 .stolpe-navn small {
+  font-size: 0.9375rem;
   font-weight: 400;
-  color: var(--dempet);
 }
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .stolper {
     gap: 8px;
+    padding: 8px 0 0;
   }
-  .stolpe-tall {
+  .stolpe-ramme {
+    height: 220px;
+    margin: 0;
+  }
+  .stolpe-tall,
+  .stolpe-navn {
     font-size: 0.75rem;
+  }
+}
+
+/* Kakediagrammet */
+.kake svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.kake-navn {
+  font-size: 15px;
+  fill: var(--tekst);
+}
+@media (max-width: 720px) {
+  .ressurser ul {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -371,49 +624,48 @@ main > .innhold > h2 + ul {
 .liggende {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: var(--md-typography-body-s);
+  gap: 14px;
+  font-size: 0.9375rem;
 }
 .liggende-rad {
   display: grid;
-  grid-template-columns: minmax(6em, 35%) minmax(0, 1fr) auto;
-  gap: 2px 12px;
+  grid-template-columns: minmax(6em, 130px) minmax(0, 1fr);
+  gap: 2px 8px;
   align-items: center;
 }
+.liggende-navn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .liggende-ramme {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 16px;
 }
 .liggende-fyll {
   display: block;
+  flex: none;
   height: 100%;
+  min-width: 2px;
+  border: 1px solid #222;
   border-radius: 2px;
 }
 .liggende-tall {
   white-space: nowrap;
-  text-align: right;
+  font-size: 0.6875rem;
 }
 @media (max-width: 480px) {
   .liggende {
     gap: 10px;
   }
   .liggende-rad {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .liggende-ramme {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 /* Det som ikke er laget ennå */
-/* Kommunen sammenlignet med resten av Norge på oversikten */
-.sammenligning {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 32px;
-}
 .mangler {
   border: 2px dashed var(--md-color-beige-7);
   border-radius: 4px;
@@ -439,12 +691,13 @@ main > .innhold > h2 + ul {
   margin-top: 12px;
 }
 
-/* Tabellen med sider */
+/* Tabellen med sider: hvite celler med kant, og sidetallene under, som i skissene */
 .tabell table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--md-typography-body-s);
+  font-size: 0.9375rem;
   background: var(--md-color-grey-white);
+  border: 1px solid #d2d2d2;
 }
 .tabell-rull {
   overflow-x: auto;
@@ -452,9 +705,14 @@ main > .innhold > h2 + ul {
 .tabell th,
 .tabell td {
   text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--linje);
-  vertical-align: top;
+  padding: 12px 10px;
+  border: 1px solid #d2d2d2;
+  border-width: 1px 0;
+  vertical-align: middle;
+}
+.tabell td + td,
+.tabell th + th {
+  border-left-width: 1px;
 }
 .tabell th {
   font-weight: 600;
@@ -469,37 +727,41 @@ main > .innhold > h2 + ul {
   white-space: nowrap;
 }
 .tabell tbody tr:nth-child(even) {
-  background: var(--md-color-beige-1);
+  background: var(--beige-flate);
+}
+.tom-celle {
+  color: var(--dempet);
 }
 .sidetall {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 4px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 16px;
 }
 .sidetall button {
-  min-width: 32px;
-  height: 32px;
+  min-width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 4px;
   background: none;
-  color: var(--md-color-text-secondary);
+  color: var(--teal-lenke);
+  font-size: 1.0625rem;
   cursor: pointer;
   display: inline-grid;
   place-items: center;
 }
 .sidetall button[aria-current='page'] {
-  background: var(--md-color-primary-100);
-  color: var(--md-color-text-inverted);
+  background: var(--teal-lenke);
+  color: #fff;
 }
 .sidetall button:disabled {
   opacity: 0.4;
   cursor: default;
 }
 .sidetall svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
 }
 .prikker {
   padding: 0 4px;
@@ -516,26 +778,35 @@ main > .innhold > h2 + ul {
   border-radius: 2px;
 }
 
-/* Ofte stilte spørsmål: beige trekkspill med mellomrom */
+/* Ofte stilte spørsmål: lyse beige trekkspill med kant og mellomrom */
+main > .innhold > .sporsmal {
+  margin-top: 90px;
+}
 .sporsmal {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .sporsmal h2 {
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 .sporsmal .md-accordion-item {
-  background: var(--beige-mork);
-  border: 1px solid var(--md-color-beige-5);
-  border-radius: 4px;
+  background: var(--beige-sporsmal);
+  border: 1px solid var(--sporsmal-kant);
+  border-radius: 3px;
+}
+.sporsmal .md-accordion-item__header-label {
+  font-size: 1.1875rem !important;
 }
 
 /* Ressurser: lenker med pil, i to kolonner */
+main > .innhold > .ressurser {
+  margin-top: 72px;
+}
 .ressurser ul {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 0 48px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 72px;
   margin-top: 12px;
 }
 .ressurser a {
@@ -543,50 +814,64 @@ main > .innhold > h2 + ul {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  min-height: 66px;
   padding: 14px 0;
-  border-bottom: 1px solid var(--md-color-grey-5);
-  color: var(--md-color-text-primary);
+  border-bottom: 2px solid #bdbdbd;
+  color: var(--tekst);
   text-decoration: none;
   font-weight: 600;
-  font-size: var(--md-typography-body-s);
+  font-size: 1.1875rem;
 }
 .ressurser a:hover span {
   text-decoration: underline;
 }
 .ressurser a span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
+  min-width: 0;
+}
+.ressurser a span svg {
+  display: inline-block;
+  margin-left: 10px;
+  vertical-align: -4px;
+}
+.flis-navn {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .ressurser svg {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   flex: none;
 }
 
 /* Flisene for temaene: bilde til venstre, navnet og en pil */
+main > .innhold > .neste {
+  margin-top: 72px;
+}
 .neste h2 {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 .fliser {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
 }
 .flis {
   display: grid;
-  grid-template-columns: 96px 1fr auto;
+  grid-template-columns: 124px 1fr auto;
   align-items: center;
-  gap: 12px;
-  min-height: 80px;
-  padding-right: 16px;
-  background: var(--beige-mork);
-  border: 1px solid var(--md-color-beige-5);
-  border-radius: 4px;
+  gap: 24px;
+  min-height: 124px;
+  padding-right: 20px;
+  background: var(--beige-flis);
+  border: 1px solid var(--beige-kant);
+  border-radius: 6px;
   overflow: hidden;
-  color: var(--md-color-text-primary);
+  color: var(--tekst);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.375rem;
+  line-height: 1.25;
 }
 .flis:hover {
   background: var(--md-color-beige-4);
@@ -596,80 +881,135 @@ main > .innhold > h2 + ul {
   height: 100%;
   border-radius: 0;
 }
-.flis svg,
-.temakort-lenke svg {
-  width: 20px;
-  height: 20px;
+.flis > svg {
+  width: 26px;
+  height: 26px;
 }
-/* Illustrasjonen fyller bildet, også i flisene, der ikonene ellers er 20 piksler */
-.bilde svg.illustrasjon {
-  width: 100%;
-  height: 100%;
-  display: block;
+@media (max-width: 720px) {
+  .flis {
+    grid-template-columns: 96px 1fr auto;
+    min-height: 96px;
+    gap: 16px;
+    font-size: 1.125rem;
+  }
 }
 
-/* Temaene i grupper, på oversikten og «Utforsk naturen» */
+/* Temaene i grupper, på oversikten og «Utforsk naturen»: kort med bildet øverst og teksten under, i et rutenett med tre kolonner der
+   noen kort er dobbelt så brede, som i skissene */
 .temagrupper {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  margin-top: 16px;
+  gap: 40px;
+  margin-top: 40px;
 }
 .temagrupper h3 {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .temakort {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.temakort li.bred {
+  grid-column: span 2;
 }
 .temakort-lenke {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  background: var(--beige-mork);
-  border: 1px solid var(--md-color-beige-5);
-  border-radius: 4px;
+  background: var(--beige-flis);
+  border: 1px solid var(--beige-kant);
+  border-radius: 6px;
   overflow: hidden;
-  color: var(--md-color-text-primary);
+  color: var(--tekst);
   text-decoration: none;
 }
 .temakort-lenke:hover {
   background: var(--md-color-beige-4);
 }
 .temakort-lenke .bilde {
-  grid-column: 1 / -1;
-  aspect-ratio: 16 / 7;
+  aspect-ratio: auto;
+  height: 250px;
   border-radius: 0;
+  flex: none;
 }
 .temakort-tekst {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px 16px;
-  font-size: var(--md-typography-body-s);
+  gap: 6px;
+  padding: 24px 24px 0;
+  font-size: 1.125rem;
+  line-height: 1.35;
 }
 .temakort-tekst b {
-  font-size: var(--md-typography-body-m);
+  font-size: 1.625rem;
+  line-height: 1.3;
+  font-weight: 700;
 }
-.temakort-lenke > svg {
-  align-self: end;
-  margin: 0 16px 16px 0;
+.temakort-bunn {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px 22px 24px;
+}
+.temakort-bunn > svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.snittmerke {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 18px;
+  border-radius: 999px;
+  background: var(--beige-sporsmal);
+  font-size: 1rem;
+}
+.snittmerke .trend {
+  width: 20px;
+  height: 20px;
+}
+.snittmerke.tom {
+  color: var(--dempet);
+}
+@media (max-width: 900px) {
+  .temakort {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .temakort li.bred {
+    grid-column: auto;
+  }
+  .temakort-lenke .bilde {
+    height: 180px;
+  }
 }
 
-/* Oversikten: tittel og kortene til venstre, kartet til høyre */
+/* Oversikten: tittel, kortene og trekkspillene til venstre, kartet til høyre i samme høyde */
+main > .innhold > .oversikt-topp {
+  margin-top: 80px;
+}
 .oversikt-topp {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: 394px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
 }
 .oversikt-topp h1 {
-  margin-bottom: 16px;
+  margin-bottom: 56px;
 }
 .oversikt-topp .trekkspill-liste {
-  margin-top: 16px;
+  margin-top: 56px;
+}
+.oversikt-topp .kart-enkel {
+  display: flex;
+}
+.oversikt-topp .kart-enkel .kartscene {
+  flex: 1;
+  height: auto;
+  min-height: 560px;
 }
 .klassekort {
   display: flex;
@@ -679,50 +1019,64 @@ main > .innhold > h2 + ul {
 /* Kortene er knapper: kortet som er valgt, er fremhevet og viser klassen i kartet */
 .klassekort li button {
   width: 100%;
-  border: 1px solid var(--md-color-primary-30);
-  border-radius: 4px;
-  padding: 12px 16px;
+  border: 1.5px solid var(--teal-kant);
+  border-radius: 6px;
+  padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   font: inherit;
-  font-size: var(--md-typography-body-s);
+  font-size: 1.125rem;
+  line-height: 1.35;
   color: inherit;
   text-align: left;
-  background: transparent;
+  background: var(--md-color-grey-white);
   cursor: pointer;
 }
 .klassekort li button:hover {
-  border-color: var(--md-color-primary-50);
+  border-color: var(--teal-ikon);
 }
 .klassekort li.valgt button {
-  background: var(--kort);
-  border-color: var(--md-color-primary-50);
+  background: var(--teal-lys);
 }
 .klassekort li button:focus-visible {
-  outline: 2px solid var(--md-color-primary-50);
+  outline: 2px solid var(--teal-ikon);
   outline-offset: 2px;
 }
 .klassekort-topp {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .klassekort-topp b {
-  font-size: var(--md-typography-body-m);
+  font-size: 1.625rem;
+  font-weight: 700;
+}
+.trend {
+  width: 22px;
+  height: 22px;
+  flex: none;
 }
 .endringsmerke {
-  background: var(--kort);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--teal-lys);
   border-radius: 999px;
-  padding: 2px 10px;
-  font-size: var(--md-typography-body-s);
+  padding: 3px 16px;
+  font-size: 1.25rem;
+  line-height: 1.4;
   white-space: nowrap;
 }
-.klassekort .valgt .endringsmerke {
-  background: var(--md-color-primary-20);
+.klassekort .valgt .endringsmerke,
+.endringer .endringsmerke {
+  background: var(--teal-merke);
 }
 @media (max-width: 900px) {
+  main > .innhold > .oversikt-topp {
+    margin-top: 40px;
+  }
   .oversikt-topp {
     grid-template-columns: 1fr;
   }
@@ -731,46 +1085,116 @@ main > .innhold > h2 + ul {
   }
   .oversikt-topp h1 {
     order: 0;
+    margin-bottom: 16px;
   }
   .oversikt-topp .klassekort {
     order: 1;
   }
-  .oversikt-topp .kart-enkel {
+  .oversikt-topp .syntetisk-merke,
+  .oversikt-topp .hint {
     order: 2;
   }
-  .oversikt-topp .trekkspill-liste {
+  .oversikt-topp .kart-enkel {
     order: 3;
+  }
+  .oversikt-topp .kart-enkel .kartscene {
+    min-height: 340px;
+  }
+  .oversikt-topp .trekkspill-liste {
+    order: 4;
     margin-top: 0;
   }
 }
 
-/* De blå båndene med en setning og merkede tall */
+/* De blå båndene: illustrasjonen på den ene siden og en stor setning med merkede tall på den andre */
 .baand {
   background: var(--blaa);
-  margin-top: 48px;
-  padding: 40px 0;
+  margin-top: 100px;
+  padding: 54px 0 50px;
 }
 .baand + .innhold > :first-child {
-  margin-top: 48px;
+  margin-top: 130px;
+}
+.baand-rute {
+  display: grid;
+  grid-template-columns: 390px minmax(0, 1fr);
+  gap: 82px;
+  align-items: center;
+}
+.baand-rute .bilde {
+  aspect-ratio: 6 / 5;
+  border-radius: 6px;
+}
+.baand.speilet .baand-rute {
+  grid-template-columns: minmax(0, 1fr) 390px;
+}
+.baand.speilet .bilde {
+  order: 2;
+  aspect-ratio: 1;
+}
+.baand.speilet .baand-innhold {
+  padding-left: 67px;
+  align-self: stretch;
 }
 .baand-innhold {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 .baand-tekst {
-  font-size: 1.375rem;
-  line-height: 1.6;
-  max-width: 32em;
+  font-size: 2rem;
+  line-height: 1.62;
+  max-width: 19em;
+}
+.baand-lenke {
+  margin-top: auto;
+  padding-top: 40px;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--tekst);
 }
 .tallmerke {
   background: var(--blaa-merke);
   color: #fff;
   border-radius: 999px;
-  padding: 0 12px;
+  padding: 1px 14px 3px;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+@media (max-width: 900px) {
+  .baand {
+    margin-top: 48px;
+    padding: 32px 0;
+  }
+  .baand + .innhold > :first-child {
+    margin-top: 48px;
+  }
+  .baand-rute,
+  .baand.speilet .baand-rute {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .baand.speilet .bilde {
+    order: 0;
+    aspect-ratio: 16 / 9;
+  }
+  .baand-rute .bilde {
+    aspect-ratio: 16 / 9;
+  }
+  .baand.speilet .baand-innhold {
+    padding-left: 0;
+  }
+  .baand-tekst {
+    font-size: 1.375rem;
+    line-height: 1.6;
+  }
+  .baand-lenke {
+    padding-top: 8px;
+    font-size: 1.125rem;
+  }
+}
+
+/* Lenker med pil, uten strek under til man holder over dem */
 .pil-lenke {
   font-weight: 600;
   text-decoration: none;
@@ -778,29 +1202,231 @@ main > .innhold > h2 + ul {
 .pil-lenke:hover {
   text-decoration: underline;
 }
+
+/* En seksjon med overskrift og lenke til høyre, og en stor ingress under */
 .seksjonstopp {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 16px;
 }
+.seksjonstopp .pil-lenke {
+  white-space: nowrap;
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--tekst);
+}
+.mer-lenke {
+  font-size: 1.375rem;
+  white-space: nowrap;
+}
+.seksjonsingress {
+  margin-top: 16px;
+  font-size: 1.5rem;
+  line-height: 1.45;
+  max-width: 39em;
+}
+.ingressmerke {
+  background: var(--teal-merke);
+  border-radius: 999px;
+  padding: 2px 16px 4px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@media (max-width: 720px) {
+  .tvilling h2.md-typography-heading-m,
+  .tvilling .seksjonstopp h2,
+  .tvilling h1 {
+    font-size: 1.625rem;
+  }
+  .seksjonstopp {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .seksjonstopp .pil-lenke,
+  .mer-lenke {
+    font-size: 1.125rem;
+  }
+  .seksjonsingress {
+    font-size: 1.25rem;
+  }
+}
+
+/* Hva slags natur ble bygget ned: rader som kan åpnes, med overskrifter over kolonnene */
+.endringer {
+  margin-top: 32px;
+}
+.endringer-topp,
+.endringer button {
+  display: grid;
+  grid-template-columns: minmax(0, 461fr) minmax(0, 295fr) minmax(0, 300fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+.endringer-topp {
+  font-size: 0.8125rem;
+  padding-bottom: 10px;
+  padding-left: 10px;
+}
+.endringer ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.endringer li {
+  background: var(--teal-lys);
+  border-radius: 6px;
+}
+.endringer button {
+  width: 100%;
+  min-height: 60px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 1.3125rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.endringer button b {
+  font-weight: 700;
+}
+.endringer .endringsmerke {
+  font-size: 1.125rem;
+  padding: 2px 16px;
+}
+.endring-mer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.25rem;
+}
+.endring-mer svg {
+  width: 24px;
+  height: 24px;
+}
+.endring-tekst {
+  padding: 8px 24px 24px;
+  font-size: 1.125rem;
+  max-width: 64em;
+}
+.endring-tekst p + p {
+  margin-top: 8px;
+}
+.endring-tekst .pil-lenke {
+  display: inline-block;
+  margin-top: 20px;
+  font-weight: 400;
+  color: var(--tekst);
+  font-size: 1.1875rem;
+}
+.nedbygd .trekkspill-liste,
+.sammenligning .trekkspill-liste {
+  margin-top: 24px;
+}
+@media (max-width: 720px) {
+  .endringer-topp {
+    display: none;
+  }
+  .endringer button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    padding: 12px 16px;
+    font-size: 1.0625rem;
+  }
+  .endringer button > span:nth-child(2) {
+    grid-row: 2;
+  }
+  .endringer button > span:nth-child(3) {
+    grid-row: 2;
+    justify-self: end;
+  }
+  .endring-mer {
+    grid-row: 1;
+    grid-column: 2;
+    font-size: 1rem;
+  }
+  .endring-tekst {
+    padding: 0 16px 16px;
+    font-size: 1rem;
+  }
+}
+
+/* Kommunen sammenlignet med resten av Norge: tre høydepunkter og tre forbedringsområder som beige kort */
+.sammenligning h3 {
+  margin-top: 40px;
+  margin-bottom: 16px;
+}
+.plasskortene {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.plasskort {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 214px;
+  padding: 16px 16px 14px;
+  background: var(--beige-kort);
+  border-radius: 8px;
+}
+.plasskort b {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.plassmerke {
+  align-self: flex-start;
+  padding: 0 16px 2px;
+  border-radius: 999px;
+  font-size: 1.625rem;
+  line-height: 1.4;
+}
+.plasskort.god .plassmerke {
+  background: var(--gronn-merke);
+}
+.plasskort.svak .plassmerke {
+  background: var(--oransje-merke);
+}
+.plassmerke.tom {
+  background: none !important;
+  border: 2px dashed var(--beige-kant);
+  color: var(--dempet);
+  min-width: 64px;
+  text-align: center;
+}
+.plasskort p {
+  font-size: 1.1875rem;
+  line-height: 1.3;
+}
+.plasskort small {
+  margin-top: auto;
+  font-size: 0.8125rem;
+}
+@media (max-width: 900px) {
+  .plasskortene {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .plasskort {
+    min-height: 0;
+  }
+}
+main > .innhold > .utforsk-del {
+  margin-top: 120px;
+}
+@media (max-width: 720px) {
+  main > .innhold > .utforsk-del {
+    margin-top: 56px;
+  }
+}
+
 .kildeliste {
   display: flex;
   flex-direction: column;
   gap: 6px;
   list-style: disc;
   padding-left: 1.25em;
-}
-@media (max-width: 720px) {
-  :root {
-    --luft: 16px;
-  }
-  .baand-tekst {
-    font-size: 1.125rem;
-  }
-  .baand {
-    padding: 28px 0;
-  }
 }
 
 /* Bunnen */
@@ -834,20 +1460,36 @@ main > .innhold > h2 + ul {
   flex: none;
   width: 18px;
   height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: none !important;
+}
+/* Pluss og minus i stedet for designsystemets pil, som i skissene */
+.trekkspill-liste .md-accordion-item__header-icon svg,
+.sporsmal .md-accordion-item__header-icon svg {
+  display: none;
+}
+.trekkspill-liste .md-accordion-item__header-icon::before,
+.sporsmal .md-accordion-item__header-icon::before {
+  content: '+';
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 300;
+  color: var(--md-color-grey-6);
+}
+.trekkspill-liste details[open] > summary .md-accordion-item__header-icon::before,
+.sporsmal details[open] > summary .md-accordion-item__header-icon::before {
+  content: '−';
+}
+.sporsmal .md-accordion-item__header-icon::before {
+  color: var(--tekst);
 }
 .trekkspill-liste .md-accordion-item__content {
   padding: 0 4px 16px 30px;
 }
 .sporsmal .md-accordion-item__content {
   padding: 0 16px 16px 42px;
-}
-.seksjonstopp .pil-lenke {
-  white-space: nowrap;
-}
-@media (max-width: 720px) {
-  .temakort-lenke .bilde {
-    aspect-ratio: 16 / 5;
-  }
 }
 /* Merket for syntetiske tall, som står i stedet for SSBs tabeller til de kommer */
 .syntetisk-merke {

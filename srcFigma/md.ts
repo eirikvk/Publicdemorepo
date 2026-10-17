@@ -1,6 +1,7 @@
 /* Komponentene fra Miljødirektoratets designsystem: de hovedsiden bruker, og noen ikoner til i tvillingen. De hentes hver for seg, så
    bare disse kommer med i bygget. */
 export * from '../src/ui/komponenter/md.ts';
+export { MdIconAdd } from '@miljodirektoratet/md-react/dist/icons-material/MdIconAdd';
 export { MdIconArrowForward } from '@miljodirektoratet/md-react/dist/icons-material/MdIconArrowForward';
 export { MdIconChevronBackward } from '@miljodirektoratet/md-react/dist/icons-material/MdIconChevronBackward';
 export { MdIconChevronForward } from '@miljodirektoratet/md-react/dist/icons-material/MdIconChevronForward';

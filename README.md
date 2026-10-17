@@ -283,7 +283,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter ETL-filen, med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `Datavisning.tsx` | Innholdet i en rad i cachen, etter formen det har: bilder fra kildene slik de kom, rutenett som bilde med én farge per verdi, lister som tabell, flater som omriss, og de enkle feltene. Formen finnes ut fra dataene, uten oppsett per tabell. |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
-| `illustrasjoner.tsx` | Tegningene til temaene, i stedet for bildene i skissene: flate landskap i samme stil, ett per tema, laget med KI og merket med det |
+| `illustrasjoner.tsx` | Tegningene til temaene og de blå båndene, i stedet for bildene i skissene: flate landskap i samme stil, laget med KI og merket med det |
 | `md.ts` | Komponentene fra designsystemet som siden bruker |
 | `lager.ts` | Kroken som kobler komponentene til tilstanden |
 
@@ -324,9 +324,15 @@ med ekte tall, uten å endre hovedsiden.
     villreinområdene (`gull.inonIVillrein`).
 - Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
-- Det skissene viser som datamotoren ikke har ennå, står i en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra
-  skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro. Temaene har i stedet
-  en enkel illustrasjon hver, laget med KI og merket «KI-generert» (`srcFigma/illustrasjoner.tsx`).
+- Utseendet følger skissene fra 17. oktober 2026 så nær som mulig: bredden (1200 px), toppen, kortene, båndene, radene som kan
+  åpnes, figurene og flisene, med fargene målt i skissene. Skissene ligger ikke i repoet. Tallene er de samme som før.
+- Det skissene viser som datamotoren ikke har ennå, står tomt: felt som krever en dataplattform har et tomt merke (–), og figurer
+  og felt som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget
+  ned til (som utgår), viser kommuneplanen i stedet. Kartlagene og listene som ikke er i skissene, som dagens arealklasser,
+  planlagt utbygging og naturskog, er beholdt.
+- Bildene fra skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro (Open Sans
+  står i stedet). Temaene og de blå båndene har i stedet en enkel illustrasjon hver, laget med KI og merket «KI-generert»
+  (`srcFigma/illustrasjoner.tsx`).
 - `npm run roykt-figma` åpner hver side i en mobilnettleser og sjekker overskrift, bredde, feil og Tilbake (`verktoy/figma-roykt.ts`).
 
 | Fil i `srcFigma/` | Innhold |
@@ -336,9 +342,9 @@ med ekte tall, uten å endre hovedsiden.
 | `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
 | `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
 | `tall.ts` | Tallene sidene viser, slått opp ferdige i gull, med tilstanden (henter, feil, ingen, mangler eller ok) |
-| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper og tresatt myr fra detaljklassene, og to lag fra kartet over naturskog |
+| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, og to lag fra kartet over naturskog |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
-| `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av |
+| `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
 | `sider/` | Hovedsidene og temasidene |
 | `stil.css` | Grunnlaget og delene. Toppen og kartet har egne stilark. |
 

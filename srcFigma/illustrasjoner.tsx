@@ -187,11 +187,11 @@ function Verdi() {
     <>
       <rect width={B} height={H} fill="#f3edf2" />
       <path d="M0 150 Q120 118 230 142 T400 132 V300 H0Z" fill="#c4d99a" />
-      <rect x="322" y="112" width="8" height="58" fill="#6b5136" />
+      <rect x="322" y="124" width="7" height="46" fill="#6b5136" />
       <g fill="#6f9a48">
-        <circle cx="306" cy="108" r="24" />
-        <circle cx="346" cy="106" r="24" />
-        <circle cx="326" cy="86" r="28" />
+        <circle cx="309" cy="124" r="17" />
+        <circle cx="343" cy="122" r="17" />
+        <circle cx="326" cy="108" r="20" />
       </g>
       <path d="M0 178 Q100 160 200 172 T400 166 V300 H0Z" fill="#a8c77d" />
       <path d="M0 214 Q140 198 260 210 T400 204 V300 H0Z" fill="#8fb766" />
@@ -295,7 +295,47 @@ function Bynatur() {
   );
 }
 
+/* Utbygging ved vannet, til de blå båndene på oversikten: skogkledde åser, et ryddet anlegg med grusdunger, bygninger og en kran, og
+   en elv forbi */
+function Utbygging() {
+  const r = tilfeldig(5);
+  return (
+    <>
+      <rect width={B} height={H} fill="#e3edf2" />
+      <path d="M0 118 Q80 66 180 96 T400 84 V300 H0Z" fill="#6f9a5c" />
+      {Array.from({ length: 20 }, (_, i) => (
+        <Gran key={i} x={i * 21 + 4 + r() * 6} y={112 + r() * 14} h={20 + r() * 9} farge="#4f7a41" />
+      ))}
+      <path d="M0 150 Q120 134 240 146 T400 140 V300 H0Z" fill="#a3c486" />
+      <path d="M0 176 Q160 166 400 182" stroke="#e7e2d4" strokeWidth="5" fill="none" />
+      <path d="M150 186 L388 176 L400 300 L176 300 Z" fill="#cfc8b7" />
+      <path d="M196 236 L300 230 L312 282 L206 288 Z" fill="#bdb5a2" />
+      <path d="M300 262 Q322 232 344 262Z" fill="#a69d89" />
+      <path d="M328 268 Q350 240 372 268Z" fill="#b4ab97" />
+      <path d="M0 200 C60 190 120 214 150 248 S170 300 190 300 H0Z" fill="#8ab7cf" />
+      <path d="M22 236 C60 230 96 244 120 268" stroke="#b2d2e2" strokeWidth="3" fill="none" />
+      <g>
+        <rect x="186" y="156" width="58" height="34" fill="#9aa3ab" />
+        <rect x="248" y="146" width="46" height="44" fill="#bcc3c9" />
+        <rect x="298" y="160" width="56" height="28" fill="#8b949c" />
+        {[0, 1, 2].map(i => (
+          <rect key={i} x={254} y={154 + i * 11} width="34" height="4" fill="#e9eef1" />
+        ))}
+      </g>
+      <g stroke="#e3a62a" strokeWidth="3" strokeLinecap="round" fill="none">
+        <line x1="222" y1="190" x2="222" y2="92" />
+        <line x1="196" y1="96" x2="282" y2="96" />
+        <line x1="266" y1="96" x2="266" y2="122" />
+        <line x1="222" y1="96" x2="210" y2="110" />
+      </g>
+      <rect x="226" y="250" width="18" height="10" rx="2" fill="#e3a62a" />
+      <rect x="262" y="210" width="14" height="8" rx="2" fill="#e3a62a" />
+    </>
+  );
+}
+
 const TEGNING: Record<string, () => ReactNode> = {
+  utbygging: Utbygging,
   skog: Skog,
   vatmark: Vatmark,
   verneomrader: Vern,

@@ -1,6 +1,7 @@
 /* Kartet i tvillingen: det samme kartet som hovedsiden (src/ui/kart), satt inn her, med lagvelgeren fra Figma ved siden av. Hvilket
    tema kartet viser, følger siden (ui.side, se navigasjon.ts). Lagvelgeren skjuler og viser lagene med gjennomsiktighet, så kartets
-   egen styring av lagene ikke røres. Lag som bare tvillingen har (kartlag.ts), legges inn under planen når kartet vises, og tas ut
+   egen styring av lagene ikke røres. Hvert lag står som i skissene: fargen til venstre, navnet og kilden, og valget til høyre, med
+   fargene under når laget har flere og er slått på. Lag som bare tvillingen har (kartlag.ts), legges inn under planen når kartet vises, og tas ut
    igjen etterpå. Det finnes ett kart, så bare én side om gangen har det. «Åpne kart i fullskjerm» legger kartet over hele vinduet. */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type TileLayer from 'ol/layer/Tile.js';
@@ -20,7 +21,7 @@ import { planLag } from '../../src/ui/kart/plan.ts';
 import { byttTilValgt, plasserBytt, settByttKnapp } from '../../src/ui/kart/trykk.ts';
 import { ui } from '../../src/ui/tilstand.ts';
 import { henteKort } from '../../src/ui/tekst.ts';
-import { MdButton, MdCheckbox, MdIconClose, MdIconExpandContent, MdLoadingSpinner } from '../md.ts';
+import { MdButton, MdIconClose, MdIconExpandContent, MdLoadingSpinner } from '../md.ts';
 import './Kart.css';
 
 /* Et lag i lagvelgeren: hvilke av kartets lag det styrer (klasser, plan eller tema), eller et eget lag (ol), navnet, kilden, fargene
@@ -36,7 +37,8 @@ export interface Kartlag {
 const OL_LAG: Record<string, () => { setOpacity(o: number): void }[]> = {
   klasser: () => [klasseLag, oversiktLag],
   plan: () => [planLag],
-  tema: () => [...flateLag, dekLag, inonLag, graaLag]
+  tema: () => [...flateLag, inonLag, graaLag],
+  dekning: () => [dekLag]
 };
 export const KLASSER: Kartlag = {
   id: 'klasser',
@@ -195,17 +197,23 @@ export default function Kart({
           <ul>
             {lag.map(l => (
               <li key={l.id}>
-                <MdCheckbox
-                  label={
-                    <span className="lagnavn">
-                      <b>{l.navn}</b>
-                      <small>Kilde: {l.kilde}</small>
-                    </span>
-                  }
-                  checked={!skjult[l.id]}
-                  onChange={e => settSkjult({ ...skjult, [l.id]: !e.target.checked })}
-                />
-                {l.farger && (
+                <label className="lagrad">
+                  <i
+                    className="lagfarge"
+                    style={{ background: l.farger && l.farger.length === 1 ? `var(--${l.farger[0][1]})` : undefined }}
+                  />
+                  <span className="lagnavn">
+                    <b>{l.navn}</b>
+                    <small>Kilde: {l.kilde}</small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="lagvalg"
+                    checked={!skjult[l.id]}
+                    onChange={e => settSkjult({ ...skjult, [l.id]: !e.target.checked })}
+                  />
+                </label>
+                {l.farger && l.farger.length > 1 && !skjult[l.id] && (
                   <ul className="farger">
                     {l.farger.map(([navn, farge]) => (
                       <li key={navn}>
@@ -221,7 +229,7 @@ export default function Kart({
           <p className="probe">
             {!p ? 'Trykk i kartet for å se hva som er der.' : p.punkt ? <b>{p.punkt}</b> : p.tekst}
           </p>
-          {etter}
+          {etter && <div className="lag-etter">{etter}</div>}
         </div>
       </div>
     </section>

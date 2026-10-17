@@ -1,6 +1,6 @@
 /* Toppen av tvillingen, som i Figma: navnet med kommunen, «Bytt kommune» og «Hjelp og veileder», og menyen med hovedsidene under. På
    mobil ligger menyen og knappene bak en menyknapp. Over toppen står en smal linje som sier at dette er en prototyp. Logoen fra
-   skissene er ikke med: det står et nøytralt merke i stedet. */
+   skissene er ikke med: det står et nøytralt merke i stedet, med den samme loddrette streken mot navnet. */
 import { useEffect, useRef } from 'react';
 import { kommuner, listeFeil } from '../../src/data/motor/kommune.ts';
 import { app, endret } from '../../src/data/motor/tilstand.ts';
@@ -84,6 +84,7 @@ export default function Topp() {
         <div className="topp-rad">
           <Lenke til={{ side: 'oversikt' }} className="merke">
             <Merke />
+            <span className="merke-skille" aria-hidden="true" />
             <span>Naturregnskap for {feil ? '…' : k ? k.navn : <span className="henter">henter kommuner …</span>}</span>
           </Lenke>
           <div className="topp-knapper">{knapper}</div>

@@ -1,97 +1,129 @@
-/* Kartet i tvillingen (Kart.tsx): båndet i beige over hele bredden, lagvelgeren til venstre og kartet til høyre (kartet først på
-   mobil), knappene i kartet som i skissene (runde grønne knapper for zoom nede til høyre, fullskjerm oppe til høyre), og
+/* Kartet i tvillingen (Kart.tsx): båndet i lys beige over hele bredden, lagvelgeren til venstre og kartet til høyre (kartet først på
+   mobil), med målene fra skissene, knappene i kartet som i skissene (runde grønne knapper for zoom nede til høyre, fullskjerm oppe til høyre), og
    fullskjerm over hele vinduet. Kartets egne kontroller kommer fra OpenLayers og får stilen sin her. */
 .kartbaand {
-  background: var(--beige);
-  margin-top: 48px;
-  padding: 24px 0;
+  background: var(--beige-baand);
+  margin-top: 64px;
+  padding: 16px 0;
 }
 .kartbaand + .innhold > :first-child {
-  margin-top: 48px;
+  margin-top: 64px;
 }
 .kartrute {
-  max-width: calc(1040px + 2 * var(--luft));
+  max-width: calc(1200px + 2 * var(--luft));
   margin: 0 auto;
   padding: 0 var(--luft);
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  grid-template-columns: 395px minmax(0, 1fr);
   grid-template-areas: 'lag kart';
-  gap: 0;
+  gap: 8px;
 }
 .kartbaand .kartscene {
   grid-area: kart;
-  height: 440px;
+  height: 745px;
 }
 .kartbaand.stor .kartscene {
-  height: min(70vh, 640px);
+  height: min(80vh, 745px);
 }
+/* Lagvelgeren som i skissene: en beige flate med ett lag per rad, fargen til venstre og valget til høyre, og trekkspillene nederst */
 .lagvelger {
   grid-area: lag;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  font-size: var(--md-typography-body-s);
 }
 .lagvelger > ul {
-  background: var(--md-color-beige-3);
-  border-radius: 4px 0 0 4px;
-  padding: 8px 16px;
+  background: var(--beige-kort);
+  border-radius: 6px;
+  padding: 10px 16px;
 }
 .lagvelger > ul > li {
-  padding: 8px 0;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid #d2d2d2;
 }
-.lagvelger > ul > li + li {
-  border-top: 1px solid var(--md-color-beige-6);
+.lagrad {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
 }
-.lagvelger .md-checkbox {
-  width: 100%;
+.lagfarge {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
 }
 .lagnavn {
   display: flex;
   flex-direction: column;
+  line-height: 1.3;
+}
+.lagnavn b {
+  font-size: 1.0625rem;
+  font-weight: 600;
 }
 .lagnavn small {
-  font-size: 0.75rem;
-  color: var(--dempet);
+  font-size: 0.9375rem;
+  color: var(--tekst);
+}
+/* Valget for laget: hvit boks med grønn kant og grønn hake */
+.lagvalg {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border: 2px solid var(--teal-lenke);
+  border-radius: 2px;
+  background: #fff center / 18px no-repeat;
+  cursor: pointer;
+}
+.lagvalg:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z' fill='%23005e5d'/%3E%3C/svg%3E");
+}
+.lagvalg:focus-visible {
+  outline: 2px solid var(--teal-lenke);
+  outline-offset: 2px;
 }
 .lagvelger .farger {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 6px 0 0 32px;
-  font-size: 0.75rem;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 0 34px;
+  font-size: 1.0625rem;
 }
 .lagvelger .farger li {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 14px;
 }
 .lagvelger .farger i {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  flex: none;
 }
-.lagvelger .probe,
+.lagvelger .probe {
+  font-size: var(--md-typography-body-s);
+  color: var(--dempet);
+}
 .lagvelger .hint,
 .lagvelger .md-radiogroup {
-  padding: 0 16px;
+  font-size: var(--md-typography-body-s);
 }
-@media (max-width: 720px) {
+.lag-etter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 900px) {
   .kartrute {
     grid-template-columns: 1fr;
     grid-template-areas: 'kart' 'lag';
     gap: 12px;
   }
   .kartbaand .kartscene {
-    height: 360px;
-  }
-  .lagvelger > ul {
-    border-radius: 4px;
-  }
-  .lagvelger .probe,
-  .lagvelger .hint,
-  .lagvelger .md-radiogroup {
-    padding: 0;
+    height: 420px;
   }
 }
 
@@ -103,8 +135,13 @@
 }
 .kart-enkel .kartscene {
   height: 460px;
-  border-radius: 4px;
-  border: 1px solid var(--md-color-primary-30);
+  border-radius: 6px;
+  border: 1px solid var(--teal-kant);
+  background: var(--teal-lys);
+}
+/* Kartet på oversikten har ikke fullskjerm i skissene */
+.kart-enkel .fullskjerm {
+  display: none;
 }
 @media (max-width: 900px) {
   .kart-enkel .kartscene {
@@ -241,5 +278,27 @@
   display: none;
 }
 .kart-enkel .kartmerke.enkel-merke {
-  bottom: 28px;
+  bottom: 26px;
+  left: 22px;
+  padding: 4px 16px 4px 12px;
+  background: var(--teal-merke);
+  box-shadow: none;
+  font-size: 1.0625rem;
+  font-weight: 400;
+}
+@media (max-width: 600px) {
+  .kart-enkel .kartmerke.enkel-merke {
+    max-width: calc(100% - 120px);
+    left: 12px;
+    font-size: 0.875rem;
+  }
+}
+.kart-enkel .kartmerke.enkel-merke::before {
+  width: 16px;
+  height: 16px;
+}
+.kart-enkel .ol-zoom {
+  right: 28px;
+  bottom: 26px;
+  gap: 8px;
 }
