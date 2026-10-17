@@ -10,7 +10,7 @@
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
    Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne), og hjelpetabeller som
-   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturmaske). Det sammensatte kartet (solv.sammensatt) har en
+   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturoppslag). Det sammensatte kartet (solv.sammensatt) har en
    ETL-funksjon, men er voksende: datamotoren legger inn nye fliser etter hvert som de hentes.
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
@@ -37,7 +37,7 @@ import * as solvTemaer from './solv/temaer.ts';
 import { BITNIVA, PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
 import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
-import type { Maske } from './solv/temaer.ts';
+import type { Omradesok } from './solv/temaer.ts';
 import type { Samling } from './solv/grunnkart.ts';
 import type { Klasseregister } from './bronse/nibio-grunnkart.ts';
 import * as gullEgne from './gull/egne.ts';
@@ -904,14 +904,14 @@ export const katalog = {
       etl: solvTemaer.kartlagt,
       glemt: (_, nr) => glemMasker('kartlagt/' + nr)
     }),
-    naturmaske: tabell<string, Maske | null>({
+    naturoppslag: tabell<string, Omradesok | null>({
       lag: 'solv',
-      navn: 'naturmaske',
+      navn: 'naturoppslag',
       fil: 'solv/temaer.ts',
-      tittel: 'Masker for områdene',
-      om: 'hjelpetabell: områdene i naturtemaene og det kartlagte som masker i et rutenett, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området. Lages første gang en rute med planlagt utbygging treffer området.',
+      tittel: 'Oppslag i områdene',
+      om: 'hjelpetabell: områdene i naturtemaene, det kartlagte og kommunen som oppslag for punkter, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området, kartlagt/kommune eller kommune/kommune. Lages første gang en rute med planlagt utbygging kan ligge i området.',
       forklaring:
-        'Hvert område og det kartlagte får en maske med dekningen per rute, laget første gang planlagt utbygging treffer området.',
+        'Hvert område og det kartlagte får et oppslag som sier om et punkt ligger i flaten, laget første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor stort området er.',
       husk: Infinity
     })
   },
@@ -1339,7 +1339,7 @@ export const katalog = {
       tittel: 'Utbyggingen i verneområder',
       om: 'kolonnen for verneområdene i utbyggingen: hvilket område hver rad ligger i',
       forklaring:
-        'Midtpunktet i hver rute med planlagt utbygging slås opp i maskene. Ruta hører til området når masken er minst halvt dekket der, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
+        'Midtpunktet i hver rute med planlagt utbygging slås opp i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
       husk: 1,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingIVerneomrader
@@ -1371,7 +1371,7 @@ export const katalog = {
       tittel: 'Utbyggingen i villreinområder',
       om: 'kolonnen for villreinområdene i utbyggingen: hvilket område hver rad ligger i',
       forklaring:
-        'Midtpunktet i hver rute med planlagt utbygging slås opp i maskene. Ruta hører til området når masken er minst halvt dekket der, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
+        'Midtpunktet i hver rute med planlagt utbygging slås opp i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
       husk: 1,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingIVillrein
@@ -1426,7 +1426,7 @@ export const katalog = {
       tittel: 'Utbyggingen i verdsatt natur',
       om: 'kolonnen for verdsatt natur i utbyggingen: hvilket område hver rad ligger i',
       forklaring:
-        'Midtpunktet i hver rute med planlagt utbygging slås opp i maskene. Ruta hører til området når masken er minst halvt dekket der, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
+        'Midtpunktet i hver rute med planlagt utbygging slås opp i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
       husk: 1,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingIVerdsattNatur
@@ -1448,7 +1448,7 @@ export const katalog = {
       tittel: 'Utbygging utenfor det kartlagte',
       om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper',
       forklaring:
-        'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt ved å slå opp midtpunktet i masken for det kartlagte.',
+        'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt etter om midtpunktet ligger i flaten for det kartlagte.',
       husk: 6,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingUtenforKartlagt
@@ -1510,7 +1510,7 @@ for (const lag of Object.values(katalog))
   }
 
 /* Maskene til et tema i en kommune glemmes når områdene glemmes */
-const glemMasker = (start: string) => glem(katalog.solv.naturmaske, k => k.startsWith(start));
+const glemMasker = (start: string) => glem(katalog.solv.naturoppslag, k => k.startsWith(start));
 
 /* Tabellene for hvert naturtema, etter id, til siden og kartet som er felles for temaene: områdene i sølv, og i gull temaet,
    planlagt utbygging i det, og for verdsatt natur kartleggingen og planlagt utbygging utenfor det kartlagte */

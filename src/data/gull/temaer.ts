@@ -6,21 +6,22 @@
    - summene over kolonnen: planlagt utbygging i temaet, samlet og per område (gull.verneomraderIPlan og de andre)
    - planlagt utbygging på natur utenfor det kartlagte (gull.utbyggingUtenforKartlagt)
    Delene er delt der det kommer inn en ny kilde: det kartlagte og utbyggingen kommer senere enn områdene, og siden viser områdene med
-   en gang. Bygger på områdene, arealet og maskene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i km²,
+   en gang. Bygger på områdene, arealet og oppslagene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i km²,
    kryssinger i ruter. */
-import { omriss, type FlateMedUtsnitt } from '../generelt/geometri.ts';
+import { omriss, type Flatesok } from '../generelt/geometri.ts';
 import { verdi } from '../generelt/glissen.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import { HALV, ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
+import { ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
 import {
   NATURTEMA,
   VURDERES,
   klasseAreal,
   verneformgruppe,
-  naturMaske,
+  iOmradet,
+  naturSok,
   type Kartlagt,
-  type Maske,
+  type Omradesok,
   type Naturtema,
   type Omrade,
   type TemaOmrade,
@@ -52,21 +53,17 @@ export interface Kryssing {
   smal: Int32Array;
   ruteKm2: number;
 }
-/* Gir masken til et område. lag() lager den, og den som kaller, kan huske den per område (nokkel). */
-export type HuskMaske = (nokkel: object, lag: () => Maske | null) => Maske | null;
+/* Gir oppslaget for et område. lag() lager det, og den som kaller, kan huske det per område (nokkel). */
+export type HuskSok = (nokkel: object, lag: () => Omradesok | null) => Omradesok | null;
 
-/* Om midtpunktet i ruta i i utbyggingen R ligger i masken M (minst halvt dekket) */
-function iMasken(M: Maske, R: Utbygging, i: number) {
-  const px = Math.floor((ruteX(R, i) - M.u[0]) / M.res),
-    py = Math.floor((M.u[3] - ruteY(R, i)) / M.res);
-  return !(px < 0 || py < 0 || px >= M.w || py >= M.h || M.a[py * M.w + px] < HALV);
-}
+/* Om midtpunktet i ruta i i utbyggingen R ligger i området S */
+const iSoket = (S: Omradesok, R: Utbygging, i: number) => iOmradet(S, ruteX(R, i), ruteY(R, i));
 
 /* Kolonnen for et tema i utbyggingen: hvilket område hver rad ligger i, som plassen i O, eller -1. Midtpunktet i ruta slås opp i
-   maskene for områdene, og ruta hører til det første området den treffer. kommune er flaten uklippede områder klippes mot. Maskene
-   lages med naturMaske i sølv. maske(nokkel, lag) gir masken: den som kaller, kan huske maskene per område (nokkel) og bare kalle
-   lag() første gang. */
-export function temaKolonne(O: TemaOmrade[], R: Utbygging, kommune: FlateMedUtsnitt, maske: HuskMaske): Int32Array {
+   områdene, og ruta hører til det første området den ligger i. kommune gir oppslaget i kommunen, som uklippede områder klippes
+   mot. Oppslagene lages med naturSok i sølv. sok(nokkel, lag) gir oppslaget: den som kaller, kan huske det per område (nokkel) og bare kalle lag() første
+   gang. */
+export function temaKolonne(O: TemaOmrade[], R: Utbygging, kommune: () => Flatesok, sok: HuskSok): Int32Array {
   const treff = new Int32Array(R.rader.length).fill(-1);
   for (let r = 0; r < R.rader.length && O.length; r++) {
     const i = R.rader[r],
@@ -75,8 +72,8 @@ export function temaKolonne(O: TemaOmrade[], R: Utbygging, kommune: FlateMedUtsn
     for (let a = 0; a < O.length; a++) {
       const o = O[a];
       if (x < o.ext[0] || x > o.ext[2] || y < o.ext[1] || y > o.ext[3]) continue;
-      const M = maske(o, () => naturMaske(o, o.uklippet ? kommune : null));
-      if (!M || !iMasken(M, R, i)) continue;
+      const S = sok(o, () => naturSok(o, o.uklippet ? kommune() : null));
+      if (!S || !iSoket(S, R, i)) continue;
       treff[r] = a;
       break;
     }
@@ -121,10 +118,10 @@ export function kryssNatur(O: TemaOmrade[], R: Utbygging, treff: Int32Array, nK:
   return { kryss: { S, P: B ? P : null }, plan, smal, ruteKm2: ruteKm2(R.z) };
 }
 
-/* Planlagt utbygging på natur i utbyggingen R, uten smale striper, delt på kartlagt og ikke kartlagt. M er masken for det
+/* Planlagt utbygging på natur i utbyggingen R, uten smale striper, delt på kartlagt og ikke kartlagt. M er oppslaget for det
    kartlagte, eller null når ingenting er kartlagt. For planen med egne områder og planen alene, for hele kommunen og per eget
    område. */
-export function kryssKartlagt(R: Utbygging, M: Maske | null): Gap {
+export function kryssKartlagt(R: Utbygging, M: Omradesok | null): Gap {
   const B = R.basis || null,
     nE = R.eget ? R.antallEgne : 0,
     nC = R.celler.length;
@@ -150,10 +147,10 @@ export function kryssKartlagt(R: Utbygging, M: Maske | null): Gap {
       const s = verdi(R.ryddet, i) === 1,
         b = !!B && verdi(B.ryddet, i) === 1;
       if (!s && !b) continue;
-      const uk = !M || !iMasken(M, R, i);
+      const uk = !M || !iSoket(M, R, i);
       if (s) tell(G, i, uk);
       if (b) tell(GP, i, uk);
-    } else if (verdi(B!.ryddet, i) === 1) tell(GP, i, !M || !iMasken(M, R, i));
+    } else if (verdi(B!.ryddet, i) === 1) tell(GP, i, !M || !iSoket(M, R, i));
   }
   return { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
 }
@@ -315,8 +312,8 @@ export async function verdsattNaturKartlagt(nr: string): Promise<Kartleggingen> 
 }
 
 /* Tabellene gull.utbyggingIVerneomrader, gull.utbyggingIVillrein og gull.utbyggingIVerdsattNatur: kolonnen for temaet i
-   utbyggingen for kommunen nr, med temaet (T) og utbyggingen (R) den er regnet av. null uten utbygging. Maskene til områdene huskes
-   i solv.naturmaske. */
+   utbyggingen for kommunen nr, med temaet (T) og utbyggingen (R) den er regnet av. null uten utbygging. Oppslagene for områdene
+   huskes i solv.naturoppslag. */
 export interface Temakolonne {
   T: Temaet;
   R: Utbygging;
@@ -326,7 +323,12 @@ async function kolonne(tema: Naturtema, nr: string, T: Temaet): Promise<Temakolo
   const [R, g] = await Promise.all([katalog.gull.utbygging(nr), katalog.solv.grense(nr)]);
   if (!R) return null;
   const navn = new Map<object, string>(T.omrader.map((o, i) => [o, `${tema.id}/${nr}/${i}`]));
-  return { T, R, treff: temaKolonne(T.omrader, R, g, (o, lag) => katalog.solv.naturmaske.straks(navn.get(o)!, lag)) };
+  const kommune = () => katalog.solv.naturoppslag.straks('kommune/' + nr, () => naturSok(g, null))!.flate;
+  return {
+    T,
+    R,
+    treff: temaKolonne(T.omrader, R, kommune, (o, lag) => katalog.solv.naturoppslag.straks(navn.get(o)!, lag))
+  };
 }
 export async function utbyggingIVerneomrader(nr: string): Promise<Temakolonne | null> {
   return kolonne(VERN, nr, await katalog.gull.verneomrader(nr));
@@ -357,15 +359,15 @@ export async function verdsattNaturIPlan(nr: string): Promise<TemaIPlan | null> 
 
 /* Tabellen gull.utbyggingUtenforKartlagt: planlagt utbygging på natur i kommunen nr, og hvor mye av den som ligger utenfor det som
    er kartlagt for naturtyper etter Miljødirektoratets instruks. Der vet vi ikke om det finnes verdifull natur. null uten utbygging,
-   eller når det kartlagte ikke kan hentes. Masken for det kartlagte huskes i solv.naturmaske. */
+   eller når det kartlagte ikke kan hentes. Oppslaget for det kartlagte huskes i solv.naturoppslag. */
 export type UtenforKartlagt = Gap & { natKm2: number; ukjentKm2: number; andel: number | null };
 export async function utbyggingUtenforKartlagt(nr: string): Promise<UtenforKartlagt | null> {
   const [R, E] = await Promise.all([katalog.gull.utbygging(nr), katalog.solv.kartlagt(nr).catch(ikke)]);
   if (!R || !E) return null;
   const M =
     E.flate && E.flate.length
-      ? katalog.solv.naturmaske.straks('kartlagt/' + nr, () =>
-          naturMaske({ koord: E.flate!, ext: omriss(E.flate!) }, null)
+      ? katalog.solv.naturoppslag.straks('kartlagt/' + nr, () =>
+          naturSok({ koord: E.flate!, ext: omriss(E.flate!) }, null)
         )
       : null;
   const G = kryssKartlagt(R, M);

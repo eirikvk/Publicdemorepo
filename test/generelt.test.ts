@@ -10,7 +10,9 @@ import {
   snitt,
   tomt,
   utsnitt,
-  iFlate
+  iFlate,
+  flatesok,
+  iSok
 } from '../src/data/generelt/geometri.ts';
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
@@ -120,4 +122,47 @@ test('punkt i flate: inne, ute og i hullet', () => {
   assert.equal(iFlate([2, 2], [[ytre, hull]]), true);
   assert.equal(iFlate([5, 5], [[ytre, hull]]), false);
   assert.equal(iFlate([12, 5], [[ytre, hull]]), false);
+});
+
+test('oppslaget i en flate gir det samme som iFlate, også i hull og langs skrå kanter', () => {
+  const koord = [
+    [
+      [
+        [0, 0],
+        [100, 0],
+        [130, 60],
+        [50, 120],
+        [-20, 60],
+        [0, 0]
+      ],
+      [
+        [40, 40],
+        [60, 40],
+        [60, 60],
+        [40, 60],
+        [40, 40]
+      ]
+    ],
+    [
+      [
+        [200, 0],
+        [220, 0],
+        [210, 30],
+        [200, 0]
+      ]
+    ]
+  ];
+  const S = flatesok(koord);
+  let ulike = 0,
+    inne = 0;
+  for (let x = -30; x <= 230; x += 3.7)
+    for (let y = -10; y <= 130; y += 2.9) {
+      const a = iFlate([x, y], koord);
+      if (a !== iSok(S, x, y)) ulike++;
+      if (a) inne++;
+    }
+  assert.equal(ulike, 0);
+  assert.ok(inne > 500);
+  assert.equal(iSok(S, 50, 50), false); /* i hullet */
+  assert.equal(iSok(S, 10, 10), true);
 });

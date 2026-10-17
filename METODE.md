@@ -111,14 +111,14 @@ tjenestene: en piksel teller når den er minst halvveis dekket. Det er tre unnta
 
 **Rutenettene.** Analysene bruker flere rutenett. Planrutenettet og bitene følger Kartverkets flisnett. De andre er lagt over
 kommunen og tilpasset størrelsen på den. Alle tall skal over på faste ruter på 10,6 meter (bestemt 18. oktober 2026); bitene er
-første steg. Når to rutenett krysses, slås midtpunktet av ruta i planrutenettet opp i det andre.
+første steg. Kryssingen av planrutenettet med verneområdene, villreinområdene, lokalitetene og det kartlagte bruker ikke noe rutenett:
+midtpunktet i hver planrute slås opp i flaten (`flatesok`, `naturSok`). Når to rutenett krysses, slås midtpunktet av ruta i planrutenettet opp i det andre.
 
 | Rutenett | Ruter | Brukes til | I koden |
 |---|---|---|---|
 | Planrutenettet | 21,16 meter, nivå 9 i Kartverkets flisnett for UTM33, 512 ruter per flis. Én rute er 0,448 dekar. | Planlagt utbygging, egne områder, og alt som krysses med dem | `PLANNIVA`, `RUTE_M`, `RUTE` |
 | Bitene | 10,6 meter, nivå 10 i flisnettet. Hentes i biter på 2048 x 2048 ruter (flisene på nivå 8, 21,7 km), like store i alle kommuner. | Inngrepsfri natur og grått areal | `BITNIVA`, `BIT` |
-| Verdsatt natur | Minst 10 meter, høyst 1536 ruter på lengste side | Arealet per verdikategori | `RUTENETT_VERDI` |
-| Områdemasker | Minst 10 meter, høyst 1500 ruter på lengste side | Oppslag fra planrutenettet i hvert verneområde, villreinområde og lokalitet, og i det kartlagte | `RUTENETT_MASKE` |
+| Verdsatt natur | Bitene, 10,6 meter | Arealet per verdikategori, og det samme innenfor det kartlagte | `klasseAreal` |
 | Plandekning | Høyst 256 ruter på lengste side | Om kommunen har kommuneplan hos DiBK | `BILDE_PLANDEKNING` |
 
 **Tersklene.** Alle står i `src/data/solv/felles.ts`.
@@ -681,15 +681,16 @@ Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
    i ett svar. Kilde: [Miljødirektoratet, Naturtyper på land (NiN),
    dekningskartet](https://kartkatalog.geonorge.no/metadata/uuid/eb48dd19-03da-41e1-afd9-7ebc3079265c), NLOD 2.0. Justeres:
    Dekningsflatene slås sammen og klippes mot kommunen.
-7. **Masker for områdene** (`solv.naturmaske`). Hvert område og det kartlagte får en maske med dekningen per rute, laget første
-   gang planlagt utbygging treffer området.
+7. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område og det kartlagte får et oppslag som sier om et punkt ligger i
+   flaten, laget første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor
+   stort området er.
 8. **Verneområder** (`gull.verneomrader`) og **Villreinområder** (`gull.villrein`). Arealet i kommunen er summen av områdene, og
    andelen er regnet av landarealet.
 9. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
 10. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
     og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). Midtpunktet i hver rute med planlagt utbygging slås opp
-    i maskene. Ruta hører til området når masken er minst halvt dekket der, og til det første området den treffer, så den telles
-    én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.
+    i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den
+    treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.
 11. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
     i planen** (`gull.verdsattNaturIPlan`). Rutene summeres per område, og for verdsatt natur per verdikategori, og regnes om til
     areal. Ruter i smale striper telles for seg.
@@ -701,7 +702,7 @@ Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
     vises som høyst 100 %. Helhetsbildet deler landarealet i kartlagt og ikke kartlagt, og viser verdsatt natur per verdi i hver
     del.
 15. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
-    striper, deles i kartlagt og ikke kartlagt ved å slå opp midtpunktet i masken for det kartlagte.
+    striper, deles i kartlagt og ikke kartlagt etter om midtpunktet ligger i flaten for det kartlagte.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
@@ -1050,6 +1051,15 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Verdsatt natur og naturtemaene uten variable ruter, 18. oktober 2026.** Arealet per verdikategori ble regnet i et rutenett over
+kommunen med høyst 1536 ruter på lengste side, og områdene ble masker med høyst 1500 ruter, så rutene var 10 meter i små kommuner og
+grovere i store (41 meter i Oppdal). Nå regnes arealet per verdikategori i bitene på 10,6 meter (`klasseAreal`), og kryssingen med
+utbyggingen slår opp midtpunktet i hver planrute direkte i flaten (`flatesok`), uten rutenett. Det samme gjelder det kartlagte og
+arealet av flater som ikke kan klippes mot kommunen (`dekketIKommune`). Masketabellen er byttet med en tabell for oppslagene
+(`solv.naturoppslag`). Endringene er små: verdsatt natur i Trondheim 30 693 → 30 736 dekar, Oppdal 140 070 → 140 147, Vinje
+61 645 → 61 704; planlagt utbygging i verneområder i Trondheim 202 → 203 dekar, og i verdsatt natur i Vinje 202 → 209 dekar.
+Regresjonstesten ga avvik bare i tallene for naturtemaene.
 
 **Fem nye tall og kartlag i tvillingen, 18. oktober 2026.** Det som sto som «Kan regnes ut» i oversikten over datatilgangen, er
 regnet ut av data datamotoren alt har. Bare tvillingen bruker dem, og de regnes etter behov (`etterBehov`):

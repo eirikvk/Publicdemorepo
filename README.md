@@ -190,7 +190,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017, og hver arealklasse for seg per år (til tvillingen fra Figma) |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
-| `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, og som masker i et rutenett |
+| `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, arealet per verdikategori i bitene, og flatene som oppslag for punkter |
 | `inon.ts` | Inngrepsfri natur: sone per rute |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon |
 | `punkt.ts` | Oppslag i ett punkt, til detaljene ved trykk i kartet: grunnkartet, kommuneplanen og inngrepsfri natur i punktet, og alle feltene for et område i et naturtema, som felt og verdi. Inngår ikke i tallene. |
@@ -436,7 +436,7 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
   mange ferdige fliser OpenLayers holder på i hvert kartlag (opptil 512 per lag), og omtrent hvor mye minne de tar.
 
 Noen tabeller har ingen ETL-funksjon. Egne områder slik brukeren laget dem (`bronse.egne`) fyller datamotoren. Det sammensatte
-kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren legger inn nye fliser med en gang de er hentet. Hjelpetabellene fyller en ETL-funksjon underveis: utbyggingens blokker og maskene til områdene.
+kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren legger inn nye fliser med en gang de er hentet. Hjelpetabellene fyller en ETL-funksjon underveis: utbyggingens blokker og oppslagene i områdene.
 
 ### Prinsippene for dataflyten
 

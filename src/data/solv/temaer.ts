@@ -1,23 +1,27 @@
 /* Sølv for naturtemaene fra Miljødirektoratet: verneområder, villreinområder og verdsatt natur. Flatene gjøres om til felles form:
-   klippet mot kommunen og med areal i km², og som masker i et rutenett når de skal krysses med utbyggingen. Også det kartlagte
+   klippet mot kommunen og med areal i km², og som oppslag for punkter når de skal krysses med utbyggingen. Også det kartlagte
    området for naturtyper. Flatene kommer som GeoJSON. */
 import polygonClipping from 'polygon-clipping';
 import {
   areal,
+  flatesok,
   flerflate,
+  iSok,
   motKlokka,
   omriss,
+  overlapper,
   snitt,
   tomt,
   utsnitt,
+  type Flatesok,
   type Flerflate,
   type FlateMedUtsnitt,
   type GeoJsonFlate,
   type Utsnitt
 } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { RUTENETT_MASKE, RUTENETT_VERDI, m2PerKm2, rutenett, type Rutebilde } from './felles.ts';
-import { sti, tegneflate, dekketM2 } from './raster.ts';
+import { BIT, biterI, bitRuter, m2PerKm2 } from './felles.ts';
+import { dekketM2, flaterPiksler, sti, tegneflate } from './raster.ts';
 
 /* Naturtemaene. samlet: mange små lokaliteter, der arealet per verdikategori regnes samlet og bare de som berøres av planlagt
    utbygging, listes. dekning: temaet har et kart over hvor det er kartlagt. klasser: verdikategoriene, [navn, farge], høyest verdi
@@ -108,10 +112,10 @@ export interface Omrade extends Opplysninger {
 export interface TemaOmrade extends Omrade {
   ext: Utsnitt;
 }
-/* Et område som et lite rutenett med dekningen per rute (a, 0–255), og arealet i kartets kvadratmeter (m2) */
-export interface Maske extends Rutebilde {
-  a: Uint8Array;
-  m2: number;
+/* Et område som oppslag for punkter fra utbyggingen: i flaten, og i kommunen når flaten ikke er klippet mot den */
+export interface Omradesok {
+  flate: Flatesok;
+  kommune: Flatesok | null;
 }
 /* Det kartlagte området for naturtyper i kommunen: arealet i km², årene kartleggingen er gjort, og flaten */
 export interface Kartlagt {
@@ -168,28 +172,27 @@ export const EGENSKAPER: Record<string, Les> = {
 export interface TemaOmrade extends Omrade {
   ext: Utsnitt;
 }
-/* Et område som et lite rutenett med dekningen per rute (a, 0–255), til oppslag fra utbyggingen. flate er { koord, ext }.
-   kommune oppgis bare når flaten ikke alt er klippet mot kommunen. m2 er arealet i kartets kvadratmeter. */
-export function naturMaske(flate: FlateMedUtsnitt, kommune: FlateMedUtsnitt | null): Maske | null {
-  const e = kommune ? snitt(flate.ext, kommune.ext) : flate.ext;
-  if (tomt(e)) return null;
-  const [maks, minst] = RUTENETT_MASKE,
-    res = Math.max(minst, Math.max(e[2] - e[0], e[3] - e[1]) / maks),
-    w = Math.ceil((e[2] - e[0]) / res) + 1,
-    h = Math.ceil((e[3] - e[1]) / res) + 1,
-    u: Utsnitt = [e[0], e[3] - h * res, e[0] + w * res, e[3]];
-  const k = tegneflate(w, h);
-  sti(k, flate.koord, u, 1 / res);
-  k.fill('evenodd');
-  if (kommune) {
-    k.globalCompositeOperation = 'destination-in';
-    sti(k, kommune.koord, u, 1 / res);
-    k.fill('evenodd');
+/* Et område som oppslag for punkter fra utbyggingen. flate er { koord, ext }. kommune er oppslaget i kommunen, og oppgis bare når
+   flaten ikke alt er klippet mot kommunen. Et punkt er i området når det ligger i flaten (og i kommunen), uten rutenett, så svaret
+   er det samme hvor stor flaten er. null når flaten ligger utenfor kommunen. */
+export function naturSok(flate: FlateMedUtsnitt, kommune: Flatesok | null): Omradesok | null {
+  if (kommune && tomt(snitt(flate.ext, kommune.ext))) return null;
+  return { flate: flatesok(flate.koord, flate.ext), kommune };
+}
+/* Om punktet (x, y) ligger i området S */
+export const iOmradet = (S: Omradesok, x: number, y: number) =>
+  iSok(S.flate, x, y) && (!S.kommune || iSok(S.kommune, x, y));
+/* Arealet av flaten koord innenfor kommunen, i kartets kvadratmeter: tegnet i bitene (ruter på 10,6 meter) og klippet mot kommunen
+   der, med dekningen av hver rute. Brukes når klippingen av flatene feiler. */
+export function dekketIKommune(koord: Flerflate, kommune: FlateMedUtsnitt) {
+  const e = snitt(omriss(koord), kommune.ext);
+  if (tomt(e)) return 0;
+  let m2 = 0;
+  for (const tc of biterI(e)) {
+    const R = bitRuter(tc);
+    m2 += dekketM2(flaterPiksler([koord], R, kommune.koord), R.res);
   }
-  const d = k.getImageData(0, 0, w, h).data,
-    a = new Uint8Array(w * h);
-  for (let i = 0; i < a.length; i++) a[i] = d[4 * i + 3];
-  return { u, res, w, h, a, m2: dekketM2(d, res) };
+  return m2;
 }
 
 /* Fast rekkefølge for områder som er like etter sorteringen (samme verdi og samme areal): første punkt, så navn, beskrivelse og
@@ -234,9 +237,9 @@ export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Le
       } else {
         koord = hele;
         uklippet = true;
-        const m = naturMaske({ koord: hele, ext: omriss(hele) }, kommune);
-        if (!m || !(m.m2 > 0)) return null;
-        km2 = m.m2 / skala;
+        const m2 = dekketIKommune(hele, kommune);
+        if (!(m2 > 0)) return null;
+        km2 = m2 / skala;
       }
       return km2 > 0 ? { koord, uklippet, km2, ...les(f.properties || {}), egenskaper: f.properties || {} } : null;
     })
@@ -281,50 +284,64 @@ export function byggDekning(features: Objekt[], kommune: FlateMedUtsnitt): Kartl
   };
 }
 
-/* Verdsatt natur: mange små flater som overlapper. Arealet per verdikategori finnes ved å tegne flatene i et rutenett over kommunen
-   og summere dekningen i rutene. Én tegning per kategori, der alle flater med minst den verdien tegnes som én sammenhengende form og
-   klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori uten dobbelttelling: der lokaliteter overlapper,
-   teller den høyeste verdien, slik kartet også viser det. omrader har verdien v (0 er høyest). innenfor er en flerflate arealet
-   også klippes mot, for eksempel det kartlagte. */
+/* Verdsatt natur: mange små flater som overlapper. Arealet per verdikategori finnes ved å tegne flatene i bitene (ruter på 10,6
+   meter, solv/felles.ts) og summere dekningen i rutene. Én tegning per kategori, der alle flater med minst den verdien tegnes som én
+   sammenhengende form og klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori uten dobbelttelling: der
+   lokaliteter overlapper, teller den høyeste verdien, slik kartet også viser det. omrader har verdien v (0 er høyest). innenfor er en
+   flerflate arealet også klippes mot, for eksempel det kartlagte. Bit for bit, så lerretet aldri er større enn 2048 x 2048. */
 export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMedUtsnitt, innenfor?: Flerflate) {
   const skala = m2PerKm2(kommune.ext),
-    { res, w, h, u } = rutenett(kommune.ext, ...RUTENETT_VERDI);
-  const g = tegneflate(w, h),
-    kum: number[] = [];
-  for (let v = 0; v < antall && omrader.length; v++) {
-    g.globalCompositeOperation = 'source-over';
-    g.clearRect(0, 0, w, h);
-    g.beginPath();
-    for (const o of omrader) {
-      if ((o.v || 0) > v) continue;
-      for (const flate of o.koord)
-        flate.forEach((ring, nr) => {
-          /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
-          const snu = motKlokka(ring) !== (nr === 0),
-            n = ring.length;
-          for (let i = 0; i < n; i++) {
-            const q = ring[snu ? n - 1 - i : i],
-              x = (q[0] - u[0]) / res,
-              y = (u[3] - q[1]) / res;
-            if (i) g.lineTo(x, y);
-            else g.moveTo(x, y);
-          }
-          g.closePath();
-        });
-    }
-    g.fill('nonzero');
-    g.globalCompositeOperation = 'destination-in';
-    sti(g, kommune.koord, u, 1 / res);
-    g.fill('evenodd');
-    if (innenfor) {
-      sti(g, innenfor, u, 1 / res);
+    kum = new Array<number>(antall).fill(0),
+    ext = omrader.map(o => omriss(o.koord));
+  if (!omrader.length) return { klasser: kum, sum: 0 };
+  const g = tegneflate(BIT, BIT);
+  for (const tc of biterI(kommune.ext)) {
+    const R = bitRuter(tc),
+      u = R.u,
+      res = R.res,
+      her = omrader.filter((_, i) => overlapper(ext[i], u));
+    if (!her.length) continue;
+    let forrige = 0;
+    for (let v = 0; v < antall; v++) {
+      if (!her.some(o => (o.v || 0) === v)) {
+        kum[v] += forrige;
+        continue;
+      }
+      g.globalCompositeOperation = 'source-over';
+      g.clearRect(0, 0, BIT, BIT);
+      g.beginPath();
+      for (const o of her) {
+        if ((o.v || 0) > v) continue;
+        for (const flate of o.koord)
+          flate.forEach((ring, nr) => {
+            /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
+            const snu = motKlokka(ring) !== (nr === 0),
+              n = ring.length;
+            for (let i = 0; i < n; i++) {
+              const q = ring[snu ? n - 1 - i : i],
+                x = (q[0] - u[0]) / res,
+                y = (u[3] - q[1]) / res;
+              if (i) g.lineTo(x, y);
+              else g.moveTo(x, y);
+            }
+            g.closePath();
+          });
+      }
+      g.fill('nonzero');
+      g.globalCompositeOperation = 'destination-in';
+      sti(g, kommune.koord, u, 1 / res);
       g.fill('evenodd');
+      if (innenfor) {
+        sti(g, innenfor, u, 1 / res);
+        g.fill('evenodd');
+      }
+      forrige = dekketM2(g.getImageData(0, 0, BIT, BIT).data, res) / skala;
+      kum[v] += forrige;
     }
-    kum.push(dekketM2(g.getImageData(0, 0, w, h).data, res) / skala);
   }
   return {
-    klasser: Array.from({ length: antall }, (_, v) => Math.max(0, (kum[v] || 0) - (v ? kum[v - 1] || 0 : 0))),
-    sum: kum.length ? kum[kum.length - 1] : 0
+    klasser: Array.from({ length: antall }, (_, v) => Math.max(0, kum[v] - (v ? kum[v - 1] : 0))),
+    sum: kum[antall - 1]
   };
 }
 

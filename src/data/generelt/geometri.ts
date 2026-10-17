@@ -86,6 +86,47 @@ export const snitt = (a: Utsnitt, b: Utsnitt): Utsnitt => [
 ];
 export const tomt = (e: Utsnitt) => e[2] < e[0] || e[3] < e[1];
 export const overlapper = (a: Utsnitt, b: Utsnitt) => a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+/* Et oppslag for mange punkter i samme flerflate: kantene sortert i bånd etter y, så hvert oppslag bare ser på kantene i sitt bånd.
+   Gir det samme som iFlate, men raskt også for flater med tusenvis av punkter. */
+export interface Flatesok {
+  ext: Utsnitt;
+  y0: number;
+  dy: number;
+  band: Float64Array[];
+}
+export function flatesok(koord: Flerflate, ext: Utsnitt = utsnitt(koord)): Flatesok {
+  let n = 0;
+  for (const flate of koord) for (const ring of flate) n += ring.length;
+  const nb = Math.max(1, Math.min(4096, Math.ceil(n / 4))),
+    y0 = ext[1],
+    dy = (ext[3] - ext[1]) / nb || 1,
+    lister: number[][] = Array.from({ length: nb }, () => []);
+  for (const flate of koord)
+    for (const ring of flate)
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i],
+          [xj, yj] = ring[j];
+        if (yi === yj) continue;
+        const a = Math.max(0, Math.floor((Math.min(yi, yj) - y0) / dy)),
+          b = Math.min(nb - 1, Math.floor((Math.max(yi, yj) - y0) / dy));
+        for (let k = a; k <= b; k++) lister[k].push(xi, yi, xj, yj);
+      }
+  return { ext, y0, dy, band: lister.map(l => Float64Array.from(l)) };
+}
+/* Om punktet (x, y) ligger i flaten bak oppslaget S, med samme regel som iFlate */
+export function iSok(S: Flatesok, x: number, y: number) {
+  if (x < S.ext[0] || x > S.ext[2] || y < S.ext[1] || y > S.ext[3]) return false;
+  const B = S.band[Math.min(S.band.length - 1, Math.max(0, Math.floor((y - S.y0) / S.dy)))];
+  let inne = false;
+  for (let i = 0; i < B.length; i += 4) {
+    const xi = B[i],
+      yi = B[i + 1],
+      xj = B[i + 2],
+      yj = B[i + 3];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inne = !inne;
+  }
+  return inne;
+}
 /* Om punktet p ligger i flerflaten koord. Like-ulik-regelen over alle ringene, så punkter i hull er utenfor. */
 export function iFlate(p: Punkt, koord: Flerflate) {
   let inne = false;

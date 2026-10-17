@@ -102,8 +102,6 @@ export const EGET_MIN_M2 = 400; /* minste tegnede område som regnes ut */
 /* Rutenett for bildene som hentes for hele kommunen: [høyst antall ruter på lengste side, minste rute i meter] */
 export const BILDE_PLANDEKNING: [number, number] = [256, 0]; /* sjekken av om kommunen har kommuneplan */
 export const PLANOVERSIKT = 4; /* oversikten over hvor kommuneplanen ligger: én piksel per 4 x 4 ruter på 21 meter (85 meter) */
-export const RUTENETT_VERDI: [number, number] = [1536, 10]; /* arealet av verdsatt natur per verdikategori */
-export const RUTENETT_MASKE: [number, number] = [1500, 10]; /* ett område i et naturtema, til oppslag fra utbyggingen */
 
 /* Rutenett over et utsnitt e: høyst maks ruter på lengste side, og ruter på minst `minst` meter. u er utsnittet rutene dekker,
    som kan være litt større enn e. */
