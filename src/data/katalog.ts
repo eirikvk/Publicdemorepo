@@ -507,6 +507,18 @@ export const katalog = {
       husk: 0,
       etl: mdirNatur.verdsattNatur
     }),
+    verdsattVurderes: tabell({
+      lag: 'bronse',
+      navn: 'verdsattVurderes',
+      endepunkt: E.VERDSATT,
+      tittel: 'Verdsatt natur som vurderes',
+      om: 'naturtyper i kommunen fra Miljødirektoratet som skal vurderes per lokalitet eller per naturtype, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      forklaring:
+        'Lokalitetene i det samme laget som verdsatt natur, med verdikategorien «Vurderes per lokalitet» eller «Vurderes per naturtype», som flater i UTM 33, forenklet med 5 meter.',
+      kilde: KILDE.verdsatt,
+      husk: 0,
+      etl: mdirNatur.verdsattVurderes
+    }),
     kartlagt: tabell({
       lag: 'bronse',
       navn: 'kartlagt',
@@ -832,6 +844,17 @@ export const katalog = {
       etl: solvTemaer.verdsattNatur,
       glemt: (_, nr) => glemMasker('verdi/' + nr + '/')
     }),
+    verdsattVurderes: tabell({
+      lag: 'solv',
+      navn: 'verdsattVurderes',
+      tittel: 'Lokaliteter som vurderes',
+      om: 'lokalitetene med naturtyper som skal vurderes per lokalitet eller per naturtype, uklippet, med areal og opplysninger. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Lokalitetene leses som verdsatt natur, med kategorien (per lokalitet eller per naturtype) i stedet for verdien.',
+      usikkerhet: ['Arealet per lokalitet er arealet av hele lokaliteten, også en del som ligger utenfor kommunen.'],
+      husk: 30,
+      etl: solvTemaer.verdsattVurderes
+    }),
     verdsattNaturAreal: tabell({
       lag: 'solv',
       navn: 'verdsattNaturAreal',
@@ -943,6 +966,29 @@ export const katalog = {
       forklaring: 'Arealet av verneområdene i kommunen summert per verneform.',
       husk: 12,
       etl: gullTemaer.vernPerVerneform
+    }),
+    verneformer: tabell({
+      lag: 'gull',
+      navn: 'verneformer',
+      tittel: 'Verneområdene per verneform',
+      om: 'verneområdene i kommunen som flater, med gruppen for verneformen (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning). Til kartet over verneformene i tvillingen fra Figma.',
+      forklaring:
+        'Verneformen slik Miljødirektoratet skriver den, gruppert etter navnet: dyre- og plantefredning er artsfredning, og det som ikke passer i de andre gruppene, som naturminne og biotopvern, er annen fredning.',
+      etterBehov: true,
+      husk: 12,
+      etl: gullTemaer.verneformer
+    }),
+    verdsattVurderes: tabell({
+      lag: 'gull',
+      navn: 'verdsattVurderes',
+      tittel: 'Verdsatt natur som vurderes',
+      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype: antall og arealet i kommunen per kategori, og flatene til kartet. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Arealet per kategori regnes som for verdsatt natur: flatene tegnes i et rutenett over kommunen og klippes mot den, så overlapp telles én gang.',
+      usikkerhet: ['Kategoriene sier at verdien ikke er satt ennå, ikke at naturen er mindre verdifull.'],
+      etterBehov: true,
+      husk: 12,
+      etl: gullTemaer.verdsattVurderes
     }),
     villreinPerOmrade: tabell({
       lag: 'gull',
@@ -1182,6 +1228,33 @@ export const katalog = {
         'Villreinområdene tegnes i det samme rutenettet som inngrepsfri natur. Rutene som er minst halvt dekket av villreinområdene, telles, og av dem rutene som ligger i en sone for inngrepsfri natur. Andelen er inngrepsfri natur av villreinområdene i kommunen.',
       husk: 12,
       etl: gullInon.inonIVillrein
+    }),
+    graaIVillrein: tabell({
+      lag: 'gull',
+      navn: 'graaIVillrein',
+      tittel: 'Grått areal i villreinområdene',
+      om: 'grått areal innenfor villreinområdene i kommunen: arealet og andelen av villreinområdene. Begge arealene telles i rutenettet for grått areal. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Villreinområdene tegnes i det samme rutenettet som grått areal. Rutene som er minst halvt dekket av villreinområdene, telles, og av dem rutene som er grå, uansett andel vegetasjon. Andelen er grått areal av villreinområdene i kommunen.',
+      usikkerhet: [
+        'Grått areal er areal som er tatt i bruk, ikke bare bygninger. Små inngrep under rutestørrelsen kommer ikke med.'
+      ],
+      etterBehov: true,
+      husk: 12,
+      etl: gullGraa.graaIVillrein
+    }),
+    gronneArealer: tabell({
+      lag: 'gull',
+      navn: 'gronneArealer',
+      tittel: 'Grønne arealer i bebyggelse',
+      om: 'grått areal med minst halvparten vegetasjon, fra laget «andel med vegetasjon» i kartet over grå arealer: arealet, og andelen av det grå arealet og av landarealet. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring: 'Summen av de to øverste trinnene i gull.graa (50–75 og 75–100 % vegetasjon).',
+      usikkerhet: [
+        'Andelen vegetasjon gjelder hver flate i kartet over grå arealer, så en flate med 60 % vegetasjon telles helt med.'
+      ],
+      etterBehov: true,
+      husk: 12,
+      etl: gullGraa.gronneArealer
     }),
     graakryss: tabell({
       lag: 'gull',

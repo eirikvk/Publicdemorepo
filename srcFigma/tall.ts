@@ -60,6 +60,17 @@ export function inonIVillrein() {
   return S.s === 'ok' && !S.v ? ({ s: 'ingen' } as const) : S;
 }
 export const graa = () => bilde(valgt(katalog.gull.graa));
+/* Grått areal i villreinområdene (gull.graaIVillrein), med ingen når kommunen ikke har villreinområder */
+export function graaIVillrein() {
+  const S = fraRad(valgt(katalog.gull.graaIVillrein));
+  return S.s === 'ok' && !S.v ? ({ s: 'ingen' } as const) : S;
+}
+/* Grønne arealer i bebyggelse (gull.gronneArealer) */
+export const gronneArealer = () => fraRad(valgt(katalog.gull.gronneArealer));
+/* Lokalitetene i verdsatt natur som skal vurderes per lokalitet eller per naturtype (gull.verdsattVurderes) */
+export const verdsattVurderes = () => fraRad(valgt(katalog.gull.verdsattVurderes));
+/* Verneområdene med gruppen for verneformen (gull.verneformer) */
+export const verneformer = () => fraRad(valgt(katalog.gull.verneformer));
 export const graaIPlan = () => verdi(katalog.gull.graaIPlan);
 
 /* Kortene på oversikten (natur, jordbruk, bebygd nå og endringen fra 2017), nedbyggingen per landklasse og regnskapet per

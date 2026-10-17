@@ -47,6 +47,38 @@ export const NATURTEMA: Naturtema[] = [
   }
 ];
 const [VERN, REIN, VERDI] = NATURTEMA;
+/* Lokalitetene i verdsatt natur som ikke har en fast verdi, men skal vurderes per lokalitet (v = 0) eller per naturtype (v = 1). De er
+   ikke et eget tema i hovedsidens kart, så de står ikke i NATURTEMA. */
+export const VURDERES: Naturtema = {
+  id: 'vurderes',
+  navn: 'Verdsatt natur som vurderes',
+  samlet: true,
+  klasser: [
+    ['Vurderes per lokalitet', 'vurderes1'],
+    ['Vurderes per naturtype', 'vurderes2']
+  ]
+};
+
+/* Verneformene i grupper, som i skissene: nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning
+   (dyre- og plantefredning) og annen fredning (resten, som naturminne og biotopvern) */
+export const VERNEFORMGRUPPER: [id: string, navn: string][] = [
+  ['nasjonalpark', 'Nasjonalpark'],
+  ['naturreservat', 'Naturreservat'],
+  ['landskap', 'Landskapsvernområde'],
+  ['marint', 'Marint verneområde'],
+  ['arts', 'Artsfredning'],
+  ['annen', 'Annen fredning']
+];
+/* Gruppen for verneformen slik Miljødirektoratet skriver den (som MarintVerneomraade eller Dyrefredningsomraade) */
+export function verneformgruppe(verneform: unknown): string {
+  const v = String(verneform || '').toLowerCase();
+  if (v.includes('nasjonalpark')) return 'nasjonalpark';
+  if (v.includes('naturreservat')) return 'naturreservat';
+  if (v.includes('landskapsvern')) return 'landskap';
+  if (v.includes('marin')) return 'marint';
+  if (/(dyre|plante|arts)fredning/.test(v)) return 'arts';
+  return 'annen';
+}
 
 /* Flatene slik polygon-clipping vil ha dem */
 type Mangekant = polygonClipping.MultiPolygon;
@@ -122,6 +154,12 @@ export const EGENSKAPER: Record<string, Les> = {
     navn: p['Områdenavn'] || p.Naturtype || 'Uten navn',
     url: p.FaktaarkLokalitet || p.Faktaark || '',
     v: Math.max(0, ['Svært stor verdi', 'Stor verdi', 'Middels verdi', 'Noe verdi'].indexOf(p.Verdikategori)),
+    under: [p.Naturtype, String(p.Verdikategori || '').toLowerCase()].filter(Boolean).join(', ')
+  }),
+  vurderes: p => ({
+    navn: p['Områdenavn'] || p.Naturtype || 'Uten navn',
+    url: p.FaktaarkLokalitet || p.Faktaark || '',
+    v: Math.max(0, ['Vurderes per lokalitet', 'Vurderes per naturtype'].indexOf(p.Verdikategori)),
     under: [p.Naturtype, String(p.Verdikategori || '').toLowerCase()].filter(Boolean).join(', ')
   })
 };
@@ -310,6 +348,10 @@ export async function villrein(nr: string): Promise<Temaomrader> {
 }
 export async function verdsattNatur(nr: string): Promise<Temaomrader> {
   return temaomrader(VERDI, nr, await katalog.bronse.verdsattNatur(nr));
+}
+/* Tabellen solv.verdsattVurderes: lokalitetene som skal vurderes per lokalitet eller per naturtype, uklippet, som verdsatt natur */
+export async function verdsattVurderes(nr: string): Promise<Temaomrader> {
+  return temaomrader(VURDERES, nr, await katalog.bronse.verdsattVurderes(nr));
 }
 /* Tabellen solv.verdsattNaturAreal: arealet av verdsatt natur i kommunen, samlet og per verdikategori */
 export async function verdsattNaturAreal(nr: string): Promise<{ sum: number; klasser: number[] }> {

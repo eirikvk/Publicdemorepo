@@ -1,7 +1,7 @@
 /* Gull, felles: små hjelpere som flere av svarene bruker. */
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import type { Rutebilde } from '../solv/felles.ts';
+import { HALV, type Rutebilde } from '../solv/felles.ts';
 
 /* Andelen del er av av, i prosent. null når det ikke er noe å regne andelen av. */
 export const andel = (del: number, av: number): number | null => (av > 0 ? (del / av) * 100 : null);
@@ -22,6 +22,26 @@ export function bildetall<E, T>(D: Kommunebilde<E> | null, tall: (H: HentetBilde
   if (!D || D.tilstand === 'henter') return { tilstand: 'henter' };
   if (D.tilstand !== 'ok') return { tilstand: 'feil' };
   return D.sum > 0 ? { tilstand: 'ok', ...tall(D) } : { tilstand: 'ingen' };
+}
+
+/* Rutene innenfor en maske M (RGBA, der en rute er med når den er minst halvt dekket, HALV): antall ruter i masken (alle), og antall
+   per plass i n. plass gir plassen i n for verdien i ruta (verdier), eller null når ruta ikke telles, og plasser er lengden på n.
+   Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
+export function tellIMaske(
+  M: ArrayLike<number>,
+  verdier: ArrayLike<number>,
+  plasser: number,
+  plass: (v: number) => number | null
+) {
+  const n = new Array<number>(plasser).fill(0);
+  let alle = 0;
+  for (let q = 0; q < verdier.length; q++) {
+    if (M[4 * q + 3] < HALV) continue;
+    alle++;
+    const p = plass(verdier[q]);
+    if (p !== null) n[p]++;
+  }
+  return { alle, n };
 }
 
 /* Et areal i km² avrundet til nærmeste 10 dekar (0,01 km²), som SSBs tall */

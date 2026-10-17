@@ -306,7 +306,8 @@ med ekte tall, uten å endre hovedsiden.
   - bare bruker typer fra gull, ikke funksjonene,
   - og fra bronse i katalogen bare kartbildene (tabeller som slutter på «flis»), slik kartet i hovedsiden gjør.
 - Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`). Lagene bare tvillingen
-  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.detaljblokker` og `solv.detaljklasser`) og kartbildene fra bronse.
+  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.detaljblokker`, `solv.detaljklasser` og `solv.graa`), flatene i gull
+  (`gull.verneformer` og `gull.verdsattVurderes`) og kartbildene fra bronse.
 - Noen tabeller bruker foreløpig bare tvillingen, og hovedsiden henter dem ikke:
   - Grunnkartet med detaljklassene (`gull/okosystemer.ts`): skog (`gull.skog`), våtmark (`gull.vatmark`), naturen i
     verneområdene (`gull.vernetNatur`) og planlagt utbygging per økosystemtype (`gull.planPerOkosystem`). De bygger på arealet
@@ -321,7 +322,10 @@ med ekte tall, uten å endre hovedsiden.
     henter dem ikke. Se METODE.md, SSB-tallene.
   - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per verneform (`gull.vernPerVerneform`), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
-    villreinområdene (`gull.inonIVillrein`).
+    villreinområdene (`gull.inonIVillrein`). Og det som var merket «Kan regnes ut»: verdsatt natur som vurderes per lokalitet eller
+    per naturtype (`gull.verdsattVurderes`), verneområdene med gruppen for verneformen (`gull.verneformer`), grått areal i
+    villreinområdene (`gull.graaIVillrein`) og grønne arealer i bebyggelse (`gull.gronneArealer`). Se METODE.md, loggen for 18.
+    oktober 2026.
 - Sidens egne filer (`kommuner.json`, `klasser/` og `detaljklasser/`) ligger hos hovedsiden. Tvillingen sier hvor med
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Utseendet følger skissene fra 17. oktober 2026 så nær som mulig: bredden (1200 px), toppen, kortene, båndene, radene som kan
@@ -342,7 +346,7 @@ med ekte tall, uten å endre hovedsiden.
 | `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
 | `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
 | `tall.ts` | Tallene sidene viser, slått opp ferdige i gull, med tilstanden (henter, feil, ingen, mangler eller ok) |
-| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, og to lag fra kartet over naturskog |
+| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, to lag fra kartet over naturskog, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse fra rutene for grått areal |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
 | `sider/` | Hovedsidene og temasidene |

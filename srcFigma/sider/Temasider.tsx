@@ -7,7 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
-import { NATURTEMA } from '../../src/data/solv/temaer.ts';
+import { NATURTEMA, VERNEFORMGRUPPER } from '../../src/data/solv/temaer.ts';
 import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
 import { MdCheckbox } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
@@ -19,7 +19,6 @@ import {
   Helt,
   Kake,
   Liggende,
-  Mangler,
   NestePerspektiv,
   Ressurser,
   Sporsmal,
@@ -29,7 +28,10 @@ import {
   svar
 } from '../komponenter/deler.tsx';
 import {
+  graaIVillrein,
+  gronneArealer,
   inonIVillrein,
+  verdsattVurderes,
   planPerOkosystem,
   skog as skogen,
   vatmark as vatmarken,
@@ -44,7 +46,7 @@ import {
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
-import { SKOGLAG, VATMARKLAG } from '../kartlag.ts';
+import { GRAALAG, SKOGLAG, VATMARKLAG, VERDILAG, VERNEFORMFARGE, VERNLAG } from '../kartlag.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -435,20 +437,12 @@ const verneform = (v: unknown) =>
     .toLowerCase()
     .replace(/omraade/g, 'område')
     .replace(/^./, c => c.toUpperCase());
-/* Fargen for en verneform i figuren, som i skissene: nasjonalpark, naturreservat, landskapsvernområde og marint verneområde har
-   hver sin, artsfredning (dyre- og plantefredning) og annen fredning har sin */
-const verneformFarge = (navn: string) =>
-  /nasjonalpark/i.test(navn)
-    ? 'vf-nasjonalpark'
-    : /naturreservat/i.test(navn)
-      ? 'vf-naturreservat'
-      : /landskapsvern/i.test(navn)
-        ? 'vf-landskap'
-        : /marint/i.test(navn)
-          ? 'vf-marint'
-          : /fredning/i.test(navn)
-            ? 'vf-arts'
-            : 'vf-annen';
+/* Hvordan lokalitetene som vurderes, fordeler seg på per lokalitet og per naturtype, som slutten av en setning */
+function vurderesTekst(v: { klasser: number[] }) {
+  const [lok, typ] = v.klasser;
+  if (lok > 0 && typ > 0) return `: ${iTekst(lok)} vurderes per lokalitet og ${iTekst(typ)} per naturtype`;
+  return lok > 0 ? ', som alle vurderes per lokalitet' : ', som alle vurderes per naturtype';
+}
 /* Fargen for et hovedøkosystem i figuren om naturen som er vernet, som i skissene */
 const OKOFARGE: Record<string, string> = {
   Skog: 'oko-skog',
@@ -502,7 +496,22 @@ function Vern({ tema }: { tema: Tema }) {
       }
       fremhevet={<PlanITema plan={plan} hva="verneområder" />}
       lag={[
-        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', farger: [['Verneområde', 'vern']] },
+        {
+          id: 'verneformer',
+          navn: 'Verneområder per verneform',
+          kilde: 'Naturvernområder',
+          farger: VERNEFORMGRUPPER.map(([id, navn]) => [navn, VERNEFORMFARGE[id]] as [string, string]),
+          ol: VERNLAG.verneformer
+        },
+        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', farger: [['Verneområde', 'vern']], av: true },
+        {
+          id: 'natur',
+          navn: 'Naturen i verneområder',
+          kilde: GK,
+          farger: Object.entries(OKOFARGE),
+          ol: VERNLAG.natur,
+          av: true
+        },
         { ...KLASSER, av: true },
         { ...PLAN, av: true }
       ]}
@@ -512,6 +521,12 @@ function Vern({ tema }: { tema: Tema }) {
             <p>
               Verneområdene deles inn etter verneform, som nasjonalpark, naturreservat, landskapsvernområde og marint
               verneområde. Hvert område har sin egen verneforskrift.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Hva viser laget «Naturen i verneområder»?">
+            <p>
+              Laget viser grunnkartets økosystemtyper inne i verneområdene, med én farge per type, som i figuren over
+              naturen som er vernet.
             </p>
           </Trekkspill>
           <Trekkspill tittel="Hva er forskjellen på verneformene?">
@@ -553,8 +568,7 @@ function Vern({ tema }: { tema: Tema }) {
             <Stolper
               hva="Vernet areal per verneform"
               data={f.map(x => {
-                const navn = verneform(x.verneform);
-                return { navn, km2: x.km2, farge: verneformFarge(navn) };
+                return { navn: verneform(x.verneform), km2: x.km2, farge: VERNEFORMFARGE[x.gruppe] };
               })}
             />
           ))}
@@ -566,7 +580,7 @@ function Vern({ tema }: { tema: Tema }) {
           <p>
             Figuren viser hva slags natur som er vernet i {kommunen()}, og hvor mye det er av hver type. Prosenten viser
             hvor stor del av det vernede arealet hver type utgjør. Verneområder kan også ha dyrket mark og bebyggelse,
-            derfor er disse med i oversikten.
+            derfor er disse med i oversikten. Slå på laget «Naturen i verneområder» for å se hvor typene ligger.
           </p>
         }
         kilder={['grunnkart', 'vern']}
@@ -589,13 +603,6 @@ function Vern({ tema }: { tema: Tema }) {
           );
         })}
       </Figur>
-      <Figur
-        tittel={`Naturen i verneområdene i ${kommunen()}, i kart`}
-        tekst={<p>Grunnkartets økosystemtyper inne i verneområdene, med én farge per type.</p>}
-        kilder={['grunnkart', 'vern']}
-        merke="Kan regnes ut"
-        tom="grunnkartet med elleve farger, klippet til verneområdene. Begge finnes i datamotoren, men kartet er ikke laget."
-      />
       {v && v.antall > 0 && (
         <Figur
           tittel={`Verneområdene i ${kommunen()}`}
@@ -636,7 +643,9 @@ function Verdi({ tema }: { tema: Tema }) {
     K = kartleggingen(),
     v = T.s === 'ok' ? T.v : null,
     kartlagt = K.s === 'ok' && K.v ? K.v.kartlagt : null,
-    klasser = NATURTEMA.find(t => t.id === 'verdi')!.klasser!;
+    klasser = NATURTEMA.find(t => t.id === 'verdi')!.klasser!,
+    VV = verdsattVurderes(),
+    vv = VV.s === 'ok' && VV.v.omrader.length ? VV.v : null;
   const [bareHoy, settBareHoy] = useState(false),
     N = verdsattPerNaturtype(),
     typer = N.s === 'ok' ? (bareHoy ? N.v.hoy : N.v.alle) : [];
@@ -694,6 +703,17 @@ function Verdi({ tema }: { tema: Tema }) {
           farger: klasser.map(([navn, farge]) => [navn, farge] as [string, string])
         },
         {
+          id: 'vurderes',
+          navn: 'Verdsatt natur som vurderes',
+          kilde: 'Naturtyper – verdsatte',
+          farger: [
+            ['Vurderes per lokalitet', 'vurderes1'],
+            ['Vurderes per naturtype', 'vurderes2']
+          ],
+          ol: VERDILAG.vurderes,
+          av: true
+        },
+        {
           id: 'dekning',
           navn: 'Dekningskart for kartlegging',
           kilde: 'Naturtyper på land (NiN)',
@@ -708,6 +728,12 @@ function Verdi({ tema }: { tema: Tema }) {
             <p>
               Verdien sier hvor viktig lokaliteten er: svært stor og stor verdi er av nasjonal eller vesentlig regional
               betydning, middels og noe verdi er av mer lokal betydning.
+            </p>
+          </Trekkspill>
+          <Trekkspill tittel="Hva er verdsatt natur som vurderes?">
+            <p>
+              Noen lokaliteter har ikke fått en verdi fra noe verdi til svært stor verdi, men skal vurderes per
+              lokalitet eller per naturtype. De er ikke med i tallene for verdsatt natur, men kan vises som eget lag.
             </p>
           </Trekkspill>
           <Trekkspill tittel="Hva er dekningskart?">
@@ -749,7 +775,12 @@ function Verdi({ tema }: { tema: Tema }) {
             <Trekkspill tittel="Hva betyr verdiene?">
               <p>
                 Svært stor og stor verdi er av nasjonal eller vesentlig regional betydning. Middels og noe verdi er av
-                mer lokal betydning. Lokaliteter som vurderes per lokalitet eller per naturtype, er ikke med.
+                mer lokal betydning. Lokaliteter som vurderes per lokalitet eller per naturtype, er ikke med i figuren.
+                {vv
+                  ? ` I ${kommunen()} gjelder det ${antallOrd(vv.omrader.length)} ${vv.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} med til sammen ${iTekst(vv.sum)}${vurderesTekst(vv)}. De kan vises som eget lag i kartet.`
+                  : VV.s === 'ok'
+                    ? ` ${kommunen()} har ingen slike lokaliteter.`
+                    : ''}
               </p>
             </Trekkspill>
           }
@@ -948,7 +979,8 @@ function Rein({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('rein'),
     v = T.s === 'ok' ? T.v : null,
     R = villreinPerOmrade(),
-    IV = inonIVillrein();
+    IV = inonIVillrein(),
+    GV = graaIVillrein();
   const kommunenavn = (s: unknown) =>
     String(s || '')
       .split(',')
@@ -982,21 +1014,27 @@ function Rein({ tema }: { tema: Tema }) {
           <span className="tallkort-to">
             <b>{svar(IV, x => prosent(x!.andel), 'Ingen villreinområder')}</b>
             <span className="tallkort-etikett">Andel villreinområde som er grå arealer</span>
-            <b className="mangler-tall" title="Kan regnes ut, ikke laget">
-              –
-            </b>
+            <b>{svar(GV, x => (x!.andel === null ? '–' : andelTekst(x!.andel)), 'Ingen villreinområder')}</b>
           </span>
         ]
       ]}
       kilde={
         <p>
           {KILDE.villrein.datasett}, {KILDE.villrein.navn}. Arealet er den delen av hvert område som ligger i kommunen.
-          Grå arealer i villreinområdene kan regnes ut av data datamotoren har, men er ikke laget.
+          Grått areal i villreinområdene er fra {KILDE.graa.datasett}, {KILDE.graa.navn}, i ruter på 10 meter: en rute
+          hører til et villreinområde når området dekker minst halve ruta.
         </p>
       }
       fremhevet={<PlanITema plan={plan} hva="villreinområder" />}
       lag={[
         { id: 'tema', navn: 'Villreinområder', kilde: 'Villreinområder', farger: [['Villreinområde', 'rein']] },
+        {
+          id: 'graa',
+          navn: 'Grått areal',
+          kilde: KILDE.graa.datasett,
+          farger: [['Grått areal', 'graa0']],
+          ol: GRAALAG.graa
+        },
         { ...KLASSER, av: true },
         { ...PLAN, av: true }
       ]}
@@ -1005,8 +1043,8 @@ function Rein({ tema }: { tema: Tema }) {
           <Trekkspill tittel="Hva er sammenhengen mellom villreinområder og grå areal?">
             <p>
               Grått areal er areal som er tatt i bruk, som veier, hytter og anlegg. Villreinen holder seg unna slike
-              inngrep, så grått areal i villreinområdene gjør området mindre brukbart for villreinen. Laget for grått
-              areal i villreinområdene er ikke laget ennå.
+              inngrep, så grått areal i villreinområdene gjør området mindre brukbart for villreinen. Laget «Grått
+              areal» viser det grå arealet i hele kommunen, sammen med villreinområdene.
             </p>
           </Trekkspill>
         </div>
@@ -1116,6 +1154,7 @@ function Rein({ tema }: { tema: Tema }) {
 
 function Bynatur({ tema }: { tema: Tema }) {
   const G = graa(),
+    GA = gronneArealer(),
     P = graaIPlan(),
     p = P ? P.plan : null;
   return (
@@ -1148,6 +1187,14 @@ function Bynatur({ tema }: { tema: Tema }) {
             ...GRAATRINN.map(([farge, navn]) => [navn, farge] as [string, string]),
             ['Grønt i bebygd område', 'gront']
           ]
+        },
+        {
+          id: 'gronne',
+          navn: 'Grønne arealer i bebyggelse',
+          kilde: KILDE.graa.datasett,
+          farger: [['50–100 % vegetasjon', 'gronne-arealer']],
+          ol: GRAALAG.gronne,
+          av: true
         },
         KLASSER,
         PLAN
@@ -1191,10 +1238,23 @@ function Bynatur({ tema }: { tema: Tema }) {
           <span>Her er all planlagt utbygging med, også på bebygd areal og i smale striper.</span>
         </Fremhevet>
       )}
-      <Mangler
+      <Figur
         tittel="Grønne arealer i bebyggelse"
-        trenger="et eget lag for grønne arealer i bebyggelse, som skissene viser ved siden av grått areal."
-      />
+        tekst={
+          <p>
+            Grønne arealer i bebyggelse er den delen av det grå arealet der minst halvparten av flaten er vegetasjon,
+            som hager, parker og grøntområder mellom husene. De kan vises som eget lag i kartet.
+          </p>
+        }
+        kilder={['graa']}
+      >
+        {svar(GA, x => (
+          <p>
+            {kommunen()} har ca. {iTekst(x.km2)} grønne arealer i bebyggelse. Det er {prosent(x.andelAvGraa)} av det grå
+            arealet og {prosent(x.andelLand)} av landarealet.
+          </p>
+        ))}
+      </Figur>
     </Temaside>
   );
 }

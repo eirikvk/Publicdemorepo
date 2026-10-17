@@ -1,9 +1,17 @@
 /* Gull for inngrepsfri natur: arealet per sone i kommunen, og i villreinområdene. */
 import { katalog } from '../katalog.ts';
-import { HALV } from '../solv/felles.ts';
 import { UTENFOR } from '../solv/inon.ts';
 import { flaterPiksler } from '../solv/raster.ts';
-import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Bildetall, type Kommunebilde } from './felles.ts';
+import {
+  andel,
+  arealFraRuter,
+  bildetall,
+  landareal,
+  tellIMaske,
+  tiDekar,
+  type Bildetall,
+  type Kommunebilde
+} from './felles.ts';
 
 /* Inngrepsfri natur for kommunen: når den er hentet, areal per sone (villmarkspreget, sone 1, sone 2) i km², og sonen per rute i
    kommunebildet (0 villmarkspreget, 1 sone 1, 2 sone 2, UTENFOR uten sone) */
@@ -46,14 +54,8 @@ export async function inonIVillrein(nr: string): Promise<InonIVillrein | null> {
       S,
       g.koord
     ),
-    n = [0, 0, 0];
-  let alle = 0;
-  for (let q = 0; q < S.sone.length; q++) {
-    if (M[4 * q + 3] < HALV) continue;
-    alle++;
-    if (S.sone[q] !== UTENFOR) n[S.sone[q]]++;
-  }
-  const A = arealFraRuter(n, S.res, S.skala),
-    villrein = tiDekar((alle * S.res * S.res) / S.skala);
+    T = tellIMaske(M, S.sone, 3, v => (v !== UTENFOR ? v : null)),
+    A = arealFraRuter(T.n, S.res, S.skala),
+    villrein = tiDekar((T.alle * S.res * S.res) / S.skala);
   return { villrein, sum: A.sum, soner: A.km2, andel: andel(A.sum, villrein) };
 }

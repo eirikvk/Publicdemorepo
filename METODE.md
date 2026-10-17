@@ -1029,6 +1029,26 @@ skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Ar
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
 
+**Fem nye tall og kartlag i tvillingen, 18. oktober 2026.** Det som sto som «Kan regnes ut» i oversikten over datatilgangen, er
+regnet ut av data datamotoren alt har. Bare tvillingen bruker dem, og de regnes etter behov (`etterBehov`):
+- Verdsatt natur som vurderes per lokalitet eller per naturtype (`bronse.verdsattVurderes` → `solv.verdsattVurderes` →
+  `gull.verdsattVurderes`): lokalitetene hentes fra det samme datasettet som verdsatt natur, med disse to kategoriene, og arealet
+  klippes og telles som for verdsatt natur, så overlapp teller én gang. De er ikke med i tallene for verdsatt natur. Vinje har 49
+  slike lokaliteter med til sammen 243 dekar, Oppdal fire, Oslo ingen.
+- Verneområdene per verneform (`gull.verneformer`): hvert område får en gruppe av verneformen (nasjonalpark, naturreservat,
+  landskapsvernområde, marint verneområde, artsfredning og annen fredning), som også fargelegger figuren per verneform.
+- Naturen i verneområdene i kart: grunnkartets detaljklasser i fargen for hovedøkosystemet, klippet til verneområdene. Tallene er
+  de samme som i figuren over naturen som er vernet (`gull.vernetNatur`).
+- Grått areal i villreinområdene (`gull.graaIVillrein`): villreinområdene tegnes i rutenettet for grått areal og klippes mot
+  kommunen, som for inngrepsfri natur i villreinområdene. En rute hører til et villreinområde når området dekker minst halve ruta.
+  Alle trinnene er grått areal. I Oppdal er under 0,1 % av villreinområdene grått areal, i Vinje 0,1 %. Rutene er like store som i
+  `gull.graa`; smale veier blir derfor borte i store kommuner, og tallet er heller for lavt enn for høyt.
+- Grønne arealer i bebyggelse (`gull.gronneArealer`): grått areal med minst halvparten vegetasjon, trinnene 50–75 og 75–100 % i
+  `gull.graa`, med andelen av det grå arealet og av landarealet. I Oslo er det 61 800 dekar, 49,4 % av det grå arealet.
+
+Kartlagene for grått areal viser rutene fra `solv.graa`. Zoomet ut får en piksel fargen når minst én av rutene i den har farge, så
+små flater ikke forsvinner. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
 **Tvillingen etter de nye skissene, 17. oktober 2026.** Utseendet i tvillingen følger nå de oppdaterte Figma-skissene så nær som
 mulig, side for side. Tallene og metoden er de samme. Det skissene viser som krever en dataplattform eller mangler kilde, står tomt
 og merket. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.

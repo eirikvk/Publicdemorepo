@@ -5,7 +5,8 @@ import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
 import { ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
-import { andel, arealFraRuter, bildetall, landareal, type Kommunebilde } from './felles.ts';
+import { flaterPiksler } from '../solv/raster.ts';
+import { andel, arealFraRuter, bildetall, landareal, tellIMaske, tiDekar, type Kommunebilde } from './felles.ts';
 import type { Utbygging } from './utbygging.ts';
 
 /* Grått areal for kommunen: når det er hentet, areal per trinn (plass 1–6) i km², og trinnet per rute i kommunebildet */
@@ -122,4 +123,42 @@ export async function graa(nr: string): Promise<Graavisning> {
   const [S, land] = await Promise.all([katalog.solv.graa(nr), landareal(nr)]),
     A = arealFraRuter(S.n, S.res, S.skala);
   return { ...byggGraa({ ...S, nr, tilstand: 'ok', trinn: A.km2, sum: A.sum }, land), sum: A.sum, trinn: A.km2 };
+}
+
+/* Grått areal i villreinområdene: arealet av villreinområdene i kommunen (villrein), det grå arealet i dem (sum), og andelen av
+   villreinområdene som er grå, i prosent */
+export interface GraaIVillrein {
+  villrein: number;
+  sum: number;
+  andel: number | null;
+}
+/* Tabellen gull.graaIVillrein: villreinområdene (solv.villrein) tegnet i rutenettet for grått areal (solv.graa) og klippet mot
+   kommunen, som inngrepsfri natur i villreinområdene (gull.inonIVillrein). En rute hører til villreinområdene når de dekker minst
+   halve ruta. Alle trinnene er grått areal, også grått uten oppgitt andel vegetasjon. null når kommunen ikke har villreinområder. */
+export async function graaIVillrein(nr: string): Promise<GraaIVillrein | null> {
+  const [S, V, g] = await Promise.all([katalog.solv.graa(nr), katalog.solv.villrein(nr), katalog.solv.grense(nr)]);
+  if (!V.omrader.length) return null;
+  const M = flaterPiksler(
+      V.omrader.map(o => o.koord),
+      S,
+      g.koord
+    ),
+    T = tellIMaske(M, S.kl, 1, v => (v > 0 ? 0 : null)),
+    sum = tiDekar((T.n[0] * S.res * S.res) / S.skala),
+    villrein = tiDekar((T.alle * S.res * S.res) / S.skala);
+  return { villrein, sum, andel: andel(sum, villrein) };
+}
+
+/* Grønne arealer i bebyggelse: grått areal med minst halvparten vegetasjon (de to øverste trinnene i kartet over grå arealer, laget
+   «andel med vegetasjon»), arealet og andelen av det grå arealet og av landarealet */
+export interface GronneArealer {
+  km2: number;
+  andelAvGraa: number | null;
+  andelLand: number | null;
+}
+/* Tabellen gull.gronneArealer: grønne arealer i bebyggelse i kommunen nr, av gull.graa (trinn 4 og 5, 50–100 % vegetasjon) */
+export async function gronneArealer(nr: string): Promise<GronneArealer> {
+  const [G, land] = await Promise.all([katalog.gull.graa(nr), landareal(nr)]),
+    km2 = tiDekar((G.trinn[4] || 0) + (G.trinn[5] || 0));
+  return { km2, andelAvGraa: andel(km2, G.sum), andelLand: andel(km2, land) };
 }

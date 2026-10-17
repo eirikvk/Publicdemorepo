@@ -15,7 +15,9 @@ import { katalog } from '../katalog.ts';
 import { HALV, ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
 import {
   NATURTEMA,
+  VURDERES,
   klasseAreal,
+  verneformgruppe,
   naturMaske,
   type Kartlagt,
   type Maske,
@@ -381,15 +383,51 @@ export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | nul
 }
 
 /* Tabellen gull.vernPerVerneform: det vernede arealet i kommunen nr per verneform, slik Miljødirektoratet skriver den
-   (egenskapen verneform, tom når den mangler). Størst først. */
-export async function vernPerVerneform(nr: string): Promise<{ verneform: string; km2: number }[]> {
+   (egenskapen verneform, tom når den mangler), med gruppen verneformen hører til (VERNEFORMGRUPPER). Størst først. */
+export async function vernPerVerneform(nr: string): Promise<{ verneform: string; gruppe: string; km2: number }[]> {
   const T = await katalog.gull.verneomrader(nr),
     m = new Map<string, number>();
   T.omrader.forEach(o => {
     const f = String(o.egenskaper.verneform || '');
     m.set(f, (m.get(f) || 0) + o.km2);
   });
-  return [...m].map(([verneform, km2]) => ({ verneform, km2 })).sort((a, b) => b.km2 - a.km2);
+  return [...m]
+    .map(([verneform, km2]) => ({ verneform, gruppe: verneformgruppe(verneform), km2 }))
+    .sort((a, b) => b.km2 - a.km2);
+}
+/* Verneområdene i kommunen med gruppen for verneformen, til kartet over verneformene: flaten (koord, klippet mot kommunen) og gruppen */
+export interface VernetFlate {
+  koord: TemaOmrade['koord'];
+  ext: TemaOmrade['ext'];
+  gruppe: string;
+}
+/* Tabellen gull.verneformer: verneområdene i kommunen nr som flater med gruppen for verneformen (VERNEFORMGRUPPER), største først */
+export async function verneformer(nr: string): Promise<VernetFlate[]> {
+  const T = await katalog.gull.verneomrader(nr);
+  return T.omrader.map(o => ({ koord: o.koord, ext: o.ext, gruppe: verneformgruppe(o.egenskaper.verneform) }));
+}
+/* Verdsatt natur som skal vurderes per lokalitet eller per naturtype: lokalitetene (omrader, med v 0 per lokalitet og 1 per
+   naturtype), antall og arealet i kommunen per kategori (klasser) og samlet (sum), og om tjenesten ga alle (ufullstendig) */
+export interface VerdsattVurderes {
+  omrader: TemaOmrade[];
+  antall: number[];
+  klasser: number[];
+  sum: number;
+  ufullstendig: boolean;
+}
+/* Tabellen gull.verdsattVurderes: lokalitetene fra solv.verdsattVurderes, med arealet per kategori klippet mot kommunen som for
+   verdsatt natur (klasseAreal), så overlapp telles én gang */
+export async function verdsattVurderes(nr: string): Promise<VerdsattVurderes> {
+  const [T, g] = await Promise.all([katalog.solv.verdsattVurderes(nr), katalog.solv.grense(nr)]),
+    n = VURDERES.klasser!.length,
+    A = klasseAreal(T.omrader, n, g);
+  return {
+    omrader: T.omrader,
+    antall: Array.from({ length: n }, (_, v) => T.omrader.filter(o => (o.v || 0) === v).length),
+    klasser: A.klasser,
+    sum: A.sum,
+    ufullstendig: !!T.ufullstendig
+  };
 }
 /* Tabellen gull.villreinPerOmrade: villreinområdene i kommunen nr med delen som ligger i kommunen, andelen av landarealet,
    kommunene området ligger i (egenskapen kommune) og faktaarket. Størst først. */

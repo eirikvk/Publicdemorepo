@@ -1,7 +1,7 @@
 /* Tester for src/data/gull: andeler, avrunding, kommunebildene og regnskapet. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felles.ts';
+import { andel, arealFraRuter, bildetall, tellIMaske, tiDekar } from '../src/data/gull/felles.ts';
 import { byggInon } from '../src/data/gull/inon.ts';
 import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
 import {
@@ -20,6 +20,19 @@ test('andel og avrunding til nærmeste 10 dekar', () => {
   assert.equal(andel(1, 0), null);
   assert.equal(tiDekar(0.125), 0.13);
   assert.deepEqual(arealFraRuter([100, 300], 10, 1e6), { km2: [0.01, 0.03], sum: 0.04 });
+});
+
+test('ruter i en maske: bare ruter som er minst halvt dekket telles', () => {
+  /* fire ruter: dekket helt, halvt (128), litt (100) og helt. Verdiene 0 og 2 telles, 255 er utenfor. */
+  const M = [0, 0, 0, 255, 0, 0, 0, 128, 0, 0, 0, 100, 0, 0, 0, 255];
+  assert.deepEqual(
+    tellIMaske(M, [0, 255, 2, 2], 3, v => (v !== 255 ? v : null)),
+    { alle: 3, n: [1, 0, 1] }
+  );
+  assert.deepEqual(
+    tellIMaske(M, [0, 4, 0, 6], 1, v => (v > 0 ? 0 : null)),
+    { alle: 3, n: [2] }
+  );
 });
 
 test('kommunebildet: henter, feil, ingen eller ok', () => {

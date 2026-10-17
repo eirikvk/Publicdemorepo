@@ -13,9 +13,15 @@ import { abonner } from '../src/data/motor/tilstand.ts';
 import { valgtNr, verdi } from '../src/data/motor/valgt.ts';
 import { FLISNIVA, type Flis } from '../src/data/solv/felles.ts';
 import { ALLE, DETALJKLASSER, type Detaljklasse, type KlasseId } from '../src/data/solv/klasser.ts';
+import type { VerdsattVurderes, VernetFlate } from '../src/data/gull/temaer.ts';
 import { flislerret, lesBilde, sti, tegneflate } from '../src/data/solv/raster.ts';
+import { kart } from '../src/ui/kart/kart.ts';
 import { KILDER, TOM, friskOpp, nyttSiden, plannett, tegnetKilde, type Flistegner } from '../src/ui/kart/felles.ts';
 import { ol } from '../src/ui/kart/ol.ts';
+
+/* Flatene og utsnittene i tabellene, som i verneområdene */
+type Flerflate = VernetFlate['koord'];
+type Utsnitt = VernetFlate['ext'];
 
 /* Fargen til en variabel i stilen (--skog-bar), som [r, g, b] */
 function cssFarge(navn: string): number[] {
@@ -34,7 +40,8 @@ function blokklag(
   niva: number,
   blokker: (nr: string) => Promise<Flis[]>,
   klasser: (tc: Flis) => Promise<{ kl: ArrayLike<number> }>,
-  farger: () => (number[] | null)[]
+  farger: () => (number[] | null)[],
+  maske?: () => Flerflate[] | null
 ): TileLayer<XYZ> {
   /* Blokken som lerret i lagets farger. Klassene laget ikke viser, er gjennomsiktige. */
   async function blokk(bx: number, by: number, F: (number[] | null)[]) {
@@ -104,6 +111,7 @@ function blokklag(
       g.globalCompositeOperation = 'destination-in';
       sti(g, G.koord, u, 512 / (u[2] - u[0]));
       g.fill('evenodd');
+      if (maske && !klipp(g, maske(), u)) return tile.setState(TOM);
       tile.setImage(c);
     } catch (e) {
       tile.setState(3);
@@ -114,15 +122,34 @@ function blokklag(
     properties: { tittel },
     source: tegnetKilde(tegn as Flistegner, [KILDER.nibio])
   });
-  /* Ny kommune: laget tegnes på nytt, og bare innenfor kommunen */
+  /* Ny kommune: laget tegnes på nytt, og bare innenfor kommunen. Med maske også når flatene i masken er hentet, men bare når laget er
+     i kartet, så flatene ikke hentes for sider som ikke viser laget. */
   const ny = nyttSiden();
   abonner(() => {
-    const G = verdi(katalog.solv.grense);
-    if (!ny('grense', G)) return;
+    const G = verdi(katalog.solv.grense),
+      a = ny('grense', G),
+      b = maske && iKartet(lag) ? ny('maske', maske()) : false;
+    if (!a && !b) return;
     if (G) lag.setExtent(G.ext);
     friskOpp(lag);
   });
   return lag;
+}
+/* Om laget er i kartet nå (tvillingens egne lag legges inn bare mens siden som viser dem, er oppe) */
+const iKartet = (lag: TileLayer<XYZ>) => !!kart && kart.getLayers().getArray().includes(lag);
+/* Klipper det som er tegnet i flisen g (utsnitt u) til flatene F, slått sammen: det som ligger i minst én av dem, blir stående.
+   false mens flatene ikke er hentet (null), eller når ingen av dem berører flisen. */
+function klipp(g: CanvasRenderingContext2D, F: Flerflate[] | null, u: Utsnitt): boolean {
+  if (!F || !F.length) return false;
+  const m = tegneflate(512, 512),
+    s = 512 / (u[2] - u[0]);
+  for (const f of F) {
+    sti(m, f, u, s);
+    m.fill('evenodd');
+  }
+  g.globalCompositeOperation = 'destination-in';
+  g.drawImage(m.canvas, 0, 0);
+  return true;
 }
 
 /* Et kartlag av detaljklassene (solv.detaljklasser, nivå 10). farge gir fargen (en variabel i stilen) for hver detaljklasse som skal
@@ -138,6 +165,24 @@ export const detaljlag = (tittel: string, farge: (k: Detaljklasse) => string | n
         const f = farge(k);
         return f ? cssFarge(f) : null;
       })
+  );
+/* Som detaljlag, men bare innenfor flatene maske gir (som verneområdene) */
+export const detaljlagI = (
+  tittel: string,
+  farge: (k: Detaljklasse) => string | null,
+  maske: () => Flerflate[] | null
+) =>
+  blokklag(
+    tittel,
+    FLISNIVA,
+    nr => katalog.solv.detaljblokker(nr),
+    tc => katalog.solv.detaljklasser(tc),
+    () =>
+      DETALJKLASSER.map(k => {
+        const f = farge(k);
+        return f ? cssFarge(f) : null;
+      }),
+    maske
   );
 /* Et kartlag med én av dagens klasser (bebygd, jordbruk eller natur) i klassens farge, av blokkene på nivå 9 (solv.blokker og
    solv.klasser, 21 meter). De er lagret for noen kommuner og lages ellers av kartbildene fra NIBIO, som for hovedsidens kart, så
@@ -189,6 +234,189 @@ export function naturskoglag(tittel: string, navn: Naturskoglag): TileLayer<XYZ>
   return lag;
 }
 
+/* Et kartlag av flater fra en tabell, som verneområdene per verneform: flatene gir flatene med utsnitt og farge (en variabel i
+   stilen), eller null mens de hentes. Hver flate fylles halvt gjennomsiktig og får kant i fargen, klippet mot kommunen. Flatene leses
+   bare når laget er i kartet. */
+export function flatelag(
+  tittel: string,
+  flatene: () => { koord: Flerflate; ext: Utsnitt; farge: string }[] | null
+): TileLayer<XYZ> {
+  async function tegn(tile: ImageTile) {
+    try {
+      const G = verdi(katalog.solv.grense),
+        F = flatene(),
+        tc = tile.getTileCoord() as Flis,
+        u = plannett.getTileCoordExtent(tc);
+      if (!G || !F || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
+      const c = flislerret(),
+        g = c.getContext('2d')!,
+        s = 512 / (u[2] - u[0]);
+      let noe = false;
+      g.lineWidth = 2;
+      for (const f of F) {
+        if (!ol.extent.intersects(u, f.ext)) continue;
+        const [r, gr, b] = cssFarge(f.farge);
+        g.fillStyle = `rgba(${r}, ${gr}, ${b}, 0.55)`;
+        g.strokeStyle = `rgb(${r}, ${gr}, ${b})`;
+        sti(g, f.koord, u, s);
+        g.fill('evenodd');
+        g.stroke();
+        noe = true;
+      }
+      if (!noe) return tile.setState(TOM);
+      g.globalCompositeOperation = 'destination-in';
+      sti(g, G.koord, u, s);
+      g.fill('evenodd');
+      tile.setImage(c);
+    } catch (e) {
+      tile.setState(3);
+    }
+  }
+  const lag = new ol.layer.Tile({
+    className: 'figma-lag',
+    properties: { tittel },
+    source: tegnetKilde(tegn as Flistegner, [KILDER.mdir])
+  });
+  const ny = nyttSiden();
+  abonner(() => {
+    const G = verdi(katalog.solv.grense),
+      a = ny('grense', G),
+      b = iKartet(lag) ? ny('flater', flatene()) : false;
+    if (!a && !b) return;
+    if (G) lag.setExtent(G.ext);
+    friskOpp(lag);
+  });
+  return lag;
+}
+
+/* Et kartlag av et kommunebilde, et rutenett over kommunen med én verdi per rute (som solv.graa): farge gir fargen (en variabel i
+   stilen) for verdien, eller null for ingen. Rutene fargelegges én gang per kommune. Zoomet inn skaleres bildet opp med skarpe
+   ruter. Zoomet ut dekker hver piksel i flisen flere ruter, og pikselen får fargen når minst én av rutene har farge, så små flater
+   som veier og hus ikke forsvinner. Klippet mot kommunen. Rutene leses bare når laget er i kartet. */
+interface Rutene {
+  u: Utsnitt;
+  res: number;
+  w: number;
+  h: number;
+  kl: ArrayLike<number>;
+}
+export function rutelag(tittel: string, rutene: () => Rutene | null, farge: (v: number) => string | null) {
+  /* Fargen for hver rute som plass i P pluss én (0 for ingen), og bildet i fargene */
+  let malt: { R: Rutene; plass: Uint8Array; P: number[][]; c: HTMLCanvasElement } | null = null;
+  const fargelegg = (R: Rutene) => {
+    if (malt && malt.R === R) return malt;
+    const g = tegneflate(R.w, R.h),
+      d = g.createImageData(R.w, R.h),
+      o = d.data,
+      plass = new Uint8Array(R.kl.length),
+      P: number[][] = [],
+      F = new Map<number, number>();
+    for (let q = 0; q < R.kl.length; q++) {
+      const v = R.kl[q];
+      if (!F.has(v)) {
+        const f = farge(v);
+        F.set(v, f ? P.push(cssFarge(f)) : 0);
+      }
+      const n = F.get(v)!;
+      if (!n) continue;
+      plass[q] = n;
+      o[4 * q] = P[n - 1][0];
+      o[4 * q + 1] = P[n - 1][1];
+      o[4 * q + 2] = P[n - 1][2];
+      o[4 * q + 3] = 255;
+    }
+    g.putImageData(d, 0, 0);
+    malt = { R, plass, P, c: g.canvas };
+    return malt;
+  };
+  async function tegn(tile: ImageTile) {
+    try {
+      const G = verdi(katalog.solv.grense),
+        R = rutene(),
+        tc = tile.getTileCoord() as Flis,
+        u = plannett.getTileCoordExtent(tc);
+      if (!G || !R || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
+      const M = fargelegg(R),
+        c = flislerret(),
+        g = c.getContext('2d')!,
+        t = (u[2] - u[0]) / 512;
+      if (t <= R.res) {
+        g.imageSmoothingEnabled = false;
+        g.drawImage(
+          M.c,
+          (u[0] - R.u[0]) / R.res,
+          (R.u[3] - u[3]) / R.res,
+          512 * (t / R.res),
+          512 * (t / R.res),
+          0,
+          0,
+          512,
+          512
+        );
+      } else {
+        /* zoomet ut: rutene i hver piksel, rad for rad og kolonne for kolonne, og den første med farge */
+        const d = g.createImageData(512, 512),
+          o = d.data,
+          fra = (k: number, start: number, ende: number) => Math.min(ende, Math.max(0, Math.floor(start + k)));
+        const kol: [number, number][] = [],
+          rad: [number, number][] = [];
+        for (let k = 0; k < 512; k++) {
+          kol.push([
+            fra((u[0] - R.u[0]) / R.res, (k * t) / R.res, R.w),
+            fra((u[0] - R.u[0]) / R.res, ((k + 1) * t) / R.res, R.w)
+          ]);
+          rad.push([
+            fra((R.u[3] - u[3]) / R.res, (k * t) / R.res, R.h),
+            fra((R.u[3] - u[3]) / R.res, ((k + 1) * t) / R.res, R.h)
+          ]);
+        }
+        let noe = false;
+        for (let j = 0; j < 512; j++) {
+          const [y0, y1] = rad[j];
+          if (y0 >= y1) continue;
+          for (let i = 0; i < 512; i++) {
+            const [x0, x1] = kol[i];
+            let n = 0;
+            for (let y = y0; y < y1 && !n; y++) for (let x = x0; x < x1 && !n; x++) n = M.plass[y * R.w + x];
+            if (!n) continue;
+            const f = M.P[n - 1],
+              q = 4 * (j * 512 + i);
+            o[q] = f[0];
+            o[q + 1] = f[1];
+            o[q + 2] = f[2];
+            o[q + 3] = 255;
+            noe = true;
+          }
+        }
+        if (!noe) return tile.setState(TOM);
+        g.putImageData(d, 0, 0);
+      }
+      g.globalCompositeOperation = 'destination-in';
+      sti(g, G.koord, u, 512 / (u[2] - u[0]));
+      g.fill('evenodd');
+      tile.setImage(c);
+    } catch (e) {
+      tile.setState(3);
+    }
+  }
+  const lag = new ol.layer.Tile({
+    className: 'figma-lag',
+    opacity: 0.85,
+    properties: { tittel },
+    source: tegnetKilde(tegn as Flistegner, [KILDER.nibio])
+  });
+  const ny = nyttSiden();
+  abonner(() => {
+    const G = verdi(katalog.solv.grense),
+      a = ny('grense', G),
+      b = iKartet(lag) ? ny('ruter', rutene()) : false;
+    if (!a && !b) return;
+    if (G) lag.setExtent(G.ext);
+    friskOpp(lag);
+  });
+  return lag;
+}
+
 /* Lagene på skogsiden: skogen samlet, skogen etter treslag, tresatt myr og tresatt innmarksbeite fra grunnkartet (hvert sitt lag, som i
    skissene), og to lag fra kartet over naturskog */
 export const SKOGLAG = {
@@ -211,4 +439,69 @@ export const KLASSELAG = {
   nat: klasselag('Natur', 'nat'),
   jor: klasselag('Jordbruk', 'jor'),
   beb: klasselag('Bebygd', 'beb')
+};
+
+/* Fargen for hvert hovedøkosystem i kartet over naturen i verneområdene, som i figuren for naturen som er vernet */
+export const OKOSYSTEMFARGE: Record<string, string> = {
+  skog: 'oko-skog',
+  vatmark: 'oko-vatmark',
+  innsjoerVannmagasiner: 'oko-innsjo',
+  heiBuskmark: 'oko-hei',
+  grasmark: 'oko-gras',
+  elverBekkerKanaler: 'oko-elv',
+  liteVegetertMark: 'oko-lite',
+  kyststrenderSvabergDyner: 'oko-kyst',
+  dyrketmark: 'oko-dyrket',
+  bebygdOpparbeidetAreal: 'oko-bebygd',
+  hav: 'oko-hav'
+};
+/* Fargen for hver gruppe av verneformer (VERNEFORMGRUPPER i solv/temaer.ts), som i figuren for verneformene */
+export const VERNEFORMFARGE: Record<string, string> = {
+  nasjonalpark: 'vf-nasjonalpark',
+  naturreservat: 'vf-naturreservat',
+  landskap: 'vf-landskap',
+  marint: 'vf-marint',
+  arts: 'vf-arts',
+  annen: 'vf-annen'
+};
+/* f av verdien v, regnet ut på nytt bare når v er en annen enn sist. Lagene ser om flatene er nye ved å sammenligne dem med forrige
+   gang, så de må være de samme så lenge tabellen er den samme. */
+function husk<T, U>(f: (v: T) => U) {
+  let sist: { v: T; u: U } | null = null;
+  return (v: T | null) => (v === null ? null : sist && sist.v === v ? sist.u : (sist = { v, u: f(v) }).u);
+}
+const vernflater = husk((V: VernetFlate[]) => V.map(o => o.koord)),
+  vernfarger = husk((V: VernetFlate[]) =>
+    V.map(o => ({ koord: o.koord, ext: o.ext, farge: VERNEFORMFARGE[o.gruppe] }))
+  ),
+  vurderes = husk((V: VerdsattVurderes) =>
+    V.omrader.map(o => ({ koord: o.koord, ext: o.ext, farge: o.v ? 'vurderes2' : 'vurderes1' }))
+  );
+/* Lagene på siden om verneområder: verneområdene etter verneform (gull.verneformer), og naturen i verneområdene, grunnkartets
+   detaljklasser i fargen for hovedøkosystemet, bare innenfor verneområdene */
+export const VERNLAG = {
+  verneformer: flatelag('Verneområder per verneform', () => vernfarger(verdi(katalog.gull.verneformer))),
+  natur: detaljlagI(
+    'Naturen i verneområder',
+    k => OKOSYSTEMFARGE[k.okosystem] || null,
+    () => vernflater(verdi(katalog.gull.verneformer))
+  )
+};
+/* Laget på siden om verdsatte naturtyper for lokalitetene som skal vurderes per lokalitet eller per naturtype (gull.verdsattVurderes) */
+export const VERDILAG = {
+  vurderes: flatelag('Verdsatt natur som vurderes', () => vurderes(verdi(katalog.gull.verdsattVurderes)))
+};
+/* Lag av kartet over grå arealer (solv.graa): alt grått areal, til villreinsiden, og grønne arealer i bebyggelse (grått areal med minst
+   halvparten vegetasjon, trinn 4 og 5), til bynaturen */
+export const GRAALAG = {
+  graa: rutelag(
+    'Grått areal',
+    () => verdi(katalog.solv.graa),
+    v => (v > 0 ? 'graa0' : null)
+  ),
+  gronne: rutelag(
+    'Grønne arealer i bebyggelse',
+    () => verdi(katalog.solv.graa),
+    v => (v === 4 || v === 5 ? 'gronne-arealer' : null)
+  )
 };
