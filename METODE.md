@@ -109,13 +109,14 @@ tjenestene: en piksel teller når den er minst halvveis dekket. Det er tre unnta
 - Arealet av verdsatt natur regnes ut fra hvor mye av hver rute som er dekket, ikke av hele ruter. Arealet av verneområder,
   villreinområder og egne områder er arealet av selve flatene.
 
-**Rutenettene.** Analysene bruker flere rutenett. Planrutenettet følger Kartverkets flisnett. De andre er lagt over kommunen og
-tilpasset størrelsen på den. Når to rutenett krysses, slås midtpunktet av ruta i planrutenettet opp i det andre.
+**Rutenettene.** Analysene bruker flere rutenett. Planrutenettet og bitene følger Kartverkets flisnett. De andre er lagt over
+kommunen og tilpasset størrelsen på den. Alle tall skal over på faste ruter på 10,6 meter (bestemt 18. oktober 2026); bitene er
+første steg. Når to rutenett krysses, slås midtpunktet av ruta i planrutenettet opp i det andre.
 
 | Rutenett | Ruter | Brukes til | I koden |
 |---|---|---|---|
 | Planrutenettet | 21,16 meter, nivå 9 i Kartverkets flisnett for UTM33, 512 ruter per flis. Én rute er 0,448 dekar. | Planlagt utbygging, egne områder, og alt som krysses med dem | `PLANNIVA`, `RUTE_M`, `RUTE` |
-| Kommunebildene | Minst 20 meter, høyst 2048 ruter på lengste side | Inngrepsfri natur og grått areal | `BILDE_TEMA` |
+| Bitene | 10,6 meter, nivå 10 i flisnettet. Hentes i biter på 2048 x 2048 ruter (flisene på nivå 8, 21,7 km), like store i alle kommuner. | Inngrepsfri natur og grått areal | `BITNIVA`, `BIT` |
 | Verdsatt natur | Minst 10 meter, høyst 1536 ruter på lengste side | Arealet per verdikategori | `RUTENETT_VERDI` |
 | Områdemasker | Minst 10 meter, høyst 1500 ruter på lengste side | Oppslag fra planrutenettet i hvert verneområde, villreinområde og lokalitet, og i det kartlagte | `RUTENETT_MASKE` |
 | Plandekning | Høyst 256 ruter på lengste side | Om kommunen har kommuneplan hos DiBK | `BILDE_PLANDEKNING` |
@@ -739,8 +740,9 @@ Rutenettmetoden for verdsatt natur ga under 0,2 % avvik fra geometrisk sammensl�
 **Spørsmål.** Hvor mye av kommunen ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte
 vassdrag?
 
-**Kort fortalt.** Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet som ett bilde av kommunen. Rutene i
-bildet telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke med planlagt utbygging.
+**Kort fortalt.** Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet i biter med ruter på 10,6 meter, like
+store i alle kommuner. Rutene i kommunen telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke med planlagt
+utbygging.
 
 **Tabeller.** Kortet viser `gull.inon`. Det står i `src/ui/komponenter/Inon.tsx`.
 
@@ -756,12 +758,14 @@ bildet telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke me
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
-3. **Bilde av inngrepsfri natur** (`bronse.inonbilde` → `solv.inon`). Hentes fra
-   `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde av hele kommunen fra laget status (2023), i
-   kommunebildenes rutenett, uten glatting av kantene. Kilde: [Miljødirektoratet, Inngrepsfri natur i
+3. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit` → `solv.inon`). Hentes fra
+   `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit fra laget status (2023), med ruter på
+   10,6 meter, uten glatting av kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde:
+   [Miljødirektoratet, Inngrepsfri natur i
    Norge](https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b), NLOD 2.0. Justeres: En rute som er
    minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst
-   5 km). Rutene i kommunen telles per sone.
+   5 km). Justeres: Rutene i kommunen telles per sone, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve
+   ruta.
 4. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
    og andelen av landarealet regnes ut.
 
@@ -793,8 +797,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 **Spørsmål.** Hvor mye av kommunen er alt tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet, hvor mye vegetasjon er
 det der, og hvor mye av planlagt utbygging ligger på slikt areal?
 
-**Kort fortalt.** Grått areal kommer fra Kart over grå arealer. Rutene i bildet av kommunen telles etter hvor stor del av flaten
-som er vegetasjon, og regnes om til areal. Planlagt utbygging på grått areal er gjenbruk av areal som alt er tatt i bruk.
+**Kort fortalt.** Grått areal kommer fra Kart over grå arealer, hentet i biter med ruter på 10,6 meter, like store i alle
+kommuner. Rutene i kommunen telles etter hvor stor del av flaten som er vegetasjon, og regnes om til areal. Planlagt utbygging på
+grått areal er gjenbruk av areal som alt er tatt i bruk.
 
 **Tabeller.** Kortet viser `gull.graa` og `gull.graaIPlan`, og forklarer også `gull.graakryss`. Det står i
 `src/ui/komponenter/Graa.tsx`.
@@ -806,18 +811,20 @@ som er vegetasjon, og regnes om til areal. Planlagt utbygging på grått areal e
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+2. **Bilder av grått areal** (`bronse.graabit` → `solv.graabit` → `solv.graa`). Hentes fra
+   `https://wms.nibio.no/cgi-bin/graastruktur`: To bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått
+   areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs
+   kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [NIBIO, Miljødirektoratet,
+   Kartverket og SSB, Kart over grå arealer, testversjon 1
+   (2025)](https://kartkatalog.geonorge.no/metadata/uuid/c5f09d79-1546-495c-8b36-91efd4008bd7), Norge digitalt-lisensen. Justeres:
+   En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått
+   uten oppgitt andel, som veier, for seg. Justeres: Rutene i kommunen telles per trinn, bit for bit. En rute er i kommunen når
+   kommunens flate dekker minst halve ruta.
+3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
-3. **Bilder av grått areal** (`bronse.graabilder` → `solv.graa`). Hentes fra `https://wms.nibio.no/cgi-bin/graastruktur`: To
-   bilder av hele kommunen i egen stil uten kantstrek: alt grått areal, og flatene med andel vegetasjon, der trinnet leses av
-   fargen. De hentes hver for seg, så fargene ikke blandes langs kantene. Kilde: [NIBIO, Miljødirektoratet, Kartverket og SSB,
-   Kart over grå arealer, testversjon 1
-   (2025)](https://kartkatalog.geonorge.no/metadata/uuid/c5f09d79-1546-495c-8b36-91efd4008bd7), Norge digitalt-lisensen. Justeres:
-   En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått
-   uten oppgitt andel, som veier, for seg. Rutene i kommunen telles per trinn.
 4. **Grått areal** (`gull.graa`). Antall ruter per trinn regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall, og
    andelen av landarealet regnes ut.
 5. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
@@ -841,8 +848,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
-`src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`, `src/data/gull/graa.ts`. Kortet: `src/ui/komponenter/Graa.tsx`.
+`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`,
+`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/gull/graa.ts`. Kortet: `src/ui/komponenter/Graa.tsx`.
 
 <!-- /forklaringer:graa -->
 
@@ -1028,6 +1035,21 @@ endret, og regresjonstesten ga ingen avvik.
 skogen delt etter treslag og underlag, og våtmark og tresatt myr for seg (se Arealklassene, steg 5). De er lagret for Trondheim.
 Lagret som sølv er de 630 kB, mot rundt 8 MB for kartbildene fra NIBIO, og knapt større enn dagens klasser for de samme blokkene
 (rundt 480 kB). Bare tvillingen bruker dem. Hovedsidens tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+**Grått areal og inngrepsfri natur på faste ruter på 10,6 meter, 18. oktober 2026.** Før ble hver kommune hentet som ett bilde
+med høyst 2048 ruter på lengste side og minst 20 meter per rute, så rutene var 20 meter i små kommuner og grovere i store (31 meter
+i Oppdal, 36 i Vinje). Nå hentes temaene i biter: flisene på nivå 8 i Kartverkets flisnett, med 2048 x 2048 ruter à 10,6 meter.
+Ruta er dermed den samme i alle kommuner, og den samme som i flisene på nivå 10 (`BITNIVA`, `BIT`, `solv.graabit`,
+`solv.inonbit`). Kommunen telles bit for bit (`tellIKommune`), og villreinområdene likeså (`tellIBiter`). Kryssingen med
+utbyggingen slår opp i bitene utbyggingen har ruter i. Kartlagene tegnes av bitene, så ingen lerreter er større enn 2048 x 2048,
+som også iPhone klarer.
+
+Endringene i tallene: grått areal i Trondheim 75 770 → 75 510 dekar, Oslo 125 220 → 125 320, Malvik 11 560 → 11 700 og Oppdal
+22 120 → 25 280. Grått uten oppgitt andel vegetasjon går mest ned (Oslo 5 630 → 2 290 dekar), fordi færre ruter langs kantene
+er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 meter, kommer smale veier og hytter med. Inngrepsfri
+natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
+under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
+grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
 **Fem nye tall og kartlag i tvillingen, 18. oktober 2026.** Det som sto som «Kan regnes ut» i oversikten over datatilgangen, er
 regnet ut av data datamotoren alt har. Bare tvillingen bruker dem, og de regnes etter behov (`etterBehov`):

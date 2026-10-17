@@ -1,17 +1,18 @@
 /* Gull, felles: små hjelpere som flere av svarene bruker. */
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import { HALV, type Rutebilde } from '../solv/felles.ts';
+import { HALV, bitRuter, type Flis } from '../solv/felles.ts';
+import type { Flerflate } from '../generelt/geometri.ts';
+import { flaterPiksler } from '../solv/raster.ts';
 
 /* Andelen del er av av, i prosent. null når det ikke er noe å regne andelen av. */
 export const andel = (del: number, av: number): number | null => (av > 0 ? (del / av) * 100 : null);
 
-/* Et tema som hentes som ett bilde av kommunen (inngrepsfri natur og grått areal), for kommunen nr. Mens det hentes, og når det
-   feilet, er det bare tilstanden. Når det er hentet, har det også arealet samlet i km² (sum), rutenettet bildet er tolket i, og det
-   som er eget for temaet (E). */
+/* Et tema som hentes i biter (inngrepsfri natur og grått areal), for kommunen nr. Mens det hentes, og når det feilet, er det bare
+   tilstanden. Når det er hentet, har det også arealet samlet i km² (sum), og det som er eget for temaet (E). */
 export type Kommunebilde<E> = { nr: string; tilstand: 'henter' | 'feil' } | HentetBilde<E>;
 /* Et kommunebilde som er hentet, og D hvis det er det */
-export type HentetBilde<E> = { nr: string; tilstand: 'ok'; sum: number } & Rutebilde & E;
+export type HentetBilde<E> = { nr: string; tilstand: 'ok'; sum: number } & E;
 export const hentet = <E>(D: Kommunebilde<E> | null): HentetBilde<E> | null => (D && D.tilstand === 'ok' ? D : null);
 
 /* Det sidene viser for et kommunebilde: henter, feil, ingen (hentet, men ingenting i kommunen), eller ok med tallene (T) */
@@ -40,6 +41,35 @@ export function tellIMaske(
     alle++;
     const p = plass(verdier[q]);
     if (p !== null) n[p]++;
+  }
+  return { alle, n };
+}
+
+/* Teller rutene innenfor flatene (unionen av dem, klippet mot kommunen innenfor) bit for bit, som tellIMaske: antall ruter i
+   flatene (alle), og antall per plass i n. verdier gir verdien per rute i en bit. Bare bitene i biter som flatene berører, telles.
+   Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
+export async function tellIBiter(
+  biter: Flis[],
+  verdier: (tc: Flis) => Promise<ArrayLike<number>>,
+  flater: { koord: Flerflate; ext: number[] }[],
+  innenfor: Flerflate,
+  plasser: number,
+  plass: (v: number) => number | null
+) {
+  const n = new Array<number>(plasser).fill(0);
+  let alle = 0;
+  for (const tc of biter) {
+    const R = bitRuter(tc),
+      her = flater.filter(f => f.ext[0] < R.u[2] && f.ext[2] > R.u[0] && f.ext[1] < R.u[3] && f.ext[3] > R.u[1]);
+    if (!her.length) continue;
+    const M = flaterPiksler(
+        her.map(f => f.koord),
+        R,
+        innenfor
+      ),
+      T = tellIMaske(M, await verdier(tc), plasser, plass);
+    alle += T.alle;
+    T.n.forEach((v, i) => (n[i] += v));
   }
   return { alle, n };
 }

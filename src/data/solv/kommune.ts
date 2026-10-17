@@ -1,9 +1,9 @@
-/* Sølv for kommunen: grensen i felles form, og bilder av hele kommunen tolket til ruter. Bildene av inngrepsfri natur og grått
-   areal tolkes på samme måte (tolketBilde), så det står bare her. */
+/* Sølv for kommunen: grensen i felles form, og temaene som hentes i biter (inngrepsfri natur og grått areal) talt i kommunen. De
+   telles på samme måte (tellIKommune), så det står bare her. */
 import { flerflate, utsnitt, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { BILDE_TEMA, arealKm2, m2PerKm2, rutenett, type Piksler, type Rutebilde } from './felles.ts';
-import { bildePiksler, flatePiksler } from './raster.ts';
+import { BITNIVA, HALV, arealKm2, biterI, bitRuter, m2PerKm2, type Flis } from './felles.ts';
+import { flatePiksler } from './raster.ts';
 
 /* Kommunegrensen: flerflaten i UTM33, utsnittet og flaten i km² (land og vann) */
 export interface Grense {
@@ -19,24 +19,55 @@ export async function grense(nr: string): Promise<Grense> {
   return { nr, koord, ext, km2: arealKm2(koord, ext) };
 }
 
-/* Rutenettet bildene av hele kommunen hentes og tolkes i */
-export async function bildenett(nr: string): Promise<Rutebilde> {
-  return rutenett((await katalog.solv.grense(nr)).ext, ...BILDE_TEMA);
+/* Et tema som hentes i biter, talt i kommunen nr: antall ruter per verdi innenfor kommunen (n), bitene kommunen har ruter i
+   (biter), meter per rute (res, 10,6) og skala (m2PerKm2 for kommunen), så arealet kan regnes ut */
+export interface Bitruter {
+  nr: string;
+  n: number[];
+  biter: Flis[];
+  res: number;
+  skala: number;
 }
-/* Et bilde av hele kommunen tolket til ruter: rutenettet, kommunen (nr), antall ruter per klasse innenfor kommunen (n), og skala
-   (m2PerKm2 for kommunen), så arealet kan regnes ut */
-export type Kommuneruter<E> = Rutebilde & { nr: string; n: ArrayLike<number>; skala: number } & E;
-/* Bildene b av kommunen nr tolket med tolk, sammen med kommunens flate som maske, i rutenettet for kommunen */
-export async function tolketBilde<E>(
+/* Teller et tema i kommunen nr bit for bit. verdier gir verdien per rute i en bit (fra katalogen), og plass plassen i n for verdien,
+   eller null når den ikke telles. plasser er lengden på n. En rute er i kommunen når kommunens flate dekker minst halve ruta. Biter
+   kommunen ikke berører, hentes ikke. Fire biter hentes om gangen. */
+export async function tellIKommune(
   nr: string,
-  b: ArrayBuffer[],
-  tolk: (bilder: Piksler[], maske: Piksler) => { n: ArrayLike<number> } & E
-): Promise<Kommuneruter<E>> {
+  plasser: number,
+  verdier: (tc: Flis) => Promise<ArrayLike<number>>,
+  plass: (v: number) => number | null
+): Promise<Bitruter> {
   const g = await katalog.solv.grense(nr),
-    R = rutenett(g.ext, ...BILDE_TEMA),
-    P: Piksler[] = [];
-  for (const x of b) P.push(await bildePiksler(x, R.w, R.h));
-  return { ...R, ...tolk(P, flatePiksler(g.koord, R)), nr, skala: m2PerKm2(g.ext) };
+    n = new Array<number>(plasser).fill(0),
+    alle = biterI(g.ext),
+    biter: Flis[] = [],
+    res = bitRuter(alle[0] || [BITNIVA, 0, 0]).res;
+  const en = async (tc: Flis) => {
+    /* først et grovt bilde (64 x 64) for å se om kommunen berører biten, så biter utenfor ikke hentes */
+    const R = bitRuter(tc),
+      grov = flatePiksler(g.koord, { u: R.u, res: R.res * (R.w / 64), w: 64, h: 64 });
+    let berort = false;
+    for (let i = 3; i < grov.length && !berort; i += 4) berort = grov[i] > 0;
+    if (!berort) return;
+    const V = await verdier(tc),
+      M = flatePiksler(g.koord, R);
+    let inne = false;
+    for (let q = 0; q < V.length; q++) {
+      if (M[4 * q + 3] < HALV) continue;
+      inne = true;
+      const p = plass(V[q]);
+      if (p !== null) n[p]++;
+    }
+    if (inne) biter.push(tc);
+  };
+  const ko = [...alle];
+  await Promise.all(
+    Array.from({ length: 4 }, async () => {
+      for (let tc = ko.shift(); tc; tc = ko.shift()) await en(tc);
+    })
+  );
+  biter.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
+  return { nr, n, biter, res, skala: m2PerKm2(g.ext) };
 }
 
 /* Tabellen solv.kommuneareal: flaten til hver kommune i km² (land, ferskvann og hav), etter kommunenummer */

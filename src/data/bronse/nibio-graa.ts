@@ -2,11 +2,9 @@
    Stilen tegner trinnene i GRAATRINN (solv/graa.ts) i rødt med styrken 51 · trinn, så trinnet kan leses av fargen. */
 import { GRAATRINN } from '../solv/graa.ts';
 import type { Utsnitt } from '../generelt/geometri.ts';
-import { flisUtsnitt, type Flis, type Kommune } from '../solv/felles.ts';
+import { BIT, flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
 import { GRAA } from './endepunkter.ts';
 import { hent, lagHenter } from './henting.ts';
-import { kommunen } from './kartverket.ts';
-import { bildenett } from '../solv/kommune.ts';
 import { wmsBilde } from './wms.ts';
 
 /* Egne stiler uten kantstrek. Alt grått areal tegnes i svart. Flatene med oppgitt andel vegetasjon får en rødfarge som sier hvilket
@@ -29,25 +27,19 @@ const graaBilde = (hva: number[], u: Utsnitt, w: number, h: number) =>
 export const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
 /* Adressen til et kartbilde på 512 x 512 piksler av utsnittet u, med begge lagene */
 export const graaFlisUrl = (u: Utsnitt) => graaBilde([0, 1], u, 512, 512);
-/* Ett av de to bildene av utsnittet u med w x h ruter for kommunen k: lag 0 er alt grått areal, lag 1 flatene med oppgitt andel
-   vegetasjon. De hentes hver for seg, fordi fargene blandes langs kantene når de hentes i ett bilde. */
-export const hentGraaBilde = (k: Kommune, lag: number, u: Utsnitt, w: number, h: number) =>
-  hent(
-    'NIBIO',
-    lag ? `Vegetasjon i grått areal i ${k.navn}` : `Grått areal i ${k.navn}`,
-    graaBilde([lag], u, w, h),
-    false,
-    true
-  );
-
 /* Tabellen bronse.graaflis: et kartbilde av grått areal for flisen tc [z, x, y], til kartlaget */
 export async function graaflis(tc: Flis): Promise<ArrayBuffer> {
   return hentGraaFlis(graaFlisUrl(flisUtsnitt(tc)));
 }
-/* Tabellen bronse.graabilder: de to bildene av grått areal over hele kommunen, som PNG: alt grått areal, og flatene med oppgitt
-   andel vegetasjon */
-export async function graabilder(nr: string): Promise<ArrayBuffer[]> {
-  const k = await kommunen(nr),
-    R = await bildenett(nr);
-  return Promise.all([hentGraaBilde(k, 0, R.u, R.w, R.h), hentGraaBilde(k, 1, R.u, R.w, R.h)]);
+/* Tabellen bronse.graabit: ett av de to bildene av biten tc (en flis på nivå 8, solv/felles.ts) med 2048 x 2048 ruter à 10,6 meter,
+   som PNG. lag 0 er alt grått areal, lag 1 flatene med oppgitt andel vegetasjon. De hentes hver for seg, fordi fargene blandes langs
+   kantene når de hentes i ett bilde. */
+export async function graabit([lag, tc]: [number, Flis]): Promise<ArrayBuffer> {
+  return hent(
+    'NIBIO',
+    `${lag ? 'Vegetasjon i grått areal' : 'Grått areal'}, bit ${flisnavn(tc)}`,
+    graaBilde([lag], flisUtsnitt(tc), BIT, BIT),
+    false,
+    true
+  );
 }

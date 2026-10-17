@@ -14,21 +14,15 @@ import { app } from '../../data/motor/tilstand.ts';
 import { planType, type Del, type Planflate } from '../../data/solv/egne.ts';
 import { AREALBRUKSSTATUS, KP_AREALFORMAL, medNavn } from '../../data/solv/kodelister.ts';
 import type { Punktflate } from '../../data/solv/punkt.ts';
-import { UTM, type Rutebilde } from '../../data/solv/felles.ts';
+import { UTM, bitVed, type Flis } from '../../data/solv/felles.ts';
 import { GRAATRINN, graaVed } from '../../data/solv/graa.ts';
-import { INONSONER, UTENFOR } from '../../data/solv/inon.ts';
+import { INONSONER, UTENFOR, soneVed } from '../../data/solv/inon.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
 import { dekar, nf, periode } from '../tekst.ts';
 import type { Oppslag, Punktinfo, Punktlag } from '../tilstand.ts';
 import { ol } from './ol.ts';
 
 const innenfor = (c: Coordinate, e: Utsnitt) => c[0] >= e[0] && c[0] <= e[2] && c[1] >= e[1] && c[1] <= e[3];
-/* Plassen til punktet c i rutenettet R, eller -1 utenfor */
-function rute(R: Rutebilde, c: Coordinate) {
-  const x = Math.floor((c[0] - R.u[0]) / R.res),
-    y = Math.floor((R.u[3] - c[1]) / R.res);
-  return x < 0 || y < 0 || x >= R.w || y >= R.h ? -1 : y * R.w + x;
-}
 /* Verdien i tabellen t for valgt kommune når den er hentet, uten å hente noe */
 const hentet = <V>(t: Tabelldef<string, V>) => {
   const r = app.valgt ? se(t, app.valgt.nr) : null;
@@ -120,11 +114,14 @@ export function punktinfo(c: Coordinate, klasse: string | null, plan: string | n
       ],
       kilde: 'Miljødirektoratet'
     });
-  /* Inngrepsfri natur og grått areal: ruta i bildet av kommunen */
-  const I = hentet(katalog.solv.inon);
+  /* Inngrepsfri natur og grått areal: ruta i biten punktet ligger i, når temaet er talt for kommunen og biten er hentet */
+  const hentetBit = <V>(t: Tabelldef<Flis, V>) => {
+    const r = se(t, bitVed(c));
+    return r && r.status === 'ok' ? (r.verdi as V) : null;
+  };
+  const I = hentet(katalog.solv.inon) ? hentetBit(katalog.solv.inonbit) : null;
   if (I) {
-    const q = rute(I, c),
-      s = q < 0 ? UTENFOR : I.sone[q];
+    const s = soneVed(I, c[0], c[1]);
     lag.push({
       tittel: 'Inngrepsfri natur',
       rader: [
@@ -137,7 +134,7 @@ export function punktinfo(c: Coordinate, klasse: string | null, plan: string | n
       oppslag: s === UTENFOR ? undefined : { hva: 'inon' }
     });
   }
-  const G = hentet(katalog.solv.graa);
+  const G = hentet(katalog.solv.graa) ? hentetBit(katalog.solv.graabit) : null;
   if (G) {
     const trinn = graaVed(G, c[0], c[1]);
     lag.push({

@@ -301,7 +301,7 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye av kommunen ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag?',
     kortFortalt:
-      'Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet som ett bilde av kommunen. Rutene i bildet telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke med planlagt utbygging.',
+      'Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet i biter med ruter på 10,6 meter, like store i alle kommuner. Rutene i kommunen telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke med planlagt utbygging.',
     tabeller: ['gull.inon'],
     usikkerhet: [
       'Tallet krysses ikke med planlagt utbygging. Sonene følger avstanden til nærmeste inngrep, så et nytt inngrep flytter sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.',
@@ -325,7 +325,7 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye av kommunen er alt tatt i bruk eller sterkt påvirket av bygge- og anleggsaktivitet, hvor mye vegetasjon er det der, og hvor mye av planlagt utbygging ligger på slikt areal?',
     kortFortalt:
-      'Grått areal kommer fra Kart over grå arealer. Rutene i bildet av kommunen telles etter hvor stor del av flaten som er vegetasjon, og regnes om til areal. Planlagt utbygging på grått areal er gjenbruk av areal som alt er tatt i bruk.',
+      'Grått areal kommer fra Kart over grå arealer, hentet i biter med ruter på 10,6 meter, like store i alle kommuner. Rutene i kommunen telles etter hvor stor del av flaten som er vegetasjon, og regnes om til areal. Planlagt utbygging på grått areal er gjenbruk av areal som alt er tatt i bruk.',
     tabeller: ['gull.graa', 'gull.graaIPlan'],
     forklarer: ['gull.graakryss'],
     regnestykke: hent => {

@@ -11,7 +11,7 @@ import type XYZ from 'ol/source/XYZ.js';
 import { katalog } from '../src/data/katalog.ts';
 import { abonner } from '../src/data/motor/tilstand.ts';
 import { valgtNr, verdi } from '../src/data/motor/valgt.ts';
-import { FLISNIVA, type Flis } from '../src/data/solv/felles.ts';
+import { FLISNIVA, bitRuter, type Flis } from '../src/data/solv/felles.ts';
 import { ALLE, DETALJKLASSER, type Detaljklasse, type KlasseId } from '../src/data/solv/klasser.ts';
 import type { VerdsattVurderes, VernetFlate } from '../src/data/gull/temaer.ts';
 import { flislerret, lesBilde, sti, tegneflate } from '../src/data/solv/raster.ts';
@@ -289,108 +289,73 @@ export function flatelag(
   return lag;
 }
 
-/* Et kartlag av et kommunebilde, et rutenett over kommunen med én verdi per rute (som solv.graa): farge gir fargen (en variabel i
-   stilen) for verdien, eller null for ingen. Rutene fargelegges én gang per kommune. Zoomet inn skaleres bildet opp med skarpe
-   ruter. Zoomet ut dekker hver piksel i flisen flere ruter, og pikselen får fargen når minst én av rutene har farge, så små flater
-   som veier og hus ikke forsvinner. Klippet mot kommunen. Rutene leses bare når laget er i kartet. */
-interface Rutene {
-  u: Utsnitt;
-  res: number;
-  w: number;
-  h: number;
-  kl: ArrayLike<number>;
-}
-export function rutelag(tittel: string, rutene: () => Rutene | null, farge: (v: number) => string | null) {
-  /* Fargen for hver rute som plass i P pluss én (0 for ingen), og bildet i fargene */
-  let malt: { R: Rutene; plass: Uint8Array; P: number[][]; c: HTMLCanvasElement } | null = null;
-  const fargelegg = (R: Rutene) => {
-    if (malt && malt.R === R) return malt;
-    const g = tegneflate(R.w, R.h),
-      d = g.createImageData(R.w, R.h),
-      o = d.data,
-      plass = new Uint8Array(R.kl.length),
-      P: number[][] = [],
-      F = new Map<number, number>();
-    for (let q = 0; q < R.kl.length; q++) {
-      const v = R.kl[q];
+/* Et kartlag av et tema som hentes i biter (som grått areal): data gir temaet talt for kommunen med bitene kommunen har ruter i
+   (solv.graa), bit verdien per rute i en bit (solv.graabit), og farge fargen (en variabel i stilen) for verdien, eller null for
+   ingen. Zoomet inn forstørres rutene skarpt. Zoomet ut dekker hver piksel i flisen flere ruter, og pikselen får fargen når minst én
+   av rutene har farge, så små flater som veier og hus ikke forsvinner. Klippet mot kommunen. Bitene leses bare når laget er i
+   kartet. */
+export function rutelag(
+  tittel: string,
+  data: () => { biter: Flis[] } | null,
+  bit: (tc: Flis) => Promise<ArrayLike<number>>,
+  farge: (v: number) => string | null
+) {
+  const F = new Map<number, number[] | null>(),
+    fargen = (v: number) => {
       if (!F.has(v)) {
         const f = farge(v);
-        F.set(v, f ? P.push(cssFarge(f)) : 0);
+        F.set(v, f ? cssFarge(f) : null);
       }
-      const n = F.get(v)!;
-      if (!n) continue;
-      plass[q] = n;
-      o[4 * q] = P[n - 1][0];
-      o[4 * q + 1] = P[n - 1][1];
-      o[4 * q + 2] = P[n - 1][2];
-      o[4 * q + 3] = 255;
-    }
-    g.putImageData(d, 0, 0);
-    malt = { R, plass, P, c: g.canvas };
-    return malt;
-  };
+      return F.get(v)!;
+    };
   async function tegn(tile: ImageTile) {
     try {
       const G = verdi(katalog.solv.grense),
-        R = rutene(),
+        D = data(),
         tc = tile.getTileCoord() as Flis,
         u = plannett.getTileCoordExtent(tc);
-      if (!G || !R || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
-      const M = fargelegg(R),
-        c = flislerret(),
+      if (!G || !D || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
+      const her = D.biter.filter(b => {
+        const e = bitRuter(b).u;
+        return e[0] < u[2] && e[2] > u[0] && e[1] < u[3] && e[3] > u[1];
+      });
+      if (!her.length) return tile.setState(TOM);
+      const c = flislerret(),
         g = c.getContext('2d')!,
-        t = (u[2] - u[0]) / 512;
-      if (t <= R.res) {
-        g.imageSmoothingEnabled = false;
-        g.drawImage(
-          M.c,
-          (u[0] - R.u[0]) / R.res,
-          (R.u[3] - u[3]) / R.res,
-          512 * (t / R.res),
-          512 * (t / R.res),
-          0,
-          0,
-          512,
-          512
-        );
-      } else {
-        /* zoomet ut: rutene i hver piksel, rad for rad og kolonne for kolonne, og den første med farge */
-        const d = g.createImageData(512, 512),
-          o = d.data,
-          fra = (k: number, start: number, ende: number) => Math.min(ende, Math.max(0, Math.floor(start + k)));
-        const kol: [number, number][] = [],
-          rad: [number, number][] = [];
-        for (let k = 0; k < 512; k++) {
-          kol.push([
-            fra((u[0] - R.u[0]) / R.res, (k * t) / R.res, R.w),
-            fra((u[0] - R.u[0]) / R.res, ((k + 1) * t) / R.res, R.w)
-          ]);
-          rad.push([
-            fra((R.u[3] - u[3]) / R.res, (k * t) / R.res, R.h),
-            fra((R.u[3] - u[3]) / R.res, ((k + 1) * t) / R.res, R.h)
-          ]);
-        }
-        let noe = false;
-        for (let j = 0; j < 512; j++) {
-          const [y0, y1] = rad[j];
-          if (y0 >= y1) continue;
-          for (let i = 0; i < 512; i++) {
-            const [x0, x1] = kol[i];
-            let n = 0;
-            for (let y = y0; y < y1 && !n; y++) for (let x = x0; x < x1 && !n; x++) n = M.plass[y * R.w + x];
-            if (!n) continue;
-            const f = M.P[n - 1],
-              q = 4 * (j * 512 + i);
-            o[q] = f[0];
-            o[q + 1] = f[1];
-            o[q + 2] = f[2];
-            o[q + 3] = 255;
+        d = g.createImageData(512, 512),
+        o = d.data,
+        m = (u[2] - u[0]) / 512;
+      let noe = false;
+      for (const b of her) {
+        const R = bitRuter(b),
+          B = await bit(b),
+          r = R.res,
+          px0 = Math.max(0, Math.floor((R.u[0] - u[0]) / m)),
+          px1 = Math.min(512, Math.ceil((R.u[2] - u[0]) / m)),
+          py0 = Math.max(0, Math.floor((u[3] - R.u[3]) / m)),
+          py1 = Math.min(512, Math.ceil((u[3] - R.u[1]) / m)),
+          kol = (px: number) => Math.floor((u[0] + px * m - R.u[0]) / r + 1e-6),
+          rad = (py: number) => Math.floor((R.u[3] - (u[3] - py * m)) / r + 1e-6);
+        for (let py = py0; py < py1; py++) {
+          const y0 = Math.max(0, rad(py)),
+            y1 = Math.min(R.h, Math.max(rad(py) + 1, rad(py + 1)));
+          for (let px = px0; px < px1; px++) {
+            const x0 = Math.max(0, kol(px)),
+              x1 = Math.min(R.w, Math.max(kol(px) + 1, kol(px + 1)));
+            let f: number[] | null = null;
+            for (let y = y0; y < y1 && !f; y++) for (let x = x0; x < x1 && !f; x++) f = fargen(B[y * R.w + x]);
+            if (!f) continue;
+            const i = 4 * (py * 512 + px);
+            o[i] = f[0];
+            o[i + 1] = f[1];
+            o[i + 2] = f[2];
+            o[i + 3] = 255;
             noe = true;
           }
         }
-        if (!noe) return tile.setState(TOM);
-        g.putImageData(d, 0, 0);
       }
+      if (!noe) return tile.setState(TOM);
+      g.putImageData(d, 0, 0);
       g.globalCompositeOperation = 'destination-in';
       sti(g, G.koord, u, 512 / (u[2] - u[0]));
       g.fill('evenodd');
@@ -409,7 +374,7 @@ export function rutelag(tittel: string, rutene: () => Rutene | null, farge: (v: 
   abonner(() => {
     const G = verdi(katalog.solv.grense),
       a = ny('grense', G),
-      b = iKartet(lag) ? ny('ruter', rutene()) : false;
+      b = iKartet(lag) ? ny('ruter', data()) : false;
     if (!a && !b) return;
     if (G) lag.setExtent(G.ext);
     friskOpp(lag);
@@ -491,17 +456,19 @@ export const VERNLAG = {
 export const VERDILAG = {
   vurderes: flatelag('Verdsatt natur som vurderes', () => vurderes(verdi(katalog.gull.verdsattVurderes)))
 };
-/* Lag av kartet over grå arealer (solv.graa): alt grått areal, til villreinsiden, og grønne arealer i bebyggelse (grått areal med minst
+/* Lag av kartet over grå arealer (solv.graa og solv.graabit): alt grått areal, til villreinsiden, og grønne arealer i bebyggelse (grått areal med minst
    halvparten vegetasjon, trinn 4 og 5), til bynaturen */
 export const GRAALAG = {
   graa: rutelag(
     'Grått areal',
     () => verdi(katalog.solv.graa),
+    tc => katalog.solv.graabit(tc).then(D => D.kl),
     v => (v > 0 ? 'graa0' : null)
   ),
   gronne: rutelag(
     'Grønne arealer i bebyggelse',
     () => verdi(katalog.solv.graa),
+    tc => katalog.solv.graabit(tc).then(D => D.kl),
     v => (v === 4 || v === 5 ? 'gronne-arealer' : null)
   )
 };

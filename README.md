@@ -172,7 +172,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, per flis, de lagrede klassene per blokk med registeret, og grunnkartet i ett punkt |
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
 | `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
-| `mdir-inon.ts` | Inngrepsfrie naturområder, som ett bilde av kommunen og i ett punkt |
+| `mdir-inon.ts` | Inngrepsfrie naturområder, som bilder per bit (2048 x 2048 ruter à 10,6 meter) og i ett punkt |
 | `mdir-naturskog.ts` | Kartet over naturskog (v1), som kartbilder til visning i tvillingen |
 | `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
@@ -182,7 +182,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | Fil | Innhold |
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
-| `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, nettet for bilder av hele kommunen, og et slikt bilde tolket til ruter |
+| `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, og et tema som hentes i biter talt i kommunen (`tellIKommune`) |
 | `grunnkart.ts` | Grunnkartet fra NIBIO: dagens klasser per blokk på 21 meter (`solv.klasser`, laget av kartbildene eller lagret), blokkene i kommunen, og dagens klasser for hele kommunen zoomet ut fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Den eneste filen i sølv og gull som bruker nettleseren. |
@@ -201,7 +201,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 
 | Fil | Innhold |
 |---|---|
-| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes som ett bilde |
+| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, tilstanden for temaene som hentes i biter, og telling i flater bit for bit (`tellIBiter`) |
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
@@ -253,7 +253,7 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og bildet av hele kommunen zoomet ut |
 | `plan.ts` | Planlagt utbygging |
 | `naturtema.ts` | Verneområder og villrein med skravur (områdene er ofte store, og små områder vises som ring), verdsatt natur fylt, sløret over det som ikke er kartlagt, og markering av ett område |
-| `kommunebilde.ts` | Felles for lagene som tegnes av et bilde av kommunen: masken, flisene og når laget vises |
+| `kommunebilde.ts` | Felles for lagene som tegnes av bitene: masken per kartflis, flisene og når laget vises |
 | `inon.ts` | Inngrepsfri natur: fargene for sonene |
 | `graa.ts` | Grått areal: fargene for trinnene, og fliser fra NIBIO når kartet er zoomet inn |
 | `egne.ts` | Egne områder: tegning i kartet og omrissene |
@@ -368,7 +368,7 @@ Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
 ## Katalogen og cachen
 
 Datapipelinen er organisert som kall mot en katalog, slik Unity Catalog i Databricks har `katalog.skjema.tabell`. Katalogen
-(`src/data/katalog.ts`) er listen over ETL-funksjonene i bronse, sølv og gull, som tabeller: `katalog.bronse.inonbilde`,
+(`src/data/katalog.ts`) er listen over ETL-funksjonene i bronse, sølv og gull, som tabeller: `katalog.bronse.inonbit`,
 `katalog.solv.inon` og `katalog.gull.inon`. Man kaller en tabell med nøkkelen, som regel kommunenummeret. Hver tabell er en
 ETL-funksjon med samme navn, og funksjonen henter selv det den bygger på fra katalogen:
 
@@ -377,17 +377,22 @@ ETL-funksjon med samme navn, og funksjonen henter selv det den bygger på fra ka
 export async function inon(nr: string): Promise<Inontall> {
   const [S, land] = await Promise.all([katalog.solv.inon(nr), landareal(nr)]),
     A = arealFraRuter(S.n, S.res, S.skala);
-  return { ...byggInon({ ...S, nr, tilstand: 'ok', soner: A.km2, sum: A.sum }, land), sum: A.sum, soner: A.km2 };
+  return { ...byggInon({ nr, tilstand: 'ok', soner: A.km2, sum: A.sum }, land), sum: A.sum, soner: A.km2 };
 }
 
-/* solv/inon.ts: sonen per rute i bildet av kommunen */
-export async function inon(nr: string): Promise<InonRuter> {
-  return tolketBilde(nr, [await katalog.bronse.inonbilde(nr)], ([P], M) => tolkInon(P, M));
+/* solv/inon.ts: sonene talt i kommunen, bit for bit */
+export async function inon(nr: string): Promise<Bitruter> {
+  return tellIKommune(nr, 3, tc => katalog.solv.inonbit(tc).then(D => D.sone), s => (s === UTENFOR ? null : s));
+}
+
+/* solv/inon.ts: sonen per rute i en bit */
+export async function inonbit(tc: Flis): Promise<Inonsoner> {
+  return { ...bitRuter(tc), sone: tolkInon(await bildePiksler(await katalog.bronse.inonbit(tc), BIT, BIT)) };
 }
 ```
 
 Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.inon` kaller `solv.inon`, som kaller
-`bronse.inonbilde`, som henter bildet fra Miljødirektoratet. Slik kan man følge hvert tall fra siden ned til kilden.
+`solv.inonbit` for hver bit, som kaller `bronse.inonbit`, som henter bildet fra Miljødirektoratet. Slik kan man følge hvert tall fra siden ned til kilden.
 
 **Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
 ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes

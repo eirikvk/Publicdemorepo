@@ -34,7 +34,7 @@ import * as solvPunkt from './solv/punkt.ts';
 import * as solvSsb from './solv/ssb.ts';
 type solvSsbJson = solvSsb.JsonStat;
 import * as solvTemaer from './solv/temaer.ts';
-import { PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
+import { BITNIVA, PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
 import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
 import type { Maske } from './solv/temaer.ts';
@@ -434,32 +434,36 @@ export const katalog = {
       nokkel: ([l, tc]) => `${l}/${flisnavn(tc)}`,
       etl: mdirNaturskog.naturskogflis
     }),
-    inonbilde: tabell({
+    inonbit: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
-      navn: 'inonbilde',
+      navn: 'inonbit',
       endepunkt: E.INON,
-      tittel: 'Bilde av inngrepsfri natur',
-      om: 'bildet av inngrepsfri natur over hele kommunen fra Miljødirektoratet, som PNG',
+      tittel: 'Bilder av inngrepsfri natur',
+      om: 'bildet av inngrepsfri natur fra Miljødirektoratet i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
       forklaring:
-        'Ett bilde av hele kommunen fra laget status (2023), i kommunebildenes rutenett, uten glatting av kantene.',
+        'Ett bilde per bit fra laget status (2023), med ruter på 10,6 meter, uten glatting av kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
       kilde: KILDE.inon,
-      husk: 6,
-      etl: mdirInon.inonbilde
+      husk: 40,
+      nokkel: flisnavn,
+      etl: mdirInon.inonbit,
+      eksempel: flisMidt(BITNIVA)
     }),
-    graabilder: tabell({
+    graabit: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
-      navn: 'graabilder',
+      navn: 'graabit',
       endepunkt: E.GRAA,
       tittel: 'Bilder av grått areal',
-      om: 'de to bildene av grått areal over hele kommunen fra NIBIO, som PNG',
+      om: 'ett av de to bildene av grått areal fra NIBIO i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med [lag, biten]: lag 0 er alt grått areal, lag 1 flatene med andel vegetasjon. Nøkkel: «lag/z/x/y».',
       forklaring:
-        'To bilder av hele kommunen i egen stil uten kantstrek: alt grått areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene.',
+        'To bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
       usikkerhet: [
         'Kartet er en testversjon. Andel bygninger er ikke brukt, fordi tjenesten oppga 0 for alle flater som ble slått opp.'
       ],
       kilde: KILDE.graa,
-      husk: 6,
-      etl: nibioGraa.graabilder
+      husk: 40,
+      nokkel: ([lag, tc]) => `${lag}/${flisnavn(tc)}`,
+      etl: nibioGraa.graabit,
+      eksempel: u => (u.midt ? [0, flisVed(u.midt, BITNIVA)] : null)
     }),
     graaflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
@@ -747,23 +751,47 @@ export const katalog = {
       etl: solvPlan.kommuneplanruter,
       eksempel: flisMidt(PLANNIVA)
     }),
+    inonbit: tabell<Flis, solvInon.Inonsoner>({
+      lag: 'solv',
+      navn: 'inonbit',
+      tittel: 'Inngrepsfri natur per rute',
+      om: 'sonen per rute i en bit (2048 x 2048 ruter à 10,6 meter), kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
+      forklaring:
+        'En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst 5 km).',
+      husk: 12,
+      nokkel: flisnavn,
+      etl: solvInon.inonbit,
+      eksempel: flisMidt(BITNIVA)
+    }),
     inon: tabell({
       lag: 'solv',
       navn: 'inon',
-      tittel: 'Inngrepsfri natur per rute',
-      om: 'sonen per rute i bildet av kommunen, og antall ruter per sone innenfor kommunen',
+      tittel: 'Inngrepsfri natur i kommunen',
+      om: 'antall ruter à 10,6 meter per sone innenfor kommunen, og bitene kommunen har ruter i',
       forklaring:
-        'En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst 5 km). Rutene i kommunen telles per sone.',
+        'Rutene i kommunen telles per sone, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve ruta.',
       husk: 3,
       etl: solvInon.inon
+    }),
+    graabit: tabell<Flis, solvGraa.Graatrinn>({
+      lag: 'solv',
+      navn: 'graabit',
+      tittel: 'Grått areal per rute',
+      om: 'trinnet per rute i en bit (2048 x 2048 ruter à 10,6 meter), kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
+      forklaring:
+        'En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått uten oppgitt andel, som veier, for seg.',
+      husk: 12,
+      nokkel: flisnavn,
+      etl: solvGraa.graabit,
+      eksempel: flisMidt(BITNIVA)
     }),
     graa: tabell({
       lag: 'solv',
       navn: 'graa',
-      tittel: 'Grått areal per rute',
-      om: 'trinnet per rute i bildet av kommunen, og antall ruter per trinn innenfor kommunen',
+      tittel: 'Grått areal i kommunen',
+      om: 'antall ruter à 10,6 meter per trinn innenfor kommunen, og bitene kommunen har ruter i',
       forklaring:
-        'En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått uten oppgitt andel, som veier, for seg. Rutene i kommunen telles per trinn.',
+        'Rutene i kommunen telles per trinn, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve ruta.',
       husk: 3,
       etl: solvGraa.graa
     }),

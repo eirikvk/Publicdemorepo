@@ -65,6 +65,22 @@ export const fliserI = (e: Utsnitt, z: number): Flis[] => {
    Zoomet lenger ut brukes blokkene satt sammen eller det sammensatte kartet. */
 export const FLISNIVA = 10;
 
+/* Bitene: inngrepsfri natur og grått areal hentes og tolkes i biter, flisene på nivå 8 med 2048 x 2048 ruter. Ruta er da den samme
+   som i flisene på nivå 10, 10,6 meter, uansett hvor stor kommunen er, og en bit dekker nøyaktig 4 x 4 slike fliser. En bit hentes
+   som ett bilde, og nabokommuner deler bitene langs grensen. */
+export const BITNIVA = FLISNIVA - 2,
+  BIT = 2048;
+/* Rutenettet i biten tc: utsnittet, 10,6 meter per rute, og 2048 x 2048 ruter */
+export const bitRuter = (tc: Flis): Rutebilde => {
+  const u = flisUtsnitt(tc);
+  return { u, res: (u[2] - u[0]) / BIT, w: BIT, h: BIT };
+};
+/* Biten punktet p [øst, nord] ligger i, og bitene som dekker utsnittet e */
+export const bitVed = (p: number[]): Flis => flisVed(p, BITNIVA);
+export const biterI = (e: Utsnitt) => fliserI(e, BITNIVA);
+/* Biten flisen tc på nivå 9 eller finere ligger i */
+export const bitAv = (tc: Flis): Flis => [BITNIVA, tc[1] >> (tc[0] - BITNIVA), tc[2] >> (tc[0] - BITNIVA)];
+
 /* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. Under
    Tekniske valg kan brukeren velge nivå 10 i stedet (bronse.planniva), med ruter på 10,6 meter. */
 export const PLANNIVA = 9,
@@ -84,7 +100,6 @@ export const HAV_MIN_KM2 = 0.5,
 export const EGET_MIN_M2 = 400; /* minste tegnede område som regnes ut */
 
 /* Rutenett for bildene som hentes for hele kommunen: [høyst antall ruter på lengste side, minste rute i meter] */
-export const BILDE_TEMA: [number, number] = [2048, 20]; /* inngrepsfri natur og grått areal */
 export const BILDE_PLANDEKNING: [number, number] = [256, 0]; /* sjekken av om kommunen har kommuneplan */
 export const PLANOVERSIKT = 4; /* oversikten over hvor kommuneplanen ligger: én piksel per 4 x 4 ruter på 21 meter (85 meter) */
 export const RUTENETT_VERDI: [number, number] = [1536, 10]; /* arealet av verdsatt natur per verdikategori */

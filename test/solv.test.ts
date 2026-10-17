@@ -39,9 +39,8 @@ test('klassene leses av de rene fargene', () => {
 test('inngrepsfri natur: sone per farge og per rute', () => {
   const [r, g, b] = INONSONER[2][2];
   assert.equal(inonSone(r, g, b), 2);
-  const S = tolkInon([r, g, b, 255, 0, 0, 0, 0], [0, 0, 0, 255, 0, 0, 0, 255]);
-  assert.deepEqual([...S.sone], [2, UTENFOR]);
-  assert.deepEqual(S.n, [0, 0, 1]);
+  const S = tolkInon([r, g, b, 255, 0, 0, 0, 0]);
+  assert.deepEqual([...S], [2, UTENFOR]);
 });
 
 test('grått areal: trinn etter rødfargen', () => {
