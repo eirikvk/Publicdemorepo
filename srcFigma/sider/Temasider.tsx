@@ -51,7 +51,17 @@ import {
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
-import { GRAALAG, SKOGLAG, VATMARKLAG, VERDILAG, VERNEFORMFARGE, VERNLAG, velgVerneformer } from '../kartlag.ts';
+import {
+  GRAALAG,
+  SKOGLAG,
+  VATMARKLAG,
+  VERDILAG,
+  VERNEFORMFARGE,
+  VERNLAG,
+  velgNatur,
+  velgVerneformer
+} from '../kartlag.ts';
+import { naturkart } from '../kart2.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -71,6 +81,8 @@ interface Temasideinnhold {
   children?: ReactNode;
   sporsmal: [string, ReactNode][];
   ressurser: [string, string][];
+  /* Et kart nummer to etter figurene, i et eget bånd, som på siden om verneområder */
+  andreKart?: ReactNode;
 }
 /* Malen for en temaside */
 function Temaside(p: Temasideinnhold) {
@@ -88,12 +100,24 @@ function Temaside(p: Temasideinnhold) {
         {p.fremhevet}
       </div>
       <Kart key={p.tema.id} lag={p.lag} etter={p.lagEtter} hint={false} />
-      <div className="innhold">
-        {p.children}
-        <Sporsmal liste={p.sporsmal} />
-        <Ressurser lenker={p.ressurser} />
-        <NestePerspektiv />
-      </div>
+      {p.andreKart ? (
+        <>
+          <div className="innhold">{p.children}</div>
+          {p.andreKart}
+          <div className="innhold">
+            <Sporsmal liste={p.sporsmal} />
+            <Ressurser lenker={p.ressurser} />
+            <NestePerspektiv />
+          </div>
+        </>
+      ) : (
+        <div className="innhold">
+          {p.children}
+          <Sporsmal liste={p.sporsmal} />
+          <Ressurser lenker={p.ressurser} />
+          <NestePerspektiv />
+        </div>
+      )}
     </>
   );
 }
@@ -454,18 +478,7 @@ function Vern({ tema }: { tema: Tema }) {
           ol: VERNLAG.verneformer,
           velg: velgVerneformer
         },
-        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', skjul: true },
-        {
-          id: 'natur',
-          navn: 'Naturen i verneområder',
-          kilde: GK,
-          farger: [
-            ...VERNET_NATUR.map(([, , navn, farge]) => [navn, farge] as [string, string]),
-            ...RESTKLASSER.map(navn => [navn, 'oko-annen'] as [string, string])
-          ],
-          ol: VERNLAG.natur,
-          av: true
-        }
+        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', skjul: true }
       ]}
       lagEtter={
         <div className="trekkspill-liste">
@@ -475,12 +488,6 @@ function Vern({ tema }: { tema: Tema }) {
               verneområde. Hvert område har sin egen verneforskrift.
             </p>
           </Trekkspill>
-          <Trekkspill tittel="Hva viser laget «Naturen i verneområder»?">
-            <p>
-              Laget viser grunnkartets økosystemtyper inne i verneområdene, med én farge per type, som i figuren over
-              naturen som er vernet.
-            </p>
-          </Trekkspill>
           <Trekkspill tittel="Hva er forskjellen på verneformene?">
             <p>
               Naturreservat har det strengeste vernet. Nasjonalparker verner store naturområder, og landskapsvernområder
@@ -488,6 +495,35 @@ function Vern({ tema }: { tema: Tema }) {
             </p>
           </Trekkspill>
         </div>
+      }
+      andreKart={
+        <Kart
+          eget={naturkart}
+          hint={false}
+          lag={[
+            {
+              id: 'natur',
+              navn: 'Naturen i verneområder',
+              kilde: GK,
+              farger: [
+                ...VERNET_NATUR.map(([, , navn, farge]) => [navn, farge] as [string, string]),
+                ['Natur eller jordbruk, uspesifisert', 'oko-annen']
+              ],
+              ol: VERNLAG.natur,
+              velg: velgNatur
+            }
+          ]}
+          etter={
+            <div className="trekkspill-liste">
+              <Trekkspill tittel="Hva viser kartet over naturen i verneområder?">
+                <p>
+                  Kartet viser grunnkartets økosystemtyper inne i verneområdene, med én farge per type, som i figuren
+                  over naturen som er vernet. Hver type kan slås av og på.
+                </p>
+              </Trekkspill>
+            </div>
+          }
+        />
       }
       sporsmal={[
         [
@@ -545,7 +581,7 @@ function Vern({ tema }: { tema: Tema }) {
           <p>
             Figuren viser hva slags natur som er vernet i {kommunen()}, og hvor mye det er av hver type. Prosenten viser
             hvor stor del av det vernede arealet hver type utgjør. Verneområder kan også ha dyrket mark og bebyggelse,
-            derfor er disse med i oversikten. Slå på laget «Naturen i verneområder» for å se hvor typene ligger.
+            derfor er disse med i oversikten.
           </p>
         }
         kilder={['grunnkart', 'vern']}

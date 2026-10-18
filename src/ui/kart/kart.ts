@@ -67,13 +67,26 @@ const grense = new ol.layer.Vector({
   source: grenseKilde,
   style: () => new ol.style.Style({ stroke: new ol.style.Stroke({ color: farge('ink'), width: 1.5 }) })
 });
-export const view = new ol.View({
-  projection: UTM,
-  center: ol.proj.fromLonLat([15, 65], UTM),
-  resolutions: OPPLOSNINGER.slice(2),
-  resolution: OPPLOSNINGER[4],
-  enableRotation: false
-});
+/* Utsnittet: projeksjonen, nivåene og at kartet ikke kan roteres. lagView lager et nytt, til et kart nummer to (tvillingen fra Figma). */
+export const lagView = () =>
+  new ol.View({
+    projection: UTM,
+    center: ol.proj.fromLonLat([15, 65], UTM),
+    resolutions: OPPLOSNINGER.slice(2),
+    resolution: OPPLOSNINGER[4],
+    enableRotation: false
+  });
+export const view = lagView();
+/* Bakgrunnskartet og kommunegrensen til et kart nummer to, som kartet over naturen i verneområdene i tvillingen fra Figma. Et lag
+   kan bare stå i ett kart, men kildene deles, så grensen følger valgt kommune og bakgrunnen hentes på samme måte. */
+export const bakgrunnslag = () =>
+  new ol.layer.Tile({
+    className: 'bakgrunn',
+    properties: { tittel: 'Bakgrunnskartet' },
+    source: bakgrunn.getSource()!
+  });
+export const grenselag = () =>
+  new ol.layer.Vector({ className: 'grense', source: grenseKilde, style: grense.getStyle() });
 export let kart: OlMap | null = null;
 /* Meter per piksel i kartet nå. Kartet har alltid en oppløsning, så den finnes. */
 export const opplosning = () => view.getResolution()!;
@@ -175,6 +188,29 @@ abonner(() => {
   }
 });
 
+/* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen. Kartet k
+   slipper derfor knip og dra igjennom til nettleseren så lenge siden er forstørret. Knappene for zoom og trykk i kartet virker
+   fortsatt. Brukes for hvert kart på siden. */
+export function slippVedSidezoom(k: OlMap) {
+  if (!window.visualViewport) return;
+  const vv = window.visualViewport;
+  let sist = false;
+  const sjekk = () => {
+    const stor = vv.scale > 1.03;
+    if (stor === sist) return;
+    sist = stor;
+    k.getViewport().style.touchAction = stor ? 'auto' : 'none';
+    k.getInteractions().forEach(i => i.setActive(!stor));
+    if (stor === ui.sidezoom) return;
+    ui.sidezoom = stor;
+    document.documentElement.classList.toggle('sidezoom', stor);
+    endret();
+  };
+  vv.addEventListener('resize', sjekk);
+  vv.addEventListener('scroll', sjekk);
+  sjekk();
+}
+
 /* Lager kartet med alle lagene og kobler til hendelsene. Kalles én gang, når alle filene er lastet. */
 export function lagKart() {
   if (kart) return kart;
@@ -188,24 +224,7 @@ export function lagKart() {
       new ol.control.Attribution({ collapsible: false })
     ]
   });
-  /* Når selve siden er forstørret, fyller kartet fort hele skjermen. Fanget kartet da alle bevegelser, kom man ikke ut igjen.
-     Kartet slipper derfor knip og dra igjennom til nettleseren så lenge siden er forstørret. Knappene for zoom og trykk i kartet
-     virker fortsatt. */
-  if (window.visualViewport) {
-    const vv = window.visualViewport;
-    const sjekk = () => {
-      const stor = vv.scale > 1.03;
-      if (stor === ui.sidezoom) return;
-      ui.sidezoom = stor;
-      document.documentElement.classList.toggle('sidezoom', stor);
-      kart!.getViewport().style.touchAction = stor ? 'auto' : 'none';
-      kart!.getInteractions().forEach(i => i.setActive(!stor));
-      endret();
-    };
-    vv.addEventListener('resize', sjekk);
-    vv.addEventListener('scroll', sjekk);
-    sjekk();
-  }
+  slippVedSidezoom(kart);
   klippSist(tema, [inonLag, graaLag]);
   klippSist(inonLag, [graaLag]);
   klippSist(graaLag, []);

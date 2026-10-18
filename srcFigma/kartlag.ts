@@ -15,7 +15,6 @@ import type { Flis } from '../src/data/solv/felles.ts';
 import { ALLE, DETALJKLASSER, type Detaljklasse, type KlasseId } from '../src/data/solv/klasser.ts';
 import type { VerdsattVurderes, VernetFlate } from '../src/data/gull/temaer.ts';
 import { flislerret, sti } from '../src/data/solv/raster.ts';
-import { kart } from '../src/ui/kart/kart.ts';
 import { KILDER, TOM, friskOpp, nyttSiden, plannett, tegnetKilde, type Flistegner } from '../src/ui/kart/felles.ts';
 import { ol } from '../src/ui/kart/ol.ts';
 import { verdilag } from '../src/ui/kart/verdilag.ts';
@@ -58,8 +57,8 @@ function pikselag(
     prikket
   });
 }
-/* Om laget er i kartet nå (tvillingens egne lag legges inn bare mens siden som viser dem, er oppe) */
-const iKartet = (lag: TileLayer<XYZ>) => !!kart && kart.getLayers().getArray().includes(lag);
+/* Om laget er i et kart nå, hovedkartet eller kart nummer to (tvillingens egne lag legges inn bare mens siden som viser dem, er oppe) */
+const iKartet = (lag: TileLayer<XYZ>) => !!lag.getMapInternal();
 
 /* Fargene for detaljklassene: farge gir fargen (en variabel i stilen) for hver detaljklasse som skal vises, eller null */
 const detaljfarger = (farge: (k: Detaljklasse) => string | null) => () => [
@@ -210,17 +209,28 @@ function verneformerVist() {
     vernVist = { F, av, ut: F.filter(f => !vernAv.includes(f.farge)) };
   return vernVist.ut;
 }
+/* Fargene i naturen i verneområdene som er slått av i lagvelgeren */
+let naturAv: string[] = [];
 /* Lagene på siden om verneområder: verneområdene etter verneform (gull.verneformer), der hver gruppe kan slås av og på
    (velgVerneformer), og naturen i verneområdene, grunnkartets detaljklasser i fargen for hovedøkosystemet, bare innenfor
-   verneområdene */
+   verneområdene, der hver farge kan slås av og på (velgNatur). Naturen står i et eget kart, som i skissene (kart2.ts). */
 export const VERNLAG = {
   verneformer: flatelag('Verneområder per verneform', verneformerVist),
   natur: detaljlagI(
     'Naturen i verneområder',
-    k => OKOSYSTEMFARGE[k.okosystem] || null,
+    k => {
+      const f = OKOSYSTEMFARGE[k.okosystem];
+      return f && !naturAv.includes(f) ? f : null;
+    },
     () => vernflater(verdi(katalog.gull.verneformer))
   )
 };
+/* Slår av fargene av i naturen i verneområdene, og tegner laget på nytt */
+export function velgNatur(av: string[]) {
+  if (av.join() === naturAv.join()) return;
+  naturAv = av;
+  friskOpp(VERNLAG.natur);
+}
 /* Slår av gruppene av verneformer med fargene av, og tegner laget på nytt */
 export function velgVerneformer(av: string[]) {
   if (av.join() === vernAv.join()) return;

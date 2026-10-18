@@ -1199,6 +1199,14 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**To kart på siden om verneområder, 19. oktober 2026.** Tvillingen har nå to kart på siden om verneområder, som skissene:
+verneformene øverst, og naturen i verneområdene i et eget kart under figurene (`srcFigma/kart2.ts`). Før var naturen et lag i det
+øverste kartet, slått av fra start. Det andre kartet deler kildene til bakgrunnskartet og kommunegrensen med hovedkartet, og
+lagene tegnes av de samme dataene, så ingenting hentes på nytt. Kartet settes inn først når det er rullet fram, så det tegnes ikke
+for dem som ikke kommer så langt. Hver type natur kan slås av og på, som i skissene. Det slipper knip og dra igjennom til
+nettleseren når siden er forstørret, som hovedkartet (`slippVedSidezoom` i `src/ui/kart/kart.ts`). Regresjonstesten for Trondheim
+ga ingen avvik, og røyktesten for tvillingen på 390 px ingen feil. Målt i Chromium, ikke på iPhone.
+
 **Avklaringene fra sammenligningen med skissene, 18. oktober 2026.** Tvillingen er et verktøy for å jobbe med designerne, så
 tillegg som ikke er i skissene, er tatt ut av temasidene:
 - dagens arealklasser, planlagt utbygging og naturskog i kartet, og teksten «Trykk i kartet …»

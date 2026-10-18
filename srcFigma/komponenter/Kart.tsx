@@ -2,10 +2,12 @@
    tema kartet viser, følger siden (ui.side, se navigasjon.ts). Lagvelgeren skjuler og viser lagene med gjennomsiktighet, så kartets
    egen styring av lagene ikke røres. Hvert lag står som i skissene: fargen til venstre, navnet og kilden, og valget til høyre. Har
    laget flere farger, står de under når laget er slått på, og en pil til venstre lukker og åpner dem. Lag som bare tvillingen har
-   (kartlag.ts), legges inn under planen når kartet vises, og tas ut igjen etterpå. Det finnes ett kart, så bare én side om gangen har
-   det. «Åpne kart i fullskjerm» legger kartet over hele vinduet. Zoomknappene har designsystemets ikoner for pluss og minus. */
+   (kartlag.ts), legges inn under planen når kartet vises, og tas ut igjen etterpå. Hovedkartet finnes én gang, så bare én side om
+   gangen har det. Siden om verneområder har i tillegg et eget kart lenger ned, som skissene (kart2.ts). «Åpne kart i fullskjerm»
+   legger kartet over hele vinduet. Zoomknappene har designsystemets ikoner for pluss og minus. */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import type OlMap from 'ol/Map.js';
 import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
 import { UTM } from '../../src/data/solv/felles.ts';
@@ -16,7 +18,7 @@ import { katalog } from '../../src/data/katalog.ts';
 import { graaLag } from '../../src/ui/kart/graa.ts';
 import { tema as klasseLag } from '../../src/ui/kart/grunnkart.ts';
 import { inonLag } from '../../src/ui/kart/inon.ts';
-import { kart as kartet, lagKart, view } from '../../src/ui/kart/kart.ts';
+import { kart as kartet, lagKart } from '../../src/ui/kart/kart.ts';
 import { dekLag, flateLag } from '../../src/ui/kart/naturtema.ts';
 import { ol } from '../../src/ui/kart/ol.ts';
 import { planLag } from '../../src/ui/kart/plan.ts';
@@ -93,12 +95,12 @@ export const PLAN: Kartlag = {
   ]
 };
 
-/* Kartet viser hele kommunen */
-function tilKommunen() {
+/* Kartet K viser hele kommunen */
+function tilKommunen(K: OlMap) {
   const k = app.valgt,
     G = verdi(katalog.solv.grense),
     u = G ? G.ext : k && k.boks ? ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM) : null;
-  if (u && kartet) view.fit(u, { size: kartet.getSize(), padding: [16, 16, 16, 16] });
+  if (u) K.getView().fit(u, { size: K.getSize(), padding: [16, 16, 16, 16] });
 }
 /* Designsystemets ikoner for pluss og minus i zoomknappene fra OpenLayers, i stedet for tegnene */
 function zoomIkoner(el: HTMLElement) {
@@ -114,47 +116,64 @@ function zoomIkoner(el: HTMLElement) {
   }
 }
 
-/* Kartet zoomer til kommunen når det settes inn, og igjen når kartet får en annen størrelse eller kommunegrensen kommer, til man
-   flytter kartet selv */
-function Kartflate() {
+/* Kartet (hent, til vanlig hovedkartet) zoomer til kommunen når det settes inn, og igjen når kartet får en annen størrelse eller
+   kommunegrensen kommer, til man flytter kartet selv. senere setter kartet inn først når flaten er rullet fram (kart nummer to). */
+function Kartflate({ hent = lagKart, senere }: { hent?: () => OlMap; senere?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const k = lagKart(),
-      el = ref.current!;
-    k.setTarget(el);
-    let flyttet = false,
-      grense = verdi(katalog.solv.grense);
-    const flytt = () => (flyttet = true),
-      r = requestAnimationFrame(() => {
-        k.updateSize();
-        tilKommunen();
-        zoomIkoner(el);
-      }),
-      storrelse = new ResizeObserver(() => {
-        k.updateSize();
-        if (!flyttet) tilKommunen();
-      }),
-      slutt = abonner(() => {
-        const G = verdi(katalog.solv.grense);
-        if (G === grense) return;
-        grense = G;
-        if (!flyttet) tilKommunen();
-      });
-    el.addEventListener('pointerdown', flytt);
-    el.addEventListener('wheel', flytt, { passive: true });
-    el.addEventListener('keydown', flytt);
-    storrelse.observe(el);
+    const el = ref.current!;
+    if (!senere) return settInn(hent(), el);
+    let rydd: (() => void) | null = null;
+    const se = new IntersectionObserver(
+      e => {
+        if (rydd || !e.some(x => x.isIntersecting)) return;
+        se.disconnect();
+        rydd = settInn(hent(), el);
+      },
+      { rootMargin: '300px 0px' }
+    );
+    se.observe(el);
     return () => {
-      cancelAnimationFrame(r);
-      storrelse.disconnect();
-      slutt();
-      el.removeEventListener('pointerdown', flytt);
-      el.removeEventListener('wheel', flytt);
-      el.removeEventListener('keydown', flytt);
-      k.setTarget(undefined);
+      se.disconnect();
+      if (rydd) rydd();
     };
   }, []);
   return <div className="kartflate" ref={ref} />;
+}
+/* Setter kartet k inn i flaten el, og gir det som tar det ut igjen */
+function settInn(k: OlMap, el: HTMLDivElement) {
+  k.setTarget(el);
+  let flyttet = false,
+    grense = verdi(katalog.solv.grense);
+  const flytt = () => (flyttet = true),
+    r = requestAnimationFrame(() => {
+      k.updateSize();
+      tilKommunen(k);
+      zoomIkoner(el);
+    }),
+    storrelse = new ResizeObserver(() => {
+      k.updateSize();
+      if (!flyttet) tilKommunen(k);
+    }),
+    slutt = abonner(() => {
+      const G = verdi(katalog.solv.grense);
+      if (G === grense) return;
+      grense = G;
+      if (!flyttet) tilKommunen(k);
+    });
+  el.addEventListener('pointerdown', flytt);
+  el.addEventListener('wheel', flytt, { passive: true });
+  el.addEventListener('keydown', flytt);
+  storrelse.observe(el);
+  return () => {
+    cancelAnimationFrame(r);
+    storrelse.disconnect();
+    slutt();
+    el.removeEventListener('pointerdown', flytt);
+    el.removeEventListener('wheel', flytt);
+    el.removeEventListener('keydown', flytt);
+    k.setTarget(undefined);
+  };
 }
 
 /* Knappen som bytter til kommunen man trykket i utenfor valgt kommune. Kartet plasserer den over punktet. */
@@ -175,14 +194,17 @@ function Bytt() {
 /* Kartet med lagvelgeren ved siden av (lag og det som står under den, etter), som et bånd over hele bredden. stor gir et høyere kart.
    enkel gir bare kartet, med en merkelapp nede til venstre, som på oversikten, og prikken i merkelappen har fargen enkelFarge (en
    variabel i stilen, til vanlig natur). Lag med farger som er slått på, får hver sin merkelapp under, så alt kartet viser, er
-   forklart. hint gir teksten «Trykk i kartet …» under lagvelgeren før man har trykket; temasidene har den ikke, som skissene. */
+   forklart. hint gir teksten «Trykk i kartet …» under lagvelgeren før man har trykket; temasidene har den ikke, som skissene.
+   eget gir et eget kart i stedet for hovedkartet, som kartet over naturen i verneområdene (kart2.ts): det får bare lagene i lag,
+   settes inn først når det er rullet fram, og har ikke trykk i kartet. */
 export default function Kart({
   lag,
   etter,
   stor,
   enkel,
   enkelFarge = 'nat',
-  hint = true
+  hint = true,
+  eget
 }: {
   lag: Kartlag[];
   etter?: ReactNode;
@@ -190,6 +212,7 @@ export default function Kart({
   enkel?: string;
   enkelFarge?: string;
   hint?: boolean;
+  eget?: () => OlMap;
 }) {
   const startSkjult = () => Object.fromEntries(lag.filter(l => l.av || l.skjul).map(l => [l.id, true]));
   const [skjult, settSkjult] = useState<Record<string, boolean>>(startSkjult),
@@ -211,28 +234,31 @@ export default function Kart({
      lagvelgeren, som temasidene. Alt vises igjen når kartet tas ut av siden. */
   const ider = lag.map(l => l.id).join();
   useEffect(() => {
+    if (eget) return;
     const med = new Set(ider.split(','));
     for (const [id, f] of Object.entries(OL_LAG))
       f().forEach(l => l.setOpacity(skjult[id] || ((id === 'klasser' || id === 'plan') && !med.has(id)) ? 0 : 1));
   }, [skjult, ider]);
-  useEffect(() => () => Object.values(OL_LAG).forEach(f => f().forEach(l => l.setOpacity(1))), []);
+  useEffect(() => () => void (eget || Object.values(OL_LAG).forEach(f => f().forEach(l => l.setOpacity(1)))), []);
   /* Fargene som er slått av i lag der hver farge kan velges, og alle på igjen når kartet tas ut av siden */
   useEffect(() => lag.forEach(l => l.velg && l.velg(fargeAv[l.id] || [])), [fargeAv, avPaa]);
   useEffect(() => () => lag.forEach(l => l.velg && l.velg([])), [avPaa]);
-  /* Egne lag (ol, og med som følger laget): inn under planen mens kartet vises, og synlige når laget er slått på */
+  /* Egne lag (ol, og med som følger laget): inn under planen mens kartet vises, eller under grensen i et eget kart, og synlige når
+     laget er slått på */
   const egne = lag.flatMap(l => [...(l.ol ? [l.ol] : []), ...(l.med || [])].map(o => ({ id: l.id, ol: o }))),
     egneId = egne.map(e => e.id + ':' + String(e.ol.get('tittel'))).join();
   useEffect(() => {
-    const k = lagKart(),
+    const k = eget ? eget() : lagKart(),
       L = k.getLayers();
     egne.forEach(e => {
-      if (!L.getArray().includes(e.ol)) L.insertAt(L.getArray().indexOf(planLag), e.ol);
+      if (!L.getArray().includes(e.ol)) L.insertAt(eget ? L.getLength() - 1 : L.getArray().indexOf(planLag), e.ol);
     });
     return () => egne.forEach(e => L.remove(e.ol));
   }, [egneId]);
   useEffect(() => egne.forEach(e => e.ol.setVisible(!skjult[e.id])), [skjult, egneId]);
   useEffect(() => {
-    if (kartet) kartet.updateSize();
+    const k = eget ? eget() : kartet;
+    if (k) k.updateSize();
     if (!full) return;
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && settFull(false);
     document.addEventListener('keydown', esc);
@@ -250,7 +276,7 @@ export default function Kart({
     : [];
   const scene = (
     <div className={'kartscene' + (full ? ' full' : '') + (enkel ? ' enkel' : '')}>
-      <Kartflate />
+      {eget ? <Kartflate hent={eget} senere /> : <Kartflate />}
       <MdButton
         className="fullskjerm"
         mode="small"
@@ -265,7 +291,7 @@ export default function Kart({
           {henting ? henteKort(henting) : 'Henter kart …'}
         </div>
       )}
-      <Bytt />
+      {!eget && <Bytt />}
       {enkel && (
         <ul className="enkel-merker">
           <li className="kartmerke enkel-merke" style={{ '--merke': `var(--${enkelFarge})` } as CSSProperties}>
@@ -360,7 +386,7 @@ export default function Kart({
                 );
               })}
           </ul>
-          {(p || hint) && (
+          {!eget && (p || hint) && (
             <p className="probe">
               {!p ? 'Trykk i kartet for å se hva som er der.' : p.punkt ? <b>{p.punkt}</b> : p.tekst}
             </p>
