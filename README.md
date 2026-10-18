@@ -326,7 +326,7 @@ med ekte tall, uten å endre hovedsiden.
     hovedøkosystem (`gull.okosystemregnskap`). De samme for alle kommunene (`gull.okosystemerNorge`, ett kall til SSB) gir
     sammenligningen med Norge (`gull.sammenligning`). De to regnes først når tvillingen ber om dem (`etterBehov`), så hovedsiden
     henter dem ikke. Se METODE.md, SSB-tallene.
-  - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per verneform (`gull.vernPerVerneform`), villreinområdene med
+  - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per gruppe av verneformer (`gull.vernPerVerneform`), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
     villreinområdene (`gull.inonIVillrein`). Og det som var merket «Kan regnes ut»: verdsatt natur som vurderes per lokalitet eller
     per naturtype (`gull.verdsattVurderes`), verneområdene med gruppen for verneformen (`gull.verneformer`), grått areal i
@@ -336,6 +336,9 @@ med ekte tall, uten å endre hovedsiden.
   `<meta name="egne-filer" content="../">`, som bronse leser (`src/data/bronse/henting.ts`).
 - Utseendet følger skissene fra 17. oktober 2026 så nær som mulig: bredden (1200 px), toppen, kortene, båndene, radene som kan
   åpnes, figurene og flisene, med fargene målt i skissene. Skissene ligger ikke i repoet. Tallene er de samme som før.
+- Der designsystemet har en regel, følger tvillingen designsystemet, også der skissene er annerledes: overskriftene
+  (`md-typography-heading-xl` til `-s`, vanlig vekt), luften i trekkspillene, sidevelgeren i tabellene, ikonene i zoomknappene og
+  tittelstørrelsen i flisene. Avvik i skissene fra designsystemet er innspill til skissene.
 - Det skissene viser som datamotoren ikke har ennå, står tomt: felt som krever en dataplattform har et tomt merke (–), og figurer
   og felt som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget
   ned til (som utgår), viser kommuneplanen i stedet. Kartlagene og listene som ikke er i skissene, som dagens arealklasser,

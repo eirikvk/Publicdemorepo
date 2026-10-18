@@ -46,7 +46,7 @@ import {
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
-import { GRAALAG, SKOGLAG, VATMARKLAG, VERDILAG, VERNEFORMFARGE, VERNLAG } from '../kartlag.ts';
+import { GRAALAG, SKOGLAG, VATMARKLAG, VERDILAG, VERNEFORMFARGE, VERNLAG, velgVerneformer } from '../kartlag.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -119,6 +119,9 @@ function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; 
   );
 }
 
+/* Verditabellen i Miljødirektoratets veileder M-1941 (Konsekvensutredning av klima og miljø), kapittelet om å sette verdi */
+const M1941 =
+  'https://www.miljodirektoratet.no/ansvarsomrader/overvaking-arealplanlegging/arealplanlegging/konsekvensutredninger/metode-for-utredning/naturmangfold/1.4-sett-verdi';
 /* Kilden til lagene fra grunnkartet, i lagvelgeren */
 const GK = 'Grunnkart for arealanalyse';
 /* Kilden for tallene fra grunnkartet med detaljklassene */
@@ -178,7 +181,7 @@ function Skog({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Skog i kommunen', svar(S, s => iTekst(s.km2))],
-        ['Andel av landarealet som er skog', svar(S, s => prosent(s.andel))],
+        ['Andel av kommunens landareal som er skog', svar(S, s => prosent(s.andel))],
         ['Skog som er vernet', svar(V, v => iTekst(v.skog))]
       ]}
       kilde={GRUNNKART_KILDE}
@@ -290,11 +293,15 @@ function Skog({ tema }: { tema: Tema }) {
         {svar(S, s => (
           <Kake
             hva="Skog i grunnkartet etter underlag"
-            data={s.underlag.map(u =>
-              u.id === 'vanlig'
-                ? { navn: 'Skog på fastmark', km2: u.km2, farge: 'kake-graa' }
-                : { navn: u.navn, km2: u.km2, farge: u.id === 'myr' ? 'myr-tresatt' : 'beite-tresatt', prikker: true }
-            )}
+            fast
+            data={['myr', 'beite', 'vanlig']
+              .map(id => s.underlag.find(u => u.id === id))
+              .filter(u => !!u)
+              .map(u =>
+                u.id === 'vanlig'
+                  ? { navn: 'Skog på fastmark', km2: u.km2, farge: 'kake-graa' }
+                  : { navn: u.navn, km2: u.km2, farge: u.id === 'myr' ? 'myr-tresatt' : 'beite-tresatt', prikker: true }
+              )}
           />
         ))}
       </Figur>
@@ -356,7 +363,7 @@ function Vatmark({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Våtmark i kommunen', svar(W, w => iTekst(w.km2))],
-        ['Andel av landarealet som er våtmark', svar(W, w => prosent(w.andel))]
+        ['Andel av kommunens landareal som er våtmark', svar(W, w => prosent(w.andel))]
       ]}
       kilde={GRUNNKART_KILDE}
       fremhevet={<VatmarkIPlan P={P} />}
@@ -385,6 +392,36 @@ function Vatmark({ tema }: { tema: Tema }) {
         </>
       }
       sporsmal={[
+        [
+          'Hvorfor er våtmark viktig?',
+          <p>
+            Myr lagrer mye karbon, og nedbygging av myr slipper ut klimagasser. Våtmark holder tilbake vann og kan dempe
+            flom, til den er mettet. Den kan også bedre vannkvaliteten og redusere avrenning fra arealene rundt. Mange
+            arter lever i våtmark, og over 600 rødlistede arter er knyttet til myr.
+          </p>
+        ],
+        [
+          'Er det utbyggingsforbud i myr?',
+          <>
+            <p>
+              Nei, ikke per oktober 2026. Et forbud mot nedbygging av myr i plan- og bygningsloven var på høring i 2025,
+              og venter på politisk behandling.
+            </p>
+            <p>
+              Nydyrking av myr er forbudt siden 2020, og nye uttak av torv er forbudt fra 1. januar 2026. Statlige
+              planretningslinjer og nasjonale forventninger sier at nedbygging av myr skal unngås så langt som mulig,
+              men det er ikke et forbud.
+            </p>
+          </>
+        ],
+        [
+          'Hvor kan jeg se restaurert eller restaurerbar myr?',
+          <p>
+            Vi har ikke funnet et offentlig kart over restaurerte eller restaurerbare myrer for hele landet.
+            Miljødirektoratet har kartet «Drensgrøfter i myr», som viser grøfter i myr, men ikke hva som er restaurert.
+            Et nytt landsdekkende kart over myr og våtmark er under arbeid fram til 2027.
+          </p>
+        ],
         [
           'Hvorfor er tresatt myr med i våtmarken?',
           <p>
@@ -487,7 +524,7 @@ function Vern({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Vernet natur i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av landarealet som er vernet', svar(V, x => prosent(x.andelLand))]
+        ['Andel av kommunens landareal som er vernet', svar(V, x => prosent(x.andelLand))]
       ]}
       kilde={
         <p>
@@ -503,9 +540,10 @@ function Vern({ tema }: { tema: Tema }) {
           navn: 'Verneområder per verneform',
           kilde: 'Naturvernområder',
           farger: VERNEFORMGRUPPER.map(([id, navn]) => [navn, VERNEFORMFARGE[id]] as [string, string]),
-          ol: VERNLAG.verneformer
+          ol: VERNLAG.verneformer,
+          velg: velgVerneformer
         },
-        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', farger: [['Verneområde', 'vern']], av: true },
+        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', skjul: true },
         {
           id: 'natur',
           navn: 'Naturen i verneområder',
@@ -549,6 +587,14 @@ function Vern({ tema }: { tema: Tema }) {
         ]
       ]}
       ressurser={[
+        [
+          'Les om Norges verneområder',
+          'https://www.miljodirektoratet.no/ansvarsomrader/vernet-natur/norges-verneomrader/'
+        ],
+        [
+          'Faktaark for verneområdene – Naturbase søk',
+          'https://www.miljodirektoratet.no/tjenester/naturbase/enkelt-sok/'
+        ],
         ['Naturvernområder, datasettet', KILDE.vern.adresse],
         ['Verneområdene i dagens løsning', iDagens('vern')]
       ]}
@@ -569,9 +615,7 @@ function Vern({ tema }: { tema: Tema }) {
           {svar(F, f => (
             <Stolper
               hva="Vernet areal per verneform"
-              data={f.map(x => {
-                return { navn: verneform(x.verneform), km2: x.km2, farge: VERNEFORMFARGE[x.gruppe] };
-              })}
+              data={f.map(x => ({ navn: x.navn, km2: x.km2, farge: VERNEFORMFARGE[x.gruppe] }))}
             />
           ))}
         </Figur>
@@ -702,18 +746,12 @@ function Verdi({ tema }: { tema: Tema }) {
           id: 'tema',
           navn: 'Verdsatte naturtyper',
           kilde: 'Naturtyper – verdsatte',
-          farger: klasser.map(([navn, farge]) => [navn, farge] as [string, string])
-        },
-        {
-          id: 'vurderes',
-          navn: 'Verdsatt natur som vurderes',
-          kilde: 'Naturtyper – verdsatte',
           farger: [
+            ...klasser.map(([navn, farge]) => [navn, farge] as [string, string]),
             ['Vurderes per lokalitet', 'vurderes1'],
             ['Vurderes per naturtype', 'vurderes2']
           ],
-          ol: VERDILAG.vurderes,
-          av: true
+          med: [VERDILAG.vurderes]
         },
         {
           id: 'dekning',
@@ -735,7 +773,8 @@ function Verdi({ tema }: { tema: Tema }) {
           <Trekkspill tittel="Hva er verdsatt natur som vurderes?">
             <p>
               Noen lokaliteter har ikke fått en verdi fra noe verdi til svært stor verdi, men skal vurderes per
-              lokalitet eller per naturtype. De er ikke med i tallene for verdsatt natur, men kan vises som eget lag.
+              lokalitet eller per naturtype. De er ikke med i tallene for verdsatt natur, men vises i kartet i egne
+              farger.
             </p>
           </Trekkspill>
           <Trekkspill tittel="Hva er dekningskart?">
@@ -748,6 +787,14 @@ function Verdi({ tema }: { tema: Tema }) {
       }
       sporsmal={[
         [
+          'Hva er en naturtype?',
+          <p>
+            Her betyr naturtype en type natur som Miljødirektoratet har valgt ut for kartlegging. Naturtypene er
+            definert med Natur i Norge (NiN), et system for å beskrive variasjonen i naturen. Typene er valgt fordi de
+            er truet, viktige for mange arter, har sentrale økosystemfunksjoner eller er dårlig kartlagt.
+          </p>
+        ],
+        [
           'Hvorfor bør man passe på verdsatte naturtyper?',
           <p>
             Lokaliteter med stor og svært stor verdi er av nasjonal eller vesentlig regional betydning, og er særlig
@@ -756,6 +803,16 @@ function Verdi({ tema }: { tema: Tema }) {
         ]
       ]}
       ressurser={[
+        [
+          'Naturtyper som kartlegges etter Miljødirektoratets instruks',
+          'https://www.miljodirektoratet.no/ansvarsomrader/overvaking-arealplanlegging/naturkartlegging/myndigheter/kartlegging-av-naturtyper-etter-miljodirektoratets-instruks/hvilke-naturtyper-kartlegges/'
+        ],
+        ['Verdisetting i konsekvensutredning', M1941],
+        ['Truede naturtyper, rødlista – Artsdatabanken', 'https://lister.artsdatabanken.no/naturtyper/2025'],
+        [
+          'Kartlegging etter NiN – Artsdatabanken',
+          'https://artsdatabanken.no/naturtyper/natur-i-norge/kartlegging-etter-nin'
+        ],
         ['Naturtyper – verdsatte, datasettet', KILDE.verdsatt.adresse],
         ['Naturtyper på land (NiN), dekningskartet', KILDE.nin.adresse],
         ['Verdsatt natur i dagens løsning', iDagens('verdi')]
@@ -766,7 +823,11 @@ function Verdi({ tema }: { tema: Tema }) {
           tittel="Fordeling av verdiene"
           tekst={
             <p>
-              Det er flere faktorer som bestemmer hvilken verdi en naturtype får, det avhenger blant annet av:
+              Verdien settes etter{' '}
+              <a href={M1941} target="_blank" rel="noopener">
+                verditabellen i M-1941
+              </a>
+              . Det er flere faktorer som bestemmer hvilken verdi en naturtype får, det avhenger blant annet av:
               naturtypelokalitetens kvalitet, om naturtypen er en utvalgt naturtype etter naturmangfoldloven, om
               naturtypen har en sentral økosystemfunksjon, om den er truet, nær truet eller har status som spesielt
               dårlig kartlagt på rødlista for naturtyper.
@@ -779,7 +840,7 @@ function Verdi({ tema }: { tema: Tema }) {
                 Svært stor og stor verdi er av nasjonal eller vesentlig regional betydning. Middels og noe verdi er av
                 mer lokal betydning. Lokaliteter som vurderes per lokalitet eller per naturtype, er ikke med i figuren.
                 {vv
-                  ? ` I ${kommunen()} gjelder det ${antallOrd(vv.omrader.length)} ${vv.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} med til sammen ${iTekst(vv.sum)}${vurderesTekst(vv)}. De kan vises som eget lag i kartet.`
+                  ? ` I ${kommunen()} gjelder det ${antallOrd(vv.omrader.length)} ${vv.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} med til sammen ${iTekst(vv.sum)}${vurderesTekst(vv)}. De vises i kartet i egne farger.`
                   : VV.s === 'ok'
                     ? ` ${kommunen()} har ingen slike lokaliteter.`
                     : ''}
@@ -788,6 +849,7 @@ function Verdi({ tema }: { tema: Tema }) {
           }
         >
           <Stolper
+            smale
             hva="Areal per verdikategori"
             data={klasser.map(([navn, farge], i) => ({ navn, km2: v.perKlasse![i].km2, farge }))}
           />
@@ -879,20 +941,20 @@ function Inon({ tema }: { tema: Tema }) {
           </Trekkspill>
           <Trekkspill tittel="Datagrunnlaget bak inngrepsfri natur">
             <p>
-              {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra et bilde av kommunen med ruter på noen
-              titalls meter.
+              {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra kartbilder av kommunen i ruter på 10
+              meter.
             </p>
           </Trekkspill>
         </>
       }
       kort={[
         ['Inngrepsfri natur i kommunen', svar(I, x => iTekst(x.sum), 'Ingen')],
-        ['Andel av landarealet', svar(I, x => prosent(x.andelLand), '0 %')]
+        ['Andel av kommunens landareal som er inngrepsfri natur', svar(I, x => prosent(x.andelLand), '0 %')]
       ]}
       kilde={
         <p>
-          {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra et bilde av kommunen med ruter på noen
-          titalls meter. Andelen er av landarealet.
+          {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra kartbilder av kommunen i ruter på 10 meter.
+          Andelen er av landarealet.
         </p>
       }
       lag={[
@@ -932,6 +994,7 @@ function Inon({ tema }: { tema: Tema }) {
           kilder={['inon']}
         >
           <Stolper
+            brede
             hva="Inngrepsfri natur per sone"
             data={[2, 1, 0].map(i => ({
               navn: INONSONER[i][4],
@@ -966,6 +1029,7 @@ function Inon({ tema }: { tema: Tema }) {
             <p>
               Når det kommer et nytt inngrep, flytter naturen rundt seg ned en sone: villmark blir til sone 1, sone 1
               blir til sone 2, og sone 2 blir til inngrepsnær natur, som ligger mindre enn én kilometer fra et inngrep.
+              Derfor øker inngrepsnær natur når de andre sonene minker.
             </p>
           </>
         }
@@ -977,12 +1041,17 @@ function Inon({ tema }: { tema: Tema }) {
   );
 }
 
+/* Første avsnitt om inngrepsfri natur i villreinområdene, som i skissene, også når kommunen ikke har villreinområder */
+const VILLREIN_SKY =
+  'Villrein er sky og holder seg unna veier, hytter, kraftlinjer og andre inngrep. Derfor trenger villreinen store områder uten slike inngrep. Inngrepsfri natur er områder som ligger mer enn én kilometer fra tyngre tekniske inngrep.';
+
 function Rein({ tema }: { tema: Tema }) {
   const { T, plan } = naturtema('rein'),
     v = T.s === 'ok' ? T.v : null,
     R = villreinPerOmrade(),
     IV = inonIVillrein(),
-    GV = graaIVillrein();
+    GV = graaIVillrein(),
+    ingen = !!v && !v.antall;
   const kommunenavn = (s: unknown) =>
     String(s || '')
       .split(',')
@@ -1010,14 +1079,19 @@ function Rein({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Villreinområder i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av landarealet som er villreinområde', svar(T, x => prosent(x.andelLand))],
+        ['Andel av kommunens landareal som er villreinområde', svar(T, x => (x.antall ? prosent(x.andelLand) : '0 %'))],
         [
           'Andel villreinområde som er inngrepsfri natur',
-          <span className="tallkort-to">
-            <b>{svar(IV, x => prosent(x!.andel), 'Ingen villreinområder')}</b>
-            <span className="tallkort-etikett">Andel villreinområde som er grå arealer</span>
-            <b>{svar(GV, x => (x!.andel === null ? '–' : andelTekst(x!.andel)), 'Ingen villreinområder')}</b>
-          </span>
+          /* Uten villreinområder er andelen av dem verken et tall eller null: én strek, som for andre tall som ikke finnes */
+          ingen ? (
+            '–'
+          ) : (
+            <span className="tallkort-to">
+              <b>{svar(IV, x => prosent(x!.andel), '–')}</b>
+              <span className="tallkort-etikett">Andel villreinområde som er grå arealer</span>
+              <b>{svar(GV, x => (x!.andel === null ? '–' : andelTekst(x!.andel)), '–')}</b>
+            </span>
+          )
         ]
       ]}
       kilde={
@@ -1040,17 +1114,6 @@ function Rein({ tema }: { tema: Tema }) {
         { ...KLASSER, av: true },
         { ...PLAN, av: true }
       ]}
-      lagEtter={
-        <div className="trekkspill-liste">
-          <Trekkspill tittel="Hva er sammenhengen mellom villreinområder og grå areal?">
-            <p>
-              Grått areal er areal som er tatt i bruk, som veier, hytter og anlegg. Villreinen holder seg unna slike
-              inngrep, så grått areal i villreinområdene gjør området mindre brukbart for villreinen. Laget «Grått
-              areal» viser det grå arealet i hele kommunen, sammen med villreinområdene.
-            </p>
-          </Trekkspill>
-        </div>
-      }
       sporsmal={[
         [
           'Hvorfor har Norge et særlig ansvar for villreinen?',
@@ -1065,13 +1128,33 @@ function Rein({ tema }: { tema: Tema }) {
             Villreinen er sky og trenger store områder uten inngrep. Utbygging i og nær villreinområdene kan stenge
             trekkveier og gjøre beiter mindre brukt.
           </p>
+        ],
+        [
+          'Hva truer villreinen?',
+          <p>
+            Den største trusselen er inngrep som hytter, veier og kraftanlegg, som krymper og deler opp leveområdene.
+            Mye ferdsel forstyrrer reinen, så den får mindre ro til å beite. Skrantesjuke er påvist på Hardangervidda og
+            i Nordfjella, og klimaendringer er også en trussel. Den første klassifiseringen etter kvalitetsnormen for
+            villrein ga dårlig tilstand i 12 av 24 villreinområder.
+          </p>
         ]
       ]}
       ressurser={[
+        ['Villrein i Norge', 'https://www.miljodirektoratet.no/ansvarsomrader/arter-naturtyper/vilt/villrein/'],
+        ['Villrein.no', 'https://villrein.no/'],
         ['Villreinområder, datasettet', KILDE.villrein.adresse],
         ['Villrein i dagens løsning', iDagens('rein')]
       ]}
     >
+      <div className="trekkspill-liste under-kart">
+        <Trekkspill tittel="Hva er sammenhengen mellom villreinområder og grå areal?">
+          <p>
+            Grått areal er areal som er tatt i bruk, som veier, hytter og anlegg. Villreinen holder seg unna slike
+            inngrep, så grått areal i villreinområdene gjør området mindre brukbart for villreinen. Laget «Grått areal»
+            viser det grå arealet i hele kommunen, sammen med villreinområdene.
+          </p>
+        </Trekkspill>
+      </div>
       {v && v.antall > 0 && (
         <Figur
           tittel={`${kommunen()}s villreinområder`}
@@ -1118,11 +1201,7 @@ function Rein({ tema }: { tema: Tema }) {
           tittel="Inngrepsfri natur i villreinområdene"
           tekst={
             <>
-              <p>
-                Villrein er sky og holder seg unna veier, hytter, kraftlinjer og andre inngrep. Derfor trenger
-                villreinen store områder uten slike inngrep. Inngrepsfri natur er områder som ligger mer enn én
-                kilometer fra tyngre tekniske inngrep.
-              </p>
+              <p>{VILLREIN_SKY}</p>
               <p>
                 Figuren viser hvor mye inngrepsfri natur det er i villreinområdene i {kommunen()} i dag, per sone.
                 Hvordan dette har endret seg over tid, krever kartene for tidligere år, som ikke er koblet.
@@ -1143,7 +1222,10 @@ function Rein({ tema }: { tema: Tema }) {
         <Figur
           tittel="Inngrepsfri natur i villreinområdene"
           tekst={
-            <p>Hvor mye av villreinområdene i kommunen som er inngrepsfri natur, og hvordan det har endret seg.</p>
+            <>
+              <p>{VILLREIN_SKY}</p>
+              <p>Figuren viser hvor mye av villreinområdene i kommunen som er inngrepsfri natur, per sone.</p>
+            </>
           }
           kilder={['inon', 'villrein']}
         >
@@ -1172,7 +1254,7 @@ function Bynatur({ tema }: { tema: Tema }) {
       }
       kort={[
         ['Grått areal i kommunen', svar(G, x => iTekst(x.sum))],
-        ['Andel av landarealet', svar(G, x => prosent(x.andelLand))],
+        ['Andel av kommunens landareal som er grått areal', svar(G, x => prosent(x.andelLand))],
         ['Planlagt utbygging på grått areal', p ? prosent(p.andelGraa) : <span className="henter">Regnes ut …</span>]
       ]}
       kilde={

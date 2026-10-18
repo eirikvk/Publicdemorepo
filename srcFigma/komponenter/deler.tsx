@@ -80,21 +80,22 @@ export const Bilde = ({ tema, farge, liten }: { tema: string; farge: string; lit
   </div>
 );
 
-/* Ikonet for et tema i den runde flaten ved tittelen, som i skissene: en gran for skog, en øyenstikker for våtmark, et reinsdyrhode
-   for villrein, hus og tre for bynaturen, og en bok for de andre (som skissene) */
+/* Ikonet for et tema i den runde flaten ved tittelen, som i skissene: en gran for skog, en fylt øyenstikker på skrå for våtmark, et
+   reinsdyrhode med gevir for villrein, hus og tre for bynaturen, og en bok for de andre (som skissene) */
 const IKON: Record<string, ReactNode> = {
   skog: <path d="M12 3v18M12 6 9 9m3-3 3 3m-3 1-4 4m4-4 4 4m-4 0-5 4m5-4 5 4" />,
   vatmark: (
-    <>
-      <path d="M12 6v15" />
-      <ellipse cx="7" cy="8" rx="5" ry="1.8" transform="rotate(-18 7 8)" />
-      <ellipse cx="17" cy="8" rx="5" ry="1.8" transform="rotate(18 17 8)" />
-      <ellipse cx="7.8" cy="12" rx="4.2" ry="1.6" transform="rotate(14 7.8 12)" />
-      <ellipse cx="16.2" cy="12" rx="4.2" ry="1.6" transform="rotate(-14 16.2 12)" />
-    </>
+    <g transform="rotate(45 12 12)" fill="currentColor" stroke="none">
+      <circle cx="12" cy="4.6" r="1.8" />
+      <rect x="11.2" y="6.4" width="1.6" height="15.4" rx="0.8" />
+      <ellipse cx="6.8" cy="8" rx="5" ry="1.3" transform="rotate(-14 6.8 8)" />
+      <ellipse cx="17.2" cy="8" rx="5" ry="1.3" transform="rotate(14 17.2 8)" />
+      <ellipse cx="7.3" cy="11.3" rx="4.4" ry="1.2" transform="rotate(12 7.3 11.3)" />
+      <ellipse cx="16.7" cy="11.3" rx="4.4" ry="1.2" transform="rotate(-12 16.7 11.3)" />
+    </g>
   ),
   villrein: (
-    <path d="M9.5 21 8 14a4 4 0 0 1 8 0l-1.5 7zM8.5 11 5 5m0 0L3 6m2-1 1-2.5M15.5 11 19 5m0 0 2 1m-2-1-1-2.5M7 8H4.5m12.5 0h2.5" />
+    <path d="M8.5 11h7v3.5c0 2.8-1.6 5.5-3.5 5.5s-3.5-2.7-3.5-5.5zM8.5 12 5.5 10.5M15.5 12l3-1.5M10 11 7.5 4M8.6 7.2 5.5 6M8 5.6l1.3-2.1M14 11l2.5-7M15.4 7.2l3.1-1.2M16 5.6l-1.3-2.1" />
   ),
   bynatur: <path d="M3 21V10h6v11m0 0V5h6v16m3 0v-5m0 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6M2 21h20" />,
   bok: <path d="M6 3.5h11.5v14H7.5A1.5 1.5 0 0 0 6 19V3.5zm0 15.5a1.5 1.5 0 0 0 1.5 1.5h10v-3M9.5 3.5v14" />
@@ -105,7 +106,7 @@ export const TemaIkon = ({ id }: { id: string }) => (
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -120,7 +121,7 @@ export function Helt({ tema, children }: { tema: Tema; children?: ReactNode }) {
   return (
     <section className="helt">
       <div className="helt-tekst">
-        <h1>
+        <h1 className="md-typography-heading-xl">
           <TemaIkon id={tema.id} />
           {tema.navn}
         </h1>
@@ -196,7 +197,7 @@ export function Figur({
   return (
     <section className="figur">
       <div className="figur-tekst">
-        <h2 className="figur-tittel">{tittel}</h2>
+        <h2 className="figur-tittel md-typography-heading-s">{tittel}</h2>
         <div className="figur-forklaring">{tekst}</div>
         <Kilde kilder={kilder} />
       </div>
@@ -215,17 +216,28 @@ export function Figur({
   );
 }
 
-/* Stående stolper med arealet over og navnet under, i kartets farger */
+/* Stående stolper med arealet over og navnet under, i kartets farger. smale gir smale stolper med runde hjørner, og brede stolper
+   som fyller hele bredden, som i figurene i skissene. */
 export interface Stolpe {
   navn: string;
   km2: number;
   farge: string;
   under?: string;
 }
-export function Stolper({ data, hva }: { data: Stolpe[]; hva: string }) {
+export function Stolper({
+  data,
+  hva,
+  smale,
+  brede
+}: {
+  data: Stolpe[];
+  hva: string;
+  smale?: boolean;
+  brede?: boolean;
+}) {
   const maks = Math.max(...data.map(d => d.km2), 1e-9);
   return (
-    <figure className="stolper" aria-label={hva}>
+    <figure className={'stolper' + (smale ? ' smale' : '') + (brede ? ' brede' : '')} aria-label={hva}>
       {data.map(d => (
         <div className="stolpe" key={d.navn}>
           <div className="stolpe-ramme">
@@ -246,18 +258,19 @@ export function Stolper({ data, hva }: { data: Stolpe[]; hva: string }) {
 }
 
 /* Et kakediagram med navnet og arealet ved hver bit, som i skissene. prikker gir biten et prikkete mønster (tresatt myr og beite).
-   Navnene står utenfor kaken, på samme side som biten, og flyttes fra hverandre når de ville kommet for tett. */
-export function Kake({ data, hva }: { data: (Stolpe & { prikker?: boolean })[]; hva: string }) {
+   Bitene står med klokka fra toppen, de minste først, eller i rekkefølgen de er gitt (fast). Navnene står utenfor kaken, på samme
+   side som biten, og flyttes fra hverandre når de ville kommet for tett. */
+export function Kake({ data, hva, fast }: { data: (Stolpe & { prikker?: boolean })[]; hva: string; fast?: boolean }) {
   const id = useId().replace(/:/g, ''),
     sum = data.reduce((a, d) => a + d.km2, 0) || 1,
-    R = 158,
+    R = 176,
     cx = 400,
     cy = 220;
   let v = -Math.PI / 2;
-  /* De minste bitene først, så de står øverst til høyre, som i skissene */
+  /* De minste bitene først, så de står øverst til høyre, som i skissene, eller i rekkefølgen de er gitt */
   const biter = [...data]
     .filter(d => d.km2 > 0)
-    .sort((a, b) => a.km2 - b.km2)
+    .sort((a, b) => (fast ? 0 : a.km2 - b.km2))
     .map(d => {
       const a0 = v,
         a1 = v + (d.km2 / sum) * 2 * Math.PI;
@@ -354,7 +367,7 @@ export function Liggende({ data, hva, tekst }: { data: Stolpe[]; hva: string; te
 export const Mangler = ({ tittel, trenger, merke }: { tittel: string; trenger: string; merke?: string }) => (
   <section className="mangler">
     <span className="mangler-merke">{merke || 'Ikke laget ennå'}</span>
-    <h2 className="md-typography-heading-s">{tittel}</h2>
+    <h2 className="md-typography-heading-m">{tittel}</h2>
     <p>Krever: {trenger}</p>
   </section>
 );
@@ -368,7 +381,7 @@ export const Fremhevet = ({ children, varsel }: { children: ReactNode; varsel?: 
 export function Ressurser({ lenker }: { lenker: [tekst: string, url: string][] }) {
   return (
     <section className="ressurser">
-      <h2 className="md-typography-heading-s">Ressurser</h2>
+      <h2 className="md-typography-heading-m">Ressurser</h2>
       <ul>
         {lenker.map(([tekst, url]) => {
           const ut = /^https?:/.test(url);
@@ -393,7 +406,7 @@ export function Ressurser({ lenker }: { lenker: [tekst: string, url: string][] }
 export function Sporsmal({ liste }: { liste: [sporsmal: string, svar: ReactNode][] }) {
   return (
     <section className="sporsmal">
-      <h2 className="md-typography-heading-s">Ofte stilte spørsmål</h2>
+      <h2 className="md-typography-heading-m">Ofte stilte spørsmål</h2>
       {liste.map(([s, sv]) => (
         <Trekkspill key={s} tittel={s}>
           {sv}
@@ -408,7 +421,7 @@ const NESTE = ['skog', 'vatmark', 'verdsatte-naturtyper', 'verneomrader', 'villr
 export function NestePerspektiv() {
   return (
     <section className="neste">
-      <h2 className="md-typography-heading-s">Utforsk neste perspektiv</h2>
+      <h2 className="md-typography-heading-m">Utforsk neste perspektiv</h2>
       <ul className="fliser">
         {NESTE.map(id => TEMAER.find(t => t.id === id)!).map(t => (
           <li key={t.id}>
@@ -452,7 +465,7 @@ export function Temagrupper({ oversikt }: { oversikt?: boolean }) {
     <div className="temagrupper">
       {GRUPPER.filter(g => !oversikt || g !== 'Nærnaturen').map(g => (
         <section key={g}>
-          <h3>{g}</h3>
+          <h3 className="md-typography-heading-s">{g}</h3>
           <ul className="temakort">
             {TEMAER.filter(t => t.gruppe === g).map(t => {
               const S = temaflis(t.id);

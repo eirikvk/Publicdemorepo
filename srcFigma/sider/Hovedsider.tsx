@@ -220,7 +220,7 @@ function plassering(p: Plassering): [merke: string | null, under: string] {
   const merke = p.plass <= 3 ? 'Bunn 3' : p.plass <= 10 ? 'Bunn 10' : `Nr. ${p.plass}`;
   return [
     merke,
-    `Nr. ${p.plass} av ${p.av}, svakere enn ${Math.floor(((p.av - p.plass) / p.av) * 100)} % av kommunene`
+    `Nr. ${p.plass} av ${p.av} kommuner som kan sammenlignes, svakere enn ${Math.floor(((p.av - p.plass) / p.av) * 100)} % av dem`
   ];
 }
 const DATAPLATTFORM = 'Krever dataplattform';
@@ -240,7 +240,7 @@ export function Oversikt() {
       <div className="innhold">
         <section className="oversikt-topp">
           <div className="oversikt-venstre">
-            <h1>Naturregnskap for {k} kommune</h1>
+            <h1 className="md-typography-heading-xl">Naturregnskap for {k} kommune</h1>
             {svar(U, u => (
               <ul className="klassekort">
                 {u.klasser.map(x => (
@@ -312,7 +312,7 @@ export function Oversikt() {
       <div className="innhold">
         <section className="nedbygd">
           <div className="seksjonstopp">
-            <h2>Hva slags natur ble bygget ned?</h2>
+            <h2 className="md-typography-heading-l">Hva slags natur ble bygget ned?</h2>
             <Lenke til={{ side: 'naturtapet' }} className="pil-lenke">
               Mer om naturtapet →
             </Lenke>
@@ -380,12 +380,12 @@ export function Oversikt() {
       </Baand>
       <div className="innhold">
         <section className="sammenligning">
-          <h2>{k} sammenlignet med resten av Norge</h2>
+          <h2 className="md-typography-heading-l">{k} sammenlignet med resten av Norge</h2>
           <p className="seksjonsingress">
             Vi har sammenlignet kart og naturdata for alle Norges kommuner og trekker frem tre høydepunkt og tre
             forbedringsområder.
           </p>
-          <h3>Tre høydepunkt</h3>
+          <h3 className="md-typography-heading-s">Tre høydepunkt</h3>
           <ul className="plasskortene">
             <Plasskort
               god
@@ -409,7 +409,7 @@ export function Oversikt() {
               under={DATAPLATTFORM}
             />
           </ul>
-          <h3>Tre forbedringsområder</h3>
+          <h3 className="md-typography-heading-s">Tre forbedringsområder</h3>
           <ul className="plasskortene">
             <Plasskort
               tittel="Landbruksjord"
@@ -455,7 +455,7 @@ export function Oversikt() {
         </section>
         <section className="utforsk-del">
           <div className="seksjonstopp">
-            <h2>Utforsk naturen i {k}</h2>
+            <h2 className="md-typography-heading-l">Utforsk naturen i {k}</h2>
             <Lenke til={{ side: 'utforsk' }} className="mer-lenke">
               Mer →
             </Lenke>
@@ -483,7 +483,7 @@ export function Naturtapet() {
     <>
       <div className="innhold">
         <section className="sidetopp">
-          <h1 className="md-typography-heading-l">Naturtapet i {kommunen()}</h1>
+          <h1 className="md-typography-heading-xl">Naturtapet i {kommunen()}</h1>
           <p className="ingress">
             Her ser du hvor mye natur og jordbruk kommuneplanen setter av til utbygging, hvor mye av det som ligger i
             verdifull natur, og hva SSB-tallene sier om arealet siden 2017.
@@ -626,7 +626,7 @@ export function Utforsk() {
   return (
     <div className="innhold">
       <section className="sidetopp">
-        <h1 className="md-typography-heading-l">Utforsk naturen i {kommunen()}</h1>
+        <h1 className="md-typography-heading-xl">Utforsk naturen i {kommunen()}</h1>
         <p className="ingress">
           Velg et perspektiv for å se hvor mye det er av det i kommunen, hvor det ligger, og hvor mye som er satt av til
           utbygging.
@@ -662,7 +662,7 @@ export function Utforskkart() {
     <>
       <div className="innhold">
         <section className="sidetopp">
-          <h1 className="md-typography-heading-l">Utforsk {kommunen()} i kart</h1>
+          <h1 className="md-typography-heading-xl">Utforsk {kommunen()} i kart</h1>
           <p className="ingress">
             Velg et tema, og trykk i kartet for å se hva som er der. Trykker du utenfor kommunen, kan du bytte til
             kommunen der.
@@ -689,19 +689,19 @@ export function Hjelp() {
   return (
     <div className="innhold smal">
       <section className="sidetopp">
-        <h1 className="md-typography-heading-l">Hjelp og veileder</h1>
+        <h1 className="md-typography-heading-xl">Hjelp og veileder</h1>
         <p className="ingress">
           Dette er en prototyp. Utseendet og navigeringen er fra Figma-skissene for naturregnskapet. Tallene og kartet
           kommer fra den samme datamotoren som dagens løsning, som henter alt direkte fra åpne kilder.
         </p>
       </section>
-      <h2 className="md-typography-heading-s">Hva som er ekte, og hva som mangler</h2>
+      <h2 className="md-typography-heading-m">Hva som er ekte, og hva som mangler</h2>
       <p>
         Alle tall på sidene er ekte og gjelder kommunen du har valgt. Der skissene viser noe datamotoren ikke har ennå,
         står det en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra skissene er ikke med, fordi
         rettighetene ikke er avklart. Temaene har i stedet en enkel illustrasjon som er laget med KI, og merket med det.
       </p>
-      <h2 className="md-typography-heading-s">Kildene</h2>
+      <h2 className="md-typography-heading-m">Kildene</h2>
       <ul className="kildeliste">
         {Object.values(KILDE).map(k => (
           <li key={k.adresse}>
@@ -712,7 +712,7 @@ export function Hjelp() {
           </li>
         ))}
       </ul>
-      <h2 className="md-typography-heading-s">Mer</h2>
+      <h2 className="md-typography-heading-m">Mer</h2>
       <p>
         <a href={`../#${app.valgt ? app.valgt.nr : ''}/om`}>Om og metode i dagens løsning</a> forklarer hvordan tallene
         er regnet ut. Temaene her er {TEMAER.length}, i tre grupper.
@@ -725,7 +725,7 @@ export function Ukjent() {
   return (
     <div className="innhold smal">
       <section className="sidetopp">
-        <h1 className="md-typography-heading-l">Fant ikke siden</h1>
+        <h1 className="md-typography-heading-xl">Fant ikke siden</h1>
         <p className="ingress">Adressen finnes ikke. Kanskje lenken er gammel, eller det er en skrivefeil.</p>
       </section>
       <Fremhevet>

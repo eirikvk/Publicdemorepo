@@ -1,14 +1,16 @@
 /* Kartet i tvillingen: det samme kartet som hovedsiden (src/ui/kart), satt inn her, med lagvelgeren fra Figma ved siden av. Hvilket
    tema kartet viser, følger siden (ui.side, se navigasjon.ts). Lagvelgeren skjuler og viser lagene med gjennomsiktighet, så kartets
-   egen styring av lagene ikke røres. Hvert lag står som i skissene: fargen til venstre, navnet og kilden, og valget til høyre, med
-   fargene under når laget har flere og er slått på. Lag som bare tvillingen har (kartlag.ts), legges inn under planen når kartet vises, og tas ut
-   igjen etterpå. Det finnes ett kart, så bare én side om gangen har det. «Åpne kart i fullskjerm» legger kartet over hele vinduet. */
+   egen styring av lagene ikke røres. Hvert lag står som i skissene: fargen til venstre, navnet og kilden, og valget til høyre. Har
+   laget flere farger, står de under når laget er slått på, og en pil til venstre lukker og åpner dem. Lag som bare tvillingen har
+   (kartlag.ts), legges inn under planen når kartet vises, og tas ut igjen etterpå. Det finnes ett kart, så bare én side om gangen har
+   det. «Åpne kart i fullskjerm» legger kartet over hele vinduet. Zoomknappene har designsystemets ikoner for pluss og minus. */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createRoot } from 'react-dom/client';
 import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
 import { UTM } from '../../src/data/solv/felles.ts';
 import { hentingAvKlasser } from '../../src/data/motor/grunnkart.ts';
-import { app } from '../../src/data/motor/tilstand.ts';
+import { abonner, app } from '../../src/data/motor/tilstand.ts';
 import { verdi } from '../../src/data/motor/valgt.ts';
 import { katalog } from '../../src/data/katalog.ts';
 import { graaLag } from '../../src/ui/kart/graa.ts';
@@ -21,19 +23,42 @@ import { planLag } from '../../src/ui/kart/plan.ts';
 import { byttTilValgt, plasserBytt, settByttKnapp } from '../../src/ui/kart/trykk.ts';
 import { ui } from '../../src/ui/tilstand.ts';
 import { henteKort } from '../../src/ui/tekst.ts';
-import { MdButton, MdIconClose, MdIconExpandContent, MdLoadingSpinner } from '../md.ts';
+import {
+  MdButton,
+  MdIconAdd,
+  MdIconClose,
+  MdIconExpandContent,
+  MdIconKeyboardArrowDown,
+  MdIconRemove,
+  MdLoadingSpinner
+} from '../md.ts';
 import './Kart.css';
 
 /* Et lag i lagvelgeren: hvilke av kartets lag det styrer (klasser, plan eller tema), eller et eget lag (ol), navnet, kilden, fargene
-   i tegnforklaringen [navn, farge], og av når laget er skjult til man slår det på */
+   i tegnforklaringen [navn, farge], og av når laget er skjult til man slår det på. med er egne lag som vises sammen med laget, som
+   lokalitetene som vurderes sammen med verdsatt natur. velg gjør at hver farge kan slås av og på for seg: den får fargene som er slått
+   av. skjul er for et av kartets lag som ikke skal vises på siden: det står ikke i lagvelgeren og er alltid skjult. */
 export interface Kartlag {
   id: string;
   navn: string;
   kilde: string;
   farger?: [navn: string, farge: string][];
   ol?: TileLayer<XYZ>;
+  med?: TileLayer<XYZ>[];
+  velg?: (av: string[]) => void;
   av?: boolean;
+  skjul?: boolean;
 }
+/* Fargene med prikker, som i skissene: tresatt myr og tresatt innmarksbeite */
+const PRIKKET = new Set(['myr-tresatt', 'beite-tresatt']);
+const fargeStil = (f: string): CSSProperties =>
+  PRIKKET.has(f)
+    ? {
+        backgroundColor: `var(--${f})`,
+        backgroundImage: 'radial-gradient(rgb(0 0 0 / 0.32) 1.1px, transparent 1.6px)',
+        backgroundSize: '5px 5px'
+      }
+    : { background: `var(--${f})` };
 const OL_LAG: Record<string, () => { setOpacity(o: number): void }[]> = {
   klasser: () => [klasseLag],
   plan: () => [planLag],
@@ -60,25 +85,64 @@ export const PLAN: Kartlag = {
   ]
 };
 
-/* Kartet zoomer til kommunen når det settes inn */
+/* Kartet viser hele kommunen */
 function tilKommunen() {
   const k = app.valgt,
     G = verdi(katalog.solv.grense),
     u = G ? G.ext : k && k.boks ? ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM) : null;
   if (u && kartet) view.fit(u, { size: kartet.getSize(), padding: [16, 16, 16, 16] });
 }
+/* Designsystemets ikoner for pluss og minus i zoomknappene fra OpenLayers, i stedet for tegnene */
+function zoomIkoner(el: HTMLElement) {
+  for (const [klasse, Ikon] of [
+    ['.ol-zoom-in', MdIconAdd],
+    ['.ol-zoom-out', MdIconRemove]
+  ] as const) {
+    const b = el.querySelector<HTMLButtonElement>(klasse);
+    if (!b || b.dataset.ikon) continue;
+    b.dataset.ikon = 'ja';
+    b.textContent = '';
+    createRoot(b).render(<Ikon aria-hidden="true" />);
+  }
+}
 
+/* Kartet zoomer til kommunen når det settes inn, og igjen når kartet får en annen størrelse eller kommunegrensen kommer, til man
+   flytter kartet selv */
 function Kartflate() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const k = lagKart();
-    k.setTarget(ref.current!);
-    const r = requestAnimationFrame(() => {
-      k.updateSize();
-      tilKommunen();
-    });
+    const k = lagKart(),
+      el = ref.current!;
+    k.setTarget(el);
+    let flyttet = false,
+      grense = verdi(katalog.solv.grense);
+    const flytt = () => (flyttet = true),
+      r = requestAnimationFrame(() => {
+        k.updateSize();
+        tilKommunen();
+        zoomIkoner(el);
+      }),
+      storrelse = new ResizeObserver(() => {
+        k.updateSize();
+        if (!flyttet) tilKommunen();
+      }),
+      slutt = abonner(() => {
+        const G = verdi(katalog.solv.grense);
+        if (G === grense) return;
+        grense = G;
+        if (!flyttet) tilKommunen();
+      });
+    el.addEventListener('pointerdown', flytt);
+    el.addEventListener('wheel', flytt, { passive: true });
+    el.addEventListener('keydown', flytt);
+    storrelse.observe(el);
     return () => {
       cancelAnimationFrame(r);
+      storrelse.disconnect();
+      slutt();
+      el.removeEventListener('pointerdown', flytt);
+      el.removeEventListener('wheel', flytt);
+      el.removeEventListener('keydown', flytt);
       k.setTarget(undefined);
     };
   }, []);
@@ -102,7 +166,8 @@ function Bytt() {
 
 /* Kartet med lagvelgeren ved siden av (lag og det som står under den, etter), som et bånd over hele bredden. stor gir et høyere kart.
    enkel gir bare kartet, med en merkelapp nede til venstre, som på oversikten, og prikken i merkelappen har fargen enkelFarge (en
-   variabel i stilen, til vanlig natur). */
+   variabel i stilen, til vanlig natur). Lag med farger som er slått på, får hver sin merkelapp under, så alt kartet viser, er
+   forklart. */
 export default function Kart({
   lag,
   etter,
@@ -116,36 +181,42 @@ export default function Kart({
   enkel?: string;
   enkelFarge?: string;
 }) {
-  const [skjult, settSkjult] = useState<Record<string, boolean>>(() =>
-      Object.fromEntries(lag.filter(l => l.av).map(l => [l.id, true]))
-    ),
+  const startSkjult = () => Object.fromEntries(lag.filter(l => l.av || l.skjul).map(l => [l.id, true]));
+  const [skjult, settSkjult] = useState<Record<string, boolean>>(startSkjult),
+    [lukket, settLukket] = useState<Record<string, boolean>>({}),
+    [fargeAv, settFargeAv] = useState<Record<string, string[]>>({}),
     [full, settFull] = useState(false),
     henting = hentingAvKlasser(),
     p = ui.probe,
-    avPaa = lag.map(l => l.id + (l.av ? ':av' : '')).join();
-  /* Bytter siden lagene (som kortene på oversikten), starter lagene som de er satt: av eller på */
+    avPaa = lag.map(l => l.id + (l.av ? ':av' : '') + (l.skjul ? ':skjul' : '')).join();
+  /* Bytter siden lagene (som kortene på oversikten), starter lagene som de er satt: av eller på, med alle fargene */
   const forrige = useRef(avPaa);
   useEffect(() => {
     if (forrige.current === avPaa) return;
     forrige.current = avPaa;
-    settSkjult(Object.fromEntries(lag.filter(l => l.av).map(l => [l.id, true])));
+    settSkjult(startSkjult());
+    settFargeAv({});
   }, [avPaa]);
   /* Lagene som er skjult, er gjennomsiktige. Alt vises igjen når kartet tas ut av siden. */
   useEffect(() => {
     for (const [id, f] of Object.entries(OL_LAG)) f().forEach(l => l.setOpacity(skjult[id] ? 0 : 1));
   }, [skjult]);
   useEffect(() => () => Object.values(OL_LAG).forEach(f => f().forEach(l => l.setOpacity(1))), []);
-  /* Egne lag: inn under planen mens kartet vises, og synlige når de er slått på */
-  const egne = lag.filter(l => l.ol);
+  /* Fargene som er slått av i lag der hver farge kan velges, og alle på igjen når kartet tas ut av siden */
+  useEffect(() => lag.forEach(l => l.velg && l.velg(fargeAv[l.id] || [])), [fargeAv, avPaa]);
+  useEffect(() => () => lag.forEach(l => l.velg && l.velg([])), [avPaa]);
+  /* Egne lag (ol, og med som følger laget): inn under planen mens kartet vises, og synlige når laget er slått på */
+  const egne = lag.flatMap(l => [...(l.ol ? [l.ol] : []), ...(l.med || [])].map(o => ({ id: l.id, ol: o }))),
+    egneId = egne.map(e => e.id + ':' + String(e.ol.get('tittel'))).join();
   useEffect(() => {
     const k = lagKart(),
       L = k.getLayers();
-    egne.forEach(l => {
-      if (!L.getArray().includes(l.ol!)) L.insertAt(L.getArray().indexOf(planLag), l.ol!);
+    egne.forEach(e => {
+      if (!L.getArray().includes(e.ol)) L.insertAt(L.getArray().indexOf(planLag), e.ol);
     });
-    return () => egne.forEach(l => L.remove(l.ol!));
-  }, [egne.map(l => l.id).join()]);
-  useEffect(() => egne.forEach(l => l.ol!.setVisible(!skjult[l.id])), [skjult, egne.map(l => l.id).join()]);
+    return () => egne.forEach(e => L.remove(e.ol));
+  }, [egneId]);
+  useEffect(() => egne.forEach(e => e.ol.setVisible(!skjult[e.id])), [skjult, egneId]);
   useEffect(() => {
     if (kartet) kartet.updateSize();
     if (!full) return;
@@ -157,6 +228,12 @@ export default function Kart({
       document.documentElement.classList.remove('kart-fullskjerm');
     };
   }, [full]);
+  /* Merkelappene i det enkle kartet: hovedmerket, og fargene i lagene som er slått på */
+  const merker = enkel
+    ? lag
+        .filter(l => l.farger && !skjult[l.id] && !l.skjul)
+        .flatMap(l => l.farger!.map(([navn, farge]) => [`${l.navn} ${navn.toLowerCase()}`, farge] as const))
+    : [];
   const scene = (
     <div className={'kartscene' + (full ? ' full' : '') + (enkel ? ' enkel' : '')}>
       <Kartflate />
@@ -176,9 +253,16 @@ export default function Kart({
       )}
       <Bytt />
       {enkel && (
-        <div className="kartmerke enkel-merke" style={{ '--merke': `var(--${enkelFarge})` } as CSSProperties}>
-          {enkel}
-        </div>
+        <ul className="enkel-merker">
+          <li className="kartmerke enkel-merke" style={{ '--merke': `var(--${enkelFarge})` } as CSSProperties}>
+            {enkel}
+          </li>
+          {merker.map(([navn, farge]) => (
+            <li key={navn} className="kartmerke enkel-merke" style={{ '--merke': `var(--${farge})` } as CSSProperties}>
+              {navn}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -194,36 +278,73 @@ export default function Kart({
         {scene}
         <div className="lagvelger">
           <ul>
-            {lag.map(l => (
-              <li key={l.id}>
-                <label className="lagrad">
-                  <i
-                    className="lagfarge"
-                    style={{ background: l.farger && l.farger.length === 1 ? `var(--${l.farger[0][1]})` : undefined }}
-                  />
-                  <span className="lagnavn">
-                    <b>{l.navn}</b>
-                    <small>Kilde: {l.kilde}</small>
-                  </span>
-                  <input
-                    type="checkbox"
-                    className="lagvalg"
-                    checked={!skjult[l.id]}
-                    onChange={e => settSkjult({ ...skjult, [l.id]: !e.target.checked })}
-                  />
-                </label>
-                {l.farger && l.farger.length > 1 && !skjult[l.id] && (
-                  <ul className="farger">
-                    {l.farger.map(([navn, farge]) => (
-                      <li key={navn}>
-                        <i style={{ background: `var(--${farge})` }} />
-                        {navn}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
+            {lag
+              .filter(l => !l.skjul)
+              .map(l => {
+                const flere = !!l.farger && l.farger.length > 1,
+                  apen = flere && !skjult[l.id] && !lukket[l.id],
+                  av = fargeAv[l.id] || [];
+                return (
+                  <li key={l.id}>
+                    <div className="lagrad">
+                      {flere ? (
+                        <button
+                          type="button"
+                          className={'lagpil' + (apen ? ' apen' : '')}
+                          aria-expanded={apen}
+                          aria-controls={`farger-${l.id}`}
+                          aria-label={`${apen ? 'Skjul' : 'Vis'} fargene i ${l.navn}`}
+                          disabled={!!skjult[l.id]}
+                          onClick={() => settLukket({ ...lukket, [l.id]: apen })}
+                        >
+                          <MdIconKeyboardArrowDown aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <i className="lagfarge" style={l.farger ? fargeStil(l.farger[0][1]) : undefined} />
+                      )}
+                      <label className="lagnavn" htmlFor={`lag-${l.id}`}>
+                        <b>{l.navn}</b>
+                        <small>Kilde: {l.kilde}</small>
+                      </label>
+                      <input
+                        id={`lag-${l.id}`}
+                        type="checkbox"
+                        className="lagvalg"
+                        checked={!skjult[l.id]}
+                        onChange={e => settSkjult({ ...skjult, [l.id]: !e.target.checked })}
+                      />
+                    </div>
+                    {apen && (
+                      <ul className="farger" id={`farger-${l.id}`}>
+                        {l.farger!.map(([navn, farge]) => (
+                          <li key={navn}>
+                            <i style={fargeStil(farge)} />
+                            {l.velg ? (
+                              <>
+                                <label htmlFor={`farge-${l.id}-${farge}`}>{navn}</label>
+                                <input
+                                  id={`farge-${l.id}-${farge}`}
+                                  type="checkbox"
+                                  className="lagvalg"
+                                  checked={!av.includes(farge)}
+                                  onChange={e =>
+                                    settFargeAv({
+                                      ...fargeAv,
+                                      [l.id]: e.target.checked ? av.filter(f => f !== farge) : [...av, farge]
+                                    })
+                                  }
+                                />
+                              </>
+                            ) : (
+                              <span>{navn}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
           </ul>
           <p className="probe">
             {!p ? 'Trykk i kartet for å se hva som er der.' : p.punkt ? <b>{p.punkt}</b> : p.tekst}

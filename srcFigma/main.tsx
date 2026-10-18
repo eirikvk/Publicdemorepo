@@ -15,6 +15,7 @@ import '@miljodirektoratet/md-css/src/iconButton/iconButton.css';
 import '@miljodirektoratet/md-css/src/link/link.css';
 import '@miljodirektoratet/md-css/src/loadingSpinner/loadingSpinner.css';
 import '@miljodirektoratet/md-css/src/messages/alertMessage.css';
+import '@miljodirektoratet/md-css/src/pagination/pagination.css';
 import 'ol/ol.css';
 import './stil.css';
 import { StrictMode } from 'react';

@@ -46,7 +46,36 @@
   grid-template-columns: 22px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 12px;
+}
+/* Pilen som lukker og åpner fargene i et lag med flere farger, som i skissene */
+.lagpil {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tekst);
+  display: grid;
+  place-items: center;
   cursor: pointer;
+}
+.lagpil svg {
+  width: 22px;
+  height: 22px;
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.lagpil.apen svg {
+  transform: none;
+}
+.lagpil:disabled {
+  color: var(--dempet);
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lagpil svg {
+    transition: none;
+  }
 }
 .lagfarge {
   width: 22px;
@@ -57,6 +86,7 @@
   display: flex;
   flex-direction: column;
   line-height: 1.3;
+  cursor: pointer;
 }
 .lagnavn b {
   font-size: 1.0625rem;
@@ -92,9 +122,14 @@
   font-size: 1.0625rem;
 }
 .lagvelger .farger li {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 22px;
   align-items: center;
   gap: 14px;
+  font-weight: 600;
+}
+.lagvelger .farger label {
+  cursor: pointer;
 }
 .lagvelger .farger i {
   width: 20px;
@@ -191,9 +226,23 @@
   transform: translateX(-50%);
   border-radius: 4px;
 }
-.kartmerke.enkel-merke {
+/* Merkelappene i det enkle kartet, nede til venstre, med hovedmerket øverst */
+.enkel-merker {
+  position: absolute;
+  z-index: 2;
   bottom: 12px;
   left: 12px;
+  max-width: calc(100% - 120px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.enkel-merker .kartmerke {
+  position: static;
+  max-width: 100%;
+}
+.kartmerke.enkel-merke {
   font-weight: 600;
 }
 .kartmerke.enkel-merke::before {
@@ -237,6 +286,12 @@
   font-size: 20px;
   line-height: 1;
 }
+.kartflate .ol-zoom button svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  margin: auto;
+}
 .kartflate .ol-zoom button:hover,
 .kartflate .ol-zoom button:focus {
   background: var(--md-color-primary-120);
@@ -277,9 +332,11 @@
 .kart-enkel .ol-scale-line {
   display: none;
 }
-.kart-enkel .kartmerke.enkel-merke {
+.kart-enkel .enkel-merker {
   bottom: 26px;
   left: 22px;
+}
+.kart-enkel .kartmerke.enkel-merke {
   padding: 4px 16px 4px 12px;
   background: var(--teal-merke);
   box-shadow: none;
@@ -287,9 +344,10 @@
   font-weight: 400;
 }
 @media (max-width: 600px) {
-  .kart-enkel .kartmerke.enkel-merke {
-    max-width: calc(100% - 120px);
+  .kart-enkel .enkel-merker {
     left: 12px;
+  }
+  .kart-enkel .kartmerke.enkel-merke {
     font-size: 0.875rem;
   }
 }

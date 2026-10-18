@@ -1125,9 +1125,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'vernPerVerneform',
       tittel: 'Vernet areal per verneform',
-      om: 'det vernede arealet i kommunen per verneform fra Miljødirektoratet. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'det vernede arealet i kommunen per gruppe av verneformer fra Miljødirektoratet (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning), de samme gruppene som i kartet over verneformene. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Arealet av verneområdene i kommunen summert per verneform. Overlapper to områder med ulik verneform, telles overlappet i begge.',
+        'Arealet av verneområdene i kommunen summert per gruppe av verneformer, gruppert som i kartet over verneformene: dyre- og plantefredning er artsfredning, og det som ikke passer i de andre gruppene, som naturminne og biotopvern, er annen fredning. Overlapper to områder med ulik gruppe, telles overlappet i begge.',
       husk: 12,
       etl: gullTemaer.vernPerVerneform
     }),

@@ -236,16 +236,35 @@ const vernflater = husk((V: VernetFlate[]) => V.map(o => o.koord)),
   vurderes = husk((V: VerdsattVurderes) =>
     V.omrader.map(o => ({ koord: o.koord, ext: o.ext, farge: o.v ? 'vurderes2' : 'vurderes1' }))
   );
-/* Lagene på siden om verneområder: verneområdene etter verneform (gull.verneformer), og naturen i verneområdene, grunnkartets
-   detaljklasser i fargen for hovedøkosystemet, bare innenfor verneområdene */
+/* Gruppene av verneformer som er slått av i lagvelgeren, som fargene deres. Flatene som vises, er de samme så lenge tabellen og valget
+   er de samme. */
+let vernAv: string[] = [];
+let vernVist: { F: ReturnType<typeof vernfarger>; av: string; ut: ReturnType<typeof vernfarger> } | null = null;
+function verneformerVist() {
+  const F = vernfarger(verdi(katalog.gull.verneformer)),
+    av = vernAv.join();
+  if (!F || !av) return F;
+  if (!vernVist || vernVist.F !== F || vernVist.av !== av)
+    vernVist = { F, av, ut: F.filter(f => !vernAv.includes(f.farge)) };
+  return vernVist.ut;
+}
+/* Lagene på siden om verneområder: verneområdene etter verneform (gull.verneformer), der hver gruppe kan slås av og på
+   (velgVerneformer), og naturen i verneområdene, grunnkartets detaljklasser i fargen for hovedøkosystemet, bare innenfor
+   verneområdene */
 export const VERNLAG = {
-  verneformer: flatelag('Verneområder per verneform', () => vernfarger(verdi(katalog.gull.verneformer))),
+  verneformer: flatelag('Verneområder per verneform', verneformerVist),
   natur: detaljlagI(
     'Naturen i verneområder',
     k => OKOSYSTEMFARGE[k.okosystem] || null,
     () => vernflater(verdi(katalog.gull.verneformer))
   )
 };
+/* Slår av gruppene av verneformer med fargene av, og tegner laget på nytt */
+export function velgVerneformer(av: string[]) {
+  if (av.join() === vernAv.join()) return;
+  vernAv = av;
+  friskOpp(VERNLAG.verneformer);
+}
 /* Laget på siden om verdsatte naturtyper for lokalitetene som skal vurderes per lokalitet eller per naturtype (gull.verdsattVurderes) */
 export const VERDILAG = {
   vurderes: flatelag('Verdsatt natur som vurderes', () => vurderes(verdi(katalog.gull.verdsattVurderes)))

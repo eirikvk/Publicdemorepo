@@ -1,7 +1,7 @@
-/* En tabell med sider, som listene i Figma: ti rader per side og sidetall under. Kolonner merket tall står til høyre, og kolonner
-   merket ikkeMobil vises ikke på smale skjermer, så tabellen får plass uten å rulle. */
+/* En tabell med sider, som listene i Figma: ti rader per side og designsystemets sidevelger under. Kolonner merket tall står til
+   høyre, og kolonner merket ikkeMobil vises ikke på smale skjermer, så tabellen får plass uten å rulle. */
 import { useState, type ReactNode } from 'react';
-import { MdIconChevronBackward, MdIconChevronForward } from '../md.ts';
+import { MdPagination } from '../md.ts';
 
 export interface Kolonne {
   navn: string;
@@ -52,29 +52,14 @@ export default function Tabell({
         </table>
       </div>
       {sider > 1 && (
-        <nav className="sidetall" aria-label={`Sider i ${hva.toLowerCase()}`}>
-          <button type="button" disabled={s === 0} onClick={() => settSide(s - 1)} aria-label="Forrige side">
-            <MdIconChevronBackward />
-          </button>
-          {Array.from({ length: sider }, (_, i) => i)
-            .filter(i => Math.abs(i - s) <= 2 || i === 0 || i === sider - 1)
-            .map((i, j, a) => (
-              <span key={i}>
-                {j > 0 && i - a[j - 1] > 1 && <span className="prikker">…</span>}
-                <button
-                  type="button"
-                  aria-current={i === s ? 'page' : undefined}
-                  onClick={() => settSide(i)}
-                  aria-label={`Side ${i + 1}`}
-                >
-                  {i + 1}
-                </button>
-              </span>
-            ))}
-          <button type="button" disabled={s === sider - 1} onClick={() => settSide(s + 1)} aria-label="Neste side">
-            <MdIconChevronForward />
-          </button>
-        </nav>
+        <div className="sidetall">
+          <MdPagination
+            totalPages={sider}
+            currentPage={s + 1}
+            onPageChange={p => settSide(p - 1)}
+            labels={{ previous: 'Forrige', next: 'Neste' }}
+          />
+        </div>
       )}
     </div>
   );

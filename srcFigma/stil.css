@@ -1,8 +1,9 @@
 /* Stilen for tvillingen fra Figma: grunnlaget, sidebredden og delene sidene er bygd av (deler.tsx, Tabell.tsx). Toppen og kartet
    har egne filer. Fargene er designsystemets variabler (--md-*), fargene målt i skissene fra 17. oktober (under) og kartets farger
    (--nat, --vern og så videre, satt i main.tsx). Bredden følger skissene: innholdet står i en spalte på opptil 1200 px, og båndene
-   (kartet og de blå feltene) går over hele bredden. Overskriftene er fete, som i skissene; skriften er Open Sans i stedet for Sofia
-   Pro, som er lisensiert. På mobil er luften på sidene 16 px. */
+   (kartet og de blå feltene) går over hele bredden. Overskriftene følger designsystemet (klassene md-typography-heading-*), også der
+   skissene har dem fetere og større; skriften er Open Sans i stedet for Sofia Pro, som er lisensiert. På mobil er luften på sidene
+   16 px. */
 :root {
   --md-typography-family-heading: 'Open Sans', sans-serif;
   --md-typography-weight-semibold: 600;
@@ -97,28 +98,6 @@ body {
   font-family: var(--md-typography-family-body);
   font-size: 1.0625rem;
   line-height: 1.45;
-}
-/* Overskriftene som i skissene: fete, og større enn designsystemets */
-.tvilling h1 {
-  font-size: 2.125rem;
-  line-height: 1.18;
-  font-weight: 700;
-}
-.tvilling h2.md-typography-heading-m,
-.tvilling .seksjonstopp h2 {
-  font-size: 2.125rem;
-  line-height: 1.2;
-  font-weight: 700;
-}
-.tvilling h2.md-typography-heading-s {
-  font-size: 1.625rem;
-  line-height: 1.25;
-  font-weight: 700;
-}
-.tvilling h3 {
-  font-size: 1.5rem;
-  line-height: 1.25;
-  font-weight: 700;
 }
 h1,
 h2,
@@ -237,8 +216,6 @@ main > .innhold > .helt {
   align-items: center;
   gap: 16px;
   margin-bottom: 22px;
-  font-size: 3rem;
-  line-height: 1.1;
 }
 .temaikon {
   flex: none;
@@ -271,9 +248,6 @@ main > .innhold > .helt {
     grid-template-areas: 'tekst' 'bilde' 'trekk';
     grid-template-rows: auto;
     gap: 16px;
-  }
-  .helt-tekst h1 {
-    font-size: 2rem;
   }
   .temaikon {
     width: 48px;
@@ -460,6 +434,11 @@ main > .innhold > .etter-tallkort {
   margin-top: 8px;
 }
 
+/* Trekkspill rett under kartet, i hele bredden */
+.kartbaand + .innhold > .trekkspill-liste.under-kart {
+  margin-top: 16px;
+}
+
 /* En figur: tekst til venstre, figuren i en lys flate til høyre, og trekkspill under */
 main > .innhold > .figur {
   margin-top: 64px;
@@ -477,11 +456,6 @@ main > .innhold > .figur {
   flex-direction: column;
   gap: 16px;
   padding: 36px 40px 0 16px;
-}
-.figur-tittel {
-  font-size: 1.3125rem;
-  line-height: 1.3;
-  font-weight: 700;
 }
 .figur-forklaring {
   font-size: 0.9375rem;
@@ -594,6 +568,21 @@ main > .innhold > .figur {
   font-size: 0.9375rem;
   font-weight: 400;
 }
+/* Smale stolper med runde hjørner øverst og tall i vanlig vekt, som figuren for verdsatte naturtyper i skissene */
+.stolper.smale .stolpe-fyll {
+  width: 58px;
+  border-radius: 6px 6px 0 0;
+}
+.stolper.smale .stolpe-tall {
+  font-weight: 400;
+}
+/* Stolper som fyller hele bredden, som figuren for inngrepsfri natur i skissene */
+.stolper.brede {
+  padding: 24px 0 8px;
+}
+.stolper.brede .stolpe {
+  flex: 1 1 0;
+}
 @media (max-width: 600px) {
   .stolper {
     gap: 8px;
@@ -618,11 +607,6 @@ main > .innhold > .figur {
 .kake-navn {
   font-size: 15px;
   fill: var(--tekst);
-}
-@media (max-width: 720px) {
-  .ressurser ul {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* Liggende stolper: navnet, stolpen og tallet på én linje, og navnet og tallet over stolpen på smale skjermer */
@@ -740,36 +724,7 @@ main > .innhold > .figur {
 .sidetall {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 8px;
   margin-top: 16px;
-}
-.sidetall button {
-  min-width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--teal-lenke);
-  font-size: 1.0625rem;
-  cursor: pointer;
-  display: inline-grid;
-  place-items: center;
-}
-.sidetall button[aria-current='page'] {
-  background: var(--teal-lenke);
-  color: #fff;
-}
-.sidetall button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.sidetall svg {
-  width: 22px;
-  height: 22px;
-}
-.prikker {
-  padding: 0 4px;
 }
 .med-farge {
   display: inline-flex;
@@ -841,12 +796,18 @@ main > .innhold > .ressurser {
 }
 .flis-navn {
   min-width: 0;
-  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 .ressurser svg {
   width: 24px;
   height: 24px;
   flex: none;
+}
+/* Én kolonne på smale skjermer (etter regelen over, så den gjelder) */
+@media (max-width: 720px) {
+  .ressurser ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Flisene for temaene: bilde til venstre, navnet og en pil */
@@ -865,7 +826,7 @@ main > .innhold > .neste {
   display: grid;
   grid-template-columns: 124px 1fr auto;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
   min-height: 124px;
   padding-right: 20px;
   background: var(--beige-flis);
@@ -875,7 +836,7 @@ main > .innhold > .neste {
   color: var(--tekst);
   text-decoration: none;
   font-weight: 700;
-  font-size: 1.375rem;
+  font-size: var(--md-size-20) /* tittelen i designsystemets flis (md-tile) */;
   line-height: 1.25;
 }
 .flis:hover {
@@ -960,8 +921,8 @@ main > .innhold > .neste {
   padding: 14px 20px 22px 24px;
 }
 .temakort-bunn > svg {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   flex: none;
 }
 .snittmerke {
@@ -1208,6 +1169,11 @@ main > .innhold > .oversikt-topp {
   text-decoration: underline;
 }
 
+/* Lenken i det blå båndet har vanlig vekt, som designsystemets lenker */
+.pil-lenke.baand-lenke {
+  font-weight: 400;
+}
+
 /* En seksjon med overskrift og lenke til høyre, og en stor ingress under */
 .seksjonstopp {
   display: flex;
@@ -1239,10 +1205,12 @@ main > .innhold > .oversikt-topp {
   box-decoration-break: clone;
 }
 @media (max-width: 720px) {
-  .tvilling h2.md-typography-heading-m,
-  .tvilling .seksjonstopp h2,
-  .tvilling h1 {
-    font-size: 1.625rem;
+  /* Overskriftene ett trinn ned i designsystemets skala på smale skjermer */
+  .tvilling h1.md-typography-heading-xl {
+    font-size: var(--md-typography-heading-l);
+  }
+  .tvilling h2.md-typography-heading-l {
+    font-size: var(--md-typography-heading-m);
   }
   .seksjonstopp {
     flex-direction: column;
@@ -1264,15 +1232,18 @@ main > .innhold > .oversikt-topp {
 .endringer-topp,
 .endringer button {
   display: grid;
-  grid-template-columns: minmax(0, 461fr) minmax(0, 295fr) minmax(0, 300fr) auto;
+  grid-template-columns: minmax(0, 461fr) minmax(0, 295fr) minmax(0, 300fr) 6.5rem;
   align-items: center;
   gap: 12px;
   padding: 0 24px;
 }
+/* Overskriftene står over kolonnene sine: samme kolonner som radene, og bare den første litt inn mot kanten, som i skissene */
 .endringer-topp {
   font-size: 0.8125rem;
   padding-bottom: 10px;
-  padding-left: 10px;
+}
+.endringer-topp > :first-child {
+  margin-left: -14px;
 }
 .endringer ul {
   display: flex;
@@ -1304,6 +1275,7 @@ main > .innhold > .oversikt-topp {
 .endring-mer {
   display: inline-flex;
   align-items: center;
+  justify-self: end;
   gap: 8px;
   font-size: 1.25rem;
 }
@@ -1418,7 +1390,7 @@ main > .innhold > .oversikt-topp {
   }
 }
 main > .innhold > .utforsk-del {
-  margin-top: 120px;
+  margin-top: 180px;
 }
 @media (max-width: 720px) {
   main > .innhold > .utforsk-del {
@@ -1446,19 +1418,11 @@ main > .innhold > .utforsk-del {
   gap: 8px 24px;
 }
 
-/* Trekkspillene som i skissene: liten pil og tekst i vanlig størrelse, uten luft til siden */
-.trekkspill-liste .md-accordion-item__header,
-.sporsmal .md-accordion-item__header {
-  padding: 12px 4px;
-}
-.sporsmal .md-accordion-item__header {
-  padding: 12px 16px;
-}
+/* Trekkspillene som i skissene: pluss og minus og tekst i vanlig størrelse. Luften er designsystemets. */
 .trekkspill-liste .md-accordion-item__header-label,
 .sporsmal .md-accordion-item__header-label {
   font-size: var(--md-typography-size-16);
   font-family: var(--md-typography-family-body);
-  margin-left: 8px;
 }
 .trekkspill-liste .md-accordion-item__header-icon,
 .sporsmal .md-accordion-item__header-icon {
@@ -1489,12 +1453,6 @@ main > .innhold > .utforsk-del {
 }
 .sporsmal .md-accordion-item__header-icon::before {
   color: var(--tekst);
-}
-.trekkspill-liste .md-accordion-item__content {
-  padding: 0 4px 16px 30px;
-}
-.sporsmal .md-accordion-item__content {
-  padding: 0 16px 16px 42px;
 }
 /* Merket for syntetiske tall, som står i stedet for SSBs tabeller til de kommer */
 .syntetisk-merke {

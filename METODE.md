@@ -1143,6 +1143,23 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Tvillingen nærmere skissene og designsystemet, 18. oktober 2026.** En ny sammenligning med de sju skissene ga 36 ting å justere i
+tvillingen. De er gjort. Der designsystemet har en regel, følger tvillingen den, også der skissene er annerledes:
+- Overskriftene har designsystemets størrelser og vanlig vekt, ikke fetere og større som før.
+- Trekkspillene har designsystemets luft.
+- Tabellene har designsystemets sidevelger, og zoomknappene designsystemets ikoner for pluss og minus.
+- Flisene nederst har tittelstørrelsen fra designsystemets flis. Selve flisen er tvillingens egen, fordi designsystemets flis ikke
+  har plass til et bilde.
+
+Ellers kan tegnforklaringen lukke grupper, og den har prikker for tresatt myr og tresatt innmarksbeite. Verneformene kan slås av og
+på hver for seg, og lokalitetene som vurderes, ligger i laget for verdsatte naturtyper. Kartet på oversikten zoomer til kommunen
+også når kartet endrer størrelse eller grensen kommer, til man flytter det selv, og planlagt utbygging har merkelapp der.
+`gull.vernPerVerneform` summerer nå per gruppe av verneformer, de samme seks gruppene som i kartet, så «naturminne» står under annen
+fredning. De nye spørsmålene og lenkene bygger på Miljødirektoratet, regjeringen.no, Artsdatabanken og villrein.no, og bør leses av
+noen med fagkunnskap. Hovedsiden er ikke endret: regresjonstesten for Trondheim ga ingen avvik. Røyktesten for tvillingen på
+390 px fant at ressurslisten hadde to kolonner på mobil, fordi regelen for én kolonne sto før den vanlige. Det er rettet. Målt i
+Chromium, ikke på iPhone.
+
 **Kommuneplanen alene telles av rutenettet, 18. oktober 2026.** Under egne områder står kommuneplanen alene, tallet med egne
 områder og forskjellen. Kommuneplanen alene ble talt mens rutene ble lagt inn, og lagret ved siden av rutene. Av og til, når siden
 hadde mye å gjøre, ble det lagrede tallet det samme som tallet med egne områder, mens rutene for planen alene var riktige. Koden
