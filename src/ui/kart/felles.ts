@@ -73,6 +73,9 @@ export function jevn(P: Uint8ClampedArray, w: number, h: number) {
   }
 }
 export const TOM = 4; /* OpenLayers' tilstand for en flis uten innhold */
+/* Venter til nettleseren har fått gjort annet arbeid, som å svare på trykk. Tungt arbeid som deles opp med denne, blir flere korte
+   oppgaver i stedet for én lang. */
+export const slippTil = () => new Promise<void>(r => setTimeout(r, 0));
 /* Et kartlag som tegnes i nettleseren eller fargelegges her */
 export type Flislag = TileLayer<XYZ>;
 /* Tegner én flis: setter bildet eller tilstanden til tile. src er adressen, for lagene som har en. OpenLayers beskriver flisen bare

@@ -127,6 +127,65 @@ export function iSok(S: Flatesok, x: number, y: number) {
   }
   return inne;
 }
+/* Mange punkter (x, y) fordelt i et rutenett, så punktene i et utsnitt finnes uten å gå gjennom alle. Nettet dekker punktene, med
+   rundt fire punkter per rute. */
+export interface Punktnett {
+  x: Float64Array;
+  y: Float64Array;
+  ext: Utsnitt;
+  nx: number;
+  ny: number;
+  dx: number;
+  dy: number;
+  start: Int32Array /* der rutas punkter begynner i punkt, per rute rad for rad, og antallet til slutt */;
+  punkt: Int32Array /* plassen til punktene i x og y, rute for rute */;
+}
+export function punktnett(x: Float64Array, y: Float64Array): Punktnett {
+  const n = x.length,
+    ext = [Infinity, Infinity, -Infinity, -Infinity];
+  for (let k = 0; k < n; k++) {
+    if (x[k] < ext[0]) ext[0] = x[k];
+    if (y[k] < ext[1]) ext[1] = y[k];
+    if (x[k] > ext[2]) ext[2] = x[k];
+    if (y[k] > ext[3]) ext[3] = y[k];
+  }
+  const s = Math.max(1, Math.min(1024, Math.ceil(Math.sqrt(n / 4)))),
+    nx = n ? s : 1,
+    ny = n ? s : 1,
+    dx = (ext[2] - ext[0]) / nx || 1,
+    dy = (ext[3] - ext[1]) / ny || 1,
+    rute = new Int32Array(n),
+    start = new Int32Array(nx * ny + 1),
+    punkt = new Int32Array(n);
+  for (let k = 0; k < n; k++) {
+    const i = Math.min(nx - 1, Math.floor((x[k] - ext[0]) / dx)),
+      j = Math.min(ny - 1, Math.floor((y[k] - ext[1]) / dy));
+    rute[k] = j * nx + i;
+    start[rute[k] + 1]++;
+  }
+  for (let r = 0; r < nx * ny; r++) start[r + 1] += start[r];
+  const fylt = start.slice(0, nx * ny);
+  for (let k = 0; k < n; k++) punkt[fylt[rute[k]]++] = k;
+  return { x, y, ext, nx, ny, dx, dy, start, punkt };
+}
+/* Kaller hver(k) for punktene i nettet N som ligger i utsnittet e, kantene med. Punktene i samme rute kommer i stigende rekkefølge. */
+export function punkterI(N: Punktnett, e: Utsnitt, hver: (k: number) => void) {
+  if (!N.punkt.length || !overlapper(e, N.ext)) return;
+  const i0 = Math.max(0, Math.floor((e[0] - N.ext[0]) / N.dx)),
+    i1 = Math.min(N.nx - 1, Math.floor((e[2] - N.ext[0]) / N.dx)),
+    j0 = Math.max(0, Math.floor((e[1] - N.ext[1]) / N.dy)),
+    j1 = Math.min(N.ny - 1, Math.floor((e[3] - N.ext[1]) / N.dy));
+  for (let j = j0; j <= j1; j++)
+    for (let i = i0; i <= i1; i++) {
+      const r = j * N.nx + i;
+      for (let p = N.start[r]; p < N.start[r + 1]; p++) {
+        const k = N.punkt[p],
+          x = N.x[k],
+          y = N.y[k];
+        if (x >= e[0] && x <= e[2] && y >= e[1] && y <= e[3]) hver(k);
+      }
+    }
+}
 /* Om punktet p ligger i flerflaten koord. Like-ulik-regelen over alle ringene, så punkter i hull er utenfor. */
 export function iFlate(p: Punkt, koord: Flerflate) {
   let inne = false;

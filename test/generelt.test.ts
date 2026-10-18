@@ -12,7 +12,9 @@ import {
   utsnitt,
   iFlate,
   flatesok,
-  iSok
+  iSok,
+  punktnett,
+  punkterI
 } from '../src/data/generelt/geometri.ts';
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
@@ -165,4 +167,41 @@ test('oppslaget i en flate gir det samme som iFlate, også i hull og langs skrå
   assert.ok(inne > 500);
   assert.equal(iSok(S, 50, 50), false); /* i hullet */
   assert.equal(iSok(S, 10, 10), true);
+});
+
+test('punktnettet gir de samme punktene i et utsnitt som å se på alle, også på kantene og utenfor nettet', () => {
+  let s = 7;
+  const tilf = () => ((s = (s * 16807) % 2147483647) / 2147483647) * 1000,
+    n = 5000,
+    x = new Float64Array(n),
+    y = new Float64Array(n);
+  for (let k = 0; k < n; k++) {
+    x[k] = Math.round(tilf());
+    y[k] = Math.round(tilf()) / 2;
+  }
+  const N = punktnett(x, y),
+    utsnittene = [
+      [0, 0, 1000, 500],
+      [-50, -50, 10, 10],
+      [250, 100, 250, 400],
+      [990, 490, 2000, 900],
+      [x[3], y[3], x[3], y[3]]
+    ];
+  for (let k = 0; k < 200; k++) {
+    const a = tilf(),
+      b = tilf() / 2;
+    utsnittene.push([a, b, a + tilf() / 5, b + tilf() / 10]);
+  }
+  for (const e of utsnittene) {
+    const nett: number[] = [],
+      alle: number[] = [];
+    punkterI(N, e, k => nett.push(k));
+    for (let k = 0; k < n; k++) if (x[k] >= e[0] && x[k] <= e[2] && y[k] >= e[1] && y[k] <= e[3]) alle.push(k);
+    assert.deepEqual(
+      nett.sort((p, q) => p - q),
+      alle
+    );
+  }
+  const tomt = punktnett(new Float64Array(0), new Float64Array(0));
+  punkterI(tomt, [0, 0, 1, 1], () => assert.fail('ingen punkter'));
 });

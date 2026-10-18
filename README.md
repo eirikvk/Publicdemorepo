@@ -154,7 +154,7 @@ regner likt. Filene importerer ingenting.
 
 | Fil | Innhold |
 |---|---|
-| `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp |
+| `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp, oppslag av mange punkter i en flate, og et rutenett av punkter for å finne punktene i et utsnitt |
 | `tall.ts` | Summen av en liste tall (`summen`) |
 | `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
 | `png.ts` | PNG-filer: bitene i en fil, og et bilde med fargetabell (til de lagrede klassene) |

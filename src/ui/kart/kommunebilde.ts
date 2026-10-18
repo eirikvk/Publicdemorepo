@@ -15,7 +15,7 @@ import { katalog } from '../../data/katalog.ts';
 import { verdi } from '../../data/motor/valgt.ts';
 import { abonner } from '../../data/motor/tilstand.ts';
 import { ui } from '../tilstand.ts';
-import { TOM, friskOpp, jevn, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
+import { TOM, friskOpp, jevn, nyttSiden, plannett, slippTil, tegnetKilde, type Flislag } from './felles.ts';
 import { friskOppGamle, tegnesOppaa } from './grunnkart.ts';
 
 /* Masken for en kartflis på 512 x 512 piksler: rød, grønn, blå og dekning per piksel (P), og verdien i en av rutene under pikselen
@@ -42,17 +42,28 @@ export interface Bitlag {
   folgOgsaa?: () => unknown /* laget tegnes også på nytt når dette endres */;
 }
 
+/* Fargene og tomme verdier for et lag som tabeller, så masken ikke kaller fyll og tom for hver rute: fyll for verdien v står på plass
+   3v, og tom[v] er 1 når ruta ikke har noe av temaet */
+interface Tabeller {
+  fyll: Uint8Array;
+  tom: Uint8Array;
+}
+const tabeller = (o: Bitlag): Tabeller => {
+  const fyll = new Uint8Array(256 * 3),
+    tom = new Uint8Array(256);
+  for (let v = 0; v < 256; v++) {
+    fyll.set(o.fyll(v), 3 * v);
+    tom[v] = o.tom(v) ? 1 : 0;
+  }
+  return { fyll, tom };
+};
+
 /* Masken for flisen med utsnittet u av bitene her */
-async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske> {
+async function flismaske(o: Bitlag, T: Tabeller, her: Flis[], u: Utsnitt): Promise<Flismaske> {
   const m = (u[2] - u[0]) / 512,
     P = new Uint8ClampedArray(512 * 512 * 4),
     V = new Uint8Array(512 * 512),
-    farger = new Map<number, number[]>(),
-    farge = (v: number) => {
-      let f = farger.get(v);
-      if (!f) farger.set(v, (f = o.fyll(v)));
-      return f;
-    };
+    { fyll, tom } = T;
   for (const b of her) {
     const R = bitRuter(b),
       B = await o.bit(b),
@@ -66,14 +77,21 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
         py0 = Math.max(0, Math.floor((u[3] - R.u[3]) / m)),
         py1 = Math.min(512, Math.ceil((u[3] - R.u[1]) / m)),
         kol = (px: number) => Math.floor((u[0] + px * m - R.u[0]) / r + 1e-6),
-        rad = (py: number) => Math.floor((R.u[3] - (u[3] - py * m)) / r + 1e-6);
+        rad = (py: number) => Math.floor((R.u[3] - (u[3] - py * m)) / r + 1e-6),
+        kx0 = new Int32Array(512),
+        kx1 = new Int32Array(512);
+      /* rutene under hver kolonne av piksler, regnet én gang */
+      for (let px = px0; px < px1; px++) {
+        kx0[px] = Math.max(0, kol(px));
+        kx1[px] = Math.min(R.w, Math.max(kol(px) + 1, kol(px + 1)));
+      }
       for (let py = py0; py < py1; py++) {
         const y0 = Math.max(0, rad(py)),
           y1 = Math.min(R.h, Math.max(rad(py) + 1, rad(py + 1)));
         if (y0 >= y1) continue;
         for (let px = px0; px < px1; px++) {
-          const x0 = Math.max(0, kol(px)),
-            x1 = Math.min(R.w, Math.max(kol(px) + 1, kol(px + 1)));
+          const x0 = kx0[px],
+            x1 = kx1[px];
           if (x0 >= x1) continue;
           let n = 0,
             sr = 0,
@@ -81,14 +99,14 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
             sb = 0,
             forste = 0;
           for (let y = y0; y < y1; y += steg)
-            for (let x = x0; x < x1; x += steg) {
-              const v = B[y * R.w + x],
-                f = farge(v);
+            for (let x = x0, k = y * R.w; x < x1; x += steg) {
+              const v = B[k + x],
+                f = 3 * v;
               n++;
-              sr += f[0];
-              sg += f[1];
-              sb += f[2];
-              if (!forste && !o.tom(v)) forste = v;
+              sr += fyll[f];
+              sg += fyll[f + 1];
+              sb += fyll[f + 2];
+              if (!forste && !tom[v]) forste = v;
             }
           const q = py * 512 + px,
             i = 4 * q;
@@ -113,11 +131,11 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
         d = k.createImageData(w, h);
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
-          const f = farge(B[(cy0 + y) * R.w + cx0 + x]),
+          const f = 3 * B[(cy0 + y) * R.w + cx0 + x],
             i = 4 * (y * w + x);
-          d.data[i] = f[0];
-          d.data[i + 1] = f[1];
-          d.data[i + 2] = f[2];
+          d.data[i] = fyll[f];
+          d.data[i + 1] = fyll[f + 1];
+          d.data[i + 2] = fyll[f + 2];
           d.data[i + 3] = 255;
         }
       for (let n = 0; n < o.jevninger; n++) jevn(d.data, w, h);
@@ -126,7 +144,7 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
         g = c.getContext('2d', { willReadFrequently: true })!;
       g.imageSmoothingEnabled = true;
       g.drawImage(k.canvas, (R.u[0] + cx0 * r - u[0]) / m, (u[3] - (R.u[3] - cy0 * r)) / m, (w * r) / m, (h * r) / m);
-      const T = g.getImageData(0, 0, 512, 512).data;
+      const glatt = g.getImageData(0, 0, 512, 512).data;
       for (let py = 0; py < 512; py++) {
         const y = Math.floor((R.u[3] - (u[3] - (py + 0.5) * m)) / r);
         if (y < 0 || y >= R.h) continue;
@@ -136,11 +154,11 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
           const q = py * 512 + px,
             i = 4 * q,
             v = B[y * R.w + x];
-          P[i] = T[i];
-          P[i + 1] = T[i + 1];
-          P[i + 2] = T[i + 2];
+          P[i] = glatt[i];
+          P[i + 1] = glatt[i + 1];
+          P[i + 2] = glatt[i + 2];
           P[i + 3] = 255;
-          V[q] = o.tom(v) ? 0 : v;
+          V[q] = tom[v] ? 0 : v;
         }
       }
     }
@@ -149,8 +167,11 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
 }
 
 export function bitlag(o: Bitlag): Flislag {
+  let T: Tabeller | null = null;
   async function last(tile: ImageTile) {
     try {
+      /* én flis om gangen: siden slipper til mellom flisene, så et trykk ikke må vente til alle flisene er tegnet */
+      await slippTil();
       const D = o.data(),
         G = verdi(katalog.solv.grense),
         tc = tile.getTileCoord() as Flis,
@@ -162,7 +183,7 @@ export function bitlag(o: Bitlag): Flislag {
       }
       const c = flislerret(),
         g = c.getContext('2d', { willReadFrequently: true })!;
-      if (!(await o.tegn(g, () => flismaske(o, her, u), tc, u))) {
+      if (!(await o.tegn(g, () => flismaske(o, (T ||= tabeller(o)), her, u), tc, u))) {
         tile.setState(TOM);
         return;
       }

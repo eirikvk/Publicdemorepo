@@ -8,7 +8,7 @@
    Delene er delt der det kommer inn en ny kilde: det kartlagte og utbyggingen kommer senere enn områdene, og siden viser områdene med
    en gang. Bygger på områdene, arealet og oppslagene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i km²,
    kryssinger i ruter. */
-import { omriss, type Flatesok } from '../generelt/geometri.ts';
+import { omriss, punkterI, punktnett, type Flatesok } from '../generelt/geometri.ts';
 import { verdi } from '../generelt/glissen.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
@@ -61,23 +61,28 @@ const iSoket = (S: Omradesok, R: Utbygging, i: number) => iOmradet(S, ruteX(R, i
 
 /* Kolonnen for et tema i utbyggingen: hvilket område hver rad ligger i, som plassen i O, eller -1. Midtpunktet i ruta slås opp i
    områdene, og ruta hører til det første området den ligger i. kommune gir oppslaget i kommunen, som uklippede områder klippes
-   mot. Oppslagene lages med naturSok i sølv. sok(nokkel, lag) gir oppslaget: den som kaller, kan huske det per område (nokkel) og bare kalle lag() første
-   gang. */
+   mot. Oppslagene lages med naturSok i sølv. sok(nokkel, lag) gir oppslaget: den som kaller, kan huske det per område (nokkel) og
+   bare kalle lag() første gang. Områdene gås gjennom i rekkefølge, og hvert område ser bare på midtpunktene innenfor omrisset sitt
+   (punktnett). En rute som alt har et område, hoppes over, så den beholder det første. */
 export function temaKolonne(O: TemaOmrade[], R: Utbygging, kommune: () => Flatesok, sok: HuskSok): Int32Array {
-  const treff = new Int32Array(R.rader.length).fill(-1);
-  for (let r = 0; r < R.rader.length && O.length; r++) {
-    const i = R.rader[r],
-      x = ruteX(R, i),
-      y = ruteY(R, i);
-    for (let a = 0; a < O.length; a++) {
-      const o = O[a];
-      if (x < o.ext[0] || x > o.ext[2] || y < o.ext[1] || y > o.ext[3]) continue;
-      const S = sok(o, () => naturSok(o, o.uklippet ? kommune() : null));
-      if (!S || !iSoket(S, R, i)) continue;
-      treff[r] = a;
-      break;
-    }
+  const n = R.rader.length,
+    treff = new Int32Array(n).fill(-1);
+  if (!n || !O.length) return treff;
+  const x = new Float64Array(n),
+    y = new Float64Array(n);
+  for (let r = 0; r < n; r++) {
+    x[r] = ruteX(R, R.rader[r]);
+    y[r] = ruteY(R, R.rader[r]);
   }
+  const N = punktnett(x, y);
+  O.forEach((o, a) => {
+    let S: Omradesok | null | undefined;
+    punkterI(N, o.ext, r => {
+      if (treff[r] >= 0) return;
+      if (S === undefined) S = sok(o, () => naturSok(o, o.uklippet ? kommune() : null));
+      if (S && iOmradet(S, x[r], y[r])) treff[r] = a;
+    });
+  });
   return treff;
 }
 

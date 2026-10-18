@@ -1046,6 +1046,17 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Kortere stopp på siden, 18. oktober 2026.** En måling av hvor lenge siden er opptatt i ett strekk, uten å kunne svare på trykk,
+viste to stopp på over et halvt sekund. Ellers var alle under 0,2 sekunder.
+- Rundt 0,7–1 sekund én gang, når rutene med planlagt utbygging slås opp i verneområdene, villreinområdene og verdsatt natur
+  (`temaKolonne` i `gull/temaer.ts`). Hver rute ble sjekket mot omrisset av alle områdene. Nå går områdene gjennom
+  midtpunktene i et rutenett (`punktnett` i `generelt/geometri.ts`), så hvert område bare ser på punktene innenfor omrisset sitt.
+  En rute hører fortsatt til det første området den ligger i.
+- Rundt 0,5 sekund hver gang kartlaget for grått areal eller inngrepsfri natur vises (`ui/kart/kommunebilde.ts`). Alle flisene
+  ble tegnet i ett strekk. Nå tegnes én flis om gangen med en pause imellom, og fargene slås opp i en tabell.
+Etterpå var det lengste stoppet rundt 0,17 sekunder i Kautokeino og Trondheim, både med bred skjerm og med telefonbredde. Målt i
+Chromium, ikke på iPhone. Tallene og kartene er de samme: regresjonstesten ga ingen avvik.
+
 **Bildearbeidet i en bakgrunnstråd, 18. oktober 2026.** Det tunge bildearbeidet kjøres nå i bakgrunnstråder i nettleseren (Web
 Worker med OffscreenCanvas, `solv/arbeid.ts`, `solv/arbeider.ts` og `solv/oppgaver.ts`), høyst tre: å pakke ut og tolke bildene av
 grått areal, inngrepsfri natur, kommuneplanen og grunnkartet, å tegne kommunens flate i bitene, å telle verdiene i kommunen, og
