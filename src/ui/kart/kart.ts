@@ -9,8 +9,7 @@ import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
 import { henteStatus, opptatt } from '../../data/bronse/henting.ts';
 import { bakgrunnUrl } from '../../data/bronse/kartverket.ts';
-import { FLISNIVA, OPPLOSNINGER, ORIGO, UTM, type Flis } from '../../data/solv/felles.ts';
-import { kartetFlyttes, lagret, oversikt } from '../../data/motor/grunnkart.ts';
+import { OPPLOSNINGER, ORIGO, UTM, type Flis } from '../../data/solv/felles.ts';
 import { katalog } from '../../data/katalog.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret } from '../../data/motor/tilstand.ts';
@@ -18,18 +17,9 @@ import { farge } from '../farger.ts';
 import { kb, nf } from '../tekst.ts';
 import { ui } from '../tilstand.ts';
 import { egneLag, sluttTegning, tegner } from './egne.ts';
-import { KILDER, MAKSRES, MAKSTETTHET, flisnett, kartflagg, nyttSiden, plannett, type Flistegner } from './felles.ts';
+import { KILDER, MAKSTETTHET, kartflagg, nyttSiden, plannett, type Flistegner } from './felles.ts';
 import { graaLag } from './graa.ts';
-import {
-  etterVenter,
-  fargeleggAltSomVenter,
-  klare,
-  oversiktLag,
-  oversiktSynlig,
-  pauseEtterarbeid,
-  planleggEtterarbeid,
-  tema
-} from './grunnkart.ts';
+import { tema } from './grunnkart.ts';
 import { inonLag } from './inon.ts';
 import { klippSist, settKlipp } from './klipping.ts';
 import { maalKartet, startMaaling, stoppMaaling } from './maaling.ts';
@@ -94,17 +84,11 @@ export const tilKartet = (mykt?: boolean) => {
   const k = document.querySelector('.kartscene');
   if (k) k.scrollIntoView({ behavior: mykt && !rolig() ? 'smooth' : 'auto', block: 'nearest' });
 };
-/* Der en flis er ferdig lastet, fjernes bildet zoomet ut under den før flisen tegnes. Ellers ville det grove
-   bildet stikke fram som en uskarp kant rundt alt som er gjennomsiktig i flisen, for eksempel langs sjøen. */
-const dekket = ([z, x, y]: TileCoord) => {
-  for (let d = 0; z - d >= FLISNIVA; d++) if (klare.has(`${z - d}/${x >> d}/${y >> d}`)) return true;
-  return false;
-};
-/* Hva kartet viser nå, til tegnforklaringen: dagens klasser (ikke zoomet ut forbi det som finnes), planlagt utbygging, temaet for
-   siden, sløret over det som ikke er kartlagt, og egne områder */
+/* Hva kartet viser nå, til tegnforklaringen: dagens klasser, planlagt utbygging, temaet for siden, sløret over det som ikke er
+   kartlagt, og egne områder */
 export function synligeLag() {
   return {
-    klasser: !!kart && tema.getVisible() && !ui.ute,
+    klasser: !!kart && tema.getVisible(),
     plan: planLag.getVisible(),
     inon: inonLag.getVisible(),
     graa: graaLag.getVisible(),
@@ -144,29 +128,6 @@ export function kartetsMinne() {
   });
 }
 
-/* Oversiktsbildet ligger under flisene og vises mens nytt innhold lastes. Sammen med fliser nettleseren
-   alt har fra andre zoomnivåer gjør det at kartet aldri står tomt. Når alle flisene i utsnittet er på plass, skjules det. */
-export function kartStatus() {
-  const varUte = ui.ute,
-    varSiste = ui.siste;
-  if (opplosning() < MAKSRES) ui.ute = false;
-  else {
-    const ov = oversikt(),
-      G = app.valgt && lagret(app.valgt.nr) ? verdi(katalog.solv.grense) : null,
-      o = (ov && ov.ext) || (G && G.ext),
-      treff = !!o && !!kart && ol.extent.intersects(view.calculateExtent(kart.getSize()), o);
-    oversiktSynlig(true);
-    ui.ute = !treff && !!app.valgt;
-    ui.siste = !treff
-      ? ''
-      : ov && ov.dynamisk
-        ? 'Viser kart nettleseren allerede har hentet'
-        : app.valgt && lagret(app.valgt.nr)
-          ? 'Viser lagrede klasser'
-          : 'Viser klassene hentet fra NIBIO for hele kommunen';
-  }
-  if (ui.ute !== varUte || ui.siste !== varSiste) endret();
-}
 /* Kartet følger valgt kommune og grensen */
 const ny = nyttSiden();
 abonner(() => {
@@ -183,7 +144,6 @@ abonner(() => {
     tema.setExtent(undefined);
     if (k.boks)
       view.fit(ol.proj.transformExtent(k.boks, 'EPSG:4326', UTM), { padding: [16, 16, 16, 16], duration: 350 });
-    kartStatus();
     endret();
   }
   const G = verdi(katalog.solv.grense);
@@ -205,7 +165,6 @@ abonner(() => {
     tema.setVisible(true);
     endret();
   }
-  if (ny('lagret', !!app.valgt && lagret(app.valgt.nr))) kartStatus();
   if (ny('sisteKall', app.sisteKall) && app.sisteKall) {
     const s = app.sisteKall,
       fliser = (n: number) => `${n} ${n === 1 ? 'flis' : 'fliser'}`;
@@ -220,20 +179,7 @@ abonner(() => {
 export function lagKart() {
   if (kart) return kart;
   kart = new ol.Map({
-    layers: [
-      bakgrunn,
-      oversiktLag,
-      tema,
-      inonLag,
-      graaLag,
-      dekLag,
-      ...flateLag,
-      planLag,
-      grense,
-      egneLag,
-      omrissLag,
-      markLag
-    ],
+    layers: [bakgrunn, tema, inonLag, graaLag, dekLag, ...flateLag, planLag, grense, egneLag, omrissLag, markLag],
     view,
     pixelRatio: Math.min(window.devicePixelRatio || 1, MAKSTETTHET),
     controls: [
@@ -260,54 +206,23 @@ export function lagKart() {
     vv.addEventListener('scroll', sjekk);
     sjekk();
   }
-  tema.on('prerender', e => {
-    const fs = e.frameState!,
-      res = fs.viewState.resolution;
-    if (!oversikt() || !oversiktLag.getVisible() || res >= MAKSRES) return;
-    const c = e.context as CanvasRenderingContext2D;
-    flisnett.forEachTileCoord(fs.extent!, flisnett.getZForResolution(res), tc => {
-      if (!dekket(tc)) return;
-      const u = flisnett.getTileCoordExtent(tc);
-      const a = ol.render.getRenderPixel(e, kart!.getPixelFromCoordinate([u[0], u[3]])),
-        b = ol.render.getRenderPixel(e, kart!.getPixelFromCoordinate([u[2], u[1]]));
-      const x0 = Math.floor(a[0]),
-        y0 = Math.floor(a[1]);
-      c.clearRect(x0, y0, Math.ceil(b[0]) - x0, Math.ceil(b[1]) - y0);
-    });
-  });
-  klippSist(oversiktLag, [tema, inonLag, graaLag]);
   klippSist(tema, [inonLag, graaLag]);
   klippSist(inonLag, [graaLag]);
   klippSist(graaLag, []);
-  [dekLag, ...flateLag, planLag].forEach((l, i, alle) => klippSist(l, alle.slice(i + 1))); /* disse deler lerret */
+  [dekLag, ...flateLag].forEach((l, i, alle) => klippSist(l, alle.slice(i + 1))); /* disse deler lerret */
   maalKartet(kart);
   kart.on('movestart', () => {
     kartflagg.iBevegelse = true;
     kartflagg.startet = henteStatus.startet;
-    kartflagg.feilet = henteStatus.feilet;
-    kartetFlyttes(true);
-    oversiktSynlig(true);
-    pauseEtterarbeid();
     startMaaling();
   });
   kart.on('moveend', () => {
     kartflagg.iBevegelse = false;
     stoppMaaling();
-    kartStatus();
     kart!.render();
-    if (etterVenter) planleggEtterarbeid();
-    kartetFlyttes(false);
-  });
-  view.on('change:resolution', () => {
-    if (opplosning() >= MAKSRES) {
-      oversiktSynlig(true);
-      fargeleggAltSomVenter();
-    }
   });
   kart.on('rendercomplete', () => {
-    if (kartflagg.iBevegelse || opplosning() >= MAKSRES || !app.valgt || !tema.getVisible() || opptatt())
-      return; /* aldri skjul oversikten midt i en bevegelse */
-    if (henteStatus.feilet === kartflagg.feilet) oversiktSynlig(false);
+    if (kartflagg.iBevegelse || !app.valgt || !tema.getVisible() || opptatt()) return;
     const ingen = 'Ingen nye kall. Flisene lå allerede i nettleseren.';
     if (henteStatus.startet === kartflagg.startet && ui.siste !== ingen) {
       ui.siste = ingen;

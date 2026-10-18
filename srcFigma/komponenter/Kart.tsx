@@ -12,7 +12,7 @@ import { app } from '../../src/data/motor/tilstand.ts';
 import { verdi } from '../../src/data/motor/valgt.ts';
 import { katalog } from '../../src/data/katalog.ts';
 import { graaLag } from '../../src/ui/kart/graa.ts';
-import { oversiktLag, tema as klasseLag } from '../../src/ui/kart/grunnkart.ts';
+import { tema as klasseLag } from '../../src/ui/kart/grunnkart.ts';
 import { inonLag } from '../../src/ui/kart/inon.ts';
 import { kart as kartet, lagKart, view } from '../../src/ui/kart/kart.ts';
 import { dekLag, flateLag } from '../../src/ui/kart/naturtema.ts';
@@ -35,7 +35,7 @@ export interface Kartlag {
   av?: boolean;
 }
 const OL_LAG: Record<string, () => { setOpacity(o: number): void }[]> = {
-  klasser: () => [klasseLag, oversiktLag],
+  klasser: () => [klasseLag],
   plan: () => [planLag],
   tema: () => [...flateLag, inonLag, graaLag],
   dekning: () => [dekLag]
@@ -174,7 +174,6 @@ export default function Kart({
           {henting ? henteKort(henting) : 'Henter kart …'}
         </div>
       )}
-      {ui.ute && !henting && <div className="kartmerke nede">Zoom inn for å se arealklassene.</div>}
       <Bytt />
       {enkel && (
         <div className="kartmerke enkel-merke" style={{ '--merke': `var(--${enkelFarge})` } as CSSProperties}>

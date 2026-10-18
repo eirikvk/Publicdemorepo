@@ -1,6 +1,6 @@
 /* Detaljene for punktet man trykket på i kommunen, som i et oppslag i et vanlig GIS, gruppert per kartlag. punktinfo lager gruppene
-   med det kartet og katalogen alt vet om punktet når man trykker, uten å hente noe: dagens arealklasse og planlagt utbygging (lest
-   av kartlagene, se trykk.ts), kommuneplanen, egne områder, områdene i naturtemaene med egenskapene slik Miljødirektoratet ga dem,
+   med det kartet og katalogen alt vet om punktet når man trykker: dagens arealklasse og planlagt utbygging (fra datamotoren på
+   nivået kartet viser, se trykk.ts), kommuneplanen, egne områder, områdene i naturtemaene med egenskapene slik Miljødirektoratet ga dem,
    det kartlagte, inngrepsfri natur, grått areal, og punktet selv: kommunen og koordinatene. Naturtemaene er med også når laget ikke
    vises, så lenge de er hentet. medKildene legger til det som slås opp hos kildene når detaljene vises: grunnkartet fra NIBIO,
    flatene i kommuneplanen fra DiBK, sonen for inngrepsfri natur og alle feltene for områdene i naturtemaene. Grått areal har ingen
@@ -14,9 +14,9 @@ import { app } from '../../data/motor/tilstand.ts';
 import { planType, type Del, type Planflate } from '../../data/solv/egne.ts';
 import { AREALBRUKSSTATUS, KP_AREALFORMAL, medNavn } from '../../data/solv/kodelister.ts';
 import type { Punktflate } from '../../data/solv/punkt.ts';
-import { UTM, bitVed, type Flis } from '../../data/solv/felles.ts';
-import { GRAATRINN, graaVed } from '../../data/solv/graa.ts';
-import { INONSONER, UTENFOR, soneVed } from '../../data/solv/inon.ts';
+import { UTM } from '../../data/solv/felles.ts';
+import { GRAATRINN, GRONT } from '../../data/solv/graa.ts';
+import { INONSONER } from '../../data/solv/inon.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
 import { dekar, nf, periode } from '../tekst.ts';
 import type { Oppslag, Punktinfo, Punktlag } from '../tilstand.ts';
@@ -42,9 +42,16 @@ function tekstAv(navn: string, v: unknown): string | null {
   return String(v);
 }
 
-/* Detaljene for punktet c. klasse er dagens arealklasse i punktet og plan om det er planlagt utbygging på natur eller jordbruk der,
-   begge lest av kartlagene, eller null. */
-export function punktinfo(c: Coordinate, klasse: string | null, plan: string | null): Punktinfo {
+/* Detaljene for punktet c. klasse er dagens arealklasse i punktet, plan om det er planlagt utbygging på natur eller jordbruk der,
+   graa trinnet for grått areal (GRONT for grønt i bebygd område) og sone sonen for inngrepsfri natur (0 ingen, ellers plassen i
+   INONSONER pluss én), alle fra datamotoren på nivået kartet viser, eller null. */
+export function punktinfo(
+  c: Coordinate,
+  klasse: string | null,
+  plan: string | null,
+  graa: number | null,
+  sone: number | null
+): Punktinfo {
   const lag: Punktlag[] = [];
   lag.push({
     tittel: 'Dagens arealklasse',
@@ -114,44 +121,38 @@ export function punktinfo(c: Coordinate, klasse: string | null, plan: string | n
       ],
       kilde: 'Miljødirektoratet'
     });
-  /* Inngrepsfri natur og grått areal: ruta i biten punktet ligger i, når temaet er talt for kommunen og biten er hentet */
-  const hentetBit = <V>(t: Tabelldef<Flis, V>) => {
-    const r = se(t, bitVed(c));
-    return r && r.status === 'ok' ? (r.verdi as V) : null;
-  };
-  const I = hentet(katalog.solv.inon) ? hentetBit(katalog.solv.inonbit) : null;
-  if (I) {
-    const s = soneVed(I, c[0], c[1]);
+  /* Inngrepsfri natur og grått areal i punktet, fra datamotoren på nivået kartet viser, når temaet er talt for kommunen */
+  if (sone !== null)
     lag.push({
       tittel: 'Inngrepsfri natur',
       rader: [
         [
           'Sone',
-          s === UTENFOR ? 'ingen, under 1 km fra tyngre tekniske inngrep' : `${INONSONER[s][4]}, ${INONSONER[s][3]}`
+          !sone
+            ? 'ingen, under 1 km fra tyngre tekniske inngrep'
+            : `${INONSONER[sone - 1][4]}, ${INONSONER[sone - 1][3]}`
         ]
       ],
       kilde: 'Miljødirektoratet',
-      oppslag: s === UTENFOR ? undefined : { hva: 'inon' }
+      oppslag: sone ? { hva: 'inon' } : undefined
     });
-  }
-  const G = hentet(katalog.solv.graa) ? hentetBit(katalog.solv.graabit) : null;
-  if (G) {
-    const trinn = graaVed(G, c[0], c[1]);
+  if (graa !== null)
     lag.push({
       tittel: 'Grått areal',
       rader: [
         [
           'Trinn',
-          !trinn
-            ? 'ikke grått areal'
-            : trinn === 6
-              ? 'grått, uten oppgitt andel vegetasjon'
-              : GRAATRINN[trinn - 1][1].toLowerCase()
+          graa === GRONT
+            ? 'ikke grått areal, grønt i bebygd område'
+            : !graa
+              ? 'ikke grått areal'
+              : graa === 6
+                ? 'grått, uten oppgitt andel vegetasjon'
+                : GRAATRINN[graa - 1][1].toLowerCase()
         ]
       ],
       kilde: 'Kart over grå arealer, NIBIO m.fl.'
     });
-  }
   /* Punktet: kommunen og koordinatene */
   const [lon, lat] = ol.proj.transform(c, UTM, 'EPSG:4326');
   lag.push({

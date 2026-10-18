@@ -14,7 +14,7 @@ test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () 
   /* en sølvtabell uten egen kilde hører til kilden for tabellen den bygger på */
   assert.ok(kilder('verdi').includes('bronse.verdsattNatur: solv.verdsattNatur + solv.verdsattAndel'));
   /* én kilde kan justeres til to sølvtabeller */
-  assert.ok(kilder('planlagt').includes('bronse.grunnkartflis: solv.klasser + solv.sammensatt'));
+  assert.ok(kilder('graa').includes('bronse.graabit: solv.graabit + solv.graa'));
   /* egne områder i ruter hører til egne områder, ikke til rutestørrelsen */
   assert.ok(kilder('egne').includes('bronse.egne: solv.egne + solv.egneruter'));
 });

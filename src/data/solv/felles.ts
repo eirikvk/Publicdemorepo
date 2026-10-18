@@ -62,7 +62,7 @@ export const fliserI = (e: Utsnitt, z: number): Flis[] => {
 };
 
 /* Groveste flisnivå NIBIO tegner grunnkartet i: 512 piksler per flis gir 10,6 meter per piksel, innenfor grensen på 1:50 000.
-   Zoomet lenger ut brukes blokkene satt sammen eller det sammensatte kartet. */
+   Det er nivået tallene regnes på. Zoomet lenger ut utledes kartet av blokkene på dette nivået. */
 export const FLISNIVA = 10;
 
 /* Bitene: inngrepsfri natur og grått areal hentes og tolkes i biter, flisene på nivå 8 med 2048 x 2048 ruter. Ruta er da den samme
@@ -75,8 +75,7 @@ export const bitRuter = (tc: Flis): Rutebilde => {
   const u = flisUtsnitt(tc);
   return { u, res: (u[2] - u[0]) / BIT, w: BIT, h: BIT };
 };
-/* Biten punktet p [øst, nord] ligger i, og bitene som dekker utsnittet e */
-export const bitVed = (p: number[]): Flis => flisVed(p, BITNIVA);
+/* Bitene som dekker utsnittet e */
 export const biterI = (e: Utsnitt) => fliserI(e, BITNIVA);
 /* Biten flisen tc på nivå 8 eller finere ligger i */
 export const bitAv = (tc: Flis): Flis => [BITNIVA, tc[1] >> (tc[0] - BITNIVA), tc[2] >> (tc[0] - BITNIVA)];
@@ -133,9 +132,8 @@ export const bitFaktor = (tc: Flis) => terrengfaktor(flisUtsnitt(bitAv(tc)));
 /* Arealet av en flerflate i km² i terrenget. e er utsnittet målestokken regnes midt i, til vanlig flatens eget utsnitt. */
 export const arealKm2 = (koord: Flerflate, e: Utsnitt = utsnitt(koord)) => areal(koord) / m2PerKm2(e);
 
-/* Navnet på flisen [z, x, y], som «z/x/y», og flisen fra navnet */
+/* Navnet på flisen [z, x, y], som «z/x/y» */
 export const flisnavn = (tc: Flis) => tc.join('/');
-export const flisAvNavn = (n: string) => n.split('/').map(Number) as Flis;
 /* Flisen på nivå z som punktet p [øst, nord] ligger i */
 export const flisVed = (p: number[], z: number): Flis => [
   z,

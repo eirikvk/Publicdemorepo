@@ -147,7 +147,7 @@ Katalogen og cachen, i `src/data/`. Se «Katalogen og cachen» under.
 |---|---|
 | `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. Tabellene bak tallene har også forklaringen, usikkerheten og kilden (`forklaring`, `usikkerhet`, `kilde`), og oppslag, lagrede svar og hjelpetabeller er merket som tekniske (`teknisk`). Kildene står samlet øverst (`KILDE`), med lisensen. |
 | `avhengigheter.ts` | Hvilke tabeller i katalogen hver tabell bygger på, lest ut av koden. Laget av `verktoy/forklaringer.ts`, ikke rediger for hånd. |
-| `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok), tid og om svaret er delvis. Gjør kallene, deler kall som pågår, og glemmer det eldste. Importerer ingenting. |
+| `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok) og tid. Gjør kallene, deler kall som pågår, og glemmer det eldste. Importerer ingenting. |
 
 Generelt, i `src/data/generelt/`. Det som ikke vet noe om natur, kommuner eller kilder. Hver ting finnes bare her, så alle lagene
 regner likt. Filene importerer ingenting.
@@ -184,7 +184,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
 | `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, dekningsandelen til flater i bitene (`andelsbiter`), kommunens flate i bitene (`solv.kommunebiter`), og et tema som hentes i biter talt i kommunen eller i et naturtema i den (`tellIKommune`, `tellIBitene`) |
-| `grunnkart.ts` | Grunnkartet fra NIBIO, én felles sannhet per nivå: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret) og på finere nivåer av kartbildet der, den vanligste klassen zoomet ut (`solv.klasserUt`), blokkene i kommunen, og dagens klasser for hele kommunen fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
+| `grunnkart.ts` | Grunnkartet fra NIBIO, én felles sannhet per nivå: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret) og på finere nivåer av kartbildet der, den vanligste klassen zoomet ut (`solv.klasserUt`), og blokkene i kommunen |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Lerretet: bildene leses inn, og kartet tegnes. Dekningen av flater regnes ikke her, men i `generelt/dekning.ts`. Tegneflatene brukes om igjen, én per størrelse. Den eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden. |
 | `tolking.ts` | Tolkingen av kartbildene til verdier per rute for grått areal, inngrepsfri natur og kommuneplanen, uten katalogen, så den kan kjøres i bakgrunnstråden |
@@ -207,7 +207,8 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | Fil | Innhold |
 |---|---|
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes i biter |
-| `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages (bare til kartet) |
+| `grunnkart.ts` | Dagens klasser for hele kommunen: alle blokkene lest, lagret eller hentet fra NIBIO når kommunen velges, og arealet per detaljklasse |
+| `planflis.ts` | Planlagt utbygging per piksel i kartet, én sannhet per nivå: rutene i utbyggingen på nivå 10, finere nivåer i eller inntil feltene der, og zoomet ut innenfor dagens klasse i pikselen |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer, av SSBs arealstatistikk alene: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, for kommunen og for alle kommunene i Norge, og summene, regnskapet og sammenligningen med Norge som tvillingen viser. Merket syntetisk. |
@@ -225,8 +226,8 @@ Datamotoren, i `src/data/motor/`.
 | `valgt.ts` | Valgt kommune, og en tabell lest for den: `valgt(katalog.gull.inon)` gir raden i cachen, og ber om den hvis den mangler |
 | `tilstand.ts` | Tilstanden som gjelder nå (`app`): valgene og det tekniske. Lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen. |
 | `kommune.ts` | Listen over kommuner, valg av kommune, og det som bes om med en gang: alle tabellene i gull for kommunen |
-| `kartverdier.ts` | Hva hver piksel i en kartflis er, fra sølv på nivået flisen er på: dagens klasser, detaljklassene, grått areal og inngrepsfri natur. Begge sidene tegner kartlagene av dette. |
-| `grunnkart.ts` | Dagens klasser til kartet, fra `gull.dagensKlasser`, og det sammensatte kartet mens blokkene hentes, med hvor langt hentingen er kommet. Legger nye fliser inn i det sammensatte kartet med en gang (tegningen står i sølv), og sier fra når kartet har stått stille med nye fliser og tallene bygger på det. |
+| `kartverdier.ts` | Hva hver piksel i en kartflis er, fra sølv og gull på nivået flisen er på: dagens klasser, detaljklassene, grått areal, inngrepsfri natur og planlagt utbygging. Begge sidene tegner kartlagene av dette, og trykk i kartet slår opp i det samme (`verdiIPunkt`). |
+| `grunnkart.ts` | Om kommunen har lagrede klasser, og hvor langt hentingen av blokkene fra NIBIO er kommet |
 | `plan.ts` | Det siden og kartet trenger å vite om utbyggingen: om kommunen har plan, utbyggingen for valgt kommune, og hvor langt den er kommet |
 | `egne.ts` | Egne områder, tegnede og opplastede: en kilde fra brukeren, som legges slik brukeren laget dem i `bronse.egne` |
 
@@ -248,17 +249,16 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | Fil | Innhold |
 |---|---|
 | `ol.ts` | Delene av OpenLayers som brukes, samlet som `ol` |
-| `felles.ts` | Flisnettene, hva kartet holder på med, hjelpere for lag som tegnes i nettleseren, og kildene hvert lag krediterer (`KILDER`) |
+| `felles.ts` | Flisnettet, hva kartet holder på med, hjelpere for lag som tegnes i nettleseren, og kildene hvert lag krediterer (`KILDER`) |
 | `kart.ts` | Selve kartet: bakgrunn, grense og status, hvordan lagene settes sammen, og kartets minne til katalogen |
 | `klipping.ts` | Klipping mot kommunen: utenfor valgt kommune vises bare bakgrunnskartet |
-| `trykk.ts` | Trykk i kartet: hva som er i punktet, prikken og omrisset av flatene i punktet, og bytte til kommunen man trykket i |
+| `trykk.ts` | Trykk i kartet: hva som er i punktet, fra datamotoren på nivået kartet viser, prikken og omrisset av flatene i punktet, og bytte til kommunen man trykket i |
 | `punktinfo.ts` | Detaljene for punktet man trykket på, gruppert per kartlag, som et oppslag i et vanlig GIS: det som alt er hentet, og det som slås opp hos kildene når detaljene vises |
 | `feltnavn.ts` | Lesbare navn på feltene fra kildene i detaljene, og hvilke felt som bare vises med kildenes egne navn |
 | `maaling.ts` | Måling av hvor jevnt kartet går, til teknisk visning |
-| `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
 | `verdilag.ts` | Tegnemotoren for lagene som tegnes piksel for piksel av datamotoren (`kartverdier.ts`), brukt av begge sidene: laget gir bare verdiene farger, uten utjevning |
 | `grunnkart.ts` | Dagens klasser i kartet, tegnet av sølv på nivået kartet viser, så alle kartlagene er enige om hver piksel |
-| `plan.ts` | Planlagt utbygging |
+| `plan.ts` | Planlagt utbygging: fargene, med styrken zoomet ut, og når laget vises |
 | `naturtema.ts` | Verneområder og villrein med skravur (områdene er ofte store, og små områder vises som ring), verdsatt natur fylt, sløret over det som ikke er kartlagt, og markering av ett område |
 | `inon.ts` | Inngrepsfri natur: fargene for sonene, og når laget vises |
 | `graa.ts` | Grått areal: fargene for trinnene og grønt i bebygd område, og når laget vises |
@@ -421,13 +421,11 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 
 - **Les-gjennom.** Ligger svaret i cachen, brukes det. Ellers kjøres ETL-funksjonen, og svaret legges i cachen. Et kall som alt er
   underveis, deles, så to som spør etter det samme, gir ett kall til kilden.
-- **Én rad per tabell og kommune**, med status (henter, feil eller ok), svaret, tiden det tok, og om svaret er delvis (regnet ut
-  for den delen av kommunen nettleseren har hentet kart for).
-- **Det som bygger på brukeren, regnes ut på nytt** når egne områder endres, eller kartet har stått stille med nye fliser. Tabellene
-  det gjelder, er merket `brukerstyrt` i katalogen: utbyggingen og alt som bygger på den. Siden viser de gamle tallene til de nye
-  er klare.
-- **Ingen kopier.** Svarene lagres som de er, uten å gjøres om til tekst. Et nytt svar erstatter det gamle. Unntakene er merket
-  voksende: det sammensatte kartet og utbyggingens blokker.
+- **Én rad per tabell og kommune**, med status (henter, feil eller ok), svaret og tiden det tok.
+- **Det som bygger på brukeren, regnes ut på nytt** når egne områder endres. Tabellene det gjelder, er merket `brukerstyrt` i
+  katalogen: utbyggingen og alt som bygger på den. Siden viser de gamle tallene til de nye er klare.
+- **Ingen kopier.** Svarene lagres som de er, uten å gjøres om til tekst. Et nytt svar erstatter det gamle. Unntaket er merket
+  voksende: utbyggingens blokker.
 - **Grensene** står per tabell i katalogen (`husk`). Svar fra kildene er store og huskes for noen få kommuner. Gull er små tabeller
   og huskes for flere. Det som er brukt lengst siden, går ut først.
 - **Bare så lenge siden er åpen.** Siden lagrer ingenting selv i nettleseren: ingen informasjonskapsler og ingen lokal lagring.
@@ -442,8 +440,8 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
   og flater som omriss. Til slutt viser «Kartets minne» hvor
   mange ferdige fliser OpenLayers holder på i hvert kartlag (opptil 512 per lag), og omtrent hvor mye minne de tar.
 
-Noen tabeller har ingen ETL-funksjon. Egne områder slik brukeren laget dem (`bronse.egne`) fyller datamotoren. Det sammensatte
-kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren legger inn nye fliser med en gang de er hentet. Hjelpetabellene fyller en ETL-funksjon underveis: utbyggingens blokker og oppslagene i områdene.
+Noen tabeller har ingen ETL-funksjon. Egne områder slik brukeren laget dem (`bronse.egne`) fyller datamotoren. Hjelpetabellene
+fyller en ETL-funksjon underveis: utbyggingens blokker og oppslagene i områdene.
 
 ### Prinsippene for dataflyten
 
@@ -453,9 +451,8 @@ kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren leg
    ulike ting sammen. Det gjør gull: at et eget område erstatter kommuneplanen der det ligger, planen lagt oppå dagens klasser,
    verneområdene krysset med utbyggingen, verdsatt natur innenfor det kartlagte. Kommunegrensen og rutenettet er rammen, ikke en
    kilde, så å klippe verneområdene mot kommunen er sølv. Planen ligger i to tabeller, én per kilde, med samme datamodell (`Planruter`):
-   `solv.kommuneplanruter` og `solv.egneruter`. Dagens klasser for hele kommunen har også to: blokkene på 10,6 meter
-   (`solv.klasser`, satt sammen i `solv.klassekart`), lagret eller hentet fra NIBIO når kommunen velges, og det sammensatte kartet
-   (`solv.sammensatt`). Tallene bruker bare blokkene; det sammensatte kartet vises i kartet når blokkene ikke kan lages.
+   `solv.kommuneplanruter` og `solv.egneruter`. Dagens klasser er blokkene på 10,6 meter (`solv.klasser`), lagret eller hentet fra
+   NIBIO når kommunen velges.
 2. **Gull deles der det kommer inn en ny eller tregere kilde.** Hver tabell i gull svarer på ett spørsmål. Trenger en del av svaret
    noe som kommer senere, som utbyggingen, blir den delen en egen tabell som kaller den første. `gull.verneomrader` er
    verneområdene i kommunen, og `gull.verneomraderIPlan` er planlagt utbygging innenfor dem. Gull kan kalle gull.
@@ -465,12 +462,9 @@ kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren leg
 4. **Komponentene velger selv hvor store de er, og gjør bare visningslogikk.** En komponent kan lese flere resultater fra gull, for
    eksempel vise listen med en gang og planlagt utbygging når den er regnet ut. Men den lager ingen nye tall. Kommer det et tall ut
    av komponenten som ikke står i gull, er det metode, og det hører hjemme i gull.
-5. **Det brukeren gjør, er kilder nederst.** Egne områder (`bronse.egne`) og kartet som er hentet (flisene i
-   `bronse.grunnkartflis`) kommer fra brukeren, ikke fra kommunenummeret. `bronse.egne` er den eneste tabellen datamotoren fyller
-   selv. Det sammensatte kartet (`solv.sammensatt`) er en ETL-funksjon som leser flisene som er hentet, rett fra cachen. Det er et
-   uttalt unntak fra prinsipp 3, for det som er hentet, er selve kilden. Nye fliser legger datamotoren inn med en gang. Ellers
-   bestemmer datamotoren bare når: når egne områder endres, eller kartet har stått stille med nye fliser, er gull for kommunen
-   utdatert og regnes ut på nytt.
+5. **Det brukeren gjør, er kilder nederst.** Egne områder (`bronse.egne`) kommer fra brukeren, ikke fra kommunenummeret. Det er
+   den eneste tabellen datamotoren fyller selv. Ellers bestemmer datamotoren bare når: når egne områder endres, er gull for
+   kommunen utdatert og regnes ut på nytt.
 6. **Gull lagres, sølv og bronse bare når noen vil spørre etter dem igjen.** Det er når gull regnes ut på nytt fordi brukeren
    har gjort noe, når kartet spør, og når mange bruker det samme, som kommunegrensen. Ellers hentes sølv og bronse rett før de
    trengs (`husk: 0`). Svarene fra Miljødirektoratet lagres for eksempel ikke, for sølv lagrer det som trengs av dem.
@@ -483,13 +477,13 @@ sidene viser, er summer over radene. Slik kunne det vært en faktatabell i Datab
 ```
 bronse.planflis (DiBK) → solv.kommuneplanruter          ─┐
 bronse.egne (brukeren) → solv.egne → solv.egneruter     ─┼─→ gull.utbygging ─┐
-solv.klasser, solv.sammensatt → gull.dagensKlasser      ─┘                   ├─→ gull.utbyggingIVerneomrader ─→ gull.verneomraderIPlan
+solv.klasser → gull.dagensKlasser                       ─┘                   ├─→ gull.utbyggingIVerneomrader ─→ gull.verneomraderIPlan
 solv.verneomrader                                       ─────────────────────┘
 ```
 
 Planen og dagens klasser tolkes per rute i sølv (`solv.kommuneplanruter`, `solv.egneruter` og `klasserIFlis`), og settes sammen i
-gull. Kartlagene for
-planen, inngrepsfri natur og grått areal bruker de samme funksjonene når de tegner per piksel. Grått areal er
+gull. Kartlagene tegnes per piksel av den samme sannheten på nivået kartet viser, gjennom datamotoren (`motor/kartverdier.ts`), og
+et trykk i kartet slår opp i den samme. Grått areal er
 krysset med utbyggingen for seg (`gull.graakryss`), fordi det også teller planlagt utbygging der det alt er bebygd, og grønt i
 bebygd område.
 
@@ -503,7 +497,7 @@ Datamotoren samordner: den velger kommune, fyller kildene fra brukeren og bestem
 utregningen gjøres i ETL-koden. Brukergrensesnittet viser og tar imot det brukeren gjør. De er skilt slik:
 
 - Tilstanden som gjelder nå, ligger i ett objekt, `app`, i `src/data/motor/tilstand.ts`: valgt kommune og egne områder (valgene
-  brukeren har gjort), og hentingen og om kartet flyttes (det tekniske). Alt som er hentet og regnet ut, ligger i cachen.
+  brukeren har gjort), og hentingen (det tekniske). Alt som er hentet og regnet ut, ligger i cachen.
 - Komponentene og kartet leser tabellene i katalogen for valgt kommune, med `valgt` og `verdi` i `src/data/motor/valgt.ts`, for
   eksempel `valgt(katalog.gull.inon)`. Mangler svaret, bes det om, og siden tegnes på nytt når det er klart.
 - Det som bare gjelder visningen, ligger i `ui` i `src/ui/tilstand.ts`: valgt side, hva som er slått på i kartet, og det som vises
@@ -514,14 +508,12 @@ utregningen gjøres i ETL-koden. Brukergrensesnittet viser og tar imot det bruke
 - Komponentene endrer ikke tilstanden i datamotoren selv. De kaller datamotoren, for eksempel `velgKommune` og `lastOppPlan`.
 - Kartet lages i `ui/kart/kart.ts` (`lagKart`) og settes inn på siden av `Kartpanel.tsx`. Knappen for å bytte kommune er en del av
   siden, men kartet plasserer den over punktet man trykket på.
-- Det som ikke er tilstand, men en hendelse, sies fra med `varsle` og `lytt`: datamotoren sier fra hver gang det er lagt en ny
-  flis inn i det sammensatte kartet, og hvor, så kartet kan fargelegge sin kopi.
 - Bronse sier fra om hentingen gjennom én funksjon (`nårHentingEndres`). Datamotoren legger det som vises, i `app`.
 
 ### Lasting av filene
 
 Filene i datamotoren, og filene i kartet, kaller hverandre fram og tilbake. Det går bra så lenge ingen fil bruker en annen mens den
-lastes. Det kartlagene trenger mens filene lastes (flisnettene og kildene for lag som tegnes i nettleseren), ligger derfor i
+lastes. Det kartlagene trenger mens filene lastes (flisnettet og kildene for lag som tegnes i nettleseren), ligger derfor i
 `ui/kart/felles.ts`, som bare bruker OpenLayers og datadelen. Selve kartet lages først når alt er lastet. Bryter man regelen,
 stopper siden med en `ReferenceError` når den åpnes.
 

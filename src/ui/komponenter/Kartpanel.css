@@ -31,7 +31,8 @@
 .kartflate .tema {
   opacity: 0.86;
 }
-.kartflate .plan {
+.kartflate .plan,
+.kartflate .planlagt {
   opacity: 0.92;
 }
 /* Merkelapper oppå kartet: hvite, med designsystemets kant og hjørner */
@@ -275,6 +276,7 @@
 /* Kartlagene av klassene vises med rene piksler, også når nettleseren forstørrer kartet til skjermens tetthet (kartet tegnes med
    høyst to piksler per punkt): hver piksel er én klasse fra sølv, den samme i alle lagene, uten blandede kantfarger. */
 .tema canvas,
-.figma-lag canvas {
+.figma-lag canvas,
+.planlagt canvas {
   image-rendering: pixelated;
 }

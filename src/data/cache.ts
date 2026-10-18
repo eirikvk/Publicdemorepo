@@ -9,13 +9,13 @@
    den bygger på, og så videre ned til kilden. Et kall som alt er underveis, deles. Det som feilet, står som feilet til noen kaller
    tabellen på nytt.
 
-   Det meste kommer fra kildene og endres ikke mens siden er åpen. Noe bygger på det brukeren gjør: kartet som er hentet, og egne
-   områder. Tabellene som gjør det, er merket brukerstyrt. Når datamotoren sier fra om at brukeren har endret noe i en kommune
+   Det meste kommer fra kildene og endres ikke mens siden er åpen. Noe bygger på det brukeren gjør: egne områder. Tabellene som gjør
+   det, er merket brukerstyrt. Når datamotoren sier fra om at brukeren har endret noe i en kommune
    (brukerEndret), er de utdatert for den kommunen. Siden får det gamle svaret til det nye er regnet ut, så tallene ikke blinker. En
    ETL-funksjon som kaller en brukerstyrt tabell, venter på det nye.
 
    Verdiene lagres som de er, uten å kopieres eller gjøres om til tekst. Det som ligger i cachen, endres derfor ikke etterpå: et nytt
-   svar erstatter det gamle. Unntaket er tabeller merket voksende (det sammensatte kartet og utbyggingens blokker), som fylles på
+   svar erstatter det gamle. Unntaket er tabeller merket voksende (utbyggingens blokker), som fylles på
    etter hvert. Siden lagrer ingenting varig i nettleseren: cachen finnes så lenge siden er åpen. (Nettleserens vanlige hurtigbuffer
    for svar fra tjenestene er noe annet, og styres av tjenestene.) Filen importerer ingenting. */
 
@@ -29,15 +29,13 @@ export interface Kildeinfo {
 }
 export type Status = 'henter' | 'feil' | 'ok';
 /* Én rad: status, verdien (den siste som ble ferdig), utgaven (et løpenummer som er nytt hver gang en verdi legges inn, så det aldri
-   brukes to ganger), når den ble laget, hvor lenge ETL-funksjonen brukte, om svaret gjelder bare en del av kommunen (delvis, fra
-   svaret selv), og kallet som er underveis. bruker er hvor mange ganger brukeren hadde endret noe i kommunen da raden ble regnet ut. */
+   brukes to ganger), når den ble laget, hvor lenge ETL-funksjonen brukte, og kallet som er underveis. bruker er hvor mange ganger brukeren hadde endret noe i kommunen da raden ble regnet ut. */
 export interface Rad<V> {
   status: Status;
   verdi: V | undefined;
   utgave: number;
   tid: number;
   ms: number;
-  delvis: boolean;
   bruker: number;
   underveis: Promise<V> | null;
   underveisBruker: number;
@@ -87,13 +85,10 @@ export type Tabell<N, V> = Tabelldef<N, V> & {
   (n: N): Promise<V>;
   naa: (n: N) => V | null;
   straks: (n: N, lag: () => V) => V;
-  alle: () => [string, V][];
 };
 
 const ALLE: Tabell<any, any>[] = [];
 const innholdet = new Map<Tabelldef<any, any>, Map<string, Rad<any>>>();
-const lyttere = new Map<Tabelldef<any, any>, ((v: any, nokkel: string) => void)[]>(),
-  glemtLyttere = new Map<Tabelldef<any, any>, ((v: any, nokkel: string) => void)[]>();
 const brukerUtgave = new Map<string, number>(); /* hvor mange ganger brukeren har endret noe, per kommune */
 const gjennom = new Map<
   Tabelldef<any, any>,
@@ -137,8 +132,7 @@ const gyldig = <V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) =>
 export function tabell<N, V>(d: Tabelldef<N, V>): Tabell<N, V> {
   const t = Object.assign((n: N) => hent(t, n), d, {
     naa: (n: N) => ferdig(t, n),
-    straks: (n: N, lag: () => V) => hentStraks(t, n, lag),
-    alle: () => alle(t)
+    straks: (n: N, lag: () => V) => hentStraks(t, n, lag)
   }) as Tabell<N, V>;
   ALLE.push(t);
   innholdet.set(t, new Map());
@@ -154,7 +148,6 @@ function brukt<V>(m: Map<string, Rad<V>>, k: string, r: Rad<V>) {
 function tattUt<V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) {
   if (r.verdi === undefined) return;
   if (t.glemt) t.glemt(r.verdi, k);
-  (glemtLyttere.get(t) || []).forEach(f => f(r.verdi, k));
 }
 /* Holder tabellen innenfor grensen: det som er brukt lengst siden, går ut først */
 function rydd<N, V>(t: Tabelldef<N, V>, m: Map<string, Rad<V>>) {
@@ -170,7 +163,6 @@ const ny = <V>(fra?: Rad<V>): Rad<V> => ({
   utgave: fra ? fra.utgave : 0,
   tid: Date.now(),
   ms: 0,
-  delvis: false,
   bruker: 0,
   underveis: null,
   underveisBruker: 0
@@ -182,11 +174,9 @@ function settInn<N, V>(t: Tabelldef<N, V>, k: string, r: Rad<V>, v: V, bruker: n
   r.utgave = ++lopenr;
   r.tid = Date.now();
   r.bruker = bruker;
-  r.delvis = !!v && typeof v === 'object' && (v as { delvis?: unknown }).delvis === true;
   r.underveis = null;
   brukt(m, k, r);
   rydd(t, m);
-  (lyttere.get(t) || []).forEach(f => f(v, k));
   kroker.endret();
 }
 
@@ -321,33 +311,12 @@ export function glem<N, V>(t: Tabelldef<N, V>, hvis: (nokkel: string) => boolean
     }
   kroker.endret();
 }
-/* Brukeren har endret noe i kommunen nr: egne områder, eller kartet som er hentet. De brukerstyrte tabellene er utdatert for
+/* Brukeren har endret noe i kommunen nr: egne områder. De brukerstyrte tabellene er utdatert for
    kommunen, og regnes ut på nytt neste gang noen spør. Datamotoren kaller denne. */
 export function brukerEndret(nr: string) {
   brukerUtgave.set(nr, (brukerUtgave.get(nr) || 0) + 1);
   kroker.brukerEndret(nr);
 }
-/* Brukeren har endret noe som gjelder alle kommuner (rutestørrelsen under Tekniske valg): som brukerEndret for hver kommune som har
-   en rad i en brukerstyrt tabell */
-export function brukerEndretOveralt() {
-  const nr = new Set<string>();
-  for (const t of ALLE) if (t.brukerstyrt) for (const k of rom(t).keys()) nr.add(k);
-  nr.forEach(brukerEndret);
-}
-/* Alle ferdige verdier i tabellen, som [nøkkel, verdi], eldst først */
-export const alle = <N, V>(t: Tabelldef<N, V>): [string, V][] =>
-  [...rom(t)].filter(([, r]) => r.status === 'ok').map(([k, r]) => [k, r.verdi as V]);
-/* f kalles hver gang en ny verdi er lagt inn i tabellen */
-export function vedNy<N, V>(t: Tabelldef<N, V>, f: (v: V, nokkel: string) => void) {
-  if (!lyttere.has(t)) lyttere.set(t, []);
-  lyttere.get(t)!.push(f);
-}
-/* f kalles når en verdi går ut av tabellen */
-export function vedGlemt<N, V>(t: Tabelldef<N, V>, f: (v: V, nokkel: string) => void) {
-  if (!glemtLyttere.has(t)) glemtLyttere.set(t, []);
-  glemtLyttere.get(t)!.push(f);
-}
-
 /* Omtrent hvor mange byte en verdi tar: bilder, lerreter og tallrekker telles, flater anslås ut fra antall punkter, og det andre
    grovt. Det som er telt én gang, telles ikke igjen. */
 function storrelse(v: unknown, sett: Set<unknown>, dybde = 0): number {
@@ -368,7 +337,7 @@ function storrelse(v: unknown, sett: Set<unknown>, dybde = 0): number {
   return sum;
 }
 /* Det cachen inneholder nå, til oversikten under Tekniske valg: per tabell navnet, tittelen, hva den er og grensen, og hver rad med status,
-   om den er utdatert eller delvis, omtrentlig størrelse i byte, hvor lenge ETL-funksjonen brukte, og alder i sekunder. Tabellene
+   om den er utdatert, omtrentlig størrelse i byte, hvor lenge ETL-funksjonen brukte, og alder i sekunder. Tabellene
    står i den rekkefølgen katalogen har dem. */
 export function innhold() {
   const sett = new Set<unknown>(),
@@ -390,7 +359,6 @@ export function innhold() {
       nokkel: k,
       status: r.status,
       utdatert: r.status === 'ok' && !gyldig(t, k, r),
-      delvis: r.delvis,
       byte: r.verdi === undefined ? 0 : storrelse(r.verdi, sett),
       ms: r.ms,
       sekunder: Math.round((na - r.tid) / 1000)

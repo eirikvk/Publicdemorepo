@@ -149,3 +149,26 @@ test('syntetiske tabeller for Norge: summen tar bare med kommunene som kan samme
   assert.deepEqual([S.jordbruk.km2, S.jordbruk.plass, S.jordbruk.av], [2, 1, 2]);
   assert.equal(byggSammenligning(N, '3')!.jordbruk.plass, null);
 });
+
+test('planlagt utbygging i kartet: rutene på nivå 10, og zoomet ut bare innenfor dagens klasse i pikselen', async () => {
+  const { glissent, leggInnDelt } = await import('../src/data/generelt/glissen.ts');
+  const { STYRKER, planPaaNivaa10, planUt } = await import('../src/data/gull/planflis.ts');
+  const { JOR, NAT } = await import('../src/data/solv/klasser.ts');
+  /* rutenettet er blokken [10, 4, 6]: ruta 0 er natur satt av og ruta 1 jordbruk satt av, i samme piksel to nivåer ut */
+  const D = glissent({ cx0: 4 * 512, cy0: 6 * 512, w: 512, h: 512 }),
+    B = new Uint8Array(512 * 512);
+  B[0] = 1;
+  B[1] = 2;
+  leggInnDelt(D, 4, 6, B);
+  const P = planPaaNivaa10(D, [10, 4, 6]);
+  assert.deepEqual([P[0], P[1], P[2]], [STYRKER, 2 * STYRKER, 0]); /* full styrke, natur og så jordbruk */
+  /* nivå 8: én piksel er 4 x 4 ruter, og blokken [10, 4, 6] er kolonne 0–127 og rad 256–383 i flisen [8, 1, 1] */
+  const K = new Uint8Array(512 * 512),
+    p = 256 * 512;
+  K[p] = NAT + 1;
+  assert.equal(planUt(D, K, [8, 1, 1])[p], 1); /* natur: én av 16 ruter, svakeste styrke */
+  K[p] = JOR + 1;
+  assert.equal(planUt(D, K, [8, 1, 1])[p], STYRKER + 1); /* jordbruk i en jordbrukspiksel */
+  K[p] = 1; /* bebygd: ingenting vises */
+  assert.equal(planUt(D, K, [8, 1, 1])[p], 0);
+});

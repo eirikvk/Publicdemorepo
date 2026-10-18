@@ -44,24 +44,19 @@ function Planlagt() {
     natur = jordbruk = tilstand === 'regner' ? 'regner …' : h ? 'henter kart …' : '';
     note = h
       ? `${henteTekst(h)}. Tallene regnes ut når hele kommunen er hentet.`
-      : tilstand === 'zoom'
-        ? 'Zoom inn i kartet for å få et anslag. Arealet regnes ut for den delen av kommunen nettleseren har hentet kart for.'
-        : tilstand === 'feil'
-          ? 'Arealet kunne ikke regnes ut.'
-          : '';
+      : tilstand === 'feil'
+        ? 'Arealet kunne ikke regnes ut.'
+        : '';
   } else {
-    const der = P.delvis ? ' i det hentede kartet' : '',
-      antall = P.antallEgne;
+    const antall = P.antallEgne;
     egnemerk = !antall
       ? ''
-      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !P.basis!.tom ? `Kommuneplanen alene setter av ca. ${iTekst(P.basis!.natur)} natur og ca. ${iTekst(P.basis!.jordbruk)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging' + der + '.'}`;
-    natur = `ca. ${iTekst(P.natur.km2)}, ${pst(P.natur.andel)} % av naturen${der}${antall ? '' : ` (${iTekst(P.natur.medStriper)} med smale striper)`}`;
-    jordbruk = `ca. ${iTekst(P.jordbruk.km2)}, ${pst(P.jordbruk.andel)} % av jordbruket${der}${antall ? '' : ` (${iTekst(P.jordbruk.medStriper)} med smale striper)`}`;
+      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !P.basis!.tom ? `Kommuneplanen alene setter av ca. ${iTekst(P.basis!.natur)} natur og ca. ${iTekst(P.basis!.jordbruk)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging.'}`;
+    natur = `ca. ${iTekst(P.natur.km2)}, ${pst(P.natur.andel)} % av naturen${antall ? '' : ` (${iTekst(P.natur.medStriper)} med smale striper)`}`;
+    jordbruk = `ca. ${iTekst(P.jordbruk.km2)}, ${pst(P.jordbruk.andel)} % av jordbruket${antall ? '' : ` (${iTekst(P.jordbruk.medStriper)} med smale striper)`}`;
     const felles =
       'Smale striper vises ikke i kartet med mindre du slår dem på under Tekniske valg på siden Om og metode. Anslag til illustrasjon, ikke offisiell statistikk.';
-    if (P.hentet)
-      note = `Gjelder bare den delen av kommunen nettleseren har hentet kart for: ca. ${iTekst(P.hentet.km2)} land${P.hentet.land ? ` av ${iTekst(P.hentet.land)} (${pst(P.hentet.andel)} %)` : ''}. Zoom inn og flytt kartet for å få med mer. ${felles}`;
-    else note = felles;
+    note = felles;
   }
   return (
     <section className="planlagt" aria-labelledby="plan-tittel">

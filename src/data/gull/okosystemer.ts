@@ -113,7 +113,6 @@ export interface PlanPerOkosystem {
   rader: { navn: string; km2: number; andel: number | null }[];
   vatmark: { km2: number; apen: number; tresatt: number };
   ingenPlan: boolean;
-  delvis: boolean;
 }
 /* Tabellen gull.planPerOkosystem: planlagt utbygging i kommunen nr per økosystemtype, av gull.planlagtPerDetaljklasse og
    gull.detaljareal. Radene er alle typene natur og jordbruk, også de uten planlagt utbygging, i samme rekkefølge som tabellen over
@@ -122,7 +121,7 @@ export async function planPerOkosystem(nr: string): Promise<PlanPerOkosystem | n
   const D = await katalog.gull.detaljareal(nr);
   if (!D) return null;
   const P = await katalog.gull.planlagtPerDetaljklasse(nr);
-  if (!P) return { rader: [], vatmark: { km2: 0, apen: 0, tresatt: 0 }, ingenPlan: true, delvis: false };
+  if (!P) return { rader: [], vatmark: { km2: 0, apen: 0, tresatt: 0 }, ingenPlan: true };
   const plan = perOkosystem(P.km2),
     iDag = perOkosystem(D.km2),
     km2 = (R: Okosystemrad[], kode: string) => (R.find(x => x.kode === kode) || { km2: 0 }).km2,
@@ -132,5 +131,5 @@ export async function planPerOkosystem(nr: string): Promise<PlanPerOkosystem | n
       andel: andel(km2(plan, h.kode), km2(iDag, h.kode))
     }));
   if (P.ukjent > 0) rader.push({ navn: 'Uten type i grunnkartet', km2: P.ukjent, andel: null });
-  return { rader, vatmark: vatmarkAv(P.km2), ingenPlan: false, delvis: P.delvis };
+  return { rader, vatmark: vatmarkAv(P.km2), ingenPlan: false };
 }

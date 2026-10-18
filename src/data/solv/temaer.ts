@@ -6,7 +6,6 @@ import {
   areal,
   flatesok,
   flerflate,
-  iSok,
   omriss,
   snitt,
   tomt,
@@ -179,9 +178,6 @@ export function naturSok(flate: FlateMedUtsnitt, kommune: Flatesok | null): Omra
   if (kommune && tomt(snitt(flate.ext, kommune.ext))) return null;
   return { flate: flatesok(flate.koord, flate.ext), kommune };
 }
-/* Om punktet (x, y) ligger i området S */
-export const iOmradet = (S: Omradesok, x: number, y: number) =>
-  iSok(S.flate, x, y) && (!S.kommune || iSok(S.kommune, x, y));
 /* Arealet av flaten koord innenfor kommunen, i kartets kvadratmeter, med dekningsandelen (generelt/dekning.ts) i et rutenett over
    snittet av utsnittene: ruter på 10,6 meter, eller større når snittet er mer enn 2048 ruter på det lengste. Brukes når klippingen av
    flatene feiler. */

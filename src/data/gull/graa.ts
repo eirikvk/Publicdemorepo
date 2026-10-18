@@ -28,7 +28,6 @@ export interface Graakryss {
   bebygd: number;
   gront: number;
   antallEgne: number;
-  delvis: boolean;
   ruteKm2: number;
 }
 
@@ -36,9 +35,9 @@ export interface Graakryss {
    gjenbruk, og hvor mye av det som er minst halvparten vegetasjon (trinn 4 og 5). Regnes for planen med egne områder (S) og planen
    alene (P), for hele kommunen og per eget område. Her er alle ruter med planlagt utbygging på land med, også der det er bebygd i
    dag, og uten regelen om smale striper. Midtpunktet i hver rute slås opp i bitene av grått areal.
-   gront er ruter som er bebygd i grunnkartet, men ikke grå: grønne arealer som parker og idrettsanlegg. R er utbyggingen, bit
-   biten av grått areal med navnet (z/x/y), og delvis om bare en del av kommunen er hentet. */
-export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undefined, delvis: boolean): Graakryss {
+   gront er ruter som er bebygd i grunnkartet, men ikke grå: grønne arealer som parker og idrettsanlegg. R er utbyggingen, og bit
+   biten av grått areal med navnet (z/x/y). */
+export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undefined): Graakryss {
   const nE = R.egetType ? R.antallEgne : 0,
     tom = (): Graatall => ({ tot: 0, graa: 0, gron: 0, gront: 0 }),
     ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }),
@@ -90,7 +89,7 @@ export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undef
       if (b) legg(P, e, k, c, w);
     }
   }
-  return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis, ruteKm2: ruteKm2(R.z) };
+  return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, ruteKm2: ruteKm2(R.z) };
 }
 
 /* Biten blokken (bx, by) i utbyggingen R ligger i. En blokk i utbyggingen er en flis på nivå 10 og ligger i én bit. */
@@ -119,7 +118,7 @@ export function byggGraa(D: Graa | null, land: number) {
 /* Det temasiden viser fra kryssingen K med utbyggingen: grønt i bebygd område, og planlagt utbygging på grått areal */
 export function byggGraaIPlan(K: Graakryss) {
   return {
-    gront: { km2: K.gront * K.ruteKm2, delvis: K.delvis },
+    gront: { km2: K.gront * K.ruteKm2 },
     plan: K.S.tot
       ? {
           km2: K.S.tot * K.ruteKm2,
@@ -127,7 +126,6 @@ export function byggGraaIPlan(K: Graakryss) {
           gron: K.S.gron * K.ruteKm2,
           gront: K.S.gront * K.ruteKm2,
           andelGraa: andel(K.S.graa, K.S.tot),
-          delvis: K.delvis,
           antallEgne: K.antallEgne
         }
       : null
@@ -140,7 +138,7 @@ export async function graakryss(nr: string): Promise<Graakryss | null> {
   if (!R) return null;
   const B = new Map<string, Graatrinn>();
   for (const b of biterIUtbygging(R)) B.set(flisnavn(b), await katalog.solv.graabit(b));
-  return kryssGraa(R, n => B.get(n), R.delvis);
+  return kryssGraa(R, n => B.get(n));
 }
 /* Tabellen gull.graaIPlan: det temasiden viser fra kryssingen, se byggGraaIPlan. null uten utbygging. */
 export type GraaIPlan = ReturnType<typeof byggGraaIPlan>;

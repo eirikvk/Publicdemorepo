@@ -4,7 +4,6 @@ import { nårBrukerEndret, se, type Tabell } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import type { Fylke, Kommune } from '../solv/felles.ts';
 import { oppdaterEgne } from './egne.ts';
-import { stoppRegning } from './grunnkart.ts';
 import { valgtNr } from './valgt.ts';
 import { app, endret } from './tilstand.ts';
 
@@ -47,7 +46,6 @@ export function velgKommune(nr: string) {
   const t = finn(nr);
   if (!t) return;
   app.valgt = t[1];
-  stoppRegning();
   oppdaterEgne(t[1].nr);
   endret();
   regnGull(t[1].nr);

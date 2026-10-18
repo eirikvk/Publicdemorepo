@@ -52,7 +52,7 @@ export function motortall() {
         : { tilstand: P.status === 'henter' ? 'sjekker' : 'feil' }),
     planTall: M.planTall(),
     plan: R && {
-      ...plukk(R, 'n', 'sum', 'iDag', 'delvis', 'fliser', 'rute', 'w', 'h', 'antallEgne', 'egneTall'),
+      ...plukk(R, 'n', 'sum', 'iDag', 'fliser', 'rute', 'w', 'h', 'antallEgne', 'egneTall'),
       basis: R.basis ? { rn: R.basis.rn, rj: R.basis.rj } : null
     },
     planSum: rund(v(K.gull.plansum)),
@@ -96,7 +96,7 @@ export function motortall() {
       (G.status === 'ok'
         ? { tilstand: 'ok', trinn: rund(G.verdi!.trinn), sum: r(G.verdi!.sum) }
         : { tilstand: tilstand(G) }),
-    graaKryss: plukk(v(K.gull.graakryss), 'S', 'P', 'bebygd', 'gront', 'delvis', 'antallEgne'),
+    graaKryss: plukk(v(K.gull.graakryss), 'S', 'P', 'bebygd', 'gront', 'antallEgne'),
     egne: A.egne.map(g => {
       const i = egne.indexOf(g.id);
       return {

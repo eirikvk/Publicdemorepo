@@ -101,8 +101,8 @@ export interface Klasseregister {
 export async function grunnkartflis(tc: Flis): Promise<ArrayBuffer> {
   return hentGrunnkartFlis(grunnkartUrl(flisUtsnitt(tc)));
 }
-/* Tabellen bronse.klasseregister: registeret over de lagrede klassene, eller null når det ikke kan hentes. Uten registeret brukes
-   det sammensatte kartet av det som er hentet. */
+/* Tabellen bronse.klasseregister: registeret over de lagrede klassene, eller null når det ikke kan hentes. Uten registeret lages
+   blokkene av kartbildene fra NIBIO, som for kommunene uten lagrede klasser. */
 export async function klasseregister(): Promise<Klasseregister | null> {
   return (hent('Egen fil', 'Register over lagrede klasser', 'klasser.json', true) as Promise<Klasseregister>).catch(
     () => null

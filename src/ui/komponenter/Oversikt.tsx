@@ -93,17 +93,11 @@ function framtid() {
   if (P)
     return {
       tall: dekar(P.nat),
-      tekst: `Natur som kommuneplanen setter av til framtidig utbygging. I tillegg ca. ${iTekst(P.jor)} jordbruk.${P.egne ? ' Egne områder er med.' : ''}${P.delvis ? ' Gjelder bare den delen av kommunen nettleseren har hentet kart for.' : ''}`
+      tekst: `Natur som kommuneplanen setter av til framtidig utbygging. I tillegg ca. ${iTekst(P.jor)} jordbruk.${P.egne ? ' Egne områder er med.' : ''}`
     };
   const tilstand = planTall();
   const h = hentingAvKlasser();
-  return h
-    ? ingenTall(henteTekst(h) + '.')
-    : tilstand === 'zoom'
-      ? ingenTall('Zoom inn i kartet for å få et anslag.')
-      : tilstand === 'feil'
-        ? ingenTall('Arealet kunne ikke regnes ut.')
-        : HENTER;
+  return h ? ingenTall(henteTekst(h) + '.') : tilstand === 'feil' ? ingenTall('Arealet kunne ikke regnes ut.') : HENTER;
 }
 
 const LINJE: Record<string, () => Linje> = {

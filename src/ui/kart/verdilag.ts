@@ -1,5 +1,5 @@
 /* Tegnemotoren for kartlagene som tegnes piksel for piksel av datamotoren (data/motor/kartverdier.ts): dagens klasser,
-   detaljklassene, grått areal og inngrepsfri natur. Hovedsiden og tvillingen fra Figma bruker den samme motoren, så dataene går den
+   detaljklassene, grått areal, inngrepsfri natur og planlagt utbygging. Hovedsiden og tvillingen fra Figma bruker den samme motoren, så dataene går den
    samme veien og møter kartet på samme måte på begge sidene.
    Datamotoren sier hva hver piksel er, og laget gir verdien en farge, uten utjevning: hver piksel i kartet er det sølv sier på nivået
    kartet viser, og alle lagene er enige. Det et lag bestemmer selv, er bare hvordan det ser ut: fargene, om det klippes mot kommunen
@@ -30,13 +30,14 @@ export interface Verdilag {
   tittel: string /* navnet på laget */;
   kilder: string[] /* hvem dataene kommer fra, til krediteringen i kartet (KILDER i felles.ts) */;
   verdier: (tc: Flis) => Promise<ArrayLike<number> | null> /* verdien per piksel i flisen, fra datamotoren */;
-  farger: () => (ArrayLike<number> | null)[] /* fargen [r, g, b] for verdien v på plass v, null der den ikke vises */;
+  farger: () => (ArrayLike<number> | null)[] /* fargen [r, g, b] eller [r, g, b, dekning] for verdien v på plass v, null der den
+    ikke vises */;
   klipp: 'alltid' | 'zoomet ut' /* klippes mot kommunen alltid, eller bare zoomet ut (under nivå 10) */;
-  klasse?: string /* CSS-klassen til laget: 'tema' (standard) deler lerret med dagens klasser på hovedsiden, 'figma-lag' i tvillingen */;
+  klasse?: string /* CSS-klassen til laget: 'tema' (standard) deler lerret med dagens klasser på hovedsiden, 'figma-lag' i
+    tvillingen, 'planlagt' for planlagt utbygging */;
   maske?: () => Flerflate[] | null /* bare innenfor disse flatene, som verneområdene. null mens de hentes. */;
-  folg?: (lag: Flislag) => unknown /* laget tegnes på nytt når dette endres */;
+  folg?: (lag: Flislag) => unknown[] /* laget tegnes på nytt når en av disse endres */;
   opacity?: number;
-  ferdig?: (tc: Flis) => void /* flisen er tegnet */;
 }
 
 /* Klipper det som er tegnet i flisen g (utsnitt u) til flatene F, slått sammen. false mens flatene ikke er hentet (null), eller når
@@ -77,6 +78,7 @@ export function verdilag(o: Verdilag): Flislag {
         const f = F[V[q]];
         if (!f) continue;
         fargPiksel(p, 4 * q, f);
+        if (f.length > 3) p[4 * q + 3] = f[3];
         noe = true;
       }
       if (!noe) return tile.setState(TOM);
@@ -88,7 +90,6 @@ export function verdilag(o: Verdilag): Flislag {
       }
       if (o.maske && !klippTil(g, o.maske(), u)) return tile.setState(TOM);
       tile.setImage(c);
-      if (o.ferdig) o.ferdig(tc);
     } catch (e) {
       tile.setState(3);
     }
@@ -104,7 +105,12 @@ export function verdilag(o: Verdilag): Flislag {
   abonner(() => {
     const G = verdi(katalog.solv.grense),
       a = ny('grense', G),
-      b = o.folg ? ny('folg', o.folg(lag)) : false;
+      b = o.folg
+        ? o
+            .folg(lag)
+            .map((v, i) => ny('folg' + i, v))
+            .some(Boolean)
+        : false;
     if (!a && !b) return;
     if (G && o.klipp === 'alltid') lag.setExtent(G.ext);
     friskOpp(lag);

@@ -5,8 +5,6 @@ import { katalog } from '../../data/katalog.ts';
 import type { EgenRad, EgneRader } from '../../data/gull/egne.ts';
 import type { Type } from '../../data/solv/egne.ts';
 import { egneRutenett, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
-import { bareHentetKart, oversikt } from '../../data/motor/grunnkart.ts';
-import { ingenPlan } from '../../data/motor/plan.ts';
 import { verdi } from '../../data/motor/valgt.ts';
 import { app, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
@@ -83,7 +81,7 @@ function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
     O = her ? her.omrade : null,
     tekster: string[] = [];
   let tabell: ReactNode = null;
-  if (!O) tekster.push(ingenPlan() || oversikt() ? 'Regner …' : 'Zoom inn over området, så regnes det ut.');
+  if (!O) tekster.push('Regner …');
   else {
     tekster.push(
       O.kjent
@@ -97,12 +95,10 @@ function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
               ] satisfies [km2: number, hva: string][]
             ).map(([v, hva]) => (v ? iTekst(v) + ' ' + hva : ''))
           )} her.`
-        : 'Kartet er ikke hentet for dette området ennå.'
+        : 'Området ligger utenfor kommunen, eller grunnkartet har ingen klasse der.'
     );
     if (O.ukjent && O.kjent)
-      tekster.push(
-        `For ca. ${iTekst(O.ukjent)} er kartet ikke hentet, eller området ligger utenfor kommunen. Zoom inn over området for å få med mer.`
-      );
+      tekster.push(`Ca. ${iTekst(O.ukjent)} ligger utenfor kommunen, eller grunnkartet har ingen klasse der.`);
     if (O.kjent)
       tabell = (
         <EgenTabell
@@ -255,9 +251,9 @@ export default function Egne() {
           />
           <p className="hint">
             Planen er kommuneplanen fra DiBK alene. Prosenten under tallene er andelen av dagens natur eller jordbruk i
-            kommunen{bareHentetKart() ? ', i den delen nettleseren har hentet kart for' : ''}. Endring er forskjellen
-            fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i bruk. Smale striper er ikke med for
-            natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.
+            kommunen. Endring er forskjellen fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i
+            bruk. Smale striper er ikke med for natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep
+            virker på avstand.
           </p>
         </div>
       )}

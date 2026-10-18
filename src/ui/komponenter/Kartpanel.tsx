@@ -106,11 +106,6 @@ export default function Kartpanel({ teknisk }: { teknisk: boolean }) {
             </MdIconButton>
           </div>
         )}
-        {ui.ute && !henting && (
-          <div className="merkelapp nede">
-            Zoom inn for å se arealklassene. NIBIO tegner grunnkartet først fra 1:50 000.
-          </div>
-        )}
       </div>
       <div className="kartfot">
         <div className="probelinje">

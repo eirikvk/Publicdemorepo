@@ -368,7 +368,7 @@ export function Oversikt() {
           {P ? (
             <>
               Kommuneplanen setter av <Merket>{iTekst(P.nat)}</Merket> natur og <Merket>{iTekst(P.jor)}</Merket>{' '}
-              jordbruk til utbygging{P.delvis ? ', i den delen av kommunen som er hentet' : ''}.
+              jordbruk til utbygging.
             </>
           ) : (
             'Hvor mye natur kommuneplanen setter av til utbygging, regnes ut når kartet for kommunen er hentet.'

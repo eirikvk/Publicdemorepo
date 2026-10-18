@@ -10,7 +10,6 @@ import type { Kartleggingen, TemaIPlan, Temaet } from '../../data/gull/temaer.ts
 import type { Rad } from '../../data/cache.ts';
 import type { Naturtema as Tema } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { bareHentetKart } from '../../data/motor/grunnkart.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
@@ -128,8 +127,6 @@ export function Naturtema({ t: tema }: { t: Tema }) {
     C = planenFor(N, I),
     K = B && B.status === 'ok' ? B.verdi! : null,
     E = K ? K.kartlagt : null,
-    hentet = bareHentetKart(),
-    der = hentet ? ' i den delen av kommunen det er hentet kart for' : '',
     helhet = !!t.dekning && !!K && !!K.helhet,
     kartlagt = !!E && E.km2 > 0;
   const under = !N.antall
@@ -142,8 +139,9 @@ export function Naturtema({ t: tema }: { t: Tema }) {
         ? 'ingen kommuneplan å krysse med'
         : !C
           ? 'planlagt utbygging ikke regnet ut ennå'
-          : (C.plan ? `ca. ${dekar(C.planKm2)} planlagt utbygging innenfor` : 'ingen planlagt utbygging innenfor') +
-            (hentet ? ', i hentet kart' : ''));
+          : C.plan
+            ? `ca. ${dekar(C.planKm2)} planlagt utbygging innenfor`
+            : 'ingen planlagt utbygging innenfor');
   const sumTekst = !N.antall
     ? `Miljødirektoratet har ingen ${t.fl} registrert i kommunen.`
     : `${stor(antallOrd(N.antall, ETT[t.id]))} ${N.antall === 1 ? t.en : t.fl} dekker ca. ${iTekst(N.sum)} av kommunen${N.andelLand !== null ? `, ${pst(N.andelLand)} % av landarealet` : ''}.${N.ufullstendig ? ' Tjenesten ga ikke alle lokalitetene, så tallet er for lavt.' : ''}${N.hoyVerdi !== null ? ` Ca. ${iTekst(N.hoyVerdi)} har stor eller svært stor verdi.` : ''}`;
@@ -157,15 +155,15 @@ export function Naturtema({ t: tema }: { t: Tema }) {
   if (N.antall) {
     if (utenPlan())
       paavirkning = 'Kommunen har ingen kommuneplan hos DiBK, så påvirkning fra planlagt utbygging kan ikke vurderes.';
-    else if (!C) paavirkning = 'Påvirkning fra planlagt utbygging regnes ut når kartet er hentet.';
+    else if (!C) paavirkning = 'Påvirkning fra planlagt utbygging regnes ut når kartet for kommunen er hentet.';
     else {
       const ant = C.berort;
       paavirkning = (
         <>
           <b>
             {C.plan
-              ? `Ca. ${iTekst(C.planKm2)} planlagt utbygging ligger innenfor ${antallOrd(ant, ETT[t.id])} ${ant === 1 ? t.en : t.fl}${der}.`
-              : `Ingen planlagt utbygging innenfor ${t.best}${der}.`}
+              ? `Ca. ${iTekst(C.planKm2)} planlagt utbygging ligger innenfor ${antallOrd(ant, ETT[t.id])} ${ant === 1 ? t.en : t.fl}.`
+              : `Ingen planlagt utbygging innenfor ${t.best}.`}
           </b>
           {C.smal
             ? ` I tillegg kommer ca. ${iTekst(C.smalKm2)} i smale striper, som oftest der grensene ikke er tegnet helt likt.`
@@ -227,8 +225,8 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       {G && (
         <p role="status">
           <b>
-            Av ca. {iTekst(G.natKm2)} planlagt utbygging på natur{der} ligger ca. {iTekst(G.ukjentKm2)} (
-            {pst(G.andel, 0)} %) i områder som ikke er kartlagt.
+            Av ca. {iTekst(G.natKm2)} planlagt utbygging på natur ligger ca. {iTekst(G.ukjentKm2)} ({pst(G.andel, 0)} %)
+            i områder som ikke er kartlagt.
           </b>{' '}
           Der vet vi ikke om det finnes verdifull natur. Smale striper er ikke med.
         </p>

@@ -52,7 +52,7 @@ function pikselag(
     klipp: 'alltid',
     klasse: 'figma-lag',
     maske,
-    folg: maske ? lag => (iKartet(lag) ? maske() : null) : undefined,
+    folg: maske ? lag => [iKartet(lag) ? maske() : null] : undefined,
     opacity
   });
 }

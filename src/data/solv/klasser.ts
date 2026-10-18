@@ -87,7 +87,7 @@ export const KLASSETABELL = [[0, 0, 0], ...ALLE.map(([id]) => DATAFARGE[id])];
 /* Tolking av fargene. I kanten mellom to flater blander tjenesten fargene. Hver farge tolkes derfor som en blanding av de to klassene
    den ligger nærmest linjen mellom: klasse A, klasse B og hvor mye av A (0–255). Oppslaget regnes ut én gang, for 32 nivåer per
    fargekanal. */
-export const BLANDING = (() => {
+const BLANDING = (() => {
   const A = new Uint8Array(32768),
     B = new Uint8Array(32768),
     T = new Uint8Array(32768),
@@ -121,7 +121,7 @@ export const BLANDING = (() => {
   return { A, B, T };
 })();
 /* Plassen til en farge i oppslaget */
-export const fargeNr = (r: number, g: number, b: number) => ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+const fargeNr = (r: number, g: number, b: number) => ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
 /* Klassen det er mest av i en piksel: plass i ALLE */
 export const klasseAv = (r: number, g: number, b: number) => {
   const q = fargeNr(r, g, b);

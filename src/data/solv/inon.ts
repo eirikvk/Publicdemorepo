@@ -16,12 +16,6 @@ export { INONSONER, UTENFOR, inonSone, tolkInon } from './tolking.ts';
 export interface Inonsoner extends Rutebilde {
   sone: Uint8Array | null;
 }
-/* Sonen i et punkt (x, y) i meter, fra biten D. UTENFOR utenfor biten. */
-export const soneVed = (D: Inonsoner, x: number, y: number) => {
-  const px = Math.floor((x - D.u[0]) / D.res),
-    py = Math.floor((D.u[3] - y) / D.res);
-  return !D.sone || px < 0 || py < 0 || px >= D.w || py >= D.h ? UTENFOR : D.sone[py * D.w + px];
-};
 /* Tabellen solv.inonbit: sonen per rute i biten tc, tolket i bakgrunnstråden (tolkInon) */
 export async function inonbit(tc: Flis): Promise<Inonsoner> {
   return {

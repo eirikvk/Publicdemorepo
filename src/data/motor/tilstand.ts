@@ -1,5 +1,4 @@
-/* Datamotoren, tilstanden som gjelder nå: valgene brukeren har gjort (valgt kommune og egne områder) og det tekniske (kall-loggen,
-   om kartet flyttes). Alt som er hentet og regnet ut, ligger i cachen (data/cache.ts) og leses gjennom katalogen
+/* Datamotoren, tilstanden som gjelder nå: valgene brukeren har gjort (valgt kommune og egne områder) og det tekniske (kall-loggen). Alt som er hentet og regnet ut, ligger i cachen (data/cache.ts) og leses gjennom katalogen
    (data/katalog.ts) for valgt kommune (valgt.ts). Det som bare gjelder visningen, som valgt side og hva man har trykket på i kartet, ligger i ui/tilstand.ts.
    Her er også lageret: React-komponentene og kartet abonnerer med abonner, og tegnes på nytt når noe er endret. Regnefunksjonene i
    sølv og gull bruker ikke tilstanden: de får det de trenger som argumenter. Filen bruker verken React eller OpenLayers. */
@@ -7,7 +6,6 @@ import { henteStatus, nårHentingEndres, type Kall, type Runde } from '../bronse
 import { nårEndret, nårKjort } from '../cache.ts';
 import type { Planfeil } from '../bronse/planfil.ts';
 import type { Egetinn } from '../solv/egne.ts';
-import type { Utsnitt } from '../generelt/geometri.ts';
 import type { Kommune } from '../solv/felles.ts';
 
 /* Et eget område, tegnet i kartet eller lastet opp som fil, i kommunen nr: det brukeren laget (Egetinn, se solv/egne.ts), med navn,
@@ -33,7 +31,6 @@ export interface Tilstand {
   valgt: Kommune | null;
   egne: EgetOmrade[];
   egneStatus: EgneStatus | null;
-  kartFlyttes: boolean;
   laster: boolean;
   kall: Kall[];
   sisteKall: Runde | null;
@@ -45,7 +42,6 @@ export const app: Tilstand = {
   egne: [] /* egne områder, tegnet i kartet eller lastet opp. De finnes så lenge siden er åpen. */,
   egneStatus: null /* hvordan siste tegning eller opplasting gikk: { hva, fil, ... }, se lastOppPlan i egne.ts */,
   /* Det tekniske */
-  kartFlyttes: false /* kartet flyttes nå. Da venter utregningene som kan vente, så kartet ikke hakker. */,
   laster: false /* om det hentes kartbilder nå, fra bronse */,
   kall: [] /* de siste kallene mot åpne kilder, nyeste først, fra bronse */,
   sisteKall: null /* siste runde med kartbilder fra én kilde, fra bronse */
@@ -75,25 +71,6 @@ export function endret() {
   requestAnimationFrame(send);
   setTimeout(send, 100);
 }
-
-/* Hendelser som ikke er tilstand: for eksempel at det er lagt en ny flis inn i det sammensatte kartet, og hvor. Kartet lytter. */
-/* Et sted i et lerret: [x, y, bredde, høyde] i piksler */
-export type Sted = [x: number, y: number, b: number, h: number];
-interface Hendelser {
-  nyFlis: [
-    lerret: HTMLCanvasElement,
-    sted: Sted
-  ] /* en flis er lagt inn i det sammensatte kartet, på stedet [x, y, b, h] */;
-  samlingFjernet: [lerret: HTMLCanvasElement] /* et sammensatt kart er fjernet fra minnet */;
-}
-type Lytter = (...verdier: any[]) => void;
-const hendelser = new Map<keyof Hendelser, Set<Lytter>>();
-export const lytt = <N extends keyof Hendelser>(navn: N, f: (...verdier: Hendelser[N]) => void) => {
-  if (!hendelser.has(navn)) hendelser.set(navn, new Set());
-  hendelser.get(navn)!.add(f as Lytter);
-};
-export const varsle = <N extends keyof Hendelser>(navn: N, ...verdier: Hendelser[N]) =>
-  (hendelser.get(navn) || []).forEach(f => f(...verdier));
 
 /* Bronse sier fra når hentingen endrer seg. Det som vises, legges i app. */
 nårHentingEndres(() => {

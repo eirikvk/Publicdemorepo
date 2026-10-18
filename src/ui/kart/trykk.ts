@@ -6,16 +6,15 @@ import type { Coordinate } from 'ol/coordinate.js';
 import { ol } from './ol.ts';
 import { se } from '../../data/cache.ts';
 import { katalog } from '../../data/katalog.ts';
-import { naermesteFarge } from '../../data/generelt/farge.ts';
+import { STYRKER } from '../../data/gull/planflis.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
-import { oversikt } from '../../data/motor/grunnkart.ts';
+import { graaIFlis, klasserIFlis, planIFlis, soneIFlis, verdiIPunkt } from '../../data/motor/kartverdier.ts';
 import { finn, velgKommune } from '../../data/motor/kommune.ts';
 import { app, endret } from '../../data/motor/tilstand.ts';
-import { rgb } from '../farger.ts';
 import { ui, type Probe, type Punktinfo } from '../tilstand.ts';
 import { tegner } from './egne.ts';
-import { oversiktLag, tema } from './grunnkart.ts';
-import { kart } from './kart.ts';
+import { plannett } from './felles.ts';
+import { kart, opplosning } from './kart.ts';
 import { utenforKommunen } from './klipping.ts';
 import { navnVed } from './naturtema.ts';
 import { planLag } from './plan.ts';
@@ -84,48 +83,56 @@ async function finnKommune(koord: Coordinate) {
     if (mitt === byttSok) settProbe({ tekst: 'Fant ingen annen kommune her.' });
   }
 }
-/* Trykk på kartet: les fargen i punktet og finn klassen, og om det er planlagt utbygging der. Setningen under kartet sier det
-   viktigste, og detaljene (punktinfo.ts) alt kartet vet om punktet. Prikken viser hvilket punkt det gjelder. */
-export function trykkIKartet(e: MapBrowserEvent) {
+/* Om temaet t er talt for valgt kommune, uten å hente noe */
+const talt = (t: typeof katalog.solv.graa) => {
+  const r = app.valgt ? se(t, app.valgt.nr) : null;
+  return !!r && r.status === 'ok';
+};
+/* Trykk på kartet: klassen i punktet, og om det er planlagt utbygging der, fra datamotoren på nivået kartet viser (verdiIPunkt), så
+   svaret er det samme som kartlagene viser. Det samme for grått areal og inngrepsfri natur, når temaet er talt for kommunen. Setningen
+   under kartet sier det viktigste, og detaljene (punktinfo.ts) alt kartet vet om punktet. Prikken viser hvilket punkt det gjelder. */
+let trykkNr = 0;
+export async function trykkIKartet(e: MapBrowserEvent) {
   if (tegner()) return; /* under tegning er trykk i kartet hjørner i området */
-  if (utenforKommunen(e.coordinate)) {
+  const c = e.coordinate;
+  if (utenforKommunen(c)) {
     glemPunkt();
-    finnKommune(e.coordinate);
+    finnKommune(c);
     return;
   }
   lukkBytt();
-  const iTema = navnVed(e.coordinate);
-  const pl = (planLag.getVisible() ? planLag.getData(e.pixel) : null) as Uint8ClampedArray | null,
-    plan =
-      pl && pl[3] > 40
-        ? naermesteFarge(pl[0], pl[1], pl[2], [rgb('pnat'), rgb('pjor')]) === 1
-          ? 'jordbruk'
-          : 'natur'
-        : null;
-  let d = (tema.getVisible() ? tema.getData(e.pixel) : null) as Uint8ClampedArray | null;
-  if ((!d || d[3] < 40) && oversikt() && oversiktLag.getVisible())
-    d = oversiktLag.getData(e.pixel) as Uint8ClampedArray | null;
-  let klasse: string | null = null,
-    tekst = 'Ingen synlig klasse her (skjult kartlag, eller kartet er ikke hentet).';
-  if (d && d[3] >= 40) {
-    const valg = [...ALLE, ['slor', null] as const];
-    klasse =
-      valg[
-        naermesteFarge(
-          d[0],
-          d[1],
-          d[2],
-          valg.map(([id]) => rgb(id))
-        )
-      ][1];
-    if (!klasse) tekst = 'Kartlaget for dette punktet er skjult.';
-  }
-  ui.punkt = punktinfo(e.coordinate, klasse, plan);
-  punktLag!.setPosition(e.coordinate);
-  settProbe(plan ? { punkt: 'Planlagt utbygging på ' + plan + iTema } : klasse ? { punkt: klasse + iTema } : { tekst });
+  punktLag!.setPosition(c);
+  const mitt = ++trykkNr,
+    valgtNa = app.valgt,
+    z = plannett.getZForResolution(opplosning()),
+    iTema = navnVed(c),
+    /* et oppslag som feiler, gir ingenting for det laget, men tar ikke de andre med seg */
+    slaaOpp = (f: Parameters<typeof verdiIPunkt>[0]) => verdiIPunkt(f, c, z).catch(() => null);
+  ui.punkt = null;
+  settProbe({ tekst: 'Slår opp punktet …' });
+  const planVises = planLag.getVisible() && planLag.getOpacity() > 0; /* tvillingen skjuler lag med gjennomsiktighet */
+  const [kl, pv, graa, sone] = await Promise.all([
+    slaaOpp(klasserIFlis),
+    planVises ? slaaOpp(tc => planIFlis(tc, ui.visSmale)) : 0,
+    talt(katalog.solv.graa) ? slaaOpp(graaIFlis) : null,
+    talt(katalog.solv.inon) ? slaaOpp(soneIFlis) : null
+  ]);
+  /* et nyere trykk, et trykk utenfor kommunen, en annen kommune eller tegning har tatt over */
+  if (mitt !== trykkNr || app.valgt !== valgtNa || tegner()) return;
+  const klasse = kl ? ALLE[kl - 1][1] : null,
+    plan = pv ? (pv > STYRKER ? 'jordbruk' : 'natur') : null;
+  ui.punkt = punktinfo(c, klasse, plan, graa, sone);
+  settProbe(
+    plan
+      ? { punkt: 'Planlagt utbygging på ' + plan + iTema }
+      : klasse
+        ? { punkt: klasse + iTema }
+        : { tekst: 'Ingen arealklasse her, eller kartet er ikke hentet ennå.' }
+  );
 }
 /* Punktet og detaljene glemmes: ved trykk utenfor kommunen og når kommunen byttes */
 export function glemPunkt() {
+  trykkNr++; /* et oppslag som pågår, gjelder ikke lenger */
   if (punktLag) punktLag.setPosition(undefined);
   if (ui.punkt) {
     ui.punkt = null;

@@ -149,7 +149,7 @@ function Rad({ navn, r }: { navn: string; r: Raden }) {
           <Innholdet
             v={v}
             foran={[
-              ['Status', statusen(r) + (r.delvis ? ', gjelder bare en del av kommunen' : '')],
+              ['Status', statusen(r)],
               ...(r.ms ? ([['Laget på', tid(r.ms)]] as [string, string][]) : []),
               ['Lagret', alder(r.sekunder) + ' siden']
             ]}

@@ -6,36 +6,29 @@ import { katalog } from '../katalog.ts';
 import { FLISNIVA, OPPLOSNINGER, ruteKm2 } from '../solv/felles.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
 import type { Planinfo } from '../solv/kommuneplan.ts';
-import { andel, landareal } from './felles.ts';
+import { andel } from './felles.ts';
 import { ruteVekt, type Utbygging } from './utbygging.ts';
 
-/* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av i km², om bare en del av kommunen er hentet, og hvor mange
-   egne områder som er med */
+/* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av i km², og hvor mange egne områder som er med */
 export interface PlanSum {
   nr: string;
   nat: number;
   jor: number;
-  delvis: boolean;
   egne: number;
 }
 
-/* Det siden viser om planlagt utbygging. R er utbyggingen, og land landarealet fra SSB. For natur og jordbruk: arealet uten smale
-   striper, andelen av det som er natur eller jordbruk i dag i samme rutenett, og arealet med smale striper. Med egne områder også
-   planen alene (basis). Er bare en del av kommunen hentet (delvis), også hvor mye land som er hentet. */
-export function byggPlanlagt(R: Utbygging, land: number) {
+/* Det siden viser om planlagt utbygging. R er utbyggingen. For natur og jordbruk: arealet uten smale striper, andelen av det som er
+   natur eller jordbruk i dag i samme rutenett, og arealet med smale striper. Med egne områder også planen alene (basis). */
+export function byggPlanlagt(R: Utbygging) {
   const m = OPPLOSNINGER[R.z] / 2,
     km2 = (v: number) => (v * m * m) / 1e6,
-    n = R.n,
-    hentet = km2(n.beb + n.jor + n.nat);
+    n = R.n;
   return {
     natur: { km2: km2(R.sum.rn), andel: andel(R.sum.rn, n.nat), medStriper: km2(n.pnat) },
     jordbruk: { km2: km2(R.sum.rj), andel: andel(R.sum.rj, n.jor), medStriper: km2(n.pjor) },
     basis: R.basis ? { natur: km2(R.basis.rn), jordbruk: km2(R.basis.rj), tom: !(R.basis.rn + R.basis.rj) } : null,
     antallEgne: R.antallEgne,
-    delvis: R.delvis,
-    hentet: R.delvis ? { km2: hentet, land, andel: land ? andel(Math.min(hentet, land), land) : null } : null,
-    rute: R.rute,
-    fliser: R.fliser
+    rute: R.rute
   };
 }
 
@@ -44,7 +37,6 @@ export const byggPlanSum = (R: Utbygging): PlanSum => ({
   nr: R.nr,
   nat: R.sum.rn * ruteKm2(R.z),
   jor: R.sum.rj * ruteKm2(R.z),
-  delvis: R.delvis,
   egne: R.antallEgne
 });
 
@@ -55,8 +47,8 @@ export async function kommuneplan(nr: string): Promise<Planinfo> {
 /* Tabellene gull.planlagt og gull.plansum for kommunen nr. null uten utbygging. */
 export type Planlagt = ReturnType<typeof byggPlanlagt>;
 export async function planlagt(nr: string): Promise<Planlagt | null> {
-  const [R, land] = await Promise.all([katalog.gull.utbygging(nr), landareal(nr)]);
-  return R ? byggPlanlagt(R, land) : null;
+  const R = await katalog.gull.utbygging(nr);
+  return R ? byggPlanlagt(R) : null;
 }
 export async function plansum(nr: string): Promise<PlanSum | null> {
   const R = await katalog.gull.utbygging(nr);
@@ -64,12 +56,11 @@ export async function plansum(nr: string): Promise<PlanSum | null> {
 }
 
 /* Planlagt utbygging per detaljklasse: km² per klasse i DETALJKLASSER (km2), planlagt utbygging der ingen detaljklasse passer
-   (ukjent), rutestørrelsen utbyggingen er regnet med, og om bare en del av kommunen er med (delvis) */
+   (ukjent), og rutestørrelsen utbyggingen er regnet med */
 export interface PlanlagtDetaljer {
   km2: number[];
   ukjent: number;
   rute: number;
-  delvis: boolean;
 }
 /* Tabellen gull.planlagtPerDetaljklasse: den planlagte utbyggingen i kommunen nr (gull.utbygging, uten smale striper) fordelt på
    detaljklassene i grunnkartet (solv.detaljklasser). Hver rute med planlagt utbygging på natur får den naturklassen det er mest av
@@ -117,5 +108,5 @@ export async function planlagtPerDetaljklasse(nr: string): Promise<PlanlagtDetal
     }
   }
   const km2 = ruteKm2(R.z);
-  return { km2: n.slice(1).map(v => v * km2), ukjent: n[0] * km2, rute: R.rute, delvis: R.delvis };
+  return { km2: n.slice(1).map(v => v * km2), ukjent: n[0] * km2, rute: R.rute };
 }

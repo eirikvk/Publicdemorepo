@@ -4,7 +4,7 @@
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { HALV, ORIGO, PLANNIVA, arealKm2, ruteM, type Planruter } from './felles.ts';
-import { sti, tegneflate } from './raster.ts';
+import { hentFlate, sti, tegneflate } from './raster.ts';
 
 /* Utbygging ('bygg') eller ikke utbygging ('fri') */
 export type Type = 'bygg' | 'fri';
@@ -138,4 +138,28 @@ function tegnEget(g: Flater, merke: number, R: Egneruter) {
           R.plan[i] = a[q] > a[q + 1] ? 1 : 2;
         }
     }
+}
+
+/* De egne områdene E i en kartflis med utsnittet u, 512 x 512 piksler: 1 utbygging, 2 ikke utbygging, 0 utenfor. En piksel hører
+   til en flate når flaten dekker minst halve pikselen, som for rutene (tegnEget), og utbygging vinner der flater overlapper. null når
+   ingen flater ligger i flisen. Til kartet zoomet inn, der pikslene er mindre enn rutene. */
+export function egneIFlis(E: Egne, u: Utsnitt): Uint8Array | null {
+  const deler: Del[] = [];
+  for (const g of E.flater)
+    if (overlapper(g.ext, u)) for (const del of g.deler) if (overlapper(del.ext, u)) deler.push(del);
+  if (!deler.length) return null;
+  const k = hentFlate(512, 512),
+    s = 512 / (u[2] - u[0]);
+  for (const type of ['fri', 'bygg']) {
+    k.fillStyle = type === 'bygg' ? '#f00' : '#0f0';
+    for (const del of deler)
+      if (del.type === type) {
+        sti(k, del.koord, u, s);
+        k.fill('evenodd');
+      }
+  }
+  const a = k.getImageData(0, 0, 512, 512).data,
+    ut = new Uint8Array(512 * 512);
+  for (let i = 0, q = 0; i < a.length; i += 4, q++) if (a[i + 3] >= HALV) ut[q] = a[i] > a[i + 1] ? 1 : 2;
+  return ut;
 }

@@ -10,8 +10,7 @@
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
    Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne), og hjelpetabeller som
-   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturoppslag). Det sammensatte kartet (solv.sammensatt) har en
-   ETL-funksjon, men er voksende: datamotoren legger inn nye fliser etter hvert som de hentes.
+   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturoppslag).
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
@@ -38,7 +37,6 @@ import { BITNIVA, PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planr
 import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
 import type { Omradesok } from './solv/temaer.ts';
-import type { Samling } from './solv/grunnkart.ts';
 import type { Klasseregister } from './bronse/nibio-grunnkart.ts';
 import * as gullEgne from './gull/egne.ts';
 import * as gullGraa from './gull/graa.ts';
@@ -713,27 +711,6 @@ export const katalog = {
       nokkel: ([nr, z]) => `${nr}/${z}`,
       etl: solvGrunnkart.blokker
     }),
-    klassekart: tabell<string, solvGrunnkart.Oversikt>({
-      lag: 'solv',
-      navn: 'klassekart',
-      tittel: 'Dagens klasser satt sammen av blokkene',
-      om: 'dagens klasser for kommunen zoomet ut, satt sammen av blokkene (solv.klasser), med høyst 2048 piksler på lengste side. Lages for alle kommuner: av de lagrede blokkene, eller av kartbildene fra NIBIO, som da hentes for hele kommunen.',
-      teknisk: true,
-      forklaring: 'Dagens klasser for hele kommunen zoomet ut, satt sammen av blokkene, til kartet.',
-      husk: 1,
-      etl: solvGrunnkart.klassekart
-    }),
-    sammensatt: tabell<string, Samling>({
-      lag: 'solv',
-      navn: 'sammensatt',
-      tittel: 'Sammensatt kart',
-      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet. Kartet viser det mens blokkene for hele kommunen hentes, og når blokkene ikke kan lages. Ingen tall bygger på det. Datamotoren legger inn nye fliser etter hvert som de hentes.',
-      forklaring:
-        'Kartbildene satt sammen flis for flis mens blokkene hentes, bare til kartet. Tallene bygger aldri på det, for rutene i det er grovere jo større kommunen er. Kan ikke blokkene hentes fra NIBIO, regnes ingen tall for planlagt utbygging.',
-      husk: 4,
-      voksende: true,
-      etl: solvGrunnkart.sammensatt
-    }),
     egne: tabell({
       lag: 'solv',
       navn: 'egne',
@@ -1280,11 +1257,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'dagensKlasser',
       tittel: 'Dagens klasser',
-      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet av det som er hentet når blokkene ikke kan lages (bare til kartet). Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
+      om: 'alle blokkene med dagens klasser for kommunen lest, lagret eller hentet fra NIBIO, med om kommunen har lagrede klasser og hvor mange blokker den har. Bes om når kommunen velges, så blokkene er klare for tallene og kartet.',
       forklaring:
-        'Dagens klasser for hele kommunen, satt sammen av blokkene. For kommunene med lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og blokkene lages med den samme funksjonen. Kan ikke blokkene lages, viser kartet det sammensatte kartet av det som er hentet, men da regnes ingen tall for planlagt utbygging.',
+        'Dagens klasser for hele kommunen, i blokkene på 10,6 meter. For kommunene med lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og blokkene lages med den samme funksjonen.',
       husk: 1,
-      brukerstyrt: true,
       etl: gullGrunnkart.dagensKlasser
     }),
     utbredelse: tabell({

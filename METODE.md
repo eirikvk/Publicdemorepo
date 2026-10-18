@@ -159,19 +159,17 @@ areal, inngrepsfri natur og tvillingens lag av skog, andre detaljklasser og grå
   har, så skog alltid ligger innenfor natur. Grått areal og sonene følger halvregelen, som for én rute: en piksel er grå når minst
   halvparten av rutene er grå, og i en sone når minst halvparten av rutene er minst så langt fra inngrep.
 
-Lagene som bygger på dagens klasser, leser dem på det samme nivået: grønt i bebygd område er bebygd, men ikke grått, og inngrepsfri
-natur vises bare der det er natur, som i tallene. Begge sidene bruker den samme datamotoren (`motor/kartverdier.ts`), som sier hva
-hver piksel er, og den samme tegnemotoren (`ui/kart/verdilag.ts`), som bare gir verdiene farger. Pikslene tegnes uten utjevning, også
-når nettleseren forstørrer kartet til skjermens tetthet, så det er ingen blandede kantfarger. Bildet zoomet ut av hele kommunen
-(`solv.klassekart`) ligger under flisene og vises bare mens de lages.
+Planlagt utbygging har rutenettet tallene regnes av (`gull.utbygging`) som sannhet (`gull/planflis.ts`): på nivå 10 rutene i det.
+Finere nivåer leser kommuneplanen, dagens klasser og egne områder på nivået, og viser bare det som ligger i et felt i rutenettet
+eller i en av de fire naborutene, for pikslene er mindre enn rutene, og kantene er tegnet litt ulikt. Zoomet ut får en piksel farge
+når dagens klasse i den er natur eller jordbruk og minst én rute er satt av, med styrken etter hvor stor del av pikselen det
+gjelder. Slik forsvinner ikke små felt, og natur satt av ligger alltid på en naturpiksel.
 
-**Kartets egne regler.** Kartet tegner de samme dataene piksel for piksel, og bruker de samme tersklene. To regler for planlagt
-utbygging gjelder bare det som vises, ikke tallene:
-
-- Smale striper zoomet inn (`ui/kart/plan.ts`): en piksel med planlagt utbygging vises når ruta den ligger i, eller en av de fire
-  naborutene, er et felt som ble beholdt i planrutenettet (`iEllerInntil`). Tallene bruker selve rutenettet.
-- Planlagt utbygging zoomet ut (nivå 9 og grovere): en piksel får farge når minst én rute i den har planlagt utbygging, og styrken
-  følger hvor stor del av pikselen det gjelder, så små felt ikke forsvinner.
+Lagene som bygger på dagens klasser, leser dem på det samme nivået: grønt i bebygd område er bebygd, men ikke grått, inngrepsfri
+natur vises bare der det er natur, og planlagt utbygging bare på natur og jordbruk, som i tallene. Begge sidene bruker den samme
+datamotoren (`motor/kartverdier.ts`), som sier hva hver piksel er, og den samme tegnemotoren (`ui/kart/verdilag.ts`), som bare gir
+verdiene farger. Et trykk i kartet spør den samme datamotoren på nivået kartet viser, så svaret er det kartet viser. Pikslene tegnes
+uten utjevning, også når nettleseren forstørrer kartet til skjermens tetthet, så det er ingen blandede kantfarger.
 
 **Enhet og avrunding.** Arealer regnes i km², som SSB oppgir. Planlagt utbygging og kryssingene med den telles i ruter i
 planrutenettet, og regnes om med 0,112 dekar per rute i gull. Inngrepsfri natur og grått areal rundes til nærmeste 10 dekar i gull.
@@ -251,12 +249,10 @@ blokk. Og arealet per detaljklasse i kommunen.
 - Grønne områder og idrettsområder er bebygd i begge inndelingene.
 - NIBIO tegner grunnkartet først fra 1:50 000. For 42 kommuner i Trøndelag, Bergen, Alta, Karasjok og Kautokeino ligger klassene
   per blokk på 10,6 meter lagret sammen med siden (`public/klasser/`, laget med `verktoy/klasser.ts`). De er laget av den samme
-  funksjonen som siden bruker (`solv.klasser`), så svaret er det samme som om siden hadde hentet kartbildene selv. Zoomet ut viser
-  kartet blokkene satt sammen (`solv.klassekart`). For andre kommuner henter nettleseren kartbildene fra NIBIO for hele kommunen
-  når den velges, ett per blokk, og lager blokkene med den samme funksjonen. Tallene regnes for hele kommunen når alt er hentet.
-  Mens det hentes, viser kartet et bilde av flisene som er kommet (`solv.sammensatt`), med høyst 2048 piksler på lengste side. Kan
-  ikke blokkene lages, viser kartet bare det bildet, og ingen tall for planlagt utbygging regnes, for rutene i det er grovere jo
-  større kommunen er (`gull.dagensKlasser`).
+  funksjonen som siden bruker (`solv.klasser`), så svaret er det samme som om siden hadde hentet kartbildene selv. For andre
+  kommuner henter nettleseren kartbildene fra NIBIO for hele kommunen når den velges, ett per blokk, og lager blokkene med den
+  samme funksjonen (`gull.dagensKlasser`). Tallene regnes for hele kommunen når alt er hentet. Zoomet ut tegner kartet hver flis
+  når blokkene i den er hentet. Kan ikke blokkene hentes, regnes ingen tall for planlagt utbygging.
 - Detaljklassene er kontrollert mot en tegning av sju testfliser i Trondheim uten blanding i kantene (SVG fra NIBIO):
   - Summert til de seks klassene gir de samme areal som dagens klasser, innenfor 0,3 %.
   - De store detaljklassene er innenfor ±3 %.
@@ -273,11 +269,11 @@ blokk. Og arealet per detaljklasse i kommunen.
 - Restklassene er små: i Trondheim 0,34 km² jordbruk og 0,86 km² natur uspesifisert, i Kautokeino 0,03 og 5,9 km² (0,07 % av
   naturen).
 
-**Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
-kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser per blokk og for hele kommunen: `solv.klasser`, `solv.blokker`,
-`solv.klassekart` og `solv.sammensatt` i `src/data/solv/grunnkart.ts`, de lagrede blokkene i `bronse.klassefil` og
-`bronse.klasseregister`, og valget mellom kildene i `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis til
-kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`. Detaljklassene: `DETALJKLASSER`, `detaljklasserIFlis`, `detaljIKlassen` og `detaljfilIFlis` i
+**Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargene i
+kartet: `src/ui/kart/grunnkart.ts`. Dagens klasser per blokk og zoomet ut: `solv.klasser`, `solv.blokker` og `solv.klasserUt` i
+`src/data/solv/grunnkart.ts`, de lagrede blokkene i `bronse.klassefil` og `bronse.klasseregister`, og alle blokkene for kommunen i
+`gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis til kartlagene: `klasserIFlis` i
+`src/data/motor/kartverdier.ts`. Detaljklassene: `DETALJKLASSER`, `detaljklasserIFlis`, `detaljIKlassen` og `detaljfilIFlis` i
 `src/data/solv/klasser.ts`, stilen og `bronse.detaljflis` i `src/data/bronse/nibio-grunnkart.ts`, `solv.detaljklasser` i
 `src/data/solv/grunnkart.ts` og `gull.detaljareal` i `src/data/gull/grunnkart.ts`.
 
@@ -481,39 +477,31 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    opp midt i det planen dekker. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
    WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: Om
    DiBK har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.
-4. **Kartbilder av grunnkartet** (`bronse.grunnkartflis` → `solv.klasser` → `solv.sammensatt`). Hentes fra
+4. **Kartbilder av grunnkartet** (`bronse.grunnkartflis` → `solv.klasser`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
    2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
    Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
    nivå 10 (10,6 meter), og for 42 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
-   viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene. Justeres: Kartbildene satt sammen flis for flis mens
-   blokkene hentes, bare til kartet. Tallene bygger aldri på det, for rutene i det er grovere jo større kommunen er. Kan ikke
-   blokkene hentes fra NIBIO, regnes ingen tall for planlagt utbygging.
+   viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
 5. **Kartbilder av kommuneplanen** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis:
    arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og
    uten kantstrek. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
    WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: En
    rute er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.
-6. **Arealtall fra SSB** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealet i km² per arealklasse i nyeste år. Svarer ikke API-et, spørres
-   det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
-   natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-7. **Egne områder per rute** (`solv.egneruter`). Forklart under [Egne områder](#egne-områder-og-opplastet-plan).
-8. **Kommuneplanen** (`gull.kommuneplan`). Opplysningene om kommuneplanen fra sølv, slik siden viser dem.
-9. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for hele kommunen, satt sammen av blokkene. For kommunene med lagrede
-   klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og blokkene
-   lages med den samme funksjonen. Kan ikke blokkene lages, viser kartet det sammensatte kartet av det som er hentet, men da
-   regnes ingen tall for planlagt utbygging.
-10. **Utbyggingen** (`gull.utbygging`). For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker
-    mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er
-    bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
-    jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene,
-    ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt
-    som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem.
-11. **Planlagt utbygging** (`gull.planlagt`). De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er
+6. **Egne områder per rute** (`solv.egneruter`). Forklart under [Egne områder](#egne-områder-og-opplastet-plan).
+7. **Kommuneplanen** (`gull.kommuneplan`). Opplysningene om kommuneplanen fra sølv, slik siden viser dem.
+8. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for hele kommunen, i blokkene på 10,6 meter. For kommunene med
+   lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og
+   blokkene lages med den samme funksjonen.
+9. **Utbyggingen** (`gull.utbygging`). For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker
+   mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er
+   bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
+   jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene,
+   ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt
+   som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem.
+10. **Planlagt utbygging** (`gull.planlagt`). De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er
     andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
@@ -541,8 +529,6 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
   dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
-- **Dagens klasser satt sammen av blokkene** (`solv.klassekart`). Dagens klasser for hele kommunen zoomet ut, satt sammen av
-  blokkene, til kartet.
 - **Hvor kommuneplanen ligger** (`solv.planoversikt`). Hvor i kommunen planen ligger, fra oversikten. Kartbildene fra DiBK hentes
   bare for blokkene der oversikten har noe, i blokken eller én piksel utenfor.
 - **Utbyggingen i blokker** (`gull.utbyggingsblokker`). Utbyggingen i blokker på 512 × 512 ruter, så bare blokker med nytt kart
@@ -559,9 +545,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 ### Kode
 
 `src/data/bronse/dibk-kommuneplan.ts`, `src/data/solv/kommuneplan.ts`, `src/data/bronse/kartverket.ts`,
-`src/data/solv/kommune.ts`, `src/data/bronse/nibio-grunnkart.ts`, `src/data/solv/grunnkart.ts`, `src/data/bronse/ssb.ts`,
-`src/data/solv/ssb.ts`, `src/data/gull/planlagt.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/utbygging.ts`. Kortet:
-`src/ui/komponenter/Framtid.tsx`.
+`src/data/solv/kommune.ts`, `src/data/bronse/nibio-grunnkart.ts`, `src/data/solv/grunnkart.ts`, `src/data/gull/planlagt.ts`,
+`src/data/gull/grunnkart.ts`, `src/data/gull/utbygging.ts`. Kortet: `src/ui/komponenter/Framtid.tsx`.
 
 <!-- /forklaringer:plan -->
 
@@ -966,16 +951,18 @@ grunnkartet kaller grønne arealer. I en stikkprøve på 140 slike punkter i Tro
 
 ## Utenfor analysene: trykk i kartet
 
-Trykker man i kartet, leser siden fargen i punktet og oppgir den synlige klassen fargen ligger nærmest. Ligger det planlagt
-utbygging der, sier siden om det er natur eller jordbruk som er satt av. Er et naturtema slått på, slås punktet også opp i flatene.
+Trykker man i kartet, spør siden datamotoren om klassen i punktet på nivået kartet viser (`verdiIPunkt` i
+`src/data/motor/kartverdier.ts`), det samme som kartlagene tegnes av. Ligger det planlagt utbygging der, sier siden om det er natur
+eller jordbruk som er satt av. Er et naturtema slått på, slås punktet også opp i flatene.
 Utenfor valgt kommune slås kommunen opp hos Kartverket (tabellen `bronse.kommuneIPunkt`). Dette er ikke en analyse og ligger i
 `trykkIKartet` i `src/ui/kart/trykk.ts`.
 
 Med «Detaljer» under kartet vises alt siden vet om punktet, gruppert per kartlag, som et oppslag i et vanlig GIS
-(`src/ui/kart/punktinfo.ts`): dagens arealklasse og planlagt utbygging lest av kartlagene, egne områder og opplastede planer med
-arealformål og status, hvert område i naturtemaene med egenskapene slik Miljødirektoratet ga dem, om punktet er kartlagt for
-naturtyper, sonen for inngrepsfri natur og trinnet for grått areal i bildet av kommunen, og kommunen og koordinatene i UTM 33 og
-grader. Naturtemaene er med også når laget ikke vises, så lenge de er hentet. Punktet i flaten avgjøres med like-ulik-regelen
+(`src/ui/kart/punktinfo.ts`): dagens arealklasse og planlagt utbygging, egne områder og opplastede planer med arealformål og
+status, hvert område i naturtemaene med egenskapene slik Miljødirektoratet ga dem, om punktet er kartlagt for naturtyper, sonen for
+inngrepsfri natur og trinnet for grått areal, og kommunen og koordinatene i UTM 33 og grader. Klassen, planen, sonen og trinnet
+kommer fra datamotoren på nivået kartet viser, så de er det samme som kartet viser. Sonen og trinnet vises når temaet er talt for
+kommunen. Naturtemaene er med også når laget ikke vises, så lenge de er hentet. Punktet i flaten avgjøres med like-ulik-regelen
 (`iFlate` i `src/data/generelt/geometri.ts`).
 
 Når detaljene vises, slås punktet også opp hos kildene, med GetFeatureInfo på et bilde på 3 × 3 meter med punktet i midten
@@ -1155,6 +1142,27 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Opprydding: oversiktsbildene, tall for hentet kart, planlagt utbygging og trykk i kartet, 18. oktober 2026.** Fire ting er
+ryddet:
+- Tallene kunne en gang regnes bare for den delen av kommunen nettleseren hadde hentet kart for. Det var slått av, men koden lå
+  igjen i utbyggingen, grått areal, økosystemene, cachen og tekstene på sidene. Den er fjernet.
+- De to bildene under kartet zoomet ut er fjernet: blokkene satt sammen med blandede farger (`solv.klassekart`) og det sammensatte
+  kartet av flisene som var hentet (`solv.sammensatt`), med kopien i kartfargene og hendelsene for nye fliser. Kartlaget tegner
+  dagens klasser av sølv på alle nivåer, og mens nye fliser lages, viser kartet flisene det har fra nabonivåene.
+  `gull.dagensKlasser` leser nå bare alle blokkene når kommunen velges.
+- Planlagt utbygging tegnes med den samme datamotoren og tegnemotoren som de andre lagene (`gull/planflis.ts`). Nivå 10 er rutene
+  i utbyggingen. Zoomet ut får en piksel natur satt av bare når dagens klasse i den er natur, og jordbruk satt av bare på jordbruk.
+  Før kunne en svak plan-piksel ligge på en bebygd piksel.
+- Et trykk i kartet finner klassen, planen, grått areal og sonen fra datamotoren på nivået kartet viser, ikke fra fargen på
+  skjermen. Grått areal og inngrepsfri natur i detaljene følger nå også nivået kartet viser.
+
+Tre ubrukte funksjoner og noen ubrukte hjelpere er også fjernet. Regresjonstesten ga de samme tallene. Det eneste avviket er feltet
+`delvis`, som er fjernet. Testen fant også en feil som fantes fra før og ikke er rettet: når et tegnet område byttes til «ikke
+utbygging», kan «kommuneplanen alene» av og til bli det samme som tallet med egne områder. Det skjedde i to av to kjøringer med
+koden før endringen og i én av to etter, da fire kjøringer gikk samtidig, og i ingen av tre kjøringer alene. Kartbildene endret seg under 0,13 %. Med planlagt utbygging på ligger ingen piksler med planlagt
+utbygging på bebygd eller vann i Trondheim, på 60, 15, 8 og 2 meter per skjermpunkt. Naturen på forsiden av tvillingen vises etter
+1,4 sekunder i Trondheim, 4,2 i Kautokeino og 3,4 i Surnadal, som ikke har lagrede klasser. Målt i Chromium, ikke på iPhone.
 
 **Grått areal og inngrepsfri natur per nivå, og én kartmotor, 18. oktober 2026.** Grått areal zoomet inn ble tegnet av egne
 kartbilder fra NIBIO med en egen grense: en piksel var grå fra en fjerdedel dekket, mens tallene krever halvparten. Zoomet ut ble

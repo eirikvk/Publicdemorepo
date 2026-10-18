@@ -306,6 +306,7 @@
 /* Kartlagene av klassene med rene piksler, som på hovedsiden (src/ui/komponenter/Kartpanel.css): hver piksel er én klasse fra sølv,
    den samme i alle lagene */
 .tema canvas,
-.figma-lag canvas {
+.figma-lag canvas,
+.planlagt canvas {
   image-rendering: pixelated;
 }

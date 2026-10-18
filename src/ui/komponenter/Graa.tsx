@@ -27,8 +27,8 @@ export default function Graa() {
       plan = (
         <>
           <b>
-            Av ca. {iTekst(P.km2)} planlagt utbygging på land{P.delvis ? ' i hentet kart' : ''} ligger ca.{' '}
-            {iTekst(P.graa)} ({pst(P.andelGraa, 0)} %) på grått areal.
+            Av ca. {iTekst(P.km2)} planlagt utbygging på land ligger ca. {iTekst(P.graa)} ({pst(P.andelGraa, 0)} %) på
+            grått areal.
           </b>
           {` Det er gjenbruk av areal som alt er tatt i bruk. Ca. ${iTekst(P.gron)} av dette er flater med minst halvparten vegetasjon, så også gjenbruk kan ta grønt.${P.gront ? ` I tillegg ligger ca. ${iTekst(P.gront)} på grønt i bebygd område.` : ''}${P.antallEgne ? ' Tallene inkluderer egne områder.' : ''} Her er all planlagt utbygging med, også på bebygd areal og i smale striper.`}
         </>
@@ -36,7 +36,7 @@ export default function Graa() {
     } else
       plan = utenPlan()
         ? 'Kommunen har ingen kommuneplan hos DiBK å krysse med.'
-        : 'Planlagt utbygging på grått areal regnes ut når kartet er hentet.';
+        : 'Planlagt utbygging på grått areal regnes ut når kartet for kommunen er hentet.';
   }
   const kilde = <p className="hint">I kartet er lysere grått mer vegetasjon, og blågrønt er grønt i bebygd område.</p>;
   return (
@@ -45,11 +45,7 @@ export default function Graa() {
       navn="Grått areal"
       tall={G}
       kilde={kilde}
-      under={
-        har && P
-          ? `${pst(P.andelGraa, 0)} % av planlagt utbygging ligger på grått areal${P.delvis ? ', i hentet kart' : ''}`
-          : ''
-      }
+      under={har && P ? `${pst(P.andelGraa, 0)} % av planlagt utbygging ligger på grått areal` : ''}
     >
       <p>{tekst}</p>
       {har && (
@@ -61,7 +57,7 @@ export default function Graa() {
           <Fargelinje
             id="gront"
             navn="Grønt i bebygd område"
-            tall={I ? (I.gront.delvis ? 'minst ' : '') + dekar(I.gront.km2) : ''}
+            tall={I ? dekar(I.gront.km2) : ''}
             under="Ikke grått areal. Parker, idrettsanlegg, golfbaner og lignende, som grunnkartet regner som bebygd og opparbeidet. Det er grønt, men telles ikke som natur."
           />
         </ul>

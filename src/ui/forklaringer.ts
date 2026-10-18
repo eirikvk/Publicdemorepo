@@ -185,7 +185,6 @@ export const KORT: Kort[] = [
         `Rutene er ${nf(ruteM(R.z))} meter, så hver rute er ${m2(r)} m². Ruter langs kommunegrensen teller med den delen som ligger i kommunen, og alle er rettet for målestokken.`,
         linje('Natur', R.sum.rn, R.n.pnat, R.n.nat, 'natur'),
         linje('Jordbruk', R.sum.rj, R.n.pjor, R.n.jor, 'jordbruk'),
-        ...(R.delvis ? ['Bare den delen av kommunen nettleseren har hentet kart for, er med.'] : []),
         ...(R.antallEgne ? ['Egne områder er med i tallene.'] : [])
       ];
     }

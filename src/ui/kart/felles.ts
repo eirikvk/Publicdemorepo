@@ -1,4 +1,4 @@
-/* Felles for kartlagene: flisnettene, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren. Filen importerer bare
+/* Felles for kartlagene: flisnettet, hva kartet holder på med, og hjelpere for lag som tegnes i nettleseren. Filen importerer bare
    fra OpenLayers og datadelen, så den er alltid ferdig lastet før kartlagene som bruker den. Kartlagene kaller hverandre fram og
    tilbake, og det går bra så lenge ingen av dem bruker hverandre mens de lastes. */
 import type ImageTile from 'ol/ImageTile.js';
@@ -9,22 +9,13 @@ import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
 import { ol } from './ol.ts';
 import type { Flerflate, Utsnitt } from '../../data/generelt/geometri.ts';
-import { FLISNIVA, OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
+import { OPPLOSNINGER, ORIGO, UTM } from '../../data/solv/felles.ts';
 import { sti } from '../../data/solv/raster.ts';
 
-export const MAKSRES = 30; /* kartet må være zoomet inn til under 30 meter per punkt før flisene fra NIBIO brukes */
-export const SVAKEST = 0.35; /* svakeste farge for en piksel med bare litt planlagt utbygging i seg, så den ikke forsvinner helt */
 export const MAKSTETTHET = 2; /* telefoner har ofte tre piksler per punkt; to er nok og gir under halvparten så store bilder */
 
-/* Grunnkartet: fliser fra NIBIO i Kartverkets flisnett. Nettleseren beholder flisene den har hentet, så panorering og zoom tilbake
-   til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. Lagene som tegnes i nettleseren, bruker samme
-   nett fra nivå 5. */
-export const flisnett = new ol.tilegrid.TileGrid({
-  origin: ORIGO,
-  resolutions: OPPLOSNINGER,
-  tileSize: 256,
-  minZoom: FLISNIVA
-});
+/* Kartverkets flisnett fra nivå 5, som alle lagene som tegnes i nettleseren, bruker. Kartet beholder flisene det har tegnet, så
+   panorering og zoom tilbake til samme sted gir ingen nye kall, og fliser fra nabonivåene vises mens nye lastes. */
 export const plannett = new ol.tilegrid.TileGrid({
   origin: ORIGO,
   resolutions: OPPLOSNINGER,
@@ -34,8 +25,7 @@ export const plannett = new ol.tilegrid.TileGrid({
 /* Hva kartet holder på med. Settes når kartet flyttes. */
 export const kartflagg = {
   iBevegelse: false /* kartet flyttes nå */,
-  startet: 0 /* antall kartbilder bronse hadde bedt om da kartet begynte å flytte seg */,
-  feilet: 0 /* antall kartbilder som hadde feilet da */
+  startet: 0 /* antall kartbilder bronse hadde bedt om da kartet begynte å flytte seg */
 };
 /* En flate fra OpenLayers som sti i et lerret der u er utsnittet og s er piksler per meter */
 export const geomSti = (g: CanvasRenderingContext2D, geom: MultiPolygon | Polygon, u: Utsnitt, s: number) =>

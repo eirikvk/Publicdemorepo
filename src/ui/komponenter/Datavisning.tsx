@@ -21,7 +21,7 @@ export type Form =
   | { type: 'felt'; felt: [string, string][] };
 
 /* Felt som beskriver dataene i stedet for å være dem: hvilken kommune, hvor og hvor stort (utsnitt, oppløsning, bredde og høyde,
-   plassering i flisnettet, målestokk), hvor mye som er med (delvis, ufullstendig, fliser, rutestørrelse, egne områder), og
+   plassering i flisnettet, målestokk), hvor mye som er med (ufullstendig, fliser, rutestørrelse, egne områder), og
    formatet (GeoJSON). De vises under «Om dataene». Et felt med et annet navn er data, også når det er et enkelt tall: i gull er
    tallene selve svaret. */
 const METADATA = new Set([
@@ -35,11 +35,9 @@ const METADATA = new Set([
   'cx0',
   'cy0',
   'skala',
-  'delvis',
   'ufullstendig',
   'fliser',
   'rute',
-  'sig',
   'utenPlan',
   'antallEgne',
   'egneIder',

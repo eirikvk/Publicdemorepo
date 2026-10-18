@@ -6,7 +6,6 @@ import type { FeatureLike } from 'ol/Feature.js';
 import type ImageTile from 'ol/ImageTile.js';
 import type { Coordinate } from 'ol/coordinate.js';
 import type MultiPolygon from 'ol/geom/MultiPolygon.js';
-import type Point from 'ol/geom/Point.js';
 import type Polygon from 'ol/geom/Polygon.js';
 import type VectorSource from 'ol/source/Vector.js';
 import { ol } from './ol.ts';
