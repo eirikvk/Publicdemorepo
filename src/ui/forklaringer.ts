@@ -265,12 +265,13 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye verdsatt natur er registrert i kommunen, hvor mye av kommunen er kartlagt, og hvor mye planlagt utbygging ligger i verdsatt natur eller der det ikke er kartlagt?',
     kortFortalt:
-      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.',
+      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.',
     tabeller: [
       'gull.verdsattNatur',
       'gull.verdsattNaturKartlagt',
       'gull.verdsattNaturIPlan',
-      'gull.utbyggingUtenforKartlagt'
+      'gull.utbyggingUtenforKartlagt',
+      'gull.verdsattVurderes'
     ],
     regnestykke: hent => {
       const T = hent(katalog.gull.verdsattNatur);

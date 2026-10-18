@@ -50,15 +50,16 @@ export const NATURTEMA: Naturtema[] = [
   }
 ];
 const [VERN, REIN, VERDI] = NATURTEMA;
-/* Lokalitetene i verdsatt natur som ikke har en fast verdi, men skal vurderes per lokalitet (v = 0) eller per naturtype (v = 1). De er
-   ikke et eget tema i hovedsidens kart, så de står ikke i NATURTEMA. */
+/* Lokalitetene i verdsatt natur som ikke har en fast verdi: de som skal vurderes per lokalitet (v = 0) eller per naturtype (v = 1),
+   og de som ikke er gitt verdi (v = 2). De er ikke et eget tema i hovedsidens kart, så de står ikke i NATURTEMA. */
 export const VURDERES: Naturtema = {
   id: 'vurderes',
-  navn: 'Verdsatt natur som vurderes',
+  navn: 'Verdsatt natur uten fast verdi',
   samlet: true,
   klasser: [
     ['Vurderes per lokalitet', 'vurderes1'],
-    ['Vurderes per naturtype', 'vurderes2']
+    ['Vurderes per naturtype', 'vurderes2'],
+    ['Ikke gitt verdi', 'vurderes3']
   ]
 };
 
@@ -162,7 +163,7 @@ export const EGENSKAPER: Record<string, Les> = {
   vurderes: p => ({
     navn: p['Områdenavn'] || p.Naturtype || 'Uten navn',
     url: p.FaktaarkLokalitet || p.Faktaark || '',
-    v: Math.max(0, ['Vurderes per lokalitet', 'Vurderes per naturtype'].indexOf(p.Verdikategori)),
+    v: Math.max(0, ['Vurderes per lokalitet', 'Vurderes per naturtype', 'Ikke gitt verdi'].indexOf(p.Verdikategori)),
     under: [p.Naturtype, String(p.Verdikategori || '').toLowerCase()].filter(Boolean).join(', ')
   })
 };
@@ -304,7 +305,8 @@ export async function villrein(nr: string): Promise<Temaomrader> {
 export async function verdsattNatur(nr: string): Promise<Temaomrader> {
   return temaomrader(VERDI, nr, await katalog.bronse.verdsattNatur(nr));
 }
-/* Tabellen solv.verdsattVurderes: lokalitetene som skal vurderes per lokalitet eller per naturtype, uklippet, som verdsatt natur */
+/* Tabellen solv.verdsattVurderes: lokalitetene uten fast verdi (vurderes per lokalitet, per naturtype, eller ikke gitt verdi),
+   uklippet, som verdsatt natur */
 export async function verdsattVurderes(nr: string): Promise<Temaomrader> {
   return temaomrader(VURDERES, nr, await katalog.bronse.verdsattVurderes(nr));
 }

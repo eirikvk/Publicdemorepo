@@ -53,6 +53,8 @@
   /* Lokalitetene i verdsatt natur som vurderes per lokalitet eller per naturtype, som i skissene */
   --vurderes1: #0084a8;
   --vurderes2: #bed2ff;
+  /* «Annet» i figuren over verdiene: lokalitetene som ikke er gitt verdi, i fargen fra skissene */
+  --vurderes3: #0096c0;
   /* Grått areal på villreinsiden, som i skissene */
   --graa-rein: #929292;
   /* Grønne arealer i bebyggelse: grått areal med minst halvparten vegetasjon */

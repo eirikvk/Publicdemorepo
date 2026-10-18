@@ -522,10 +522,10 @@ export const katalog = {
       lag: 'bronse',
       navn: 'verdsattVurderes',
       endepunkt: E.VERDSATT,
-      tittel: 'Verdsatt natur som vurderes',
-      om: 'naturtyper i kommunen fra Miljødirektoratet som skal vurderes per lokalitet eller per naturtype, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      tittel: 'Verdsatt natur uten fast verdi',
+      om: 'naturtyper i kommunen fra Miljødirektoratet som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Lokalitetene i det samme laget som verdsatt natur, med verdikategorien «Vurderes per lokalitet» eller «Vurderes per naturtype», som flater i UTM 33, forenklet med 5 meter.',
+        'Lokalitetene i det samme laget som verdsatt natur, med verdikategorien «Vurderes per lokalitet», «Vurderes per naturtype» eller «Ikke gitt verdi», som flater i UTM 33, forenklet med 5 meter.',
       kilde: KILDE.verdsatt,
       husk: 0,
       etl: mdirNatur.verdsattVurderes
@@ -952,10 +952,10 @@ export const katalog = {
     verdsattVurderes: tabell({
       lag: 'solv',
       navn: 'verdsattVurderes',
-      tittel: 'Lokaliteter som vurderes',
-      om: 'lokalitetene med naturtyper som skal vurderes per lokalitet eller per naturtype, uklippet, med areal og opplysninger. Brukes foreløpig bare av tvillingen fra Figma.',
+      tittel: 'Lokaliteter uten fast verdi',
+      om: 'lokalitetene med naturtyper som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, uklippet, med areal og opplysninger.',
       forklaring:
-        'Lokalitetene leses som verdsatt natur, med kategorien (per lokalitet eller per naturtype) i stedet for verdien.',
+        'Lokalitetene leses som verdsatt natur, med kategorien (per lokalitet, per naturtype eller ikke gitt verdi) i stedet for verdien.',
       usikkerhet: ['Arealet per lokalitet er arealet av hele lokaliteten, også en del som ligger utenfor kommunen.'],
       husk: 30,
       etl: solvTemaer.verdsattVurderes
@@ -1004,8 +1004,8 @@ export const katalog = {
     vurderesAndel: tabell<string, solvTemaer.Temaandel>({
       lag: 'solv',
       navn: 'vurderesAndel',
-      tittel: 'Verdsatt natur som vurderes per rute',
-      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype som andel per rute i bitene, per kategori, med arealet',
+      tittel: 'Verdsatt natur uten fast verdi per rute',
+      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, som andel per rute i bitene, per kategori, med arealet',
       forklaring:
         'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller «vurderes per lokalitet» først. Gir arealet per kategori.',
       husk: 30,
@@ -1152,11 +1152,13 @@ export const katalog = {
     verdsattVurderes: tabell({
       lag: 'gull',
       navn: 'verdsattVurderes',
-      tittel: 'Verdsatt natur som vurderes',
-      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype: antall og arealet i kommunen per kategori, og flatene til kartet. Brukes foreløpig bare av tvillingen fra Figma.',
+      tittel: 'Verdsatt natur uten fast verdi',
+      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi: antall og arealet i kommunen per kategori, og flatene til kartet.',
       forklaring:
         'Arealet per kategori regnes som for verdsatt natur, fra dekningsandelen (solv.vurderesAndel), så overlapp telles én gang.',
-      usikkerhet: ['Kategoriene sier at verdien ikke er satt ennå, ikke at naturen er mindre verdifull.'],
+      usikkerhet: [
+        'Kategoriene sier at verdien ikke er satt, ikke at naturen er mindre verdifull. «Ikke gitt verdi» gjelder bare noen få lokaliteter i landet, de fleste med naturtypen «Ikke kartlagt».'
+      ],
       etterBehov: true,
       husk: 12,
       etl: gullTemaer.verdsattVurderes

@@ -195,7 +195,7 @@ const vernflater = husk((V: VernetFlate[]) => V.map(o => o.koord)),
     V.map(o => ({ koord: o.koord, ext: o.ext, farge: VERNEFORMFARGE[o.gruppe] }))
   ),
   vurderes = husk((V: VerdsattVurderes) =>
-    V.omrader.map(o => ({ koord: o.koord, ext: o.ext, farge: o.v ? 'vurderes2' : 'vurderes1' }))
+    V.omrader.map(o => ({ koord: o.koord, ext: o.ext, farge: 'vurderes' + ((o.v || 0) + 1) }))
   );
 /* Gruppene av verneformer som er slått av i lagvelgeren, som fargene deres. Flatene som vises, er de samme så lenge tabellen og valget
    er de samme. */
@@ -237,7 +237,8 @@ export function velgVerneformer(av: string[]) {
   vernAv = av;
   friskOpp(VERNLAG.verneformer);
 }
-/* Laget på siden om verdsatte naturtyper for lokalitetene som skal vurderes per lokalitet eller per naturtype (gull.verdsattVurderes) */
+/* Laget på siden om verdsatte naturtyper for lokalitetene uten fast verdi: de som skal vurderes per lokalitet eller per naturtype, og
+   de som ikke er gitt verdi (gull.verdsattVurderes) */
 export const VERDILAG = {
   vurderes: flatelag('Verdsatt natur som vurderes', () => vurderes(verdi(katalog.gull.verdsattVurderes)))
 };

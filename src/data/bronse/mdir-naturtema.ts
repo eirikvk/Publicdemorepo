@@ -63,10 +63,12 @@ const TEMA: Record<string, { url: string; felt: string; slakk: number; hvor?: (n
     felt: 'OBJECTID,Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark',
     slakk: 5
   },
-  /* Lokalitetene i det samme laget som ikke har fått en fast verdi, men skal vurderes per lokalitet eller per naturtype */
+  /* Lokalitetene i det samme laget som ikke har fått en fast verdi: de skal vurderes per lokalitet eller per naturtype, eller er ikke
+     gitt verdi */
   vurderes: {
     url: VERDSATT,
-    hvor: nr => `Verdikategori IN ('Vurderes per lokalitet','Vurderes per naturtype') AND Kommune LIKE '%(${nr})%'`,
+    hvor: nr =>
+      `Verdikategori IN ('Vurderes per lokalitet','Vurderes per naturtype','Ikke gitt verdi') AND Kommune LIKE '%(${nr})%'`,
     felt: 'OBJECTID,Verdikategori,Naturtype,Områdenavn,FaktaarkLokalitet,Faktaark',
     slakk: 5
   }
@@ -101,10 +103,10 @@ export async function villrein(nr: string): Promise<Temasvar> {
 export async function verdsattNatur(nr: string): Promise<Temasvar> {
   return hentTemaflater('verdi', 'Verdsatt natur', await kommunen(nr));
 }
-/* Tabellen bronse.verdsattVurderes: lokalitetene med naturtyper i kommunen som skal vurderes per lokalitet eller per naturtype, som
-   GeoJSON. De har ingen fast verdi, så de er ikke med i bronse.verdsattNatur. */
+/* Tabellen bronse.verdsattVurderes: lokalitetene med naturtyper i kommunen som skal vurderes per lokalitet eller per naturtype, eller
+   ikke er gitt verdi, som GeoJSON. De har ingen fast verdi, så de er ikke med i bronse.verdsattNatur. */
 export async function verdsattVurderes(nr: string): Promise<Temasvar> {
-  return hentTemaflater('vurderes', 'Verdsatt natur som vurderes', await kommunen(nr));
+  return hentTemaflater('vurderes', 'Verdsatt natur uten fast verdi', await kommunen(nr));
 }
 /* Tabellen bronse.kartlagt: dekningsflatene for naturtypekartlegging rundt kommunen, som GeoJSON */
 export async function kartlagt(nr: string): Promise<Temasvar> {

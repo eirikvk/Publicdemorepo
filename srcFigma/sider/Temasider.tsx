@@ -405,11 +405,19 @@ const verneform = (v: unknown) =>
     .toLowerCase()
     .replace(/omraade/g, 'område')
     .replace(/^./, c => c.toUpperCase());
-/* Hvordan lokalitetene som vurderes, fordeler seg på per lokalitet og per naturtype, som slutten av en setning */
-function vurderesTekst(v: { klasser: number[] }) {
-  const [lok, typ] = v.klasser;
-  if (lok > 0 && typ > 0) return `: ${iTekst(lok)} vurderes per lokalitet og ${iTekst(typ)} per naturtype`;
-  return lok > 0 ? ', som alle vurderes per lokalitet' : ', som alle vurderes per naturtype';
+/* Lokalitetene som vurderes per lokalitet eller per naturtype (ikke de som ikke er gitt verdi), som en setning: hvor mange, arealet og
+   hvordan de fordeler seg, eller at kommunen ikke har noen */
+function vurderesTekst(v: { omrader: { v?: number }[]; klasser: number[] }) {
+  const n = v.omrader.filter(o => (o.v || 0) < 2).length,
+    [lok, typ] = v.klasser;
+  if (!n) return ` ${kommunen()} har ingen slike lokaliteter.`;
+  const fordeling =
+    lok > 0 && typ > 0
+      ? `: ${iTekst(lok)} vurderes per lokalitet og ${iTekst(typ)} per naturtype`
+      : lok > 0
+        ? ', som alle vurderes per lokalitet'
+        : ', som alle vurderes per naturtype';
+  return ` I ${kommunen()} gjelder det ${antallOrd(n)} ${n === 1 ? 'lokalitet' : 'lokaliteter'} med til sammen ${iTekst(lok + typ)}${fordeling}. De vises i kartet i egne farger.`;
 }
 /* Hovedøkosystemene i figuren og kartlaget om naturen som er vernet, i rekkefølgen og med navnene i skissene: navnet i dataene,
    navnet i figuren, navnet i tegnforklaringen og fargen. Restklassene fra grunnkartet er ikke i skissene, og står til slutt når de har
@@ -711,7 +719,8 @@ function Verdi({ tema }: { tema: Tema }) {
           farger: [
             ...klasser.map(([navn, farge]) => [navn, farge] as [string, string]),
             ['Vurderes per lokalitet', 'vurderes1'],
-            ['Vurderes per naturtype', 'vurderes2']
+            ['Vurderes per naturtype', 'vurderes2'],
+            ['Annet (ikke gitt verdi)', 'vurderes3']
           ],
           med: [VERDILAG.vurderes]
         },
@@ -734,7 +743,7 @@ function Verdi({ tema }: { tema: Tema }) {
             <p>
               Noen lokaliteter har ikke fått en verdi fra noe verdi til svært stor verdi, men skal vurderes per
               lokalitet eller per naturtype. De er ikke med i tallene for verdsatt natur, men vises i kartet i egne
-              farger.
+              farger. Noen få lokaliteter i landet er ikke gitt verdi. De står som «Annet».
             </p>
           </Trekkspill>
           <Trekkspill tittel="Hva er dekningskart?">
@@ -795,12 +804,9 @@ function Verdi({ tema }: { tema: Tema }) {
             <Trekkspill tittel="Hva betyr verdiene?">
               <p>
                 Svært stor og stor verdi er av nasjonal eller vesentlig regional betydning. Middels og noe verdi er av
-                mer lokal betydning. Lokaliteter som vurderes per lokalitet eller per naturtype, er ikke med i figuren.
-                {vv
-                  ? ` I ${kommunen()} gjelder det ${antallOrd(vv.omrader.length)} ${vv.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} med til sammen ${iTekst(vv.sum)}${vurderesTekst(vv)}. De vises i kartet i egne farger.`
-                  : VV.s === 'ok'
-                    ? ` ${kommunen()} har ingen slike lokaliteter.`
-                    : ''}
+                mer lokal betydning. «Annet» er lokaliteter som ikke er gitt verdi. Lokaliteter som vurderes per
+                lokalitet eller per naturtype, er ikke med i figuren.
+                {vv ? vurderesTekst(vv) : VV.s === 'ok' ? ` ${kommunen()} har ingen slike lokaliteter.` : ''}
               </p>
             </Trekkspill>
           }
@@ -808,7 +814,15 @@ function Verdi({ tema }: { tema: Tema }) {
           <Stolper
             smale
             hva="Areal per verdikategori"
-            data={klasser.map(([navn, farge], i) => ({ navn, km2: v.perKlasse![i].km2, farge }))}
+            data={[
+              ...klasser.map(([navn, farge], i) => ({ navn, km2: v.perKlasse![i].km2, farge })),
+              {
+                navn: 'Annet',
+                under: '(ikke gitt verdi)',
+                km2: VV.s === 'ok' ? VV.v.klasser[2] || 0 : 0,
+                farge: 'vurderes3'
+              }
+            ]}
           />
         </Figur>
       )}

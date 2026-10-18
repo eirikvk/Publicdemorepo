@@ -676,10 +676,11 @@ ligger i verdsatt natur eller der det ikke er kartlagt?
 
 **Kort fortalt.** Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes av hvor stor del av hver rute på 10,6
 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet
-som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
+som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal
+vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
 
-**Tabeller.** Kortet viser `gull.verdsattNatur`, `gull.verdsattNaturKartlagt`, `gull.verdsattNaturIPlan` og
-`gull.utbyggingUtenforKartlagt`. Det står i `src/ui/komponenter/Naturtema.tsx`.
+**Tabeller.** Kortet viser `gull.verdsattNatur`, `gull.verdsattNaturKartlagt`, `gull.verdsattNaturIPlan`,
+`gull.utbyggingUtenforKartlagt` og `gull.verdsattVurderes`. Det står i `src/ui/komponenter/Naturtema.tsx`.
 
 ### Fra kilde til tall
 
@@ -750,38 +751,49 @@ som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi
    kommunen og det kartlagte er masker, så bare det som ligger i begge, telles. Gir arealet per verdikategori innenfor det
    kartlagte. Justeres: Arealet er dekningsflatene som andel per rute i kommunen (solv.kartlagtAndel), så overlapp telles én gang.
    Til kartet slås flatene sammen og klippes mot kommunen.
-9. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i flaten,
-   med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er ingen
-   ruter i oppslaget, så svaret er det samme hvor stort området er.
-10. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder
+9. **Verdsatt natur uten fast verdi** (`bronse.verdsattVurderes` → `solv.verdsattVurderes` → `solv.vurderesAndel`). Hentes fra
+   `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_kuverdi/MapServer/0/query`: Lokalitetene i det samme laget
+   som verdsatt natur, med verdikategorien «Vurderes per lokalitet», «Vurderes per naturtype» eller «Ikke gitt verdi», som flater
+   i UTM 33, forenklet med 5 meter. Kilde: [Miljødirektoratet, Naturtyper – verdsatte (naturtyper med
+   KU-verdi)](https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314), NLOD 2.0. Justeres:
+   Lokalitetene leses som verdsatt natur, med kategorien (per lokalitet, per naturtype eller ikke gitt verdi) i stedet for
+   verdien. Justeres: Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per
+   ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller
+   «vurderes per lokalitet» først. Gir arealet per kategori.
+10. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i
+    flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er
+    ingen ruter i oppslaget, så svaret er det samme hvor stort området er.
+11. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder
     overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
-11. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-12. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
+12. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+13. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
     og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). For hver rute med planlagt utbygging: hvor stor del av
     ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor
     stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.
-13. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
+14. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
     i planen** (`gull.verdsattNaturIPlan`). Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og
     for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område
     regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.
-14. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
+15. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
     verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Der
     verneområder overlapper, telles arealet én gang. Ruter uten klasse i grunnkartet er ikke med.
-15. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to
+16. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to
     områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
-16. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori fra dekningsandelen i sølv
+17. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori fra dekningsandelen i sølv
     (solv.verdsattAndel), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen
     av landarealet.
-17. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Verdsatt natur per verdikategori innenfor det kartlagte,
+18. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Verdsatt natur per verdikategori innenfor det kartlagte,
     fra dekningsandelen med både kommunen og det kartlagte som masker (solv.verdsattIKartlagtAndel).
-18. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
+19. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
     vises som høyst 100 %. Helhetsbildet deler landarealet i kartlagt og ikke kartlagt, og viser verdsatt natur per verdi i hver
     del.
-19. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
+20. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
     striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte
     (solv.kartlagtAndel), er ikke kartlagt.
+21. **Verdsatt natur uten fast verdi** (`gull.verdsattVurderes`). Arealet per kategori regnes som for verdsatt natur, fra
+    dekningsandelen (solv.vurderesAndel), så overlapp telles én gang.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
@@ -822,8 +834,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - Arealet per lokalitet i listen er arealet av hele lokaliteten, også en del som ligger utenfor kommunen. Summene per
   verdikategori er klippet mot kommunen.
 - Dekningsflatene kan ligge delvis i vann, mens kartleggingsgraden regnes av landarealet.
+- Arealet per lokalitet er arealet av hele lokaliteten, også en del som ligger utenfor kommunen.
 - Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen verdsatt natur der kan ikke overføres til resten. Utenfor det
   kartlagte betyr «ingen registrert» at det ikke er lett, ikke at naturen mangler verdi.
+- Kategoriene sier at verdien ikke er satt, ikke at naturen er mindre verdifull. «Ikke gitt verdi» gjelder bare noen få
+  lokaliteter i landet, de fleste med naturtypen «Ikke kartlagt».
 
 ### Kode
 
@@ -1198,6 +1213,15 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**«Ikke gitt verdi» i verdsatt natur, 19. oktober 2026.** Skissene har en femte stolpe, «Annet», i figuren over verdiene. Vi antar
+at den er lokalitetene med verdikategorien «Ikke gitt verdi» i Miljødirektoratets tjeneste for naturtyper med KU-verdi, som er et
+eget lag der. Kategorien er nå med sammen med lokalitetene som skal vurderes per lokalitet eller per naturtype
+(`bronse.verdsattVurderes` til `gull.verdsattVurderes`, nå «uten fast verdi»), som en tredje kategori. Den gjelder 23 lokaliteter i
+hele landet, de fleste med naturtypen «Ikke kartlagt», så stolpen er 0 i de fleste kommuner. Tvillingen viser den som «Annet» og
+i kartet. Hovedsiden nevner lokalitetene uten fast verdi i en setning under verdiene. Kontroll: i Bergen er det fire slike
+lokaliteter, med til sammen ca. 1 842 dekar, og ingen som vurderes. Regresjonstesten for Trondheim ga ingen avvik (Trondheim har
+ingen), og røyktesten for tvillingen ingen feil. Målt i Chromium, ikke på iPhone.
 
 **Dekningskartet som prikker i tvillingen, 19. oktober 2026.** Dekningskartet for verdsatte naturtyper viser nå det som er
 kartlagt med lilla prikker i tvillingen, som skissene, i stedet for et slør over det som ikke er kartlagt. Dataene er de samme:

@@ -149,6 +149,34 @@ function VernLandSjo() {
   );
 }
 
+/* Lokalitetene i verdsatt natur uten fast verdi (gull.verdsattVurderes): de som skal vurderes per lokalitet eller per naturtype, og
+   de som ikke er gitt verdi. De er ikke med i tallene for verdsatt natur. Tabellen leses bare når siden for verdsatt natur vises. */
+function UtenVerdi() {
+  const R = ui.side === 'verdi' ? valgt(katalog.gull.verdsattVurderes) : null;
+  if (!R || R.status !== 'ok' || !R.verdi || !R.verdi.omrader.length) return null;
+  const V = R.verdi,
+    deler = (
+      [
+        [V.antall[0], 'vurderes per lokalitet'],
+        [V.antall[1], 'vurderes per naturtype'],
+        [V.antall[2], 'står som «Ikke gitt verdi»']
+      ] as [number, string][]
+    ).filter(([n]) => n > 0),
+    liste =
+      deler.length === 1
+        ? `${V.omrader.length === 1 ? 'den' : 'alle'} ${deler[0][1]}`
+        : deler
+            .map(([n, t]) => `${antallOrd(n, 'én')} ${t}`)
+            .join(', ')
+            .replace(/, ([^,]*)$/, ' og $1');
+  return (
+    <p className="hint">
+      I tillegg har {antallOrd(V.omrader.length, 'én')} {V.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} ingen
+      fast verdi, med til sammen ca. {iTekst(V.sum)}: {liste}. De er ikke med i tallene over.
+    </p>
+  );
+}
+
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
 export function Naturtema({ t: tema }: { t: Tema }) {
   /* Kommunen der hele listen er åpnet. Bytter man kommune, vises den korte listen igjen. */
@@ -255,6 +283,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
           })}
         </ul>
       )}
+      {t.id === 'verdi' && <UtenVerdi />}
       {helhet && <Helhet t={t} H={K!.helhet!} E={E!} />}
       {merk && <p>{merk}</p>}
       {t.dekning && kartlagt && (

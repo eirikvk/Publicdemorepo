@@ -460,8 +460,9 @@ export async function verneformer(nr: string): Promise<VernetFlate[]> {
   const T = await katalog.gull.verneomrader(nr);
   return T.omrader.map(o => ({ koord: o.koord, ext: o.ext, gruppe: verneformgruppe(o.egenskaper.verneform) }));
 }
-/* Verdsatt natur som skal vurderes per lokalitet eller per naturtype: lokalitetene (omrader, med v 0 per lokalitet og 1 per
-   naturtype), antall og arealet i kommunen per kategori (klasser) og samlet (sum), og om tjenesten ga alle (ufullstendig) */
+/* Verdsatt natur uten fast verdi, som skal vurderes per lokalitet eller per naturtype eller ikke er gitt verdi: lokalitetene (omrader,
+   med v 0 per lokalitet, 1 per naturtype og 2 ikke gitt verdi), antall og arealet i kommunen per kategori (klasser) og samlet (sum),
+   og om tjenesten ga alle (ufullstendig) */
 export interface VerdsattVurderes {
   omrader: TemaOmrade[];
   antall: number[];
