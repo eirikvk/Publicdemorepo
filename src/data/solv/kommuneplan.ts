@@ -13,7 +13,7 @@ import {
   type Piksler,
   type Planruter
 } from './felles.ts';
-import { tellIKommune } from './kommune.ts';
+import { iKommunen, tellIKommune } from './kommune.ts';
 import { bildePiksler } from './raster.ts';
 
 /* Planlagt utbygging per rute i en flis, fra kartbildet P fra DiBK (piksler): 1 der minst halve ruta ligger i en planflate
@@ -97,13 +97,15 @@ export async function plandekning(nr: string): Promise<Plandekning> {
     2,
     async tc => planlagPerRute(await bildePiksler(await katalog.bronse.planbit(tc), BIT, BIT)),
     v => v,
-    (tc, V, M) => {
+    0,
+    (tc, V, K) => {
+      if (!V) return;
       let n = 0;
-      for (let q = 0; q < V.length; q++) if (V[q] && M[4 * q + 3] >= HALV) n++;
+      for (let q = 0; q < V.length; q++) if (V[q] && iKommunen(K, q)) n++;
       if (n <= flest) return;
       flest = n;
       for (let q = 0, k = 0; q < V.length; q++)
-        if (V[q] && M[4 * q + 3] >= HALV && k++ === n >> 1) {
+        if (V[q] && iKommunen(K, q) && k++ === n >> 1) {
           punkt = { bit: tc, i: q % BIT, j: Math.floor(q / BIT) };
           break;
         }

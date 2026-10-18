@@ -21,7 +21,8 @@
    - De har ingen variabler på toppnivå som kan endres (let). Det som gis inn, kommer som argumenter.
    Og datamotoren har ingen regnefunksjoner: funksjoner som heter tolk, kryss, bygg eller tell noe, hører hjemme i sølv eller gull.
    Alt datapipelinen husker, ligger i cachen (data/cache.ts). Ingen andre filer i data har minne på toppnivå (new Map, WeakMap, Set
-   eller WeakSet). Unntaket er listen over hvem som abonnerer, i data/motor/tilstand.ts. Kartet kan ha sitt eget minne
+   eller WeakSet). Unntakene er listen over hvem som abonnerer, i data/motor/tilstand.ts, og tegneflatene som brukes om igjen, i
+   data/solv/raster.ts: lerreter, ikke data. Kartet kan ha sitt eget minne
    for det som tegnes.
 
    Tvillingen fra Figma, i srcFigma/ (se vite.figma.config.ts), er en egen side som bruker den samme datamotoren. Den kan importere
@@ -72,7 +73,7 @@ const UNNTAK: Record<string, string[]> = {
 }; /* fil uten endelse */
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
 const MINNE = ['Map', 'WeakMap', 'Set', 'WeakSet'],
-  MINNE_LOV = ['data/cache', 'data/motor/tilstand']; /* fil uten endelse */
+  MINNE_LOV = ['data/cache', 'data/motor/tilstand', 'data/solv/raster']; /* fil uten endelse */
 const FAST_VERDI = /^[A-ZÆØÅ][A-ZÆØÅ0-9_]*$/;
 
 /* En node i syntakstreet, slik oxc-parser gir den (ESTree, med TypeScript i tillegg) */

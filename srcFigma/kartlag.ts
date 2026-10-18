@@ -297,7 +297,7 @@ export function flatelag(
 export function rutelag(
   tittel: string,
   data: () => { biter: Flis[] } | null,
-  bit: (tc: Flis) => Promise<ArrayLike<number>>,
+  bit: (tc: Flis) => Promise<ArrayLike<number> | null>,
   farge: (v: number) => string | null
 ) {
   const F = new Map<number, number[] | null>(),
@@ -328,8 +328,9 @@ export function rutelag(
       let noe = false;
       for (const b of her) {
         const R = bitRuter(b),
-          B = await bit(b),
-          r = R.res,
+          B = await bit(b);
+        if (!B) continue;
+        const r = R.res,
           px0 = Math.max(0, Math.floor((R.u[0] - u[0]) / m)),
           px1 = Math.min(512, Math.ceil((R.u[2] - u[0]) / m)),
           py0 = Math.max(0, Math.floor((u[3] - R.u[3]) / m)),

@@ -27,34 +27,38 @@ export function bildetall<E, T>(D: Kommunebilde<E> | null, tall: (H: HentetBilde
 
 /* Rutene innenfor en maske M (RGBA, der en rute er med når den er minst halvt dekket, HALV): antall ruter i masken (alle), og antall
    per plass i n. plass gir plassen i n for verdien i ruta (verdier), eller null når ruta ikke telles, og plasser er lengden på n.
-   Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
+   verdier er null når alle rutene har verdien tom. Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
 export function tellIMaske(
   M: ArrayLike<number>,
-  verdier: ArrayLike<number>,
+  verdier: ArrayLike<number> | null,
   plasser: number,
-  plass: (v: number) => number | null
+  plass: (v: number) => number | null,
+  tom = 0
 ) {
-  const n = new Array<number>(plasser).fill(0);
+  const n = new Array<number>(plasser).fill(0),
+    ruter = M.length >> 2,
+    pt = plass(tom);
   let alle = 0;
-  for (let q = 0; q < verdier.length; q++) {
+  for (let q = 0; q < ruter; q++) {
     if (M[4 * q + 3] < HALV) continue;
     alle++;
-    const p = plass(verdier[q]);
+    const p = verdier ? plass(verdier[q]) : pt;
     if (p !== null) n[p]++;
   }
   return { alle, n };
 }
 
 /* Teller rutene innenfor flatene (unionen av dem, klippet mot kommunen innenfor) bit for bit, som tellIMaske: antall ruter i
-   flatene (alle), og antall per plass i n. verdier gir verdien per rute i en bit. Bare bitene i biter som flatene berører, telles.
-   Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
+   flatene (alle), og antall per plass i n. verdier gir verdien per rute i en bit, eller null når alle rutene har verdien tom. Bare
+   bitene i biter som flatene berører, telles. Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
 export async function tellIBiter(
   biter: Flis[],
-  verdier: (tc: Flis) => Promise<ArrayLike<number>>,
+  verdier: (tc: Flis) => Promise<ArrayLike<number> | null>,
   flater: { koord: Flerflate; ext: number[] }[],
   innenfor: Flerflate,
   plasser: number,
-  plass: (v: number) => number | null
+  plass: (v: number) => number | null,
+  tom: number
 ) {
   const n = new Array<number>(plasser).fill(0);
   let alle = 0;
@@ -62,12 +66,13 @@ export async function tellIBiter(
     const R = bitRuter(tc),
       her = flater.filter(f => f.ext[0] < R.u[2] && f.ext[2] > R.u[0] && f.ext[1] < R.u[3] && f.ext[3] > R.u[1]);
     if (!her.length) continue;
-    const M = flaterPiksler(
+    const V = await verdier(tc),
+      M = flaterPiksler(
         her.map(f => f.koord),
         R,
         innenfor
       ),
-      T = tellIMaske(M, await verdier(tc), plasser, plass);
+      T = tellIMaske(M, V, plasser, plass, tom);
     alle += T.alle;
     T.n.forEach((v, i) => (n[i] += v));
   }

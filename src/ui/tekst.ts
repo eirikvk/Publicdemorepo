@@ -3,8 +3,9 @@
    mellomrom foran prosent, «dekar» i setninger og «daa» i tabeller og lister. */
 
 /* Et tall med d desimaler, norsk skrivemåte */
+const FORMAT: Intl.NumberFormat[] = []; /* ett format per antall desimaler: å lage et nytt for hvert tall er tregt */
 export const nf = (v: number, d = 1) =>
-  v.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
+  (FORMAT[d] ||= new Intl.NumberFormat('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d })).format(v);
 /* Alle arealer vises i dekar. Internt regnes det i kvadratkilometer, som er enheten SSB oppgir. 1 km² er 1000 dekar.
    I kolonner og lister står forkortelsen «daa», i setninger står «dekar» skrevet ut. */
 export const dekar = (km2: number, enhet = 'daa') => {

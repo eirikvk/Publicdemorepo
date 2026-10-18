@@ -21,7 +21,7 @@ import {
 } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { BIT, biterI, bitRuter, m2PerKm2 } from './felles.ts';
-import { dekketM2, flaterPiksler, sti, tegneflate } from './raster.ts';
+import { dekketM2, flaterPiksler, laanFlate, sti } from './raster.ts';
 
 /* Naturtemaene. samlet: mange små lokaliteter, der arealet per verdikategori regnes samlet og bare de som berøres av planlagt
    utbygging, listes. dekning: temaet har et kart over hvor det er kartlagt. klasser: verdikategoriene, [navn, farge], høyest verdi
@@ -294,51 +294,52 @@ export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMed
     kum = new Array<number>(antall).fill(0),
     ext = omrader.map(o => omriss(o.koord));
   if (!omrader.length) return { klasser: kum, sum: 0 };
-  const g = tegneflate(BIT, BIT);
-  for (const tc of biterI(kommune.ext)) {
-    const R = bitRuter(tc),
-      u = R.u,
-      res = R.res,
-      her = omrader.filter((_, i) => overlapper(ext[i], u));
-    if (!her.length) continue;
-    let forrige = 0;
-    for (let v = 0; v < antall; v++) {
-      if (!her.some(o => (o.v || 0) === v)) {
-        kum[v] += forrige;
-        continue;
-      }
-      g.globalCompositeOperation = 'source-over';
-      g.clearRect(0, 0, BIT, BIT);
-      g.beginPath();
-      for (const o of her) {
-        if ((o.v || 0) > v) continue;
-        for (const flate of o.koord)
-          flate.forEach((ring, nr) => {
-            /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
-            const snu = motKlokka(ring) !== (nr === 0),
-              n = ring.length;
-            for (let i = 0; i < n; i++) {
-              const q = ring[snu ? n - 1 - i : i],
-                x = (q[0] - u[0]) / res,
-                y = (u[3] - q[1]) / res;
-              if (i) g.lineTo(x, y);
-              else g.moveTo(x, y);
-            }
-            g.closePath();
-          });
-      }
-      g.fill('nonzero');
-      g.globalCompositeOperation = 'destination-in';
-      sti(g, kommune.koord, u, 1 / res);
-      g.fill('evenodd');
-      if (innenfor) {
-        sti(g, innenfor, u, 1 / res);
+  laanFlate(BIT, BIT, g => {
+    for (const tc of biterI(kommune.ext)) {
+      const R = bitRuter(tc),
+        u = R.u,
+        res = R.res,
+        her = omrader.filter((_, i) => overlapper(ext[i], u));
+      if (!her.length) continue;
+      let forrige = 0;
+      for (let v = 0; v < antall; v++) {
+        if (!her.some(o => (o.v || 0) === v)) {
+          kum[v] += forrige;
+          continue;
+        }
+        g.globalCompositeOperation = 'source-over';
+        g.clearRect(0, 0, BIT, BIT);
+        g.beginPath();
+        for (const o of her) {
+          if ((o.v || 0) > v) continue;
+          for (const flate of o.koord)
+            flate.forEach((ring, nr) => {
+              /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
+              const snu = motKlokka(ring) !== (nr === 0),
+                n = ring.length;
+              for (let i = 0; i < n; i++) {
+                const q = ring[snu ? n - 1 - i : i],
+                  x = (q[0] - u[0]) / res,
+                  y = (u[3] - q[1]) / res;
+                if (i) g.lineTo(x, y);
+                else g.moveTo(x, y);
+              }
+              g.closePath();
+            });
+        }
+        g.fill('nonzero');
+        g.globalCompositeOperation = 'destination-in';
+        sti(g, kommune.koord, u, 1 / res);
         g.fill('evenodd');
+        if (innenfor) {
+          sti(g, innenfor, u, 1 / res);
+          g.fill('evenodd');
+        }
+        forrige = dekketM2(g.getImageData(0, 0, BIT, BIT).data, res) / skala;
+        kum[v] += forrige;
       }
-      forrige = dekketM2(g.getImageData(0, 0, BIT, BIT).data, res) / skala;
-      kum[v] += forrige;
     }
-  }
+  });
   return {
     klasser: Array.from({ length: antall }, (_, v) => Math.max(0, kum[v] - (v ? kum[v - 1] : 0))),
     sum: kum[antall - 1]

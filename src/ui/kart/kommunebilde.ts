@@ -30,7 +30,9 @@ export interface Bitlag {
   tittel: string /* navnet på laget, i kartets minne i katalogen */;
   kilder: string[] /* hvem dataene kommer fra, til krediteringen i kartet */;
   data: () => Bitruter | null /* temaet talt for valgt kommune, med bitene kommunen har ruter i, fra katalogen */;
-  bit: (tc: Flis) => Promise<Uint8Array> /* verdien per rute i biten tc, fra katalogen */;
+  bit: (
+    tc: Flis
+  ) => Promise<Uint8Array | null> /* verdien per rute i biten tc, fra katalogen, eller null når biten er tom */;
   noe: () => boolean /* kommunen har noe av temaet, fra gull */;
   tom: (v: number) => boolean /* ruta har ingenting av temaet */;
   fyll: (v: number) => number[] /* masken for verdien v: rød, grønn og blå */;
@@ -55,6 +57,7 @@ async function flismaske(o: Bitlag, her: Flis[], u: Utsnitt): Promise<Flismaske>
     const R = bitRuter(b),
       B = await o.bit(b),
       r = R.res;
+    if (!B) continue; /* tom bit: pikslene står uten dekning, som utenfor bitene */
     if (m >= r * 0.999) {
       /* zoomet ut, eller én rute per piksel: snittet av rutene under hver piksel. Store vinduer tas med sprang. */
       const steg = Math.max(1, Math.floor(m / r / 4)),

@@ -165,7 +165,8 @@ export async function graaIVillrein(nr: string): Promise<GraaIVillrein | null> {
       V.omrader,
       g.koord,
       1,
-      v => (v > 0 ? 0 : null)
+      v => (v > 0 ? 0 : null),
+      0
     ),
     sum = tiDekar((T.n[0] * S.res * S.res) / S.skala),
     villrein = tiDekar((T.alle * S.res * S.res) / S.skala);

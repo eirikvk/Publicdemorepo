@@ -53,7 +53,8 @@ export async function inonIVillrein(nr: string): Promise<InonIVillrein | null> {
       V.omrader,
       g.koord,
       3,
-      v => (v !== UTENFOR ? v : null)
+      v => (v !== UTENFOR ? v : null),
+      UTENFOR
     ),
     A = arealFraRuter(T.n, S.res, S.skala),
     villrein = tiDekar((T.alle * S.res * S.res) / S.skala);

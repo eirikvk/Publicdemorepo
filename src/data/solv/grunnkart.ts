@@ -28,7 +28,6 @@ import {
   flaterPiksler,
   flislerret,
   lesBilde,
-  palettLerret,
   sti,
   tegneflate,
   tegnUtsnitt
@@ -134,7 +133,7 @@ export async function lagredeBlokker([nr, z]: [string, number]): Promise<Flis[] 
 }
 /* Tabellen solv.klassekart: dagens klasser for kommunen nr zoomet ut, satt sammen av blokkene på 10,6 meter (solv.blokker og
    solv.klasser på nivå 10) og klippet til kommunen, så det er tomt utenfor. Bare til kartet: én piksel er 1, 2, 4 eller flere
-   ruter, så det blir høyst 2048 piksler på lengste side. Blokkene leses seks om gangen. */
+   ruter, så det blir høyst 2048 piksler på lengste side. Blokkene leses seks om gangen og snittes rett inn i bildet. */
 export async function klassekart(nr: string): Promise<Oversikt> {
   const [B, G] = await Promise.all([katalog.solv.blokker([nr, FLISNIVA]), katalog.solv.grense(nr)]);
   if (!B.length) throw new Error('ingen blokker');
@@ -147,20 +146,48 @@ export async function klassekart(nr: string): Promise<Oversikt> {
   const z = B[0][0],
     m = OPPLOSNINGER[z] / 2,
     s = 512 / f,
-    g = tegneflate(nx * s, ny * s),
+    W = nx * s,
+    g = tegneflate(W, ny * s),
+    d = g.createImageData(W, ny * s),
+    o = d.data,
     a = flisUtsnitt([z, x0, y0]),
     b = flisUtsnitt([z, x0 + nx - 1, y0 + ny - 1]);
-  g.imageSmoothingQuality = 'high';
+  /* hver piksel er snittet av fargene til de f x f rutene den dekker, og dekningen er andelen ruter med klasse: det samme som å
+     krympe blokken med utjevning, uten et lerret per blokk */
+  const blokk = (tc: Flis, kl: Uint8Array) => {
+    const ox = (tc[1] - x0) * s,
+      oy = (tc[2] - y0) * s;
+    for (let py = 0; py < s; py++)
+      for (let px = 0; px < s; px++) {
+        let n = 0,
+          r = 0,
+          gr = 0,
+          bl = 0;
+        for (let y = py * f; y < py * f + f; y++)
+          for (let x = px * f; x < px * f + f; x++) {
+            const k = kl[y * 512 + x];
+            if (!k) continue;
+            const c = KLASSETABELL[k];
+            n++;
+            r += c[0];
+            gr += c[1];
+            bl += c[2];
+          }
+        if (!n) continue;
+        const i = 4 * ((oy + py) * W + ox + px);
+        o[i] = r / n;
+        o[i + 1] = gr / n;
+        o[i + 2] = bl / n;
+        o[i + 3] = (255 * n) / (f * f);
+      }
+  };
   const ko = [...B];
   await Promise.all(
     Array.from({ length: 6 }, async () => {
-      for (let tc = ko.shift(); tc; tc = ko.shift()) {
-        const c = palettLerret((await katalog.solv.klasser(tc)).kl, 512, 512, KLASSETABELL);
-        g.drawImage(c, (tc[1] - x0) * s, (tc[2] - y0) * s, s, s);
-        c.width = 0;
-      }
+      for (let tc = ko.shift(); tc; tc = ko.shift()) blokk(tc, (await katalog.solv.klasser(tc)).kl);
     })
   );
+  g.putImageData(d, 0, 0);
   const ext: Utsnitt = [a[0], b[1], b[2], a[3]];
   g.globalCompositeOperation = 'destination-in';
   sti(g, G.koord, ext, 1 / (m * f));

@@ -741,6 +741,17 @@ export const katalog = {
       etl: solvPlan.kommuneplanruter,
       eksempel: flisMidt(PLANNIVA)
     }),
+    kommunebiter: tabell<string, solvKommune.Kommunebit[]>({
+      lag: 'solv',
+      navn: 'kommunebiter',
+      tittel: 'Kommunen i bitene',
+      om: 'bitene kommunen har ruter i (2048 x 2048 ruter à 10,6 meter), med kommunens flate i hver etter halvregelen: én bit per rute, eller hel når hele biten er i kommunen',
+      teknisk: true,
+      forklaring:
+        'Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.',
+      husk: 3,
+      etl: solvKommune.kommunebiter
+    }),
     inonbit: tabell<Flis, solvInon.Inonsoner>({
       lag: 'solv',
       navn: 'inonbit',

@@ -12,6 +12,36 @@ export function tegneflate(w: number, h: number): CanvasRenderingContext2D {
   return c.getContext('2d', { willReadFrequently: true })!;
 }
 
+/* Tegneflatene som brukes om igjen, én per størrelse. Lerreter tar mye minne, og Safari på iPhone har en grense for hvor mye alle
+   lerretene på siden kan ta til sammen, også de som venter på å bli ryddet bort. En flate lånes bare mens noe tegnes og leses, uten
+   å vente på noe i mellom, så to kall kan ikke bruke den samme samtidig. Svaret er alltid en kopi (getImageData), ikke flaten. */
+const flater = new Map<string, CanvasRenderingContext2D>();
+export function laanFlate<T>(w: number, h: number, bruk: (g: CanvasRenderingContext2D) => T): T {
+  const n = `${w}x${h}`;
+  let g = flater.get(n);
+  if (g) {
+    flater.delete(n);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.imageSmoothingEnabled = true;
+    g.fillStyle = '#000';
+    g.clearRect(0, 0, w, h);
+    g.beginPath();
+  } else g = tegneflate(w, h);
+  try {
+    return bruk(g);
+  } finally {
+    flater.set(n, g);
+    /* høyst fire størrelser: den som er brukt lengst siden, frigjøres */
+    for (const [k, x] of flater) {
+      if (flater.size <= 4) break;
+      x.canvas.width = 0;
+      flater.delete(k);
+    }
+  }
+}
+
 /* Et lerret på 512 x 512 piksler: én flis i utbyggingen, eller én flis i kartet tegnet i dobbel tetthet */
 export function flislerret(): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -55,29 +85,37 @@ export function sti(g: CanvasRenderingContext2D, koord: Flerflate, u: Utsnitt, s
 
 /* En flerflate tegnet i rutenettet R, som piksler: dekningen av hver rute står i alfa. Kommunens flate brukes slik som maske. */
 export function flatePiksler(koord: Flerflate, R: Rutebilde) {
-  const g = tegneflate(R.w, R.h);
-  sti(g, koord, R.u, 1 / R.res);
-  g.fill('evenodd');
-  return g.getImageData(0, 0, R.w, R.h).data;
+  return laanFlate(R.w, R.h, g => {
+    sti(g, koord, R.u, 1 / R.res);
+    g.fill('evenodd');
+    return g.getImageData(0, 0, R.w, R.h).data;
+  });
 }
 /* Flere flerflater tegnet i rutenettet R, hver for seg, så der de overlapper, er dekningen den samme som for én (unionen). Klippet
    mot flaten innenfor (kommunen). Dekningen av hver rute står i alfa. */
 export function flaterPiksler(flater: Flerflate[], R: Rutebilde, innenfor: Flerflate) {
-  const g = tegneflate(R.w, R.h);
-  for (const koord of flater) {
-    sti(g, koord, R.u, 1 / R.res);
+  return laanFlate(R.w, R.h, g => {
+    for (const koord of flater) {
+      sti(g, koord, R.u, 1 / R.res);
+      g.fill('evenodd');
+    }
+    g.globalCompositeOperation = 'destination-in';
+    sti(g, innenfor, R.u, 1 / R.res);
     g.fill('evenodd');
-  }
-  g.globalCompositeOperation = 'destination-in';
-  sti(g, innenfor, R.u, 1 / R.res);
-  g.fill('evenodd');
-  return g.getImageData(0, 0, R.w, R.h).data;
+    return g.getImageData(0, 0, R.w, R.h).data;
+  });
 }
 /* Et bilde fra en kilde (PNG) som piksler, skalert til w x h ruter */
 export async function bildePiksler(buf: ArrayBuffer, w: number, h: number) {
-  const g = tegneflate(w, h);
-  g.drawImage(await createImageBitmap(new Blob([buf])), 0, 0, w, h);
-  return g.getImageData(0, 0, w, h).data;
+  const bm = await createImageBitmap(new Blob([buf]));
+  try {
+    return laanFlate(w, h, g => {
+      g.drawImage(bm, 0, 0, w, h);
+      return g.getImageData(0, 0, w, h).data;
+    });
+  } finally {
+    if (bm.close) bm.close();
+  }
 }
 /* Arealet en tegning dekker, i kvadratmeter i kartet: summen av dekningen (alfa) i rutene, med ruter på res meter */
 export function dekketM2(d: Piksler, res: number) {

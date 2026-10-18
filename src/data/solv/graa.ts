@@ -6,9 +6,10 @@ import { BIT, HALV, bitRuter, type Flis, type Piksler, type Rutebilde } from './
 import { tellIKommune, type Bitruter } from './kommune.ts';
 import { bildePiksler } from './raster.ts';
 
-/* Trinnet per rute i en bit (0 ikke grått, 1–5 andel vegetasjon, 6 uten oppgitt andel), med bitens rutenett */
+/* Trinnet per rute i en bit (0 ikke grått, 1–5 andel vegetasjon, 6 uten oppgitt andel), med bitens rutenett. kl er null når
+   biten ikke har noe grått areal, så tomme biter ikke tar plass. */
 export interface Graatrinn extends Rutebilde {
-  kl: Uint8Array;
+  kl: Uint8Array | null;
 }
 
 /* Trinnene etter andel vegetasjon i flaten: [farge, navn, fra og med prosent, til prosent] */
@@ -38,13 +39,21 @@ export function tolkGraa(P: Piksler, V: Piksler) {
 export const graaVed = (D: Graatrinn, x: number, y: number) => {
   const px = Math.floor((x - D.u[0]) / D.res),
     py = Math.floor((D.u[3] - y) / D.res);
-  return px < 0 || py < 0 || px >= D.w || py >= D.h ? 0 : D.kl[py * D.w + px];
+  return !D.kl || px < 0 || py < 0 || px >= D.w || py >= D.h ? 0 : D.kl[py * D.w + px];
+};
+/* null når ingen ruter har noe (alle er 0), ellers v */
+export const ellerTom = (v: Uint8Array, tom: number) => {
+  for (let q = 0; q < v.length; q++) if (v[q] !== tom) return v;
+  return null;
 };
 
 /* Tabellen solv.graabit: trinnet per rute i biten tc */
 export async function graabit(tc: Flis): Promise<Graatrinn> {
   const [P, V] = await Promise.all([0, 1].map(lag => katalog.bronse.graabit([lag, tc])));
-  return { ...bitRuter(tc), kl: tolkGraa(await bildePiksler(P, BIT, BIT), await bildePiksler(V, BIT, BIT)) };
+  return {
+    ...bitRuter(tc),
+    kl: ellerTom(tolkGraa(await bildePiksler(P, BIT, BIT), await bildePiksler(V, BIT, BIT)), 0)
+  };
 }
 /* Tabellen solv.graa: antall ruter per trinn (plass 1–6) innenfor kommunen nr, og bitene kommunen har ruter i */
 export async function graa(nr: string): Promise<Bitruter> {
@@ -52,6 +61,7 @@ export async function graa(nr: string): Promise<Bitruter> {
     nr,
     7,
     tc => katalog.solv.graabit(tc).then(D => D.kl),
-    t => t || null
+    t => t || null,
+    0
   );
 }

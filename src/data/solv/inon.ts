@@ -4,6 +4,7 @@ import { naermesteFarge } from '../generelt/farge.ts';
 import { katalog } from '../katalog.ts';
 import { BIT, HALV, bitRuter, type Flis, type Piksler, type Rutebilde } from './felles.ts';
 import { tellIKommune, type Bitruter } from './kommune.ts';
+import { ellerTom } from './graa.ts';
 import { bildePiksler } from './raster.ts';
 
 /* Sonene: [kode i tjenesten, farge i kartet her, farge i tjenestens bilder, avstand, navn] */
@@ -36,19 +37,23 @@ export function tolkInon(P: Piksler) {
   return sone;
 }
 
-/* Sonen per rute i en bit (0 villmarkspreget, 1 sone 1, 2 sone 2, UTENFOR uten sone), med bitens rutenett */
+/* Sonen per rute i en bit (0 villmarkspreget, 1 sone 1, 2 sone 2, UTENFOR uten sone), med bitens rutenett. sone er null når biten
+   ikke har noen soner, så tomme biter ikke tar plass. */
 export interface Inonsoner extends Rutebilde {
-  sone: Uint8Array;
+  sone: Uint8Array | null;
 }
 /* Sonen i et punkt (x, y) i meter, fra biten D. UTENFOR utenfor biten. */
 export const soneVed = (D: Inonsoner, x: number, y: number) => {
   const px = Math.floor((x - D.u[0]) / D.res),
     py = Math.floor((D.u[3] - y) / D.res);
-  return px < 0 || py < 0 || px >= D.w || py >= D.h ? UTENFOR : D.sone[py * D.w + px];
+  return !D.sone || px < 0 || py < 0 || px >= D.w || py >= D.h ? UTENFOR : D.sone[py * D.w + px];
 };
 /* Tabellen solv.inonbit: sonen per rute i biten tc */
 export async function inonbit(tc: Flis): Promise<Inonsoner> {
-  return { ...bitRuter(tc), sone: tolkInon(await bildePiksler(await katalog.bronse.inonbit(tc), BIT, BIT)) };
+  return {
+    ...bitRuter(tc),
+    sone: ellerTom(tolkInon(await bildePiksler(await katalog.bronse.inonbit(tc), BIT, BIT)), UTENFOR)
+  };
 }
 /* Tabellen solv.inon: antall ruter per sone innenfor kommunen nr, og bitene kommunen har ruter i */
 export async function inon(nr: string): Promise<Bitruter> {
@@ -56,6 +61,7 @@ export async function inon(nr: string): Promise<Bitruter> {
     nr,
     3,
     tc => katalog.solv.inonbit(tc).then(D => D.sone),
-    s => (s === UTENFOR ? null : s)
+    s => (s === UTENFOR ? null : s),
+    UTENFOR
   );
 }

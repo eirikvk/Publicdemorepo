@@ -479,6 +479,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Oversikt over kommuneplanen** (`bronse.planoversikt`). Hentes fra `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Ett
   bilde av kommuneplanen over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Det er et vanlig
   PNG, ikke med fargetabell, for der forsvinner piksler som en liten flate bare dekker en bit av.
+- **Kommunen i bitene** (`solv.kommunebiter`). Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som
+  telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen har minst én rute, etter halvregelen. For kommunene med lagrede
   klasser står listen i registeret.
 - **Dagens klasser satt sammen av blokkene** (`solv.klassekart`). Dagens klasser for hele kommunen zoomet ut, satt sammen av
@@ -762,6 +764,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Kommunen i bitene** (`solv.kommunebiter`). Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som
+  telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.
 
 ### Usikkerhet
 
@@ -827,6 +831,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Kommunen i bitene** (`solv.kommunebiter`). Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som
+  telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.
 
 ### Usikkerhet
 
@@ -1039,6 +1045,23 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Mindre arbeid og minne med ruter på 10,6 meter, 18. oktober 2026.** En måling av Kautokeino viste at siden regnet i rundt 32 av
+de 35 sekundene til tallene for planlagt utbygging var ferdige, som før tiltakene 11. oktober. Fire tiltak, uten endring i metoden:
+- Kommunens flate tegnes én gang per bit (`solv.kommunebiter`) og deles av grått areal, inngrepsfri natur og plandekningen, i stedet
+  for én gang per tema. Flaten lagres som én bit per rute (512 kB per bit), og ikke i det hele tatt for biter som ligger helt inne
+  i kommunen (8 av 37 i Kautokeino).
+- Oversiktskartet (`solv.klassekart`) lages ved å snitte rutene rett inn i ett bilde, i stedet for et lerret på 512 × 512 per blokk
+  som krympes. Det har fire ganger så mange blokker etter overgangen til nivå 10.
+- Tegneflatene brukes om igjen, én per størrelse (`laanFlate` i `solv/raster.ts`), i stedet for et nytt lerret per bit og blokk.
+  Safari på iPhone har en grense for hvor mye lerretene på siden kan ta til sammen.
+- Biter uten grått areal eller inngrepsfri natur lagres uten rutenett (8 av 37 biter med grått areal i Kautokeino, ingen i Oppdal
+  og Trondheim). Tellingen slår opp plassen for hver verdi i en tabell i stedet for å kalle en funksjon per rute, og tallformatet
+  på siden lages én gang.
+
+Kautokeino gikk fra 35 til 26 sekunder til tallene for planlagt utbygging. Det som er igjen, er mest å pakke ut bildene (4 s),
+verdsatt natur per bit (2,5 s) og tellingen i kommunen (2 s). Regresjonstesten ga ingen avvik i tall eller tekst, bare tre
+kartbilder med under 0,3 % ulike piksler langs kantene.
 
 **Hvor mye av kommunen planen dekker, på 10,6 meter, 18. oktober 2026.** Sjekken av om kommunen har kommuneplan hos DiBK, og
 andelen siden viser når planen dekker under 60 % av kommunen, ble regnet av ett lite bilde av hele kommunen med høyst 256 piksler på
