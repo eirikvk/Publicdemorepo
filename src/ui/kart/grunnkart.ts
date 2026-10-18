@@ -1,24 +1,29 @@
-/* Kartlaget med dagens arealklasser: flisene fra NIBIO når kartet er zoomet inn, og dagens klasser zoomet ut når det er zoomet ut,
-   i kartfargene. Flisene hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn i det sammensatte kartet.
-   Zoomet ut vises blokkene satt sammen (for kommunene med lagrede klasser), eller det sammensatte kartet datamotoren lager av flisene
-   som er hentet (data/motor/grunnkart.ts). Begge er et lerret, og kartet har sin egen kopi av det i kartfargene. */
+/* Kartlaget med dagens arealklasser i kartfargene, tegnet av den felles sannheten i sølv på nivået kartet viser, så hver piksel er
+   én klasse, den samme i alle kartlagene: fra nivå 10 og finere solv.klasser (nivå 10 er blokkene tallene regnes av), og zoomet ut
+   solv.klasserUt, utledet av blokkene. Kartbildene fra NIBIO hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn
+   i det sammensatte kartet. Under flisene ligger bildet zoomet ut, som vises mens flisene lages: blokkene satt sammen, eller det
+   sammensatte kartet datamotoren lager av flisene som er hentet (data/motor/grunnkart.ts). Begge er et lerret, og kartet har sin
+   egen kopi av det i kartfargene. */
 import type ImageWrapper from 'ol/Image.js';
 import type ImageTile from 'ol/ImageTile.js';
 import type { LoadFunction } from 'ol/Tile.js';
 import type { Extent } from 'ol/extent.js';
 import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
-import { grunnkartUrl } from '../../data/bronse/nibio-grunnkart.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
-import { UTM, type Flis } from '../../data/solv/felles.ts';
+import { FLISNIVA, UTM, type Flis } from '../../data/solv/felles.ts';
 import { katalog } from '../../data/katalog.ts';
 import { oversikt } from '../../data/motor/grunnkart.ts';
-import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
-import { fargeleggBlob, klassefarger, tilFarge } from './fargelegging.ts';
+import { abonner, app, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
+import { verdi } from '../../data/motor/valgt.ts';
+import { flislerret, sti } from '../../data/solv/raster.ts';
+import { klassefarger, tilFarge } from './fargelegging.ts';
 import {
   KILDER,
   MAKSRES,
-  flisnett,
+  TOM,
+  fargPiksel,
+  plannett,
   friskOpp,
   kartflagg,
   nyttSiden,
@@ -29,27 +34,39 @@ import {
 import { kartStatus, opplosning } from './kart.ts';
 import { tegnPlan } from './plan.ts';
 
-/* Flisene fra NIBIO, fargelagt i kartfargene */
-export const klare = new Set<string>(); /* fliser som er ferdig lastet og tegnes skarpt, som «nivå/x/y» */
-const flisUrl = (tc: TileCoord) => grunnkartUrl(flisnett.getTileCoordExtent(tc));
-function lastFlis(tile: ImageTile) {
-  katalog.bronse
-    .grunnkartflis(tile.getTileCoord() as Flis)
-    .then(fargeleggBlob)
-    .then(blob => {
-      const img = tile.getImage() as HTMLImageElement,
-        url = URL.createObjectURL(blob!);
-      img.addEventListener(
-        'load',
-        () => {
-          URL.revokeObjectURL(url);
-          klare.add(tile.getTileCoord().join('/'));
-        },
-        { once: true }
-      );
-      img.src = url;
-    })
-    .catch(() => tile.setState(3));
+/* Flisene: dagens klasser fra sølv på flisens nivå, i kartfargene, én farge per piksel. Fra nivå 10 og finere solv.klasser, og
+   zoomet ut solv.klasserUt for valgt kommune, klippet mot kommunen. */
+export const klare = new Set<string>(); /* fliser som er ferdig tegnet, som «nivå/x/y» */
+const flisUrl = (tc: TileCoord) => tc.join('/');
+async function lastFlis(tile: ImageTile) {
+  try {
+    const tc = tile.getTileCoord() as Flis,
+      ut = tc[0] < FLISNIVA,
+      nr = app.valgt ? app.valgt.nr : null,
+      G = verdi(katalog.solv.grense),
+      u = plannett.getTileCoordExtent(tc);
+    if (ut && (!nr || !G || G.nr !== nr || !ol.extent.intersects(u, G.ext))) return tile.setState(TOM);
+    const K = await (ut ? katalog.solv.klasserUt([nr!, tc[0], tc[1], tc[2]]) : katalog.solv.klasser(tc)),
+      F = klassefarger(),
+      c = flislerret(),
+      g = c.getContext('2d')!,
+      d = g.createImageData(512, 512),
+      o = d.data;
+    for (let q = 0; q < K.kl.length; q++) {
+      const f = K.kl[q] ? F[K.kl[q] - 1] : null;
+      if (f) fargPiksel(o, 4 * q, f);
+    }
+    g.putImageData(d, 0, 0);
+    if (ut) {
+      g.globalCompositeOperation = 'destination-in';
+      sti(g, G!.koord, u, 512 / (u[2] - u[0]));
+      g.fill('evenodd');
+    }
+    tile.setImage(c);
+    klare.add(tc.join('/'));
+  } catch (e) {
+    tile.setState(3);
+  }
 }
 export const tema = new ol.layer.Tile({
   className: 'tema',
@@ -57,13 +74,19 @@ export const tema = new ol.layer.Tile({
   source: new ol.source.XYZ({
     attributions: [KILDER.nibio],
     tileUrlFunction: flisUrl,
-    tileGrid: flisnett,
+    tileGrid: plannett,
     tilePixelRatio: 2,
     tileLoadFunction: lastFlis as Flistegner as LoadFunction,
     transition: 0,
-    projection: UTM
-  }),
-  maxResolution: MAKSRES
+    projection: UTM,
+    interpolate: false /* hver piksel i kartet er én rute, uten utjevning, som i de andre lagene av klassene */
+  })
+});
+/* Ny kommune: flisene zoomet ut gjelder kommunen, og tegnes på nytt */
+const nyKommune = nyttSiden();
+abonner(() => {
+  const G = verdi(katalog.solv.grense);
+  if (nyKommune('grense', G)) friskOpp(tema);
 });
 
 /* Zoomet ut tegnes inngrepsfri natur og grått areal oppå dagens klasser fra det sammensatte kartet. Fliser som ble tegnet før

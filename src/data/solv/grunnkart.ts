@@ -1,20 +1,23 @@
-/* Sølv for grunnkartet fra NIBIO: dagens klasser i to former.
+/* Sølv for grunnkartet fra NIBIO: dagens klasser, én felles sannhet per nivå i kartet.
    Per blokk (solv.klasser): klassen per rute i blokkene på nivå 10 (10,6 meter), i samme rutenett som planen. De lages av
    kartbildene fra NIBIO, og for noen kommuner ligger de lagret ferdig sammen med siden (bronse.klassefil). Det lagrede er laget med
-   den samme funksjonen, så det er samme svar.
+   den samme funksjonen, så det er samme svar. Tallene regnes av nivå 10. Finere nivåer leses av kartbildet på det nivået, med den
+   samme funksjonen.
    Detaljklassene per blokk (solv.detaljklasser): det samme med 19 klasser fra NIBIO og to restklasser, lest innenfor dagens klasse
-   i hver rute (se klasser.ts), bare på nivå 10, og lagret for noen kommuner på samme måte (bronse.detaljfil).
+   på samme nivå (se klasser.ts), og lagret for noen kommuner på nivå 10 (bronse.detaljfil).
+   Zoomet ut (solv.klasserUt og solv.detaljklasserUt): den vanligste klassen i blokkene på nivå 10 under hver piksel, så grovere
+   nivåer aldri sier noe annet enn blokkene.
    For hele kommunen zoomet ut (Oversikt), fra to kilder side om side: blokkene satt sammen (solv.klassekart) og det sammensatte
    kartet av flisene som er hentet (solv.sammensatt). Gull velger mellom dem (gull.dagensKlasser).
    Kartbildene fra NIBIO leses som de er: klassen leses av fargen (klasserIFlis i klasser.ts). */
 import { HEL, type Andel } from '../generelt/dekning.ts';
-import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
+import { overlapper, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, OPPLOSNINGER, flisAvNavn, flisUtsnitt, flisnavn, type Flis, type Plassering } from './felles.ts';
 import { arbeid } from './arbeid.ts';
-import { KLASSETABELL, detaljIKlassen } from './klasser.ts';
+import { ALLE, KLASSETABELL, detaljFlestIBlokk, detaljIKlassen, flestIBlokk } from './klasser.ts';
 import { kommuneIBlokk } from './kommune.ts';
-import { flislerret, lesBilde, sti, tegneflate, tegnUtsnitt } from './raster.ts';
+import { lesBilde, sti, tegneflate } from './raster.ts';
 
 /* Dagens klasser zoomet ut: lerretet med klassene i rene farger, utsnittet det dekker (ext) og meter per piksel (res). dynamisk sier
    at det fylles på med det som hentes (det sammensatte kartet). */
@@ -39,11 +42,12 @@ const iBlokk = (tc: Flis): Plassering & { h: number } => ({
   h: 512
 });
 
-/* Tabellen solv.klasser: dagens klasser i blokken tc [10, x, y], laget av kartbildet fra NIBIO for flisen (bronse.grunnkartflis):
-   512 x 512 piksler på 10,6 meter, og hver rute er én piksel. Klassen leses av fargen (klasserIFlis): det det er mest av, når fargen
-   er en blanding. */
+/* Tabellen solv.klasser: dagens klasser i flisen tc [z, x, y], laget av kartbildet fra NIBIO for flisen (bronse.grunnkartflis): 512 x
+   512 piksler, og hver rute er én piksel. Klassen leses av fargen (klasserIFlis): det det er mest av, når fargen er en blanding. På
+   nivå 10 er ruta 10,6 meter, og det er blokkene alle tallene regnes av. Finere nivåer (11, 12 og videre, med ruter på 5,3, 2,6 meter
+   og så videre) er den felles sannheten for kartet zoomet inn: alle kartlagene tegnes av dem, men ingen tall regnes av dem. */
 export async function klasser(tc: Flis): Promise<Klasser> {
-  if (tc[0] !== FLISNIVA) throw new Error('blokkene er på nivå 10');
+  if (tc[0] < FLISNIVA) throw new Error('dagens klasser finnes fra nivå 10');
   return {
     ...iBlokk(tc),
     kl: await arbeid<Uint8Array>({ type: 'klasser', P: await katalog.bronse.grunnkartflis(tc) })
@@ -56,14 +60,56 @@ export async function lagredeKlasser(tc: Flis): Promise<Klasser | null> {
   return buf ? { ...iBlokk(tc), kl: await arbeid<Uint8Array>({ type: 'klasser', P: buf }) } : null;
 }
 
-/* Tabellen solv.detaljklasser: detaljklassen per rute i blokken tc [10, x, y], på 10,6 meter. Blokken er ett kartbilde fra NIBIO
-   (bronse.detaljflis), og detaljklassen leses innenfor dagens klasse i den samme ruta (solv.klasser): hører den til en annen av
+/* Tabellen solv.detaljklasser: detaljklassen per rute i flisen tc [z, x, y]. Flisen er ett kartbilde fra NIBIO (bronse.detaljflis),
+   og detaljklassen leses innenfor dagens klasse i den samme ruta på det samme nivået (solv.klasser): hører den til en annen av
    dagens klasser, blir den en restklasse (detaljIKlassen i klasser.ts). kl er 0 for ukjent, ellers plassen i DETALJKLASSER pluss
-   én. Bare nivå 10, for tallene regnes på den oppløsningen grunnkartet tegnes i. */
+   én. Tallene regnes på nivå 10 (10,6 meter); finere nivåer er til kartet zoomet inn, som for dagens klasser. */
 export async function detaljklasser(tc: Flis): Promise<Klasser> {
-  if (tc[0] !== FLISNIVA) throw new Error('detaljklassene er på nivå 10');
+  if (tc[0] < FLISNIVA) throw new Error('detaljklassene finnes fra nivå 10');
   const [K, P] = await Promise.all([katalog.solv.klasser(tc), katalog.bronse.detaljflis(tc)]);
   return { ...iBlokk(tc), kl: detaljIKlassen(await arbeid<Uint8Array>({ type: 'detaljklasser', P }), K.kl) };
+}
+/* Blokkene på nivå 10 i flisen [z, x, y] under nivå 10 som kommunen nr har (solv.blokker): [i, j] i flisen, n blokker langs siden */
+async function blokkerIFlis(nr: string, z: number, x: number, y: number) {
+  const n = 1 << (FLISNIVA - z),
+    har = new Set((await katalog.solv.blokker([nr, FLISNIVA])).map(([, bx, by]) => `${bx}/${by}`)),
+    her: [number, number][] = [];
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) if (har.has(`${x * n + i}/${y * n + j}`)) her.push([i, j]);
+  return { n, her };
+}
+/* Tabellen solv.klasserUt: dagens klasser i flisen [z, x, y] under nivå 10 for kommunen nr, kalt med [nr, z, x, y]: kartet zoomet
+   ut. Hver piksel er n x n ruter på nivå 10 i kommunens blokker (solv.klasser), og får klassen flest av dem har (flestIBlokk i
+   klasser.ts). Utledet av blokkene tallene regnes av, så det er den samme sannheten, bare grovere, og alle kartlagene zoomet ut
+   tegnes av den. Blokker kommunen ikke har, er ukjent. */
+export async function klasserUt([nr, z, x, y]: [string, number, number, number]): Promise<Klasser> {
+  if (z >= FLISNIVA) throw new Error('klassene zoomet ut er under nivå 10');
+  const { n, her } = await blokkerIFlis(nr, z, x, y),
+    kl = new Uint8Array(512 * 512),
+    s = 512 / n;
+  await Promise.all(
+    her.map(async ([i, j]) => {
+      const K = await katalog.solv.klasser([FLISNIVA, x * n + i, y * n + j]);
+      flestIBlokk(K.kl, n, kl, i * s, j * s, ALLE.length);
+    })
+  );
+  return { ...iBlokk([z, x, y]), kl };
+}
+/* Tabellen solv.detaljklasserUt: det samme for detaljklassene (solv.detaljklasser), kalt med [nr, z, x, y]. Pikselen får dagens
+   klasse flest av rutene har, og detaljklassen flest av rutene med den klassen har (detaljFlestIBlokk), så den alltid ligger innenfor
+   dagens klasse i solv.klasserUt. */
+export async function detaljklasserUt([nr, z, x, y]: [string, number, number, number]): Promise<Klasser> {
+  if (z >= FLISNIVA) throw new Error('detaljklassene zoomet ut er under nivå 10');
+  const { n, her } = await blokkerIFlis(nr, z, x, y),
+    kl = new Uint8Array(512 * 512),
+    s = 512 / n;
+  await Promise.all(
+    her.map(async ([i, j]) => {
+      const tc: Flis = [FLISNIVA, x * n + i, y * n + j],
+        [D, K] = await Promise.all([katalog.solv.detaljklasser(tc), katalog.solv.klasser(tc)]);
+      detaljFlestIBlokk(D.kl, K.kl, n, kl, i * s, j * s);
+    })
+  );
+  return { ...iBlokk([z, x, y]), kl };
 }
 /* Tabellen solv.detaljblokker: blokkene på nivå 10 for kommunen nr, som [10, x, y]: de samme som for dagens klasser (solv.blokker).
    For de lagrede blokkene leser solv.detaljklasser filen, og for de andre kartbildet fra NIBIO, ett kall per blokk. Slik er logikken
@@ -256,31 +302,4 @@ export function tegnISamling(s: Samling, tc: Flis, bm: ImageBitmap): [number, nu
     H = py(u[1]) - Y;
   s.g.drawImage(bm, X, Y, W, H);
   return [X, Y, W, H];
-}
-
-/* Hvor dagens klasser i en flis tegnes fra: kartbildet fra NIBIO for flisen (flis), eller dagens klasser zoomet ut (ov), som
-   klippes mot kommunen (koord) */
-export interface Dagenskilde {
-  flis?: ArrayBuffer;
-  ov?: Oversikt | null;
-  koord?: Flerflate | null;
-}
-/* Dagens klasser i flisen tc på 512 x 512 piksler, i de rene fargene fra NIBIO, til kartlagene. Zoomet ut bare innenfor kommunen.
-   null hvis kilden k ikke har noe. */
-export async function dagensKlasserIFlis(tc: Flis, k: Dagenskilde): Promise<Uint8ClampedArray | null> {
-  const c = flislerret(),
-    g = c.getContext('2d', { willReadFrequently: true })!,
-    ov = k.ov;
-  if (k.flis) g.drawImage(await lesBilde(k.flis), 0, 0, 512, 512);
-  else if (ov && k.koord) {
-    const u = flisUtsnitt(tc),
-      r = (ov.ext[2] - ov.ext[0]) / ov.lerret.width,
-      s = 512 / (u[2] - u[0]);
-    tegnUtsnitt(g, ov.lerret, (u[0] - ov.ext[0]) / r, (ov.ext[3] - u[3]) / r, (u[2] - u[0]) / r, (u[3] - u[1]) / r);
-    g.globalCompositeOperation = 'destination-in';
-    sti(g, k.koord, u, s);
-    g.fill('evenodd');
-    g.globalCompositeOperation = 'source-over';
-  } else return null;
-  return g.getImageData(0, 0, 512, 512).data;
 }

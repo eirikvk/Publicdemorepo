@@ -91,8 +91,9 @@ export const KILDER = {
   ssb: 'SSB'
 };
 /* Kilde for et lag som tegnes i nettleseren. Flisene har ingen adresse, bare plass i rutenettet. kilder er hvem dataene kommer fra,
-   til krediteringen nederst i kartet (se KILDER). */
-export const tegnetKilde = (tegnFlis: Flistegner, kilder: string[]) =>
+   til krediteringen nederst i kartet (se KILDER). skarp: pikslene forstørres og forminskes uten utjevning, så hver piksel i kartet er
+   én rute, som i lagene av dagens klasser og detaljklassene (de samme rutene i alle lagene, se grunnkart.ts). */
+export const tegnetKilde = (tegnFlis: Flistegner, kilder: string[], skarp = false) =>
   new ol.source.XYZ({
     attributions: kilder,
     tileUrlFunction: tc => tc.join('/'),
@@ -100,7 +101,8 @@ export const tegnetKilde = (tegnFlis: Flistegner, kilder: string[]) =>
     tilePixelRatio: 2,
     tileLoadFunction: tegnFlis as LoadFunction,
     transition: 0,
-    projection: UTM
+    projection: UTM,
+    interpolate: !skarp
   });
 /* Tegner flisene i et lag på nytt. De gamle står til de nye er klare. */
 let friskNr = 0;

@@ -143,6 +143,21 @@ de samme fire delradene. Når to rutenett krysses, slås midtpunktet av ruta i p
 | `EGET_MIN_M2` | 400 m² | Minste tegnede område som regnes ut |
 | `BERORT` | en halv rute, 56 m² | Et verneområde, villreinområde eller en lokalitet regnes som berørt av planlagt utbygging når utbyggingen dekker minst så mye av det. Arealet telles uansett |
 
+**Én sannhet per nivå i kartet.** Grunnkartet ligger i sølv på hvert nivå kartet kan vise, og alle kartlagene tegnes av det samme
+nivået, så hver piksel er den samme klassen i alle lagene (dagens arealklasser, planlagt utbygging, grått areal, inngrepsfri natur
+og tvillingens lag av skog og andre detaljklasser):
+
+- Nivå 10, ruter på 10,6 meter: blokkene tallene regnes av (`solv.klasser`), lagret for mange kommuner. Det er den ferdige
+  sannheten.
+- Finere nivåer, 11, 12 og videre (5,3, 2,6 meter og så videre): `solv.klasser` og `solv.detaljklasser` lest av NIBIOs kartbilde på
+  det nivået, med detaljklassen innenfor dagens klasse på det samme nivået. Ingen tall regnes av dem.
+- Zoomet ut, under nivå 10: `solv.klasserUt` og `solv.detaljklasserUt`, utledet av blokkene på nivå 10. Hver piksel er flere ruter, og
+  får klassen flest av dem har, og detaljklassen flest av rutene med den klassen har. Slik ligger skog alltid innenfor natur også
+  zoomet ut.
+
+Pikslene tegnes uten utjevning, også når nettleseren forstørrer kartet til skjermens tetthet, så det er ingen blandede kantfarger.
+Bildet zoomet ut av hele kommunen (`solv.klassekart`) ligger under flisene og vises bare mens de lages.
+
 **Kartets egne regler.** Kartet tegner de samme dataene piksel for piksel, og bruker de samme tersklene. På to steder har kartet
 egne regler, som bare gjelder det som vises, ikke tallene:
 
@@ -464,10 +479,11 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
    2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
-   Dagens klasse per rute i blokker på 512 × 512 ruter à 10,6 meter, ett kartbilde per blokk (se Arealklassene). For 42 kommuner
-   er blokkene lagret sammen med siden. Justeres: Kartbildene satt sammen flis for flis mens blokkene hentes, bare til kartet.
-   Tallene bygger aldri på det, for rutene i det er grovere jo større kommunen er. Kan ikke blokkene hentes fra NIBIO, regnes
-   ingen tall for planlagt utbygging.
+   Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
+   nivå 10 (10,6 meter), og for 42 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
+   viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene. Justeres: Kartbildene satt sammen flis for flis mens
+   blokkene hentes, bare til kartet. Tallene bygger aldri på det, for rutene i det er grovere jo større kommunen er. Kan ikke
+   blokkene hentes fra NIBIO, regnes ingen tall for planlagt utbygging.
 5. **Kartbilder av kommuneplanen** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis:
    arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og
@@ -1133,6 +1149,14 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Én sannhet per nivå i kartet, 18. oktober 2026.** I Kautokeino endret elvene seg når skog ble slått av og på. Kartlaget med dagens
+arealklasser tegnet NIBIOs kartbilde direkte når kartet var zoomet inn, og bildet av hele kommunen med blandede farger når det var
+zoomet ut, mens skog-laget ble tegnet av blokkene i sølv. To kilder på ulik oppløsning var uenige i kantene, og en elv smalere enn
+ruta ble dekket av skog. Nå tegnes alle kartlagene av sølv på nivået kartet viser (se Felles grunnlag): blokkene på nivå 10, klassene
+på finere nivåer lest av NIBIO på det nivået, og zoomet ut klassen flest ruter har. Detaljklassen ligger innenfor dagens klasse på
+hvert nivå, og pikslene tegnes uten utjevning. En sammenligning av kartet med skog av og på, fra 60 til 3 meter per skjermpunkt i
+Kautokeino og på to nivåer i Trondheim, ga ingen ulike piksler. Kantene er nå skarpe i stedet for blandet. Tallene er de samme. Målt i Chromium, ikke på iPhone.
 
 **Kommunegrensen og andelen per rute lagret, 18. oktober 2026.** For de 45 kommunene som har dagens klasser eller detaljklassene
 lagret, er nå også kommunegrensen (`solv.grense`) og kommunens andel per rute i bitene (`solv.kommunebiter`) lagret sammen med siden,

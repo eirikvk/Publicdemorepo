@@ -1,10 +1,11 @@
 /* Kartlag som bare tvillingen har. Lag av detaljklassene i grunnkartet, som skogtyper og tresatt myr: flisene tegnes i nettleseren
-   av de lagrede detaljklassene (solv.detaljklasser), i kartets flisnett. En flis på nivå 10 er én blokk, en flis zoomet ut er flere
-   blokker forminsket, og en flis zoomet inn er en del av en blokk forstørret. Hver detaljklasse får fargen laget gir den, eller ingen.
-   De finnes bare for kommunene med lagrede detaljklasser. På samme måte lag med én av dagens klasser (bebygd, jordbruk eller natur) for
-   seg, til kortene på oversikten. Og lag fra Miljødirektoratets kart over naturskog, bare til visning. Alle
-   flisene klippes mot kommunen. Kartet (Kart.tsx) legger lagene inn i det felles kartet når siden vises, og tar dem ut igjen
-   etterpå. */
+   av detaljklassene i sølv (solv.detaljklasser), i kartets flisnett. En flis på nivå 10 er én blokk, og en flis zoomet ut er flere
+   blokker forminsket. Zoomet inn er flisen detaljklassene på sitt eget nivå (11, 12 og videre), lest innenfor dagens klasser på det
+   samme nivået, så laget stemmer piksel for piksel med dagens arealklasser og de andre kartlagene. Hver detaljklasse får fargen laget
+   gir den, eller ingen. De er lagret for noen kommuner på nivå 10, og lages ellers av kartbildene fra NIBIO. På samme måte lag med én
+   av dagens klasser (bebygd, jordbruk eller natur) for seg, til kortene på oversikten. Og lag fra Miljødirektoratets kart over
+   naturskog, bare til visning. Alle flisene klippes mot kommunen. Kartet (Kart.tsx) legger lagene inn i det felles kartet når siden
+   vises, og tar dem ut igjen etterpå. */
 import type ImageTile from 'ol/ImageTile.js';
 import type TileLayer from 'ol/layer/Tile.js';
 import type XYZ from 'ol/source/XYZ.js';
@@ -16,7 +17,16 @@ import { ALLE, DETALJKLASSER, type Detaljklasse, type KlasseId } from '../src/da
 import type { VerdsattVurderes, VernetFlate } from '../src/data/gull/temaer.ts';
 import { flislerret, lesBilde, sti, tegneflate } from '../src/data/solv/raster.ts';
 import { kart } from '../src/ui/kart/kart.ts';
-import { KILDER, TOM, friskOpp, nyttSiden, plannett, tegnetKilde, type Flistegner } from '../src/ui/kart/felles.ts';
+import {
+  KILDER,
+  TOM,
+  fargPiksel,
+  friskOpp,
+  nyttSiden,
+  plannett,
+  tegnetKilde,
+  type Flistegner
+} from '../src/ui/kart/felles.ts';
 import { ol } from '../src/ui/kart/ol.ts';
 
 /* Flatene og utsnittene i tabellene, som i verneområdene */
@@ -32,68 +42,17 @@ function cssFarge(navn: string): number[] {
   return m ? [1, 2, 3].map(i => parseInt(m[i], 16)) : [128, 128, 128];
 }
 
-/* Et kartlag av klassene i blokkene på nivå niva (9 eller 10): blokker gir blokkene for kommunen, klasser klassene per rute i en blokk
-   (plassen i tabellen pluss én, 0 for ingen), og farger fargen for hver plass som [r, g, b], eller null når den ikke vises. En flis
-   på nivået er én blokk, en flis zoomet ut er flere blokker forminsket, og en flis zoomet inn er en del av en blokk forstørret. */
-/* Krymper en blokk på 512 x 512 ruter inn i bildet o (512 piksler bredt) fra pikselen (ox, oy): hver piksel er n x n ruter, med
-   snittet av fargene F til de rutene som vises, og dekningen er andelen av dem. Det samme som å krympe blokken med utjevning. Gir
-   om noe ble tegnet. */
-function krymp(kl: ArrayLike<number>, F: (number[] | null)[], n: number, o: Uint8ClampedArray, ox: number, oy: number) {
-  const s = 512 / n;
-  let noe = false;
-  for (let py = 0; py < s; py++)
-    for (let px = 0; px < s; px++) {
-      let m = 0,
-        r = 0,
-        gr = 0,
-        b = 0;
-      for (let y = py * n; y < py * n + n; y++)
-        for (let x = px * n, q = y * 512 + x; x < px * n + n; x++, q++) {
-          const f = kl[q] ? F[kl[q] - 1] : null;
-          if (!f) continue;
-          m++;
-          r += f[0];
-          gr += f[1];
-          b += f[2];
-        }
-      if (!m) continue;
-      const i = 4 * ((oy + py) * 512 + ox + px);
-      o[i] = r / m;
-      o[i + 1] = gr / m;
-      o[i + 2] = b / m;
-      o[i + 3] = (255 * m) / (n * n);
-      noe = true;
-    }
-  return noe;
-}
+/* Et kartlag av klassene på nivået kartet viser, fra sølv: klasser gir klassene per piksel i flisen tc for kommunen nr (plassen i
+   tabellen pluss én, 0 for ingen), blokker blokkene på nivå 10 for kommunen, og farger fargen for hver plass som [r, g, b], eller null
+   når den ikke vises. Zoomet inn (fra nivå 10) tegnes bare fliser i kommunens blokker. Hver piksel får én farge, uten utjevning, så
+   laget stemmer piksel for piksel med dagens arealklasser og de andre kartlagene. */
 function blokklag(
   tittel: string,
-  niva: number,
   blokker: (nr: string) => Promise<Flis[]>,
-  klasser: (tc: Flis) => Promise<{ kl: ArrayLike<number> }>,
+  klasser: (nr: string, tc: Flis) => Promise<{ kl: ArrayLike<number> }>,
   farger: () => (number[] | null)[],
   maske?: () => Flerflate[] | null
 ): TileLayer<XYZ> {
-  /* Blokken som lerret i lagets farger. Klassene laget ikke viser, er gjennomsiktige. */
-  async function blokk(bx: number, by: number, F: (number[] | null)[]) {
-    const K = await klasser([niva, bx, by]),
-      g = tegneflate(512, 512),
-      d = g.createImageData(512, 512),
-      o = d.data;
-    let noe = false;
-    for (let q = 0; q < K.kl.length; q++) {
-      const f = K.kl[q] ? F[K.kl[q] - 1] : null;
-      if (!f) continue;
-      o[4 * q] = f[0];
-      o[4 * q + 1] = f[1];
-      o[4 * q + 2] = f[2];
-      o[4 * q + 3] = 255;
-      noe = true;
-    }
-    if (!noe) return null;
-    g.putImageData(d, 0, 0);
-    return g.canvas;
-  }
   async function tegn(tile: ImageTile) {
     try {
       const nr = valgtNr(),
@@ -101,44 +60,25 @@ function blokklag(
         [z, x, y] = tile.getTileCoord() as Flis,
         u = plannett.getTileCoordExtent([z, x, y]);
       if (!nr || !G || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
-      const har = new Set((await blokker(nr)).map(([, bx, by]) => `${bx}/${by}`)),
+      if (z >= FLISNIVA) {
+        const har = new Set((await blokker(nr)).map(([, bx, by]) => `${bx}/${by}`));
+        if (!har.has(`${x >> (z - FLISNIVA)}/${y >> (z - FLISNIVA)}`)) return tile.setState(TOM);
+      }
+      const K = await klasser(nr, [z, x, y]),
         F = farger(),
         c = flislerret(),
-        g = c.getContext('2d')!;
+        g = c.getContext('2d')!,
+        d = g.createImageData(512, 512),
+        o = d.data;
       let tegnet = false;
-      if (z <= niva) {
-        /* zoomet ut: n x n blokker forminsket inn i flisen. Blokkene hentes samtidig, og hver krympes rett inn i flisen så snart den
-           er lest (krymp), uten et lerret per blokk. */
-        const n = 1 << (niva - z),
-          s = 512 / n,
-          d = g.createImageData(512, 512),
-          her: [number, number][] = [];
-        for (let j = 0; j < n; j++)
-          for (let i = 0; i < n; i++) if (har.has(`${x * n + i}/${y * n + j}`)) her.push([i, j]);
-        await Promise.all(
-          her.map(async ([i, j]) => {
-            const K = await klasser([niva, x * n + i, y * n + j]);
-            if (krymp(K.kl, F, n, d.data, i * s, j * s)) tegnet = true;
-          })
-        );
-        if (tegnet) g.putImageData(d, 0, 0);
-      } else {
-        /* zoomet inn: en del av én blokk, forstørret med skarpe ruter */
-        const n = 1 << (z - niva),
-          bx = x >> (z - niva),
-          by = y >> (z - niva),
-          s = 512 / n;
-        if (har.has(`${bx}/${by}`)) {
-          const b = await blokk(bx, by, F);
-          if (b) {
-            g.imageSmoothingEnabled = false;
-            g.drawImage(b, (x - bx * n) * s, (y - by * n) * s, s, s, 0, 0, 512, 512);
-            b.width = 0;
-            tegnet = true;
-          }
-        }
+      for (let q = 0; q < K.kl.length; q++) {
+        const f = K.kl[q] ? F[K.kl[q] - 1] : null;
+        if (!f) continue;
+        fargPiksel(o, 4 * q, f);
+        tegnet = true;
       }
       if (!tegnet) return tile.setState(TOM);
+      g.putImageData(d, 0, 0);
       g.globalCompositeOperation = 'destination-in';
       sti(g, G.koord, u, 512 / (u[2] - u[0]));
       g.fill('evenodd');
@@ -151,7 +91,7 @@ function blokklag(
   const lag = new ol.layer.Tile({
     className: 'figma-lag',
     properties: { tittel },
-    source: tegnetKilde(tegn as Flistegner, [KILDER.nibio])
+    source: tegnetKilde(tegn as Flistegner, [KILDER.nibio], true)
   });
   /* Ny kommune: laget tegnes på nytt, og bare innenfor kommunen. Med maske også når flatene i masken er hentet, men bare når laget er
      i kartet, så flatene ikke hentes for sider som ikke viser laget. */
@@ -183,14 +123,16 @@ function klipp(g: CanvasRenderingContext2D, F: Flerflate[] | null, u: Utsnitt): 
   return true;
 }
 
-/* Et kartlag av detaljklassene (solv.detaljklasser, nivå 10). farge gir fargen (en variabel i stilen) for hver detaljklasse som skal
-   vises, eller null. De finnes bare for kommunene med lagrede detaljklasser (solv.detaljblokker). */
+/* Detaljklassene i flisen tc for kommunen nr fra sølv: fra nivå 10 solv.detaljklasser, og zoomet ut solv.detaljklasserUt */
+const detaljer = (nr: string, tc: Flis) =>
+  tc[0] >= FLISNIVA ? katalog.solv.detaljklasser(tc) : katalog.solv.detaljklasserUt([nr, tc[0], tc[1], tc[2]]);
+/* Et kartlag av detaljklassene. farge gir fargen (en variabel i stilen) for hver detaljklasse som skal vises, eller null. Blokkene er
+   de samme som for dagens klasser (solv.detaljblokker). */
 export const detaljlag = (tittel: string, farge: (k: Detaljklasse) => string | null) =>
   blokklag(
     tittel,
-    FLISNIVA,
     nr => katalog.solv.detaljblokker(nr),
-    tc => katalog.solv.detaljklasser(tc),
+    detaljer,
     () =>
       DETALJKLASSER.map(k => {
         const f = farge(k);
@@ -205,9 +147,8 @@ export const detaljlagI = (
 ) =>
   blokklag(
     tittel,
-    FLISNIVA,
     nr => katalog.solv.detaljblokker(nr),
-    tc => katalog.solv.detaljklasser(tc),
+    detaljer,
     () =>
       DETALJKLASSER.map(k => {
         const f = farge(k);
@@ -215,15 +156,13 @@ export const detaljlagI = (
       }),
     maske
   );
-/* Et kartlag med én av dagens klasser (bebygd, jordbruk eller natur) i klassens farge, av blokkene på nivå 10 (solv.blokker og
-   solv.klasser, 10,6 meter). De er lagret for noen kommuner og lages ellers av kartbildene fra NIBIO, som for hovedsidens kart, så
-   laget henter ikke noe mer enn kartet alt gjør. */
+/* Et kartlag med én av dagens klasser (bebygd, jordbruk eller natur) i klassens farge, av de samme klassene som hovedsidens kart
+   (solv.klasser fra nivå 10, og solv.klasserUt zoomet ut), så laget henter ikke noe mer enn kartet alt gjør. */
 export const klasselag = (tittel: string, id: KlasseId) =>
   blokklag(
     tittel,
-    FLISNIVA,
     nr => katalog.solv.blokker([nr, FLISNIVA]),
-    tc => katalog.solv.klasser(tc),
+    (nr, tc) => (tc[0] >= FLISNIVA ? katalog.solv.klasser(tc) : katalog.solv.klasserUt([nr, tc[0], tc[1], tc[2]])),
     () => ALLE.map(([k]) => (k === id ? cssFarge(id) : null))
   );
 

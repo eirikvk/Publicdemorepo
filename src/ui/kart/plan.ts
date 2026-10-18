@@ -9,11 +9,10 @@ import { kommuneplanUrl } from '../../data/bronse/dibk-kommuneplan.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
 import { BLOKK, blokkAv, nummer, verdi as rute } from '../../data/generelt/glissen.ts';
 import { HALV, UTM, type Flis } from '../../data/solv/felles.ts';
-import { JOR, NAT, klasserIFlis } from '../../data/solv/klasser.ts';
-import { planIFlis } from '../../data/solv/kommuneplan.ts';
+import { JOR, NAT } from '../../data/solv/klasser.ts';
 import type { Del } from '../../data/solv/egne.ts';
 import type { Utbygging } from '../../data/gull/utbygging.ts';
-import { bildePiksler, flislerret, sti } from '../../data/solv/raster.ts';
+import { flislerret, sti } from '../../data/solv/raster.ts';
 import { katalog } from '../../data/katalog.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { dagensKlasser, lagret } from '../../data/motor/grunnkart.ts';
@@ -135,13 +134,14 @@ async function lastPlanFlis(tile: ImageTile) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    const [K, planBuf] = await Promise.all([
+    /* Planen og dagens klasser per piksel fra sølv, på nivået kartet viser (solv.kommuneplanruter og solv.klasser), med de samme
+       reglene som tallene */
+    const [kl, P] = await Promise.all([
       dagensKlasser(tile.getTileCoord() as Flis),
-      katalog.bronse.planflis(tile.getTileCoord() as Flis)
+      katalog.solv.kommuneplanruter(tile.getTileCoord() as Flis)
     ]);
-    if (!K) throw new Error('mangler dagens klasser');
-    /* Planen og dagens klasser leses per piksel med de samme reglene som tallene (planIFlis og klasserIFlis i sølv) */
-    const P = await bildePiksler(planBuf, 512, 512),
+    if (!kl) throw new Error('mangler dagens klasser');
+    const pl = P.plan,
       t0 = performance.now(),
       c = flislerret(),
       g = c.getContext('2d')!,
@@ -163,8 +163,6 @@ async function lastPlanFlis(tile: ImageTile) {
       plannett.getTileCoordExtent(tile.getTileCoord())
     ); /* egne områder i flisen: 1 utbygging, 2 ikke utbygging */
     if (!vent) {
-      const kl = klasserIFlis(K),
-        pl = planIFlis(P);
       for (let py = 0, q = 0; py < 512; py++)
         for (let px = 0; px < 512; px++, q++) {
           const e = EM ? EM[q] : 0,
@@ -198,7 +196,8 @@ const nyPlanKilde = () =>
     tilePixelRatio: 2,
     tileLoadFunction: lastPlanFlis as Flistegner as LoadFunction,
     transition: 0,
-    projection: UTM
+    projection: UTM,
+    interpolate: false /* uten utjevning, så pikslene ligger oppå de samme rutene i dagens klasser */
   });
 export const planLag = new ol.layer.Tile({
   className: 'plan',

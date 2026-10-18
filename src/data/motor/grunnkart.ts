@@ -2,8 +2,8 @@
    utbygging, inngrepsfri natur og grått areal tegnes oppå det.
    Dagens klasser for kommunen står i gull.dagensKlasser: blokkene for hele kommunen (solv.klassekart), lagret sammen med siden eller
    hentet fra NIBIO når kommunen velges, eller det sammensatte kartet av flisene som er hentet (solv.sammensatt) når blokkene ikke kan
-   lages. Mens blokkene hentes, viser kartet det sammensatte kartet, som fylles flis for flis. Zoomet inn brukes kartbildene fra NIBIO,
-   én flis om gangen (bronse.grunnkartflis).
+   lages. Mens blokkene hentes, viser kartet det sammensatte kartet, som fylles flis for flis. Kartlagene leser dagens klasser per flis
+   fra sølv på nivået kartet viser (dagensKlasser): solv.klasser fra nivå 10 og finere, og solv.klasserUt zoomet ut.
    Det sammensatte kartet er en kilde fra brukeren: det er kartet brukeren har sett på. Datamotoren bestemmer bare når: hver ny flis
    legges inn med en gang, og når kartet har stått stille med nye fliser, sier datamotoren fra (brukerEndret), så gull regnes ut på
    nytt. Selve tegningen står i sølv (solv/grunnkart.ts).
@@ -14,7 +14,7 @@ import { alle, brukerEndret, se, vedGlemt, vedNy } from '../cache.ts';
 import { overlapper } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, flisAvNavn, flisUtsnitt, flisnavn, type Flis } from '../solv/felles.ts';
-import { dagensKlasserIFlis, tegnISamling, type Oversikt, type Samling } from '../solv/grunnkart.ts';
+import { tegnISamling, type Oversikt, type Samling } from '../solv/grunnkart.ts';
 import { lesBilde } from '../solv/raster.ts';
 import { valgtNr, verdi } from './valgt.ts';
 import { app, endret, tidSlutt, varsle } from './tilstand.ts';
@@ -139,17 +139,14 @@ export const stoppRegning = () => {
   regningVenter = false;
 };
 
-/* Dagens klasser i flisen tc på 512 x 512 piksler for valgt kommune, i de rene fargene fra NIBIO, til kartlagene. Zoomet inn fra
-   kartbildet fra NIBIO, ellers fra gull.dagensKlasser: blokkene satt sammen, eller det sammensatte kartet. null hvis de ikke
-   finnes ennå. Selve tegningen står i sølv (dagensKlasserIFlis). */
-export async function dagensKlasser(tc: Flis): Promise<Uint8ClampedArray | null> {
-  const D = dagensKlasserNaa(),
-    t0 = performance.now();
-  const K = await dagensKlasserIFlis(tc, {
-    flis: tc[0] >= FLISNIVA ? await katalog.bronse.grunnkartflis(tc) : undefined,
-    ov: D && D.ov,
-    koord: D && D.koord
-  });
+/* Dagens klasser per piksel i flisen tc på 512 x 512 piksler for valgt kommune, til kartlagene: 0 ukjent, ellers plassen i ALLE pluss
+   én. Fra sølv på nivået kartet viser, så alle kartlagene tegnes av de samme klassene: fra nivå 10 og finere solv.klasser, og zoomet
+   ut solv.klasserUt for kommunen, utledet av blokkene på nivå 10. null uten valgt kommune. */
+export async function dagensKlasser(tc: Flis): Promise<Uint8Array | null> {
+  const t0 = performance.now(),
+    nr = valgtNr();
+  if (tc[0] < FLISNIVA && !nr) return null;
+  const K = await (tc[0] >= FLISNIVA ? katalog.solv.klasser(tc) : katalog.solv.klasserUt([nr!, tc[0], tc[1], tc[2]]));
   tidSlutt('dagens klasser', t0);
-  return K;
+  return K.kl;
 }

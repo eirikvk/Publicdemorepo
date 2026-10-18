@@ -4,7 +4,7 @@
    samme gjennomsiktighet og ser ut som en del av naturfargen. Det som er felles med grått areal, står i kommunebilde.ts. */
 import { HALV } from '../../data/solv/felles.ts';
 import { UTENFOR } from '../../data/solv/inon.ts';
-import { NAT, klasserIFlis } from '../../data/solv/klasser.ts';
+import { NAT } from '../../data/solv/klasser.ts';
 import { dagensKlasser } from '../../data/motor/grunnkart.ts';
 import { katalog } from '../../data/katalog.ts';
 import { bildetallet, valgt, verdi } from '../../data/motor/valgt.ts';
@@ -37,12 +37,11 @@ export const inonLag = bitlag({
         break;
       }
     if (!noe) return false; /* ingen inngrepsfri natur her: dagens klasser trengs ikke */
-    const K = await dagensKlasser(tc);
-    if (!K) return false; /* klassene er ikke hentet ennå. Laget friskes opp når de er det. */
+    const kl = await dagensKlasser(tc); /* dagens klasser fra sølv, på nivået kartet viser */
+    if (!kl) return false; /* klassene er ikke hentet ennå. Laget friskes opp når de er det. */
     const ut = g.createImageData(512, 512),
       o = ut.data,
-      F = [rgb('inon2'), rgb('inon1'), rgb('inonv')],
-      kl = klasserIFlis(K); /* dagens klasser med samme regel som tallene */
+      F = [rgb('inon2'), rgb('inon1'), rgb('inonv')];
     let tegnet = false;
     for (let i = 0, q = 0; i < P.length; i += 4, q++) {
       if (P[i] < HALV || P[i + 3] < HALV || kl[q] !== NAT + 1) continue;

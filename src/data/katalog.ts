@@ -645,11 +645,11 @@ export const katalog = {
     klasser: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'klasser',
-      tittel: 'Dagens klasser per blokk',
-      om: 'dagens klasse per rute i en blokk på nivå 10, kalt med blokken [10, x, y]: ruta er 10,6 meter, og blokken er ett kartbilde fra NIBIO. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
+      tittel: 'Dagens klasser per flis',
+      om: 'dagens klasse per rute i en flis, kalt med flisen [z, x, y] fra nivå 10: ett kartbilde fra NIBIO. På nivå 10 er ruta 10,6 meter, og det er blokkene tallene regnes av; for noen kommuner ligger de lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Finere nivåer er den felles sannheten for kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
       forklaring:
-        'Dagens klasse per rute i blokker på 512 × 512 ruter à 10,6 meter, ett kartbilde per blokk (se Arealklassene). For 42 kommuner er blokkene lagret sammen med siden.',
-      husk: 0,
+        'Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 42 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.',
+      husk: 32,
       nokkel: flisnavn,
       etl: solvGrunnkart.klasser,
       lagret: solvGrunnkart.lagredeKlasser,
@@ -658,8 +658,8 @@ export const katalog = {
     detaljklasser: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'detaljklasser',
-      tittel: 'Detaljklasser per blokk',
-      om: 'detaljklassen per rute i en blokk på nivå 10 (10,6 meter), kalt med blokken [10, x, y], laget av ett kartbilde fra NIBIO (bronse.detaljflis) lest innenfor dagens klasser (solv.klasser). For noen kommuner ligger svaret lagret sammen med siden (bronse.detaljfil). Nøkkel: blokken som «z/x/y».',
+      tittel: 'Detaljklasser per flis',
+      om: 'detaljklassen per rute i en flis, kalt med flisen [z, x, y] fra nivå 10, laget av ett kartbilde fra NIBIO (bronse.detaljflis) lest innenfor dagens klasser på det samme nivået (solv.klasser). Tallene regnes på nivå 10 (10,6 meter), og for noen kommuner ligger de blokkene lagret sammen med siden (bronse.detaljfil). Finere nivåer er til kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
       forklaring:
         'Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er mest av, når fargen er en blanding. Så leses den innenfor dagens klasse i ruta (solv.klasser): hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur, uspesifisert», så detaljklassene summerer til dagens klasser. De lagrede filene leses med eksakte farger.',
       husk: 64,
@@ -667,6 +667,30 @@ export const katalog = {
       etl: solvGrunnkart.detaljklasser,
       lagret: solvGrunnkart.lagredeDetaljklasser,
       eksempel: flisMidt(10)
+    }),
+    klasserUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'klasserUt',
+      tittel: 'Dagens klasser zoomet ut',
+      om: 'dagens klasse per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]: kartet zoomet ut. Nøkkel: «nummer/z/x/y».',
+      teknisk: true,
+      forklaring:
+        'Hver piksel er flere ruter på 10,6 meter i kommunens blokker, og får klassen flest av dem har. Utledet av blokkene tallene regnes av, så alle kartlagene zoomet ut viser den samme klassen i hver piksel. Endrer ingen tall.',
+      husk: 32,
+      nokkel: ([nr, z, x, y]) => `${nr}/${z}/${x}/${y}`,
+      etl: solvGrunnkart.klasserUt
+    }),
+    detaljklasserUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'detaljklasserUt',
+      tittel: 'Detaljklasser zoomet ut',
+      om: 'detaljklassen per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]. Nøkkel: «nummer/z/x/y».',
+      teknisk: true,
+      forklaring:
+        'Hver piksel får dagens klasse flest av rutene har, og så detaljklassen flest av rutene med den klassen har, så detaljklassen alltid ligger innenfor dagens klasse også zoomet ut. Endrer ingen tall.',
+      husk: 32,
+      nokkel: ([nr, z, x, y]) => `${nr}/${z}/${x}/${y}`,
+      etl: solvGrunnkart.detaljklasserUt
     }),
     detaljblokker: tabell<string, Flis[]>({
       lag: 'solv',

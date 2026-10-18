@@ -271,3 +271,10 @@
 .probe b {
   color: var(--md-color-text-primary);
 }
+
+/* Kartlagene av klassene vises med rene piksler, også når nettleseren forstørrer kartet til skjermens tetthet (kartet tegnes med
+   høyst to piksler per punkt): hver piksel er én klasse fra sølv, den samme i alle lagene, uten blandede kantfarger. */
+.tema canvas,
+.figma-lag canvas {
+  image-rendering: pixelated;
+}

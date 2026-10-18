@@ -55,27 +55,6 @@ export function flislerret(): HTMLCanvasElement {
   return c;
 }
 
-/* Tegner utsnittet (sx, sy, sw, sh) av et bilde over hele lerretet g på 512 x 512. Utsnittet klippes til bildet her, og målet krympes
-   tilsvarende. Standarden sier at nettleseren skal gjøre det selv, men Safari har tegnet ingenting når utsnittet stikker utenfor
-   bildet, og det gjør det for alle fliser langs kanten av kommunen når kartet er zoomet ut. */
-export function tegnUtsnitt(
-  g: CanvasRenderingContext2D,
-  bilde: CanvasImageSource & { width: number; height: number },
-  sx: number,
-  sy: number,
-  sw: number,
-  sh: number
-) {
-  const x0 = Math.max(0, sx),
-    y0 = Math.max(0, sy),
-    x1 = Math.min(bilde.width, sx + sw),
-    y1 = Math.min(bilde.height, sy + sh);
-  if (!(x1 > x0 && y1 > y0)) return;
-  const fx = 512 / sw,
-    fy = 512 / sh;
-  g.drawImage(bilde, x0, y0, x1 - x0, y1 - y0, (x0 - sx) * fx, (y0 - sy) * fy, (x1 - x0) * fx, (y1 - y0) * fy);
-}
-
 /* En flerflate som sti i lerretet g. u er utsnittet lerretet viser, og s er ruter per meter. Fylles med g.fill('evenodd'), så hull
    blir hull. */
 export function sti(g: Flate, koord: Flerflate, u: Utsnitt, s: number) {

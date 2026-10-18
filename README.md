@@ -184,7 +184,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
 | `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, dekningsandelen til flater i bitene (`andelsbiter`), kommunens flate i bitene (`solv.kommunebiter`), og et tema som hentes i biter talt i kommunen eller i et naturtema i den (`tellIKommune`, `tellIBitene`) |
-| `grunnkart.ts` | Grunnkartet fra NIBIO: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret), blokkene i kommunen, og dagens klasser for hele kommunen zoomet ut fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
+| `grunnkart.ts` | Grunnkartet fra NIBIO, én felles sannhet per nivå: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret) og på finere nivåer av kartbildet der, den vanligste klassen zoomet ut (`solv.klasserUt`), blokkene i kommunen, og dagens klasser for hele kommunen fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Lerretet: bildene leses inn, og kartet tegnes. Dekningen av flater regnes ikke her, men i `generelt/dekning.ts`. Tegneflatene brukes om igjen, én per størrelse. Den eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden. |
 | `tolking.ts` | Tolkingen av kartbildene til verdier per rute for grått areal, inngrepsfri natur og kommuneplanen, uten katalogen, så den kan kjøres i bakgrunnstråden |
@@ -224,7 +224,7 @@ Datamotoren, i `src/data/motor/`.
 | `valgt.ts` | Valgt kommune, og en tabell lest for den: `valgt(katalog.gull.inon)` gir raden i cachen, og ber om den hvis den mangler |
 | `tilstand.ts` | Tilstanden som gjelder nå (`app`): valgene og det tekniske. Lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen. |
 | `kommune.ts` | Listen over kommuner, valg av kommune, og det som bes om med en gang: alle tabellene i gull for kommunen |
-| `grunnkart.ts` | Dagens klasser til kartet, fra `gull.dagensKlasser`, og det sammensatte kartet mens blokkene hentes, med hvor langt hentingen er kommet. Legger nye fliser inn i det sammensatte kartet med en gang (tegningen står i sølv), og sier fra når kartet har stått stille med nye fliser og tallene bygger på det. |
+| `grunnkart.ts` | Dagens klasser til kartet, fra `gull.dagensKlasser`, dagens klasser per flis for kartlagene (fra sølv på nivået kartet viser), og det sammensatte kartet mens blokkene hentes, med hvor langt hentingen er kommet. Legger nye fliser inn i det sammensatte kartet med en gang (tegningen står i sølv), og sier fra når kartet har stått stille med nye fliser og tallene bygger på det. |
 | `plan.ts` | Det siden og kartet trenger å vite om utbyggingen: om kommunen har plan, utbyggingen for valgt kommune, og hvor langt den er kommet |
 | `egne.ts` | Egne områder, tegnede og opplastede: en kilde fra brukeren, som legges slik brukeren laget dem i `bronse.egne` |
 
@@ -254,7 +254,7 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `feltnavn.ts` | Lesbare navn på feltene fra kildene i detaljene, og hvilke felt som bare vises med kildenes egne navn |
 | `maaling.ts` | Måling av hvor jevnt kartet går, til teknisk visning |
 | `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
-| `grunnkart.ts` | Dagens klasser i kartet: flisene fra NIBIO, og bildet av hele kommunen zoomet ut |
+| `grunnkart.ts` | Dagens klasser i kartet, tegnet av sølv på nivået kartet viser, så alle kartlagene er enige om hver piksel |
 | `plan.ts` | Planlagt utbygging |
 | `naturtema.ts` | Verneområder og villrein med skravur (områdene er ofte store, og små områder vises som ring), verdsatt natur fylt, sløret over det som ikke er kartlagt, og markering av ett område |
 | `kommunebilde.ts` | Felles for lagene som tegnes av bitene: masken per kartflis, flisene og når laget vises |

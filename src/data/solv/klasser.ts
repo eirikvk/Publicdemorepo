@@ -325,3 +325,50 @@ export function detaljfilIFlis(K: Piksler): Uint8Array {
   }
   return kl;
 }
+
+/* Kartet zoomet ut (under nivå 10): hver piksel er n x n ruter på nivå 10, og får én klasse, den flest av rutene har. Ukjent (0)
+   teller ikke, og er det likt, vinner den laveste plassen. Slik er hvert nivå zoomet ut én sannhet, utledet av blokkene tallene
+   regnes av, og alle kartlagene viser den samme klassen i hver piksel. kl er blokken (512 x 512 ruter, plassen pluss én), og ut
+   bildet av flisen (512 piksler bredt), fra pikselen (ox, oy). antall er antall klasser. */
+export function flestIBlokk(kl: ArrayLike<number>, n: number, ut: Uint8Array, ox: number, oy: number, antall: number) {
+  const s = 512 / n,
+    tell = new Int32Array(antall + 1);
+  for (let py = 0; py < s; py++)
+    for (let px = 0; px < s; px++) {
+      tell.fill(0);
+      for (let y = py * n; y < py * n + n; y++) for (let q = y * 512 + px * n, e = q + n; q < e; q++) tell[kl[q]]++;
+      let best = 0;
+      for (let k = 1; k <= antall; k++) if (tell[k] > tell[best] || (best === 0 && tell[k] > 0)) best = k;
+      ut[(oy + py) * 512 + ox + px] = best;
+    }
+}
+/* Det samme for detaljklassene D, innenfor dagens klasser K i de samme rutene: pikselen får dagens klasse flest av rutene har
+   (flestIBlokk), og så detaljklassen flest av rutene med den klassen har. Slik ligger detaljklassen alltid innenfor dagens klasse også
+   zoomet ut. */
+export function detaljFlestIBlokk(
+  D: ArrayLike<number>,
+  K: ArrayLike<number>,
+  n: number,
+  ut: Uint8Array,
+  ox: number,
+  oy: number
+) {
+  const s = 512 / n,
+    tk = new Int32Array(ALLE.length + 1),
+    td = new Int32Array(DETALJKLASSER.length + 1);
+  for (let py = 0; py < s; py++)
+    for (let px = 0; px < s; px++) {
+      tk.fill(0);
+      for (let y = py * n; y < py * n + n; y++) for (let q = y * 512 + px * n, e = q + n; q < e; q++) tk[K[q]]++;
+      let k = 0;
+      for (let c = 1; c <= ALLE.length; c++) if (tk[c] > tk[k] || (k === 0 && tk[c] > 0)) k = c;
+      let best = 0;
+      if (k) {
+        td.fill(0);
+        for (let y = py * n; y < py * n + n; y++)
+          for (let q = y * 512 + px * n, e = q + n; q < e; q++) if (K[q] === k) td[D[q]]++;
+        for (let d = 1; d <= DETALJKLASSER.length; d++) if (td[d] > td[best] || (best === 0 && td[d] > 0)) best = d;
+      }
+      ut[(oy + py) * 512 + ox + px] = best;
+    }
+}

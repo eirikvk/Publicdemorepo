@@ -11,7 +11,9 @@ import {
   JOR,
   NAT,
   detaljfilIFlis,
+  detaljFlestIBlokk,
   detaljIKlassen,
+  flestIBlokk,
   detaljklasseAv,
   klasseAv
 } from '../src/data/solv/klasser.ts';
@@ -163,4 +165,30 @@ test('detaljklassene: lest innenfor dagens klasse, med restklasse, og lagret med
     DETALJTABELL.map((_, i) => i)
   );
   assert.equal(new Set(DETALJTABELL.map(f => f.join())).size, DETALJTABELL.length);
+});
+
+test('zoomet ut: klassen flest ruter har, og detaljklassen innenfor den', () => {
+  const d = (id: string) => DETALJKLASSER.findIndex(k => k.id === id) + 1;
+  /* en blokk der de fire rutene øverst til venstre er natur (3), natur, jordbruk (2) og ukjent, og resten hav (4) */
+  const K = new Uint8Array(512 * 512).fill(4),
+    D = new Uint8Array(512 * 512).fill(d('hav'));
+  K.set([NAT + 1, NAT + 1], 0);
+  K.set([JOR + 1, 0], 512);
+  D.set([d('hei'), d('skog-bar-vanlig')], 0);
+  D.set([d('dyrket'), 0], 512);
+  const ut = new Uint8Array(512 * 512);
+  flestIBlokk(K, 2, ut, 0, 0, 6);
+  assert.equal(ut[0], NAT + 1); /* to natur mot én jordbruk, og ukjent teller ikke */
+  assert.equal(ut[1], 4);
+  const ud = new Uint8Array(512 * 512);
+  detaljFlestIBlokk(D, K, 2, ud, 0, 0);
+  assert.equal(
+    ud[0],
+    d('skog-bar-vanlig') < d('hei') ? d('skog-bar-vanlig') : d('hei')
+  ); /* likt: den laveste plassen */
+  assert.equal(DETALJKLASSER[ud[0] - 1].gruppe, 'nat'); /* aldri jordbruk i en naturpiksel */
+  /* forminsket fire ganger: pikselen (1, 0) i ut er rutene 4–7 i de fire første radene */
+  const ut4 = new Uint8Array(512 * 512);
+  flestIBlokk(K, 4, ut4, 0, 0, 6);
+  assert.equal(ut4[0], 4); /* 13 av 16 er hav */
 });
