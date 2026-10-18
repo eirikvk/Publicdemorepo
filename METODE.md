@@ -1054,8 +1054,10 @@ viste to stopp på over et halvt sekund. Ellers var alle under 0,2 sekunder.
   En rute hører fortsatt til det første området den ligger i.
 - Rundt 0,5 sekund hver gang kartlaget for grått areal eller inngrepsfri natur vises (`ui/kart/kommunebilde.ts`). Alle flisene
   ble tegnet i ett strekk. Nå tegnes én flis om gangen med en pause imellom, og fargene slås opp i en tabell.
-Etterpå var det lengste stoppet rundt 0,17 sekunder i Kautokeino og Trondheim, både med bred skjerm og med telefonbredde. Målt i
-Chromium, ikke på iPhone. Tallene og kartene er de samme: regresjonstesten ga ingen avvik.
+Målt i Trondheim. Etterpå var det lengste stoppet der rundt 0,17 sekunder, både med bred skjerm og med telefonbredde. I Kautokeino
+var ingen av de to stoppene over 0,1 sekund. Det lengste stoppet der er rundt 0,3 sekunder, når grått areal krysses med planlagt
+utbygging (`kryssGraa`), før og etter endringen. Målt i Chromium, ikke på iPhone. Tallene og kartene er de samme: regresjonstesten
+ga ingen avvik.
 
 **Bildearbeidet i en bakgrunnstråd, 18. oktober 2026.** Det tunge bildearbeidet kjøres nå i bakgrunnstråder i nettleseren (Web
 Worker med OffscreenCanvas, `solv/arbeid.ts`, `solv/arbeider.ts` og `solv/oppgaver.ts`), høyst tre: å pakke ut og tolke bildene av
