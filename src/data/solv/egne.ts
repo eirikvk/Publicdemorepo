@@ -69,13 +69,13 @@ export async function egne(nr: string): Promise<Egne> {
 }
 
 /* Tabellen solv.egneruter: de egne områdene i kommunen nr som planen per rute (Planruter i felles.ts), i rutenettet for planen på
-   nivået brukeren har valgt (bronse.planniva) og over utsnittet rundt alle områdene. plan er 1 utbygging og 2 ikke utbygging, og omrade hvilket område ruta hører til (1 er det
+   nivå 10 (PLANNIVA) og over utsnittet rundt alle områdene. plan er 1 utbygging og 2 ikke utbygging, og omrade hvilket område ruta hører til (1 er det
    første i ider). null uten egne områder. */
 export type Egneruter = Planruter & { omrade: Uint8Array; ider: number[] };
 export async function egneruter(nr: string): Promise<Egneruter | null> {
-  const [E, z] = await Promise.all([katalog.solv.egne(nr), katalog.bronse.planniva()]);
+  const E = await katalog.solv.egne(nr);
   if (!E.flater.length) return null;
-  const Z = z || PLANNIVA,
+  const Z = PLANNIVA,
     m = ruteM(Z),
     x0 = Math.min(...E.flater.map(g => g.ext[0])),
     y0 = Math.min(...E.flater.map(g => g.ext[1])),

@@ -1,7 +1,6 @@
 /* Om og metode: kall-loggen og katalogen (teknisk visning), hvordan klassene er satt sammen, om siden, og tekniske valg. */
 import { katalog } from '../../data/katalog.ts';
 import { finn } from '../../data/motor/kommune.ts';
-import { planniva, settPlanniva } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { settSmale } from '../kart/plan.ts';
 import { REPO } from '../forklaringer.ts';
@@ -110,7 +109,7 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
         {medKlasser.length > 0 && reg && (
           <p>
             For {medKlasser.length === 1 ? finn(medKlasser[0])![1].navn : medKlasser.length + ' kommuner'} ligger også
-            dagens arealklasser lagret, i ruter på 21 meter laget av kartet fra NIBIO ({reg.versjon}, hentet{' '}
+            dagens arealklasser lagret, i ruter på 10,6 meter laget av kartet fra NIBIO ({reg.versjon}, hentet{' '}
             {reg.hentet}). Da regnes tallene for hele kommunen med en gang, og kartet bruker dem når det er zoomet ut.
             Fliser fra NIBIO tar over når du zoomer inn.
           </p>
@@ -152,17 +151,8 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
           onChange={e => settSmale(e.target.checked)}
         />
         <p className="hint">
-          Smale striper er felt som ikke er bredere enn rundt {planniva() === 10 ? 20 : 40} meter noe sted, ofte
-          grøntdrag og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.
-        </p>
-        <MdCheckbox
-          label="Regn i ruter på 10 meter (forsøk)"
-          checked={planniva() === 10}
-          onChange={e => settPlanniva(e.target.checked ? 10 : 9)}
-        />
-        <p className="hint">
-          Planlagt utbygging og alt som krysses med den, regnes da i ruter på 10,6 meter i stedet for 21. Det gir fire
-          ganger så mange kall mot DiBK. Regelen om smale striper gjelder fortsatt to ruter.
+          Smale striper er felt som ikke er bredere enn rundt 20 meter (to ruter på 10,6 meter) noe sted, ofte grøntdrag
+          og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.
         </p>
       </section>
     </>

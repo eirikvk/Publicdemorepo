@@ -1,9 +1,9 @@
 /* Gull: utbyggingen, midtpunktet i analysene. Kommuneplanen fra DiBK og egne områder lagt oppå dagens klasser fra NIBIO, i et
-   rutenett med ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Svarer på hvor det er planlagt utbygging, og hva som er der i dag.
+   rutenett med ruter på 10,6 meter, med smale striper tatt bort. Svarer på hvor det er planlagt utbygging, og hva som er der i dag.
    Alle kryssinger med planlagt utbygging går gjennom utbyggingen: temaene (gull/temaer.ts), grått areal (gull/graa.ts), tallene for
    planlagt utbygging (gull/planlagt.ts) og egne områder (gull/egne.ts).
    Hver kilde tolkes per rute i sølv: planen, med kommuneplanen (solv.kommuneplanruter) og egne områder (solv.egneruter) i samme
-   datamodell, og dagens klasser (solv.klasser, eller dagensKlasserIFlis og klasserIFlis for det sammensatte kartet). Her settes de
+   datamodell, og dagens klasser (solv.klasser). Her settes de
    sammen: dagens klasser klippes til kommunen, et eget område erstatter kommuneplanen der det ligger, og planen legges oppå dagens
    klasser. Én rute er ruteKm2(z) km² (felles.ts). */
 import {
@@ -21,8 +21,8 @@ import {
 import { katalog } from '../katalog.ts';
 import { PLANNIVA, ruteM, type Flis, type Plassering } from '../solv/felles.ts';
 import type { Egneruter } from '../solv/egne.ts';
-import { dagensKlasserIFlis, klasserIFlate } from '../solv/grunnkart.ts';
-import { JOR, NAT, klasserIFlis } from '../solv/klasser.ts';
+import { klasserIFlate } from '../solv/grunnkart.ts';
+import { JOR, NAT } from '../solv/klasser.ts';
 import { kanHaPlan } from '../solv/kommuneplan.ts';
 
 /* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
@@ -321,12 +321,11 @@ export function leggInnEgne(E: Egneruter, d: Glissen, kl: Glissen, eget: Glissen
 
 /* Tabellen gull.utbygging: utbyggingen i kommunen nr. null når det ikke finnes noe å regne på: uten kommuneplan og uten egne
    områder, eller når dagens klasser mangler.
-   Dagens klasser kommer fra gull.dagensKlasser. Som regel er det blokkene (solv.klasser), lagret eller hentet fra NIBIO, klippet til
-   kommunen etter halvregelen, og hele kommunen er med. Kan ikke blokkene lages, er det det sammensatte kartet av flisene som er
-   hentet. Da gjelder utbyggingen bare den delen av kommunen nettleseren har hentet kart for (delvis), og den regnes ut på nytt når
-   datamotoren sier fra om mer kart. Egne områder kommer fra solv.egneruter.
-   Utbyggingen bygges av blokker på 512 x 512 ruter, én per flis på nivået brukeren har valgt (bronse.planniva, 9 som standard). En blokk regnes bare ut på nytt når det har kommet nye
-   kartfliser innenfor den, så mer kart koster én eller to blokker og ikke hele det hentede området. Blokkene huskes i
+   Dagens klasser kommer fra blokkene (solv.klasser) på nivå 10, lagret eller hentet fra NIBIO, klippet til kommunen etter
+   halvregelen, og hele kommunen er med. Kan ikke blokkene lages for hele kommunen, regnes ingenting: det sammensatte kartet av
+   flisene som er hentet, brukes bare til å vise kartet, for der er rutene grovere jo større kommunen er. Egne områder kommer fra
+   solv.egneruter.
+   Utbyggingen bygges av blokker på 512 x 512 ruter à 10,6 meter, én per flis på nivå 10 (PLANNIVA). Blokkene huskes i
    gull.utbyggingsblokker. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 export async function utbygging(nr: string): Promise<Utbygging | null> {
   const [info, E, D] = await Promise.all([
@@ -336,45 +335,24 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
   ]);
   const ingenPlan = !!info && !info.finnes;
   if ((ingenPlan && !E) || !D) return null;
-  const dyn = D.delvis,
-    O = ingenPlan ? null : await katalog.solv.planoversikt(nr).catch(() => null) /* uten oversikt hentes alle */,
-    Z = (await katalog.bronse.planniva()) || PLANNIVA,
+  if (D.delvis) throw new Error('dagens klasser kunne ikke hentes for hele kommunen');
+  const O = ingenPlan ? null : await katalog.solv.planoversikt(nr).catch(() => null) /* uten oversikt hentes alle */,
+    Z = PLANNIVA,
     blokker = katalog.gull.utbyggingsblokker.straks(nr, () => new Map<string, Blokk>()),
-    under = new Map<string, Flis[] | null>();
+    under = (await katalog.solv.blokker([nr, Z])).map(([, x, y]) => [x, y]);
   for (const k of [...blokker.keys()]) if (!k.startsWith(`${Z}/`)) blokker.delete(k); /* blokker på et annet nivå */
-  if (!dyn) for (const [, x, y] of await katalog.solv.blokker([nr, Z])) under.set(`${x}/${y}`, null);
-  else
-    for (const [z, x, y] of D.fliser || []) {
-      const k = `${x >> (z - Z)}/${y >> (z - Z)}`;
-      if (!under.has(k)) under.set(k, []);
-      under.get(k)!.push([z, x, y]);
-    }
   await Promise.all(
-    [...under].map(async ([k, fliser]) => {
-      const har = blokker.get(`${Z}/${k}`),
-        sig = fliser ? fliser.length : -1;
-      if (har && har.sig === sig && har.kl && har.utenPlan === ingenPlan) return;
-      const [x, y] = k.split('/').map(Number),
-        tc: Flis = [Z, x, y];
+    under.map(async ([x, y]) => {
+      const har = blokker.get(`${Z}/${x}/${y}`);
+      if (har && har.kl && har.utenPlan === ingenPlan) return;
+      const tc: Flis = [Z, x, y];
       const [kl, P] = await Promise.all([
-        !dyn
-          ? katalog.solv.klasser(tc).then(K => klasserIFlate(K, D.koord))
-          : dagensKlasserIFlis(tc, D).then(K => K && klasserIFlis(K)),
+        katalog.solv.klasser(tc).then(K => klasserIFlate(K, D.koord)),
         ingenPlan || (O && !kanHaPlan(O, tc)) ? null : katalog.solv.kommuneplanruter(tc)
       ]);
-      if (!kl) throw new Error('mangler dagens klasser');
-      blokker.set(`${Z}/${k}`, { ...kombinerBlokk(kl, P ? P.plan : null, tc, fliser), utenPlan: ingenPlan });
+      blokker.set(`${Z}/${x}/${y}`, { ...kombinerBlokk(kl, P ? P.plan : null, tc, null), utenPlan: ingenPlan });
     })
   );
   if (E && E.z !== Z) throw new Error('egne områder er regnet på et annet nivå');
-  const m = dyn ? Math.max(ruteM(Z), D.ov.res) : ruteM(Z);
-  return byggUtbygging(
-    nr,
-    Z,
-    [...under.keys()].map(k => k.split('/').map(Number)),
-    blokker,
-    dyn,
-    E,
-    m < 15 ? Math.round(m * 10) / 10 : Math.round(m) /* 21 meter, eller 10,6 */
-  );
+  return byggUtbygging(nr, Z, under, blokker, false, E, Math.round(ruteM(Z) * 10) / 10 /* 10,6 meter */);
 }

@@ -135,7 +135,7 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 | `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
 | `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
-| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 21 og 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for seks kommuner (`detaljklasser/` og `detaljklasser.json`) |
+| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for seks kommuner (`detaljklasser/` og `detaljklasser.json`) |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
@@ -183,7 +183,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
 | `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, og et tema som hentes i biter talt i kommunen (`tellIKommune`) |
-| `grunnkart.ts` | Grunnkartet fra NIBIO: dagens klasser per blokk på 21 meter (`solv.klasser`, laget av kartbildene eller lagret), blokkene i kommunen, og dagens klasser for hele kommunen zoomet ut fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
+| `grunnkart.ts` | Grunnkartet fra NIBIO: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret), blokkene i kommunen, og dagens klasser for hele kommunen zoomet ut fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Den eneste filen i sølv og gull som bruker nettleseren. |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, tolking av fargene i kartbildene, og dagens klasse per rute i en flis |
@@ -202,8 +202,8 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | Fil | Innhold |
 |---|---|
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, tilstanden for temaene som hentes i biter, og telling i flater bit for bit (`tellIBiter`) |
-| `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages |
-| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg), med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
+| `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages (bare til kartet) |
+| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer, av SSBs arealstatistikk alene: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, for kommunen og for alle kommunene i Norge, og summene, regnskapet og sammenligningen med Norge som tvillingen viser. Merket syntetisk. |
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Foreløpig bare til tvillingen. |
@@ -403,10 +403,8 @@ svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som 
 **Cachen kan starte utfylt.** En tabell kan ha ferdige svar som ligger lagret sammen med siden (`lagret` i katalogen). Finnes
 svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Dagens klasser per blokk (`solv.klasser`) er
 slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (`verktoy/klasser.ts`) og lagret som små bilder i
-`public/klasser/`, både på 21 meter (nivå 9) og 10,6 meter (nivå 10), rundt 3 800 filer og 19 MB. Siden slipper da kallene mot
-NIBIO, og nettleseren henter bare filene for valgt kommune og rutestørrelse. Blokkene i kommunen (`solv.blokker`) står i
-registeret (`public/klasser.json`). Begge nivåene lages fra kartbildene fra NIBIO. 21 meter regnes ikke av 10 meter, for da ville
-klassen avrundes to ganger. Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for Trondheim, Malvik, Røros,
+`public/klasser/`, på 10,6 meter (nivå 10), 3 020 filer og 21 MB. Siden slipper da kallene mot NIBIO, og nettleseren henter
+bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for Trondheim, Malvik, Røros,
 Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 457 filer og 5,1 MB). For de andre kommunene
 lages de av kartbildene fra NIBIO, med den samme funksjonen.
 
@@ -446,9 +444,9 @@ kartet (`solv.sammensatt`) har en ETL-funksjon, men er voksende: datamotoren leg
    ulike ting sammen. Det gjør gull: at et eget område erstatter kommuneplanen der det ligger, planen lagt oppå dagens klasser,
    verneområdene krysset med utbyggingen, verdsatt natur innenfor det kartlagte. Kommunegrensen og rutenettet er rammen, ikke en
    kilde, så å klippe verneområdene mot kommunen er sølv. Planen ligger i to tabeller, én per kilde, med samme datamodell (`Planruter`):
-   `solv.kommuneplanruter` og `solv.egneruter`. Dagens klasser for hele kommunen har også to: blokkene på 21 meter
+   `solv.kommuneplanruter` og `solv.egneruter`. Dagens klasser for hele kommunen har også to: blokkene på 10,6 meter
    (`solv.klasser`, satt sammen i `solv.klassekart`), lagret eller hentet fra NIBIO når kommunen velges, og det sammensatte kartet
-   (`solv.sammensatt`). `gull.dagensKlasser` bruker blokkene, og det sammensatte kartet bare når blokkene ikke kan lages.
+   (`solv.sammensatt`). Tallene bruker bare blokkene; det sammensatte kartet vises i kartet når blokkene ikke kan lages.
 2. **Gull deles der det kommer inn en ny eller tregere kilde.** Hver tabell i gull svarer på ett spørsmål. Trenger en del av svaret
    noe som kommer senere, som utbyggingen, blir den delen en egen tabell som kaller den første. `gull.verneomrader` er
    verneområdene i kommunen, og `gull.verneomraderIPlan` er planlagt utbygging innenfor dem. Gull kan kalle gull.
@@ -557,7 +555,7 @@ GitHub. Dette er brukt hvor:
 | `MdButton`, `MdIconButton` | Tegning og opplasting, vis i kartet, faktaark, slett, bytt kommune, til listen og fjern markering |
 | `MdLink` (og stilen `md-link`) | Lenker i løpende tekst, og lenkene mellom sidene |
 | `MdRadioGroup` | Om et tegnet område er utbygging eller ikke |
-| `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper, ruter på 10 meter og teknisk visning |
+| `MdCheckbox`, `MdToggle` | Slør over det som ikke er kartlagt, smale striper og teknisk visning |
 | `MdLoadingSpinner` | Mens kartet hentes |
 | `MdAccordionItem` | Bronse, sølv og gull i katalogen under teknisk visning |
 | Ikoner | Tegn, last opp, sted, åpne i ny fane, slett og lukk |
@@ -665,11 +663,9 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `forklaringer.ts` leser ut av ETL-funksjonene hvilke tabeller hver tabell bygger på (`src/data/avhengigheter.ts`), og skriver
   kapitlene i METODE.md mellom merkene `<!-- forklaringer:gruppe -->` fra kortene og katalogen. `npm run forklaringer` kjører den.
   Med `--sjekk` sier den fra hvis filene ikke er oppdatert, eller et steg mangler forklaring.
-- `klasser.ts` lager de lagrede klassene på 21 og 10 meter, for eksempel `npm run klasser -- --fylke 50`, eller bare ett nivå med
-  `--niva 9`. Arbeidet gjøres i Chromium med katalogen i `src` (`klasser-side.ts`): verktøyet kaller `solv.blokker` og
+- `klasser.ts` lager de lagrede klassene på 10,6 meter, for eksempel `npm run klasser -- --fylke 50`. Arbeidet gjøres i Chromium med katalogen i `src` (`klasser-side.ts`): verktøyet kaller `solv.blokker` og
   `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og lagrer svaret. Siden bruker da den samme funksjonens svar som
-  ferdig svar (`lagret` i katalogen). En blokk koster fire kall mot NIBIO på 21 meter og ett på 10 meter, og de samme kartbildene
-  brukes til begge.
+  ferdig svar (`lagret` i katalogen). En blokk koster ett kall mot NIBIO.
 - `kommuneareal.ts` lager `public/kommuneareal.json`: flaten til hver kommune med land, ferskvann og hav, regnet av Kartverkets
   grenser én gang. De syntetiske tabellene bruker den til havet i alle kommunene. Den må lages på nytt når kommunene endres.
 - `figma-roykt.ts` er røyktesten for tvillingen fra Figma, se over.

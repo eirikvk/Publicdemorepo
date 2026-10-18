@@ -5,7 +5,7 @@ import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import {
   BILDE_PLANDEKNING,
-  PLANNIVA,
+  PLANOVERSIKT_NIVA,
   PLANOVERSIKT,
   flisUtsnitt,
   flisrammen,
@@ -94,7 +94,7 @@ export async function planflis(tc: Flis): Promise<ArrayBuffer> {
 /* Tabellen bronse.planoversikt: ett bilde av kommuneplanen med samme utvalg og stil som kartbildene, over flisene på nivå 9 som
    dekker kommunen nr, med én piksel per PLANOVERSIKT x PLANOVERSIKT ruter. Brukes til å hente kartbildene bare der det er plan. */
 export async function planoversikt(nr: string): Promise<ArrayBuffer> {
-  const R = flisrammen((await katalog.solv.grense(nr)).ext, PLANNIVA),
+  const R = flisrammen((await katalog.solv.grense(nr)).ext, PLANOVERSIKT_NIVA),
     s = 512 / PLANOVERSIKT;
   return hent(
     'DiBK',

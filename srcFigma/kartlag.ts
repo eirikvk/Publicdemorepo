@@ -184,14 +184,14 @@ export const detaljlagI = (
       }),
     maske
   );
-/* Et kartlag med én av dagens klasser (bebygd, jordbruk eller natur) i klassens farge, av blokkene på nivå 9 (solv.blokker og
-   solv.klasser, 21 meter). De er lagret for noen kommuner og lages ellers av kartbildene fra NIBIO, som for hovedsidens kart, så
+/* Et kartlag med én av dagens klasser (bebygd, jordbruk eller natur) i klassens farge, av blokkene på nivå 10 (solv.blokker og
+   solv.klasser, 10,6 meter). De er lagret for noen kommuner og lages ellers av kartbildene fra NIBIO, som for hovedsidens kart, så
    laget henter ikke noe mer enn kartet alt gjør. */
 export const klasselag = (tittel: string, id: KlasseId) =>
   blokklag(
     tittel,
-    FLISNIVA - 1,
-    nr => katalog.solv.blokker([nr, FLISNIVA - 1]),
+    FLISNIVA,
+    nr => katalog.solv.blokker([nr, FLISNIVA]),
     tc => katalog.solv.klasser(tc),
     () => ALLE.map(([k]) => (k === id ? cssFarge(id) : null))
   );

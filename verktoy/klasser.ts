@@ -1,4 +1,4 @@
-/* Lager de lagrede klassene: dagens klasser per blokk på nivå 9 (21 meter) og 10 (10,6 meter) for noen kommuner, lagret sammen med
+/* Lager de lagrede klassene: dagens klasser per blokk på nivå 10 (10,6 meter) for noen kommuner, lagret sammen med
    siden. De er det ferdige svaret for solv.klasser, så siden slipper å hente kartbildene fra NIBIO for hele kommunen. Arbeidet gjøres i en nettleser
    (Chromium via Playwright) med katalogen i src, se klasser-side.ts. Svaret lages altså av den samme ETL-funksjonen som siden
    bruker når det ikke finnes noe lagret. Her står bare det å lagre: hver blokk som et lite bilde med fargetabell (KLASSETABELL i
@@ -7,15 +7,14 @@
    Kjør fra roten av repoet:
        node verktoy/klasser.ts 5001 5021
        node verktoy/klasser.ts --fylke 50 --hentet "11. oktober 2026"
-       node verktoy/klasser.ts 5612 --niva 10
        node verktoy/klasser.ts 5001 --detalj --hentet "13. oktober 2026"
 
    Med --detalj lages detaljklassene (19 klasser, solv.detaljklasser) i stedet, bare på nivå 10, i public/detaljklasser/ og
    public/detaljklasser.json. En blokk koster da ett kall mot NIBIO.
 
    Blokkene legges i public/klasser/z/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
-   --paa-nytt. En blokk koster fire kall mot NIBIO på nivå 9 og ett på nivå 10. Kartbildene huskes i nettleseren mens verktøyet går,
-   så nivå 10 etter nivå 9 koster lite ekstra. Grunnkartet er lisensiert «Norge digitalt begrenset». */
+   --paa-nytt. En blokk koster ett kall mot NIBIO. Grunnkartet er lisensiert «Norge digitalt begrenset». Tallene regnes bare på nivå
+   10, så det er det eneste nivået som lagres. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,7 +33,7 @@ const { values: valg, positionals: kommuner } = parseArgs({
     fylke: { type: 'string' } /* alle kommunene i et fylke, etter fylkesnummer i public/kommuner.json */,
     'paa-nytt': { type: 'boolean' } /* lag blokkene også når de er lagret fra før */,
     hentet: { type: 'string' } /* tekst for når klassene er laget, vises på siden */,
-    niva: { type: 'string', default: '9,10' } /* nivåene som lages */,
+    niva: { type: 'string', default: '10' } /* nivåene som lages */,
     detalj: { type: 'boolean' } /* detaljklassene i stedet for dagens klasser, bare på nivå 10 */,
     ut: { type: 'string', default: path.join(ROT, 'public') } /* mappen klasser/ og klasser.json legges i */
   }
@@ -59,7 +58,7 @@ const DETALJ = !!valg.detalj,
   NAVN = DETALJ ? 'detaljklasser' : 'klasser',
   TABELL = DETALJ ? DETALJTABELL : KLASSETABELL,
   NIVAER = DETALJ ? [10] : valg.niva!.split(',').map(Number);
-if (NIVAER.some(z => z !== 9 && z !== 10)) throw new Error('nivåene er 9 og 10');
+if (NIVAER.some(z => z !== 10)) throw new Error('blokkene lages bare på nivå 10');
 /* Registeret: blokkene [x, y] per kommune og nivå */
 interface Register {
   versjon: string;

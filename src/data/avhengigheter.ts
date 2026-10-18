@@ -46,7 +46,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'solv.klassekart': ['solv.blokker', 'solv.grense', 'solv.klasser'],
   'solv.sammensatt': ['bronse.grunnkartflis', 'solv.grense'],
   'solv.egne': ['bronse.egne'],
-  'solv.egneruter': ['bronse.planniva', 'solv.egne'],
+  'solv.egneruter': ['solv.egne'],
   'solv.plandekning': ['bronse.plandekning', 'solv.grense'],
   'solv.planinfo': ['bronse.planopplysninger', 'solv.plandekning'],
   'solv.planoversikt': ['bronse.planoversikt', 'solv.grense'],
@@ -96,7 +96,6 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'gull.landOgVann': ['solv.arealtall', 'solv.grense'],
   'gull.kommuneplan': ['solv.planinfo'],
   'gull.utbygging': [
-    'bronse.planniva',
     'gull.dagensKlasser',
     'gull.utbyggingsblokker',
     'solv.blokker',

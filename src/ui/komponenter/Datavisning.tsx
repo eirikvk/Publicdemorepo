@@ -114,7 +114,8 @@ export function finnFormer(v: unknown): { om: [string, string][]; former: Form[]
     if (erPng(x)) return legg({ type: 'png', sti, buf: x });
     if (erLerret(x)) return legg({ type: 'bilde', sti, kilde: x });
     if (erTall(x)) {
-      if (x.length === 262144) legg({ type: 'rutenett', sti, w: 512, h: 512, data: x }); /* én flis på nivå 9 */
+      if (x.length === 262144)
+        legg({ type: 'rutenett', sti, w: 512, h: 512, data: x }); /* én blokk på 512 x 512 ruter */
       return;
     }
     if (x instanceof Map) {

@@ -169,7 +169,7 @@ export const KORT: Kort[] = [
     komponent: 'src/ui/komponenter/Framtid.tsx',
     sporsmal: 'Hvor mye natur og jordbruk setter kommuneplanen av til utbygging?',
     kortFortalt:
-      'Kommuneplanen fra DiBK legges oppå dagens arealklasser fra NIBIO i et rutenett, med ruter på 21 meter. Ruter som i dag er natur eller jordbruk, og som planen setter av til bebyggelse, anlegg eller samferdsel, telles. Smale striper, som oftest kommer av at grensene ikke er tegnet helt likt, tas bort.',
+      'Kommuneplanen fra DiBK legges oppå dagens arealklasser fra NIBIO i et rutenett, med ruter på 10,6 meter. Ruter som i dag er natur eller jordbruk, og som planen setter av til bebyggelse, anlegg eller samferdsel, telles. Smale striper, som oftest kommer av at grensene ikke er tegnet helt likt, tas bort.',
     tabeller: ['gull.kommuneplan', 'gull.planlagt'],
     forklarer: ['gull.utbygging', 'gull.dagensKlasser', 'solv.planinfo'],
     usikkerhet: ['Tallene er anslag til illustrasjon, ikke offisiell statistikk.'],
@@ -201,7 +201,7 @@ export const KORT: Kort[] = [
     tabeller: ['gull.egneRader'],
     forklarer: ['solv.egneruter'],
     usikkerhet: [
-      'Områder smalere enn rundt 40 meter faller for regelen om smale striper og gir ikke utslag. Funksjonen passer derfor for kommuneplannivå, ikke for reguleringsplaner.'
+      'Områder smalere enn rundt 20 meter faller for regelen om smale striper og gir ikke utslag. Funksjonen passer derfor for kommuneplannivå, ikke for reguleringsplaner.'
     ],
     regnestykke: hent => {
       const E = hent(katalog.gull.egneRader);

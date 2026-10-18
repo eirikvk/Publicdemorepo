@@ -298,16 +298,6 @@ export const katalog = {
       nokkel: flisnavn,
       etl: nibioGrunnkart.grunnkartflis
     }),
-    planniva: tabell<void, number>({
-      lag: 'bronse',
-      navn: 'planniva',
-      fil: 'motor/plan.ts',
-      tittel: 'Rutestørrelse',
-      om: 'nivået i flisnettet utbyggingen regnes på, slik brukeren har valgt under Tekniske valg: 9 (ruter på 21 meter, som er standard) eller 10 (10,6 meter). Datamotoren fyller den. Tom betyr standard.',
-      forklaring:
-        'Rutestørrelsen valgt under Tekniske valg: 21 meter (standard) eller 10,6 meter (forsøk). På 10,6 meter hentes kommuneplanen med fire ganger så mange kall, og egne områder legges i samme rutenett. Smale striper er da under rundt 20 meter i stedet for 40.',
-      husk: 1
-    }),
     detaljflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'detaljflis',
@@ -350,7 +340,7 @@ export const katalog = {
       navn: 'klasseregister',
       endepunkt: 'klasser.json',
       tittel: 'Register over lagrede klasser',
-      om: 'kommunene som har dagens klasser lagret sammen med siden, og blokkene på nivå 9 for hver',
+      om: 'kommunene som har dagens klasser lagret sammen med siden, og blokkene på nivå 10 for hver',
       teknisk: true,
       forklaring: 'Kommunene som har dagens klasser lagret sammen med siden, og blokkene for hver.',
       husk: 1,
@@ -361,7 +351,7 @@ export const katalog = {
       navn: 'klassefil',
       endepunkt: 'klasser/{z}/{x}/{y}.png',
       tittel: 'Lagrede klasser per blokk',
-      om: 'dagens klasser i en blokk på nivå 9 eller 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [z, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
+      om: 'dagens klasser i en blokk på nivå 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [z, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
       teknisk: true,
       forklaring:
         'Dagens klasser i en blokk slik de er lagret sammen med siden. Det er svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så ingenting må hentes fra NIBIO.',
@@ -616,9 +606,9 @@ export const katalog = {
       lag: 'solv',
       navn: 'klasser',
       tittel: 'Dagens klasser per blokk',
-      om: 'dagens klasse per rute i en blokk, kalt med blokken [z, x, y]: på nivå 9 er ruta 21 meter, laget av de fire kartbildene fra NIBIO som dekker blokken, og på nivå 10 er ruta 10,6 meter og blokken ett kartbilde. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
+      om: 'dagens klasse per rute i en blokk på nivå 10, kalt med blokken [10, x, y]: ruta er 10,6 meter, og blokken er ett kartbilde fra NIBIO. For noen kommuner ligger svaret lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Nøkkel: blokken som «z/x/y».',
       forklaring:
-        'Dagens klasse per rute i blokker på 512 × 512 ruter, av fire kartbilder på 21 meter eller ett på 10,6 meter (se Arealklassene). For 42 kommuner er blokkene lagret sammen med siden.',
+        'Dagens klasse per rute i blokker på 512 × 512 ruter à 10,6 meter, ett kartbilde per blokk (se Arealklassene). For 42 kommuner er blokkene lagret sammen med siden.',
       husk: 0,
       nokkel: flisnavn,
       etl: solvGrunnkart.klasser,
@@ -653,7 +643,7 @@ export const katalog = {
       lag: 'solv',
       navn: 'blokker',
       tittel: 'Blokkene i kommunen',
-      om: 'blokkene på nivå 9 eller 10 der kommunen har minst én rute, etter halvregelen, kalt med [kommunenummer, nivå]. For kommunene med lagrede klasser står listen i registeret (bronse.klasseregister). Nøkkel: «nummer/nivå».',
+      om: 'blokkene på et nivå (10 for tallene) der kommunen har minst én rute, etter halvregelen, kalt med [kommunenummer, nivå]. For kommunene med lagrede klasser står listen i registeret (bronse.klasseregister). Nøkkel: «nummer/nivå».',
       teknisk: true,
       forklaring:
         'Blokkene der kommunen har minst én rute, etter halvregelen. For kommunene med lagrede klasser står listen i registeret.',
@@ -676,12 +666,9 @@ export const katalog = {
       lag: 'solv',
       navn: 'sammensatt',
       tittel: 'Sammensatt kart',
-      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet. Kartet viser det mens blokkene for hele kommunen hentes, og tallene bygger på det når blokkene ikke kan lages. Datamotoren legger inn nye fliser etter hvert som de hentes.',
+      om: 'dagens klasser satt sammen av kartbildene fra NIBIO som er hentet. Kartet viser det mens blokkene for hele kommunen hentes, og når blokkene ikke kan lages. Ingen tall bygger på det. Datamotoren legger inn nye fliser etter hvert som de hentes.',
       forklaring:
-        'Kartbildene satt sammen flis for flis mens blokkene hentes. Tallene bruker det bare når blokkene ikke kan lages, og gjelder da det brukeren har sett i kartet. En piksel som er minst 100 av 255 dekket, får klassen det er mest av.',
-      usikkerhet: [
-        'Kan ikke blokkene hentes fra NIBIO, er bare den delen av kommunen nettleseren har hentet kart for, med, og det sammensatte kartet er grovere enn rutene på 21 meter i store kommuner. Siden sier fra når det gjelder.'
-      ],
+        'Kartbildene satt sammen flis for flis mens blokkene hentes, bare til kartet. Tallene bygger aldri på det, for rutene i det er grovere jo større kommunen er. Kan ikke blokkene hentes fra NIBIO, regnes ingen tall for planlagt utbygging.',
       husk: 4,
       voksende: true,
       etl: solvGrunnkart.sammensatt
@@ -1121,9 +1108,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'dagensKlasser',
       tittel: 'Dagens klasser',
-      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet av det som er hentet når blokkene ikke kan lages. Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
+      om: 'dagens klasser for kommunen, på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet av det som er hentet når blokkene ikke kan lages (bare til kartet). Utbyggingen, kartet og sidene leser dagens klasser herfra. Bare for valgt kommune, så den ikke holder på bilder sølv har sluppet.',
       forklaring:
-        'Dagens klasser for hele kommunen, satt sammen av blokkene. For kommunene med lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og blokkene lages med den samme funksjonen. Kan ikke blokkene lages, brukes det sammensatte kartet av det som er hentet.',
+        'Dagens klasser for hele kommunen, satt sammen av blokkene. For kommunene med lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og blokkene lages med den samme funksjonen. Kan ikke blokkene lages, viser kartet det sammensatte kartet av det som er hentet, men da regnes ingen tall for planlagt utbygging.',
       husk: 1,
       brukerstyrt: true,
       etl: gullGrunnkart.dagensKlasser
@@ -1183,9 +1170,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbygging',
       tittel: 'Utbyggingen',
-      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 21 meter (eller 10,6 meter, valgt under Tekniske valg) med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
+      om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 10,6 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
       forklaring:
-        'For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene, ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt som ikke er bredere enn rundt 40 meter noe sted, faller bort. Ruter som ikke er hentet, regnes som naboer, så felt ikke skrelles av langs kanten av det som er hentet. Med egne områder regnes alt både med og uten dem.',
+        'For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene, ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem.',
       usikkerhet: [
         'Rutenettet overser bebygde flater som er smalere enn en rute, særlig veier. Regelen om smale striper tar bort det meste av dette, men også noe som er reelt: smale felt og nye veier.'
       ],
@@ -1198,7 +1185,7 @@ export const katalog = {
       navn: 'utbyggingsblokker',
       fil: 'gull/utbygging.ts',
       tittel: 'Utbyggingen i blokker',
-      om: 'hjelpetabell: utbyggingen i blokker på 512 x 512 ruter, én per flis på nivå 9, så bare blokker med nytt kart regnes ut på nytt',
+      om: 'hjelpetabell: utbyggingen i blokker på 512 x 512 ruter, én per flis på nivå 10, så blokkene ikke regnes ut på nytt når egne områder endres',
       teknisk: true,
       forklaring: 'Utbyggingen i blokker på 512 × 512 ruter, så bare blokker med nytt kart regnes ut på nytt.',
       husk: 1,

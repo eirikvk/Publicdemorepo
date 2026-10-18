@@ -78,14 +78,17 @@ export const bitRuter = (tc: Flis): Rutebilde => {
 /* Biten punktet p [øst, nord] ligger i, og bitene som dekker utsnittet e */
 export const bitVed = (p: number[]): Flis => flisVed(p, BITNIVA);
 export const biterI = (e: Utsnitt) => fliserI(e, BITNIVA);
-/* Biten flisen tc på nivå 9 eller finere ligger i */
+/* Biten flisen tc på nivå 8 eller finere ligger i */
 export const bitAv = (tc: Flis): Flis => [BITNIVA, tc[1] >> (tc[0] - BITNIVA), tc[2] >> (tc[0] - BITNIVA)];
 
-/* Rutenettet for utbyggingen: planlagt utbygging og alt som krysses med den, regnes i flisene på nivå 9 med 512 ruter per flis. Under
-   Tekniske valg kan brukeren velge nivå 10 i stedet (bronse.planniva), med ruter på 10,6 meter. */
-export const PLANNIVA = 9,
-  RUTE_M = OPPLOSNINGER[PLANNIVA] / 2 /* 21,16 meter */,
-  RUTE = RUTE_M ** 2 / 1e6; /* km² per rute, 0,448 dekar */
+/* Rutenettet for utbyggingen: planlagt utbygging, dagens klasser og alt som krysses med dem, regnes i flisene på nivå 10 med 512
+   ruter per flis, 10,6 meter, i alle kommuner. */
+export const PLANNIVA = FLISNIVA,
+  RUTE_M = OPPLOSNINGER[PLANNIVA] / 2 /* 10,58 meter */,
+  RUTE = RUTE_M ** 2 / 1e6; /* km² per rute, 0,112 dekar */
+/* Nivået oversikten over hvor kommuneplanen ligger, er lagt i (solv.planoversikt). Den bestemmer bare hvilke fliser som hentes, ikke
+   tallene. */
+export const PLANOVERSIKT_NIVA = 9;
 /* Meter langs siden av en rute og km² per rute i rutenettet på nivå z, med 512 ruter per flis */
 export const ruteM = (z: number) => OPPLOSNINGER[z] / 2,
   ruteKm2 = (z: number) => ruteM(z) ** 2 / 1e6;
@@ -101,7 +104,7 @@ export const EGET_MIN_M2 = 400; /* minste tegnede område som regnes ut */
 
 /* Rutenett for bildene som hentes for hele kommunen: [høyst antall ruter på lengste side, minste rute i meter] */
 export const BILDE_PLANDEKNING: [number, number] = [256, 0]; /* sjekken av om kommunen har kommuneplan */
-export const PLANOVERSIKT = 4; /* oversikten over hvor kommuneplanen ligger: én piksel per 4 x 4 ruter på 21 meter (85 meter) */
+export const PLANOVERSIKT = 4; /* oversikten over hvor kommuneplanen ligger: én piksel per 4 x 4 ruter på nivå 9 (85 meter) */
 
 /* Rutenett over et utsnitt e: høyst maks ruter på lengste side, og ruter på minst `minst` meter. u er utsnittet rutene dekker,
    som kan være litt større enn e. */

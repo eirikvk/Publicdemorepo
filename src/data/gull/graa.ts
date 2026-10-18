@@ -82,7 +82,7 @@ export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undef
   return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis, ruteKm2: ruteKm2(R.z) };
 }
 
-/* Biten blokken (bx, by) i utbyggingen R ligger i. En blokk i utbyggingen er en flis på nivå 9 eller 10 og ligger i én bit. */
+/* Biten blokken (bx, by) i utbyggingen R ligger i. En blokk i utbyggingen er en flis på nivå 10 og ligger i én bit. */
 const blokkensBit = (R: Utbygging, bx: number, by: number): Flis => bitAv([R.z, bx, by]);
 /* Bitene utbyggingen R har ruter i som krysses: bebygd i dag, eller med planlagt utbygging */
 function biterIUtbygging(R: Utbygging): Flis[] {

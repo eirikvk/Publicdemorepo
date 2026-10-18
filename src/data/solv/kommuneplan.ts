@@ -5,8 +5,8 @@ import { katalog } from '../katalog.ts';
 import {
   BILDE_PLANDEKNING,
   HALV,
-  PLANNIVA,
   PLANOVERSIKT,
+  PLANOVERSIKT_NIVA,
   PLAN_FINNES,
   SYNLIG,
   flisrammen,
@@ -45,7 +45,7 @@ export interface Planoversikt {
    som bare dekker en liten bit av pikselen, er med. */
 export async function planoversikt(nr: string): Promise<Planoversikt> {
   const [g, buf] = await Promise.all([katalog.solv.grense(nr), katalog.bronse.planoversikt(nr)]);
-  const R = flisrammen(g.ext, PLANNIVA),
+  const R = flisrammen(g.ext, PLANOVERSIKT_NIVA),
     s = 512 / PLANOVERSIKT,
     w = R.nx * s,
     h = R.ny * s,
@@ -57,7 +57,7 @@ export async function planoversikt(nr: string): Promise<Planoversikt> {
 /* Om flisen tc (nivå 9 eller 10) kan ha kommuneplan etter oversikten O: om en piksel i flisen, eller én piksel rundt den, har noe.
    Kanten på én piksel er med for sikkerhets skyld. En flis utenfor oversikten kan ha plan. */
 export function kanHaPlan(O: Planoversikt, tc: Flis): boolean {
-  const f = 2 ** (tc[0] - PLANNIVA),
+  const f = 2 ** (tc[0] - PLANOVERSIKT_NIVA),
     n = O.s / f,
     px = tc[1] * n - O.x0 * O.s,
     py = tc[2] * n - O.y0 * O.s;

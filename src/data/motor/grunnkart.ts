@@ -32,22 +32,21 @@ export function lagret(nr: string) {
 }
 
 /* Hvor langt hentingen av blokkene fra NIBIO er kommet for valgt kommune, når den ikke har lagrede klasser og blokkene hentes nå:
-   kartbildene som er hentet (ferdig), og hvor mange det er i alt, fire per blokk (av, 0 før blokkene er funnet). null ellers. */
+   kartbildene som er hentet (ferdig), og hvor mange det er i alt, ett per blokk (av, 0 før blokkene er funnet). null ellers. */
 export function hentingAvKlasser(): { ferdig: number; av: number } | null {
   const nr = valgtNr();
   if (!nr || iRegisteret(nr)) return null;
   const k = se(katalog.solv.klassekart, nr);
   if (!k || k.status !== 'henter') return null;
-  const b = se(katalog.solv.blokker, [nr, FLISNIVA - 1]);
+  const b = se(katalog.solv.blokker, [nr, FLISNIVA]);
   if (!b || b.status !== 'ok') return { ferdig: 0, av: 0 };
   const hentet = (tc: Flis) => {
     const r = se(katalog.bronse.grunnkartflis, tc);
     return !!r && r.status === 'ok';
   };
   let ferdig = 0;
-  for (const [, x, y] of b.verdi!)
-    for (let d = 0; d < 4; d++) if (hentet([FLISNIVA, 2 * x + (d & 1), 2 * y + (d >> 1)])) ferdig++;
-  return { ferdig, av: 4 * b.verdi!.length };
+  for (const tc of b.verdi!) if (hentet(tc)) ferdig++;
+  return { ferdig, av: b.verdi!.length };
 }
 
 /* Dagens klasser for valgt kommune, fra gull. oversikt er bildet zoomet ut: blokkene satt sammen, eller det sammensatte kartet. Mens

@@ -1,8 +1,8 @@
 /* Gull for grunnkartet: dagens klasser for kommunen, på tvers av de to kildene i sølv. Først blokkene (solv.blokker, solv.klasser og
    solv.klassekart), og da er hele kommunen med. For kommunene med lagrede klasser ligger blokkene ferdig sammen med siden. For de
    andre, og for blokker som ikke kan leses, lager sølv dem av kartbildene fra NIBIO når kommunen velges, med den samme funksjonen
-   som laget de lagrede. Kan ikke blokkene lages, brukes det sammensatte kartet av flisene som er hentet (solv.sammensatt), og da
-   gjelder alt som bygger på det, bare den delen av kommunen som er hentet.
+   som laget de lagrede. Kan ikke blokkene lages, viser kartet det sammensatte kartet av flisene som er hentet (solv.sammensatt),
+   men ingen tall bygger på det: rutene i det er grovere jo større kommunen er.
    Utbyggingen (gull/utbygging.ts), kartet og sidene leser dagens klasser herfra.
    Nederst arealet per detaljklasse, i hele kommunen (gull.detaljareal) og i verneområdene (gull.detaljerIVerneomrader), som
    foreløpig bare tvillingen fra Figma bruker. */

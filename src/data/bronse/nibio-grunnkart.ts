@@ -88,7 +88,7 @@ export async function detaljflis(tc: Flis): Promise<ArrayBuffer> {
 }
 
 /* Registeret over de lagrede klassene: årsversjonen av grunnkartet, når de er laget, og blokkene [x, y] per kommune og nivå
-   (kommuner['5001']['9'] er blokkene på 21 meter i Trondheim) */
+   (kommuner['5001']['10'] er blokkene på 10,6 meter i Trondheim) */
 export interface Klasseregister {
   versjon?: string;
   hentet?: string;
