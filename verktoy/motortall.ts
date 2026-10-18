@@ -53,7 +53,7 @@ export function motortall() {
     planTall: M.planTall(),
     plan: R && {
       ...plukk(R, 'n', 'sum', 'iDag', 'fliser', 'rute', 'w', 'h', 'antallEgne', 'egneTall'),
-      basis: R.basis ? { rn: R.basis.rn, rj: R.basis.rj } : null
+      basis: R.basisSum ? { rn: R.basisSum.rn, rj: R.basisSum.rj } : null
     },
     planSum: rund(v(K.gull.plansum)),
     tema: M.NATURTEMA.map(t => {

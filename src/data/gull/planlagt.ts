@@ -26,7 +26,9 @@ export function byggPlanlagt(R: Utbygging) {
   return {
     natur: { km2: km2(R.sum.rn), andel: andel(R.sum.rn, n.nat), medStriper: km2(n.pnat) },
     jordbruk: { km2: km2(R.sum.rj), andel: andel(R.sum.rj, n.jor), medStriper: km2(n.pjor) },
-    basis: R.basis ? { natur: km2(R.basis.rn), jordbruk: km2(R.basis.rj), tom: !(R.basis.rn + R.basis.rj) } : null,
+    basis: R.basisSum
+      ? { natur: km2(R.basisSum.rn), jordbruk: km2(R.basisSum.rj), tom: !(R.basisSum.rn + R.basisSum.rj) }
+      : null,
     antallEgne: R.antallEgne,
     rute: R.rute
   };

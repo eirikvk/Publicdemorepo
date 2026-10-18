@@ -48,11 +48,14 @@ export interface Blokk {
   andel: Andel | null;
   faktor: number;
 }
-/* Utbyggingen med smale striper tatt bort: rutene med planlagt utbygging på natur eller jordbruk (celler), det som er beholdt
-   per rute (ryddet: 1 natur, 2 jordbruk), og antallet natur (rn) og jordbruk (rj) som er beholdt */
+/* Utbyggingen med smale striper tatt bort: rutene med planlagt utbygging på natur eller jordbruk (celler), og det som er beholdt
+   per rute (ryddet: 1 natur, 2 jordbruk). Hvor mye det er, telles av rutenettet med tellRyddet. */
 export interface Rydding {
   celler: number[];
   ryddet: Glissen;
+}
+/* Natur (rn) og jordbruk (rj) satt av, i ruter vektet med kommunens andel og målestokken */
+export interface Ryddetsum {
   rn: number;
   rj: number;
 }
@@ -87,7 +90,8 @@ export interface Utbygging extends Plassering {
   pl: Glissen;
   antallEgne: number;
   basis: Rydding | null /* kommuneplanen alene, når det finnes egne områder */;
-  sum: { rn: number; rj: number };
+  sum: Ryddetsum /* talt av ryddet */;
+  basisSum: Ryddetsum | null /* talt av basis.ryddet */;
   iDag: { nat: number; jor: number };
   n: Antall;
   fliser: number;
@@ -164,8 +168,8 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, andel: An
    ikke er tegnet helt likt, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle
    fire sider. Så beholdes alt som henger sammen med en kjerne, også på skrå. Et større felt beholdes dermed helt, også der det
    smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk). Naboene finnes med nummeret på ruta,
-   som i et vanlig rutenett med bredden w. Gir de beholdte rutene (ryddet) og antallet natur (rn) og jordbruk (rj) i dem, vektet med vekt. */
-export function ryddStriper(d: Glissen, vekt: (i: number) => number = () => 1): Rydding {
+   som i et vanlig rutenett med bredden w. Gir de beholdte rutene (ryddet). */
+export function ryddStriper(d: Glissen): Rydding {
   const w = d.w,
     n = d.w * d.h,
     v = (i: number) => verdi(d, i),
@@ -191,14 +195,36 @@ export function ryddStriper(d: Glissen, vekt: (i: number) => number = () => 1): 
       }
     front = ny;
   }
+  return { celler, ryddet };
+}
+/* Natur (1) og jordbruk (2) i det ryddede rutenettet L, blokk for blokk: hver rute vektet med kommunens andel i blokken (andeler,
+   ingen når hele blokken er i kommunen) og målestokken (faktorer). Tallene regnes alltid av rutenettet de beskriver, når det er
+   ferdig, så de to ikke kan bli uenige. */
+export function tellRyddet(L: Glissen, andeler: Map<number, Andel>, faktorer: Map<number, number>): Ryddetsum {
   let rn = 0,
     rj = 0;
-  for (const i of celler) {
-    const x = verdi(ryddet, i);
-    if (x === 1) rn += vekt(i);
-    else if (x === 2) rj += vekt(i);
+  for (const [k, b] of L.blokker) {
+    const A = andeler.get(k),
+      f = faktorer.get(k) ?? 1;
+    if (!A) {
+      let n = 0,
+        j = 0;
+      for (let q = 0; q < b.length; q++)
+        if (b[q] === 1) n++;
+        else if (b[q] === 2) j++;
+      rn += n * f;
+      rj += j * f;
+      continue;
+    }
+    for (let q = 0; q < b.length; q++) {
+      const v = b[q];
+      if (v !== 1 && v !== 2) continue;
+      const w = (andelVed(A, q % BLOKK, Math.floor(q / BLOKK)) / HEL) * f;
+      if (v === 1) rn += w;
+      else rj += w;
+    }
   }
-  return { celler, ryddet, rn, rj };
+  return { rn, rj };
 }
 
 /* Setter flisene sammen til ett rutenett for kommunen, legger inn egne områder og rydder bort smale striper. nr er kommunen,
@@ -246,13 +272,13 @@ export function byggUtbygging(
     egetType: Glissen | null = null;
   const egneIder = E ? E.ider : [];
   if (E) {
-    basis = ryddStriper(d, vekt);
+    basis = ryddStriper(d);
     d = kopiAv(d);
     eget = glissent(G);
     egetType = glissent(G);
     leggInnEgne(E, d, kl, eget, egetType);
   }
-  const { celler, ryddet, rn, rj } = ryddStriper(d, vekt);
+  const { celler, ryddet } = ryddStriper(d);
   const egneTall: EgetTall[] = egneIder.map(() => ({
     nat: 0,
     jor: 0,
@@ -301,7 +327,8 @@ export function byggUtbygging(
     pl,
     antallEgne: egneIder.length,
     basis,
-    sum: { rn, rj },
+    sum: tellRyddet(ryddet, andeler, faktorer),
+    basisSum: basis ? tellRyddet(basis.ryddet, andeler, faktorer) : null,
     iDag: { nat: n.nat, jor: n.jor },
     n,
     fliser: nokler.length,

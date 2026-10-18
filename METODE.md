@@ -1143,6 +1143,16 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Kommuneplanen alene telles av rutenettet, 18. oktober 2026.** Under egne områder står kommuneplanen alene, tallet med egne
+områder og forskjellen. Kommuneplanen alene ble talt mens rutene ble lagt inn, og lagret ved siden av rutene. Av og til, når siden
+hadde mye å gjøre, ble det lagrede tallet det samme som tallet med egne områder, mens rutene for planen alene var riktige. Koden
+gjør alt i én utregning uten pauser, så feilen kan ikke forklares av den. Den kom ikke igjen i over 2 400 kjøringer i et eget
+testoppsett. Den kan ligge i JavaScript-motoren i nettleseren, men det er ikke vist. Nå telles begge tallene av de ferdige rutene,
+blokk for blokk (`tellRyddet` i `gull/utbygging.ts`), så tallet og rutene kan ikke være uenige. Det tar ikke lengre tid.
+Regresjonstesten ga de samme tallene og kartbildene i Trondheim. Det eneste avviket er avrunding i det tolvte sifferet for
+kommuneplanen alene, fordi summen legges sammen i en annen rekkefølge. En ny test sjekker at planen alene og planen med et eget
+område som ikke er utbygging, telles hver for seg. Målt i Chromium, ikke på iPhone.
+
 **Opprydding: oversiktsbildene, tall for hentet kart, planlagt utbygging og trykk i kartet, 18. oktober 2026.** Fire ting er
 ryddet:
 - Tallene kunne en gang regnes bare for den delen av kommunen nettleseren hadde hentet kart for. Det var slått av, men koden lå
@@ -1158,7 +1168,7 @@ ryddet:
   skjermen. Grått areal og inngrepsfri natur i detaljene følger nå også nivået kartet viser.
 
 Tre ubrukte funksjoner og noen ubrukte hjelpere er også fjernet. Regresjonstesten ga de samme tallene. Det eneste avviket er feltet
-`delvis`, som er fjernet. Testen fant også en feil som fantes fra før og ikke er rettet: når et tegnet område byttes til «ikke
+`delvis`, som er fjernet. Testen fant også en feil som fantes fra før (rettet, se over): når et tegnet område byttes til «ikke
 utbygging», kan «kommuneplanen alene» av og til bli det samme som tallet med egne områder. Det skjedde i to av to kjøringer med
 koden før endringen og i én av to etter, da fire kjøringer gikk samtidig, og i ingen av tre kjøringer alene. Kartbildene endret seg under 0,13 %. Med planlagt utbygging på ligger ingen piksler med planlagt
 utbygging på bebygd eller vann i Trondheim, på 60, 15, 8 og 2 meter per skjermpunkt. Naturen på forsiden av tvillingen vises etter

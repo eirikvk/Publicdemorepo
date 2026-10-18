@@ -61,7 +61,7 @@ export function byggEgneRader(
   ut.push([
     'Natur',
     'pnat',
-    harPlan ? (T ? T.fnat : R.basis!.rn) : null,
+    harPlan ? (T ? T.fnat : R.basisSum!.rn) : null,
     T ? T.nnat : R.sum.rn,
     e === null ? R.iDag.nat : 0,
     ''
@@ -69,7 +69,7 @@ export function byggEgneRader(
   ut.push([
     'Jordbruk',
     'pjor',
-    harPlan ? (T ? T.fjor : R.basis!.rj) : null,
+    harPlan ? (T ? T.fjor : R.basisSum!.rj) : null,
     T ? T.njor : R.sum.rj,
     e === null ? R.iDag.jor : 0,
     ''

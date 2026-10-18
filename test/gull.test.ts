@@ -172,3 +172,33 @@ test('planlagt utbygging i kartet: rutene på nivå 10, og zoomet ut bare innenf
   K[p] = 1; /* bebygd: ingenting vises */
   assert.equal(planUt(D, K, [8, 1, 1])[p], 0);
 });
+
+test('utbyggingen: planen alene og planen med egne områder telles hver av sitt rutenett', async () => {
+  const { byggUtbygging } = await import('../src/data/gull/utbygging.ts');
+  const { finn } = await import('../src/data/generelt/glissen.ts');
+  /* én blokk med natur overalt og et felt på 10 x 10 ruter natur satt av */
+  const d = new Uint8Array(512 * 512),
+    kl = new Uint8Array(512 * 512).fill(3);
+  for (let y = 100; y < 110; y++) d.fill(1, y * 512 + 100, y * 512 + 110);
+  const blokk = {
+    d,
+    kl,
+    pl: d.slice(),
+    n: { beb: 0, nat: 512 * 512, jor: 0, pnat: 100, pjor: 0 },
+    andel: null,
+    faktor: 1
+  };
+  /* et eget område som ikke er utbygging (2), over de fem første kolonnene i feltet */
+  const plan = new Uint8Array(512 * 512),
+    omrade = new Uint8Array(512 * 512);
+  for (let y = 100; y < 110; y++) {
+    plan.fill(2, y * 512 + 100, y * 512 + 105);
+    omrade.fill(1, y * 512 + 100, y * 512 + 105);
+  }
+  const E = { z: 10, cx0: 0, cy0: 0, w: 512, h: 512, plan, omrade, ider: [1] };
+  const R = byggUtbygging('1', 10, [[0, 0]], new Map([['10/0/0', blokk]]), E, 10.6);
+  assert.equal(R.basisSum!.rn, 100); /* planen alene: hele feltet */
+  assert.equal(R.sum.rn, 50); /* med det egne området: halve feltet */
+  assert.equal(finn(R.basis!.ryddet, v => v === 1).length, 100); /* tallet er det samme som rutenettet */
+  assert.equal(finn(R.ryddet, v => v === 1).length, 50);
+});
