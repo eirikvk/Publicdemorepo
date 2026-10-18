@@ -1,21 +1,20 @@
 /* Sølv for kommuneplanen fra DiBK: planlagt utbygging per rute i en flis (solv.kommuneplanruter), og om kommunen har kommuneplan hos
    DiBK og hvilken. Bare kommuneplanen: den legges oppå dagens klasser og egne områder i gull (gull/utbygging.ts). */
-import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import {
-  BILDE_PLANDEKNING,
   HALV,
   PLANOVERSIKT,
   PLANOVERSIKT_NIVA,
   PLAN_FINNES,
   SYNLIG,
+  BIT,
   flisrammen,
-  rutenett,
   type Flis,
   type Piksler,
   type Planruter
 } from './felles.ts';
-import { bildePiksler, flatePiksler } from './raster.ts';
+import { tellIKommune } from './kommune.ts';
+import { bildePiksler } from './raster.ts';
 
 /* Planlagt utbygging per rute i en flis, fra kartbildet P fra DiBK (piksler): 1 der minst halve ruta ligger i en planflate
    (halvregelen), ellers 0 */
@@ -67,20 +66,11 @@ export function kanHaPlan(O: Planoversikt, tc: Flis): boolean {
   return false;
 }
 
-/* Har kommunen kommuneplan hos DiBK? P er et lite bilde av planlaget over kommunen og M kommunens flate, begge som piksler (RGBA) i
-   samme rutenett. Gir hvor stor del av kommunen planlaget dekker, om det regnes som at kommunen har plan, og rutene med plan (til
-   oppslag om hvilken plan det er). Langs grensen stikker naboenes planer litt inn, så en liten dekning betyr at kommunen ikke har
-   plan der (se PLAN_FINNES). */
-export function planDekning(P: Piksler, M: Piksler) {
-  const treff: number[] = [];
-  let inne = 0;
-  for (let q = 0; q < M.length / 4; q++)
-    if (M[4 * q + 3] >= HALV) {
-      inne++;
-      if (P[4 * q + 3] >= SYNLIG) treff.push(q);
-    }
-  const dekning = inne ? treff.length / inne : 0;
-  return { dekning, finnes: dekning >= PLAN_FINNES, treff };
+/* Planlaget per rute i et kartbilde fra DiBK (piksler): 1 der ruta er tegnet (minst 100 av 255, SYNLIG), ellers 0 */
+export function planlagPerRute(P: Piksler): Uint8Array {
+  const pl = new Uint8Array(P.length / 4);
+  for (let i = 3, q = 0; i < P.length; i += 4, q++) if (P[i] >= SYNLIG) pl[q] = 1;
+  return pl;
 }
 
 /* Kommuneplanen DiBK har: plan-id, hvem som har levert den, og datoen den ble kopiert til DiBK som [år, måned, dag] */
@@ -89,15 +79,39 @@ export interface Planopplysninger {
   vert: string;
   kopiert: string[] | null;
 }
-/* Tabellen solv.plandekning: hvor stor del av kommunen planlaget dekker, om det regnes som at kommunen har plan, og rutene med plan,
-   i rutenettet bildet er hentet i (u, w, h) */
-export async function plandekning(
-  nr: string
-): Promise<ReturnType<typeof planDekning> & { u: Utsnitt; w: number; h: number }> {
-  const g = await katalog.solv.grense(nr),
-    R = rutenett(g.ext, ...BILDE_PLANDEKNING);
-  const D = planDekning(await bildePiksler(await katalog.bronse.plandekning(nr), R.w, R.h), flatePiksler(g.koord, R));
-  return { ...D, u: R.u, w: R.w, h: R.h };
+/* Hvor mye av kommunen planlaget dekker: andelen av rutene i kommunen (dekning), om det regnes som at kommunen har plan (finnes), og
+   en rute midt i det planen dekker (punkt: biten og ruta i den), til oppslaget om hvilken plan det er */
+export interface Plandekning {
+  dekning: number;
+  finnes: boolean;
+  punkt: { bit: Flis; i: number; j: number } | null;
+}
+/* Tabellen solv.plandekning: planlaget fra DiBK (bronse.planbit) talt i kommunen nr bit for bit, med ruter på 10,6 meter. Langs
+   grensen stikker naboenes planer litt inn, så en liten dekning betyr at kommunen ikke har plan der (se PLAN_FINNES). Punktet er den
+   midterste ruta med plan i biten som har flest. */
+export async function plandekning(nr: string): Promise<Plandekning> {
+  let flest = 0,
+    punkt: Plandekning['punkt'] = null;
+  const T = await tellIKommune(
+    nr,
+    2,
+    async tc => planlagPerRute(await bildePiksler(await katalog.bronse.planbit(tc), BIT, BIT)),
+    v => v,
+    (tc, V, M) => {
+      let n = 0;
+      for (let q = 0; q < V.length; q++) if (V[q] && M[4 * q + 3] >= HALV) n++;
+      if (n <= flest) return;
+      flest = n;
+      for (let q = 0, k = 0; q < V.length; q++)
+        if (V[q] && M[4 * q + 3] >= HALV && k++ === n >> 1) {
+          punkt = { bit: tc, i: q % BIT, j: Math.floor(q / BIT) };
+          break;
+        }
+    }
+  );
+  const inne = T.n[0] + T.n[1],
+    dekning = inne ? T.n[1] / inne : 0;
+  return { dekning, finnes: dekning >= PLAN_FINNES, punkt };
 }
 /* Tabellen solv.planinfo: om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er */
 export interface Planinfo {

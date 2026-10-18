@@ -359,16 +359,19 @@ export const katalog = {
       nokkel: flisnavn,
       etl: nibioGrunnkart.klassefil
     }),
-    plandekning: tabell({
+    planbit: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
-      navn: 'plandekning',
+      navn: 'planbit',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Bilde av kommuneplanen over kommunen',
-      om: 'ett lite bilde av hele kommuneplanen fra DiBK over kommunen',
-      forklaring: 'Et lite bilde av kommuneplanen over hele kommunen.',
+      tittel: 'Bilder av kommuneplanen',
+      om: 'hele kommuneplanen fra DiBK i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
+      forklaring:
+        'Hele kommuneplanen i DiBKs egen stil, ett bilde per bit med ruter på 10,6 meter. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
       kilde: KILDE.dibk,
-      husk: 6,
-      etl: dibk.plandekning
+      husk: 12,
+      nokkel: flisnavn,
+      etl: dibk.planbit,
+      eksempel: flisMidt(BITNIVA)
     }),
     planopplysninger: tabell({
       lag: 'bronse',
@@ -699,9 +702,9 @@ export const katalog = {
       lag: 'solv',
       navn: 'plandekning',
       tittel: 'Hvor mye planen dekker',
-      om: 'hvor stor del av kommunen kommuneplanen dekker, og rutene med plan',
+      om: 'hvor stor del av kommunen kommuneplanen dekker, talt i ruter på 10,6 meter bit for bit, og en rute midt i det planen dekker',
       forklaring:
-        'Andelen av kommunen planen dekker. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.',
+        'Andelen av rutene på 10,6 meter i kommunen som planen dekker, der en rute er tegnet når den er minst 100 av 255 dekket. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.',
       husk: 6,
       etl: solvPlan.plandekning
     }),

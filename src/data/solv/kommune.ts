@@ -2,7 +2,7 @@
    telles på samme måte (tellIKommune), så det står bare her. */
 import { flerflate, utsnitt, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { BITNIVA, HALV, arealKm2, biterI, bitRuter, m2PerKm2, type Flis } from './felles.ts';
+import { BITNIVA, HALV, arealKm2, biterI, bitRuter, m2PerKm2, type Flis, type Piksler } from './felles.ts';
 import { flatePiksler } from './raster.ts';
 
 /* Kommunegrensen: flerflaten i UTM33, utsnittet og flaten i km² (land og vann) */
@@ -30,12 +30,14 @@ export interface Bitruter {
 }
 /* Teller et tema i kommunen nr bit for bit. verdier gir verdien per rute i en bit (fra katalogen), og plass plassen i n for verdien,
    eller null når den ikke telles. plasser er lengden på n. En rute er i kommunen når kommunens flate dekker minst halve ruta. Biter
-   kommunen ikke berører, hentes ikke. Fire biter hentes om gangen. */
+   kommunen ikke berører, hentes ikke. Fire biter hentes om gangen. hver kalles for hver bit med verdiene (V) og kommunens flate
+   (M, alfa er dekningen), når den som kaller trenger mer enn antallet. */
 export async function tellIKommune(
   nr: string,
   plasser: number,
   verdier: (tc: Flis) => Promise<ArrayLike<number>>,
-  plass: (v: number) => number | null
+  plass: (v: number) => number | null,
+  hver?: (tc: Flis, V: ArrayLike<number>, M: Piksler) => void
 ): Promise<Bitruter> {
   const g = await katalog.solv.grense(nr),
     n = new Array<number>(plasser).fill(0),
@@ -59,6 +61,7 @@ export async function tellIKommune(
       if (p !== null) n[p]++;
     }
     if (inne) biter.push(tc);
+    if (inne && hver) hver(tc, V, M);
   };
   const ko = [...alle];
   await Promise.all(

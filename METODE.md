@@ -119,7 +119,7 @@ midtpunktet i hver planrute slås opp i flaten (`flatesok`, `naturSok`). Når to
 | Planrutenettet | 10,58 meter, nivå 10 i Kartverkets flisnett for UTM33, 512 ruter per flis. Én rute er 0,112 dekar. | Planlagt utbygging, dagens klasser, egne områder, og alt som krysses med dem | `PLANNIVA`, `RUTE_M`, `RUTE` |
 | Bitene | 10,6 meter, nivå 10 i flisnettet. Hentes i biter på 2048 x 2048 ruter (flisene på nivå 8, 21,7 km), like store i alle kommuner. | Inngrepsfri natur og grått areal | `BITNIVA`, `BIT` |
 | Verdsatt natur | Bitene, 10,6 meter | Arealet per verdikategori, og det samme innenfor det kartlagte | `klasseAreal` |
-| Plandekning | Høyst 256 ruter på lengste side | Om kommunen har kommuneplan hos DiBK | `BILDE_PLANDEKNING` |
+| Plandekning | Bitene, 10,6 meter | Om kommunen har kommuneplan hos DiBK, og hvor mye av kommunen planen dekker | `solv.plandekning` |
 
 **Tersklene.** Alle står i `src/data/solv/felles.ts`.
 
@@ -417,17 +417,17 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
 
 ### Fra kilde til tall
 
-1. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+1. **Bilder av kommuneplanen** (`bronse.planbit` → `solv.plandekning`). Hentes fra
+   `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Hele kommuneplanen i DiBKs egen stil, ett bilde per bit med ruter på 10,6
+   meter. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Direktoratet for byggkvalitet
+   (DiBK), Kommuneplaner, WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge
+   digitalt-lisensen. Justeres: Andelen av rutene på 10,6 meter i kommunen som planen dekker, der en rute er tegnet når den er
+   minst 100 av 255 dekket. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.
+2. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
-2. **Bilde av kommuneplanen over kommunen** (`bronse.plandekning` → `solv.plandekning`). Hentes fra
-   `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Et lite bilde av kommuneplanen over hele kommunen. Kilde: [Direktoratet
-   for byggkvalitet (DiBK), Kommuneplaner,
-   WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres:
-   Andelen av kommunen planen dekker. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs
-   grensen.
 3. **Opplysninger om kommuneplanen** (`bronse.planopplysninger` → `solv.planinfo`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Plan-id, hvem som leverte planen og når den ble kopiert til DiBK, slått
    opp midt i det planen dekker. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
@@ -498,8 +498,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/bronse/dibk-kommuneplan.ts`,
-`src/data/solv/kommuneplan.ts`, `src/data/bronse/nibio-grunnkart.ts`, `src/data/solv/grunnkart.ts`, `src/data/bronse/ssb.ts`,
+`src/data/bronse/dibk-kommuneplan.ts`, `src/data/solv/kommuneplan.ts`, `src/data/bronse/kartverket.ts`,
+`src/data/solv/kommune.ts`, `src/data/bronse/nibio-grunnkart.ts`, `src/data/solv/grunnkart.ts`, `src/data/bronse/ssb.ts`,
 `src/data/solv/ssb.ts`, `src/data/gull/planlagt.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/utbygging.ts`. Kortet:
 `src/ui/komponenter/Framtid.tsx`.
 
@@ -1040,6 +1040,15 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Hvor mye av kommunen planen dekker, på 10,6 meter, 18. oktober 2026.** Sjekken av om kommunen har kommuneplan hos DiBK, og
+andelen siden viser når planen dekker under 60 % av kommunen, ble regnet av ett lite bilde av hele kommunen med høyst 256 piksler på
+lengste side (rundt 150 meter i Trondheim). Nå hentes hele planlaget i bitene på 10,6 meter (`bronse.planbit`) og telles i kommunen
+bit for bit (`solv.plandekning`), som grått areal. Oppslaget om hvilken plan det er, gjøres i den midterste ruta med plan i biten
+som har flest. Dekningen i Trondheim går fra 89,4 til 88,3 %, i Malvik fra 99,8 til 99,7 %, og i Oslo, som ikke har planen hos
+DiBK, fra 3,1 til 0,2 %: naboplanene stikker mindre inn over grensen med finere ruter. Det er noen flere kall mot DiBK når kommunen
+velges (ett per bit), men tiden til tallene er omtrent den samme. Regresjonstesten ga avvik bare i dekningen. Grensen for smale
+striper følger rutene, rundt 20 meter, foreløpig (avklart samme dag).
+
 **Planlagt utbygging og dagens klasser på 10,6 meter, 18. oktober 2026.** Utbyggingen, dagens klasser og egne områder regnes nå
 i ruter på 10,6 meter (nivå 10) i alle kommuner. Før var standarden 21 meter (nivå 9, 2 × 2 piksler av kartbildene), og 10,6 meter
 kunne velges under Tekniske valg; valget er tatt bort. Dagens klasser er ett kartbilde per blokk, de samme bildene som før, så
@@ -1294,8 +1303,8 @@ Svakheter:
 Åpne spørsmål om metoden:
 
 - **Smale striper på 10 meter.** Regelen tar bort felt som ikke er bredere enn to ruter. Med ruter på 10,6 meter er det rundt 20
-  meter, mot rundt 40 meter med 21 meter før 18. oktober 2026. Det må avgjøres om grensen skal følge rutene eller holdes på rundt
-  40 meter, og det må kontrolleres mot vektoranalysen.
+  meter, mot rundt 40 meter med 21 meter før 18. oktober 2026. Avklart 18. oktober: grensen følger rutene (rundt 20 meter) foreløpig,
+  og vi kommer tilbake til den. Den må også kontrolleres mot vektoranalysen.
 - **Halvregelen gjelder ikke overalt.** Grunnkartet og plansjekken bruker 100 av 255, og verdsatt natur regnes av dekningen.
   Klippingen til kommunen bruker halvregelen for blokkene.
 - **Avrundingen er ulik.** Inngrepsfri natur og grått areal rundes til 10 dekar i gull, de andre først på siden.

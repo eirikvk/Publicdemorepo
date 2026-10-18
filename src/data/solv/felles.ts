@@ -103,7 +103,6 @@ export const HAV_MIN_KM2 = 0.5,
 export const EGET_MIN_M2 = 400; /* minste tegnede område som regnes ut */
 
 /* Rutenett for bildene som hentes for hele kommunen: [høyst antall ruter på lengste side, minste rute i meter] */
-export const BILDE_PLANDEKNING: [number, number] = [256, 0]; /* sjekken av om kommunen har kommuneplan */
 export const PLANOVERSIKT = 4; /* oversikten over hvor kommuneplanen ligger: én piksel per 4 x 4 ruter på nivå 9 (85 meter) */
 
 /* Rutenett over et utsnitt e: høyst maks ruter på lengste side, og ruter på minst `minst` meter. u er utsnittet rutene dekker,

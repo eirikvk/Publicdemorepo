@@ -4,12 +4,13 @@
 import type { Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import {
-  BILDE_PLANDEKNING,
+  BIT,
   PLANOVERSIKT_NIVA,
   PLANOVERSIKT,
+  bitRuter,
   flisUtsnitt,
+  flisnavn,
   flisrammen,
-  rutenett,
   type Flis,
   type Kommune
 } from '../solv/felles.ts';
@@ -39,17 +40,8 @@ export const kommuneplanUrl = (u: Utsnitt, w = 512, h = 512, format = 'image/png
 /* Kartbildene hentes gjennom en egen kø */
 export const hentKommuneplanFlis = lagHenter('DiBK', 'Kommuneplan');
 
-/* Sjekken av om kommunen har plan: ett lite bilde av hele planlaget over utsnittet u, med w x h ruter, i DiBKs egen stil. Utsnittet
-   sendes med én desimal. */
+/* Sjekken av om kommunen har plan: hele planlaget i DiBKs egen stil. Utsnittet sendes med én desimal. */
 const DEKNING = { layers: 'kparealformalomrade', styles: 'polygon' };
-export const hentPlandekning = (k: Kommune, u: Utsnitt, w: number, h: number) =>
-  hent(
-    'DiBK',
-    `Dekning av kommuneplan for ${k.navn}`,
-    wmsBilde(PLAN, u, w, h, { ...DEKNING, format: 'image/png8', transparent: 'true' }, 1),
-    false,
-    true
-  );
 /* Opplysningene om kommuneplanen for kommunen k i ruta (i, j) i det samme bildet: { id, vert, kopiert }, der vert er hvem som har
    levert planen og kopiert datoen den ble kopiert til DiBK, som [år, måned, dag]. null hvis ruta ikke har en plan fra kommunen. */
 export const hentPlaninfo = (
@@ -104,18 +96,24 @@ export async function planoversikt(nr: string): Promise<ArrayBuffer> {
     true
   );
 }
-/* Tabellen bronse.plandekning: ett lite bilde av hele planlaget over kommunen */
-export async function plandekning(nr: string): Promise<ArrayBuffer> {
-  const R = rutenett((await katalog.solv.grense(nr)).ext, ...BILDE_PLANDEKNING);
-  return hentPlandekning(await kommunen(nr), R.u, R.w, R.h);
+/* Tabellen bronse.planbit: hele planlaget fra DiBK i biten tc (en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, solv/felles.ts),
+   som PNG, til sjekken av om kommunen har plan */
+export async function planbit(tc: Flis): Promise<ArrayBuffer> {
+  return hent(
+    'DiBK',
+    `Dekning av kommuneplan, bit ${flisnavn(tc)}`,
+    wmsBilde(PLAN, flisUtsnitt(tc), BIT, BIT, { ...DEKNING, format: 'image/png8', transparent: 'true' }, 1),
+    false,
+    true
+  );
 }
 /* Tabellen bronse.planopplysninger: hvilken plan kommunen har, slått opp i én rute midt i det planen dekker. null når planen ikke
    finnes, eller ruta ikke har en plan fra kommunen. */
 export async function planopplysninger(nr: string): Promise<Planopplysninger | null> {
   const D = await katalog.solv.plandekning(nr);
-  if (!D.finnes) return null;
-  const q = D.treff[D.treff.length >> 1];
-  return hentPlaninfo(await kommunen(nr), D.u, D.w, D.h, q % D.w, Math.floor(q / D.w));
+  if (!D.finnes || !D.punkt) return null;
+  const R = bitRuter(D.punkt.bit);
+  return hentPlaninfo(await kommunen(nr), R.u, R.w, R.h, D.punkt.i, D.punkt.j);
 }
 
 /* Tabellen bronse.planIPunkt: flatene i kommuneplanene i punktet p [øst, nord], med egenskapene og flaten, som GeoJSON. Til
