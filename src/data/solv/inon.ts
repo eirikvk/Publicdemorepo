@@ -1,6 +1,6 @@
-/* Sølv for inngrepsfri natur: bildet av hver bit fra Miljødirektoratets kartlag (status) gjort om til sone per rute, etter avstand
-   til tyngre tekniske inngrep, og sonene talt i kommunen. Og sonen per piksel i kartet, én sannhet per nivå (solv.inonsoner og
-   solv.inonsonerUt, se nivaer.ts), i naturen (inonINatur). */
+/* Sølv for inngrepsfri natur: bildet av hver bit fra Miljødirektoratets kartlag gjort om til sone per rute, etter avstand til tyngre
+   tekniske inngrep, og sonene talt i kommunen, for nyeste år (solv.inon) og for de tidligere årene (solv.inonAar). Og sonen per
+   piksel i kartet for nyeste år, én sannhet per nivå (solv.inonsoner og solv.inonsonerUt, se nivaer.ts), i naturen (inonINatur). */
 import { katalog } from '../katalog.ts';
 import { arbeid } from './arbeid.ts';
 import { FLISNIVA, bitAv, bitRuter, type Flis, type Rutebilde } from './felles.ts';
@@ -8,30 +8,37 @@ import { iBlokk, type Klasser } from './grunnkart.ts';
 import { NAT } from './klasser.ts';
 import { tellIKommune, type Bitruter } from './kommune.ts';
 import { biterIFlisen, flestIFlisen, rutenIFlis, soneHalvpart } from './nivaer.ts';
-import { UTENFOR } from './tolking.ts';
-export { INONSONER, UTENFOR, inonSone, tolkInon } from './tolking.ts';
+import { INON_NYESTE, UTENFOR } from './tolking.ts';
+export { INONAAR, INON_NYESTE, INONSONER, UTENFOR, inonSone, tolkInon } from './tolking.ts';
 
 /* Sonen per rute i en bit (0 villmarkspreget, 1 sone 1, 2 sone 2, UTENFOR uten sone), med bitens rutenett. sone er null når biten
    ikke har noen soner, så tomme biter ikke tar plass. */
 export interface Inonsoner extends Rutebilde {
   sone: Uint8Array | null;
 }
-/* Tabellen solv.inonbit: sonen per rute i biten tc, tolket i bakgrunnstråden (tolkInon) */
-export async function inonbit(tc: Flis): Promise<Inonsoner> {
+/* Tabellen solv.inonbit: sonen per rute i biten tc for året aar, tolket i bakgrunnstråden (tolkInon). Kalles med [aar, tc]. */
+export async function inonbit([aar, tc]: [number, Flis]): Promise<Inonsoner> {
   return {
     ...bitRuter(tc),
-    sone: await arbeid<Uint8Array | null>({ type: 'inon', P: await katalog.bronse.inonbit(tc) })
+    sone: await arbeid<Uint8Array | null>({ type: 'inon', P: await katalog.bronse.inonbit([aar, tc]) })
   };
 }
-/* Tabellen solv.inon: antall ruter per sone innenfor kommunen nr, og bitene kommunen har ruter i */
-export async function inon(nr: string): Promise<Bitruter> {
-  return tellIKommune(
+/* Antall ruter per sone innenfor kommunen nr for året aar, og bitene kommunen har ruter i */
+const tellAar = (nr: string, aar: number): Promise<Bitruter> =>
+  tellIKommune(
     nr,
     3,
-    tc => katalog.solv.inonbit(tc).then(D => D.sone),
+    tc => katalog.solv.inonbit([aar, tc]).then(D => D.sone),
     s => (s === UTENFOR ? null : s),
     UTENFOR
   );
+/* Tabellen solv.inon: antall ruter per sone innenfor kommunen nr for nyeste år, og bitene kommunen har ruter i */
+export async function inon(nr: string): Promise<Bitruter> {
+  return tellAar(nr, INON_NYESTE);
+}
+/* Tabellen solv.inonAar: det samme for et tidligere år, kalt med [nr, aar], på samme måte og i de samme rutene */
+export async function inonAar([nr, aar]: [string, number]): Promise<Bitruter> {
+  return tellAar(nr, aar);
 }
 
 /* Sonen i bitene oversatt til flisene: sonen pluss én, og 0 uten sone */
@@ -42,7 +49,7 @@ const SONEPLASS = Uint8Array.from({ length: 256 }, (_, v) => (v < 3 ? v + 1 : 0)
 export async function inonsoner(tc: Flis): Promise<Klasser> {
   if (tc[0] < FLISNIVA) throw new Error('sonene per flis finnes fra nivå 10');
   const b = bitAv(tc),
-    D = await katalog.solv.inonbit(b),
+    D = await katalog.solv.inonbit([INON_NYESTE, b]),
     kl = new Uint8Array(512 * 512);
   if (D.sone) rutenIFlis(D.sone, b, tc, kl, SONEPLASS);
   return { ...iBlokk(tc), kl };
@@ -59,7 +66,7 @@ export async function inonsonerUt([nr, z, x, y]: [string, number, number, number
     );
   await Promise.all(
     B.map(async b => {
-      const D = await katalog.solv.inonbit(b);
+      const D = await katalog.solv.inonbit([INON_NYESTE, b]);
       if (D.sone) flestIFlisen(D.sone, b, tc, kl, 3, soneHalvpart);
     })
   );

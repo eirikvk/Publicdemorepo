@@ -1,7 +1,7 @@
-/* Gull for inngrepsfri natur: arealet per sone i kommunen, og i villreinområdene. */
+/* Gull for inngrepsfri natur: arealet per sone i kommunen, og i villreinområdene, nå og i årene Miljødirektoratet har status for. */
 import { katalog } from '../katalog.ts';
-import { UTENFOR } from '../solv/inon.ts';
-import { BITRES, tellIBitene } from '../solv/kommune.ts';
+import { INONAAR, INON_NYESTE, UTENFOR } from '../solv/inon.ts';
+import { BITRES, tellIBitene, type Andelsbit } from '../solv/kommune.ts';
 import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Bildetall, type Kommunebilde } from './felles.ts';
 
 /* Inngrepsfri natur for kommunen: når den er hentet, areal per sone (villmarkspreget, sone 1, sone 2) i km² */
@@ -32,20 +32,79 @@ export interface InonIVillrein {
   soner: number[];
   andel: number | null;
 }
+/* Inngrepsfri natur for året aar talt i bitene KB med andelen av hver rute som er med (som villreinområdene), i km² per sone og
+   samlet */
+async function iBitene(KB: Andelsbit[], aar: number) {
+  const n = await tellIBitene(
+    KB,
+    3,
+    tc => katalog.solv.inonbit([aar, tc]).then(D => D.sone),
+    v => (v !== UTENFOR ? v : null),
+    UTENFOR
+  );
+  return arealFraRuter(n, BITRES, 1e6);
+}
 /* Tabellen gull.inonIVillrein: inngrepsfri natur (solv.inonbit) i villreinområdene i kommunen, talt med andelen av hver rute som
    ligger i villreinområdene og i kommunen (solv.villreinAndel). Der områder overlapper, telles ruta én gang. Arealet av villreinområdene
    er det samme som i gull.villrein. null når kommunen ikke har villreinområder. */
 export async function inonIVillrein(nr: string): Promise<InonIVillrein | null> {
   const V = await katalog.solv.villreinAndel(nr);
   if (!(V.sum > 0)) return null;
-  const n = await tellIBitene(
-      V.biter[0],
-      3,
-      tc => katalog.solv.inonbit(tc).then(D => D.sone),
-      v => (v !== UTENFOR ? v : null),
-      UTENFOR
-    ),
-    A = arealFraRuter(n, BITRES, 1e6),
+  const A = await iBitene(V.biter[0], INON_NYESTE),
     villrein = tiDekar(V.sum);
   return { villrein, sum: A.sum, soner: A.km2, andel: andel(A.sum, villrein) };
+}
+
+/* Inngrepsfri natur over tid: for hvert år Miljødirektoratet har status for (aar), arealet per sone (villmarkspreget, sone 1, sone 2)
+   og samlet i km², og andelen av det arealet det er regnet av (landarealet, eller villreinområdene). perioder er endringen mellom to
+   år etter hverandre: per sone, og for inngrepsnær natur, som er det inngrepsfri natur mister. Den første perioden er 20 år (1988 til
+   2008), de andre fem. byggUtvikling lager det av arealet per år (A, i rekkefølgen i INONAAR) og arealet andelen regnes av (av). */
+export interface InonUtvikling {
+  aar: number[];
+  soner: number[][];
+  sum: number[];
+  andel: (number | null)[];
+  perioder: { fra: number; til: number; soner: number[]; naer: number }[];
+}
+export function byggUtvikling(A: { km2: number[]; sum: number }[], av: number): InonUtvikling {
+  return {
+    aar: [...INONAAR],
+    soner: A.map(a => a.km2),
+    sum: A.map(a => a.sum),
+    andel: A.map(a => andel(a.sum, av)),
+    perioder: A.slice(1).map((a, i) => ({
+      fra: INONAAR[i],
+      til: INONAAR[i + 1],
+      soner: a.km2.map((v, s) => tiDekar(v - A[i].km2[s])),
+      naer: tiDekar(A[i].sum - a.sum)
+    }))
+  };
+}
+/* Arealet per år (f gir arealet for året), to år om gangen, så tjenesten ikke får alle kallene samtidig */
+async function perAar(f: (aar: number) => Promise<{ km2: number[]; sum: number }>) {
+  const A: { km2: number[]; sum: number }[] = [];
+  for (let i = 0; i < INONAAR.length; i += 2) A.push(...(await Promise.all(INONAAR.slice(i, i + 2).map(f))));
+  return A;
+}
+/* Tabellen gull.inonUtvikling: inngrepsfri natur i kommunen nr for hvert år Miljødirektoratet har status for, talt på samme måte og
+   i de samme rutene som nyeste år (solv.inon og solv.inonAar), og andelen av landarealet. Regnes først når en side ber om den, fordi
+   den henter fire ganger så mange bilder. */
+export async function inonUtvikling(nr: string): Promise<InonUtvikling> {
+  const [land, A] = await Promise.all([
+    landareal(nr),
+    perAar(async aar => {
+      const S = await (aar === INON_NYESTE ? katalog.solv.inon(nr) : katalog.solv.inonAar([nr, aar]));
+      return arealFraRuter(S.n, S.res, S.skala);
+    })
+  ]);
+  return byggUtvikling(A, land);
+}
+/* Tabellen gull.inonIVillreinUtvikling: det samme i villreinområdene i kommunen (som gull.inonIVillrein), og andelen av
+   villreinområdene. null når kommunen ikke har villreinområder. */
+export async function inonIVillreinUtvikling(nr: string): Promise<(InonUtvikling & { villrein: number }) | null> {
+  const V = await katalog.solv.villreinAndel(nr);
+  if (!(V.sum > 0)) return null;
+  const villrein = tiDekar(V.sum),
+    A = await perAar(aar => iBitene(V.biter[0], aar));
+  return { ...byggUtvikling(A, villrein), villrein };
 }

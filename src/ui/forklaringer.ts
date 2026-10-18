@@ -302,11 +302,12 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye av kommunen ligger minst én kilometer fra tyngre tekniske inngrep, som veier, kraftlinjer og regulerte vassdrag?',
     kortFortalt:
-      'Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet i biter med ruter på 10,6 meter, like store i alle kommuner. Rutene i kommunen telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke med planlagt utbygging.',
-    tabeller: ['gull.inon'],
+      'Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet i biter med ruter på 10,6 meter, like store i alle kommuner. Rutene i kommunen telles per sone og regnes om til areal. Utviklingen siden 1988 telles på samme måte i de samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses ikke med planlagt utbygging.',
+    tabeller: ['gull.inon', 'gull.inonUtvikling'],
     usikkerhet: [
       'Tallet krysses ikke med planlagt utbygging. Sonene følger avstanden til nærmeste inngrep, så et nytt inngrep flytter sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.',
-      'I kartet får bare klassen natur sonefarge.'
+      'I kartet får bare klassen natur sonefarge.',
+      'Alle årene er fra Miljødirektoratets utgave fra april 2024. Neste status gjelder 2028, og kan endre tallene for de tidligere årene. Den første perioden er 20 år, de andre fem.'
     ],
     regnestykke: hent => {
       const I = hent(katalog.gull.inon);

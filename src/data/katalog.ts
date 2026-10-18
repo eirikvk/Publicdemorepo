@@ -34,6 +34,7 @@ import * as solvSsb from './solv/ssb.ts';
 type solvSsbJson = solvSsb.JsonStat;
 import * as solvTemaer from './solv/temaer.ts';
 import { BITNIVA, PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
+import { INON_NYESTE } from './solv/tolking.ts';
 import * as solvEgne from './solv/egne.ts';
 import type { Egetinn } from './solv/egne.ts';
 import type { Omradesok } from './solv/temaer.ts';
@@ -460,19 +461,19 @@ export const katalog = {
       nokkel: ([l, tc]) => `${l}/${flisnavn(tc)}`,
       etl: mdirNaturskog.naturskogflis
     }),
-    inonbit: tabell<Flis, ArrayBuffer>({
+    inonbit: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
       navn: 'inonbit',
       endepunkt: E.INON,
       tittel: 'Bilder av inngrepsfri natur',
-      om: 'bildet av inngrepsfri natur fra Miljødirektoratet i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
+      om: 'bildet av inngrepsfri natur fra Miljødirektoratet for et år i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med [år, biten]. Nøkkel: «år/z/x/y».',
       forklaring:
-        'Ett bilde per bit fra laget status (2023), med ruter på 10,6 meter, uten glatting av kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
+        'Ett bilde per bit og år, med ruter på 10,6 meter, uten glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
       kilde: KILDE.inon,
-      husk: 40,
-      nokkel: flisnavn,
+      husk: 200,
+      nokkel: ([aar, tc]) => `${aar}/${flisnavn(tc)}`,
       etl: mdirInon.inonbit,
-      eksempel: flisMidt(BITNIVA)
+      eksempel: u => (u.midt ? [INON_NYESTE, flisVed(u.midt, BITNIVA)] : null)
     }),
     graabit: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
@@ -788,17 +789,17 @@ export const katalog = {
       etl: solvKommune.kommunebiter,
       lagret: solvKommune.lagredeKommunebiter
     }),
-    inonbit: tabell<Flis, solvInon.Inonsoner>({
+    inonbit: tabell<[number, Flis], solvInon.Inonsoner>({
       lag: 'solv',
       navn: 'inonbit',
       tittel: 'Inngrepsfri natur per rute',
-      om: 'sonen per rute i en bit (2048 x 2048 ruter à 10,6 meter), kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
+      om: 'sonen per rute i en bit (2048 x 2048 ruter à 10,6 meter) for et år, kalt med [år, biten]. Nøkkel: «år/z/x/y».',
       forklaring:
-        'En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst 5 km).',
+        'En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst 5 km). Alle årene tolkes likt.',
       husk: 12,
-      nokkel: flisnavn,
+      nokkel: ([aar, tc]) => `${aar}/${flisnavn(tc)}`,
       etl: solvInon.inonbit,
-      eksempel: flisMidt(BITNIVA)
+      eksempel: u => (u.midt ? [INON_NYESTE, flisVed(u.midt, BITNIVA)] : null)
     }),
     inon: tabell({
       lag: 'solv',
@@ -809,6 +810,17 @@ export const katalog = {
         'Rutene i kommunen telles per sone, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.',
       husk: 3,
       etl: solvInon.inon
+    }),
+    inonAar: tabell<[string, number], solvKommune.Bitruter>({
+      lag: 'solv',
+      navn: 'inonAar',
+      tittel: 'Inngrepsfri natur i kommunen et tidligere år',
+      om: 'antall ruter à 10,6 meter per sone innenfor kommunen for et år Miljødirektoratet har status for, kalt med [kommunenummer, år]. Nøkkel: «nummer/år».',
+      forklaring:
+        'Det samme som for nyeste år (solv.inon), talt i de samme rutene med den samme andelen av hver rute i kommunen, men av kartet for det året.',
+      husk: 16,
+      nokkel: ([nr, aar]) => `${nr}/${aar}`,
+      etl: solvInon.inonAar
     }),
     inonsoner: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
@@ -1391,6 +1403,34 @@ export const katalog = {
         'Hver rute teller med den delen av den som ligger i villreinområdene og i kommunen (solv.villreinAndel), og sonen kommer fra bildet av inngrepsfri natur. Andelen er inngrepsfri natur av villreinområdene i kommunen.',
       husk: 12,
       etl: gullInon.inonIVillrein
+    }),
+    inonUtvikling: tabell({
+      lag: 'gull',
+      navn: 'inonUtvikling',
+      tittel: 'Inngrepsfri natur over tid',
+      om: 'inngrepsfri natur i kommunen for hvert år Miljødirektoratet har status for (1988, 2008, 2013, 2018 og 2023): arealet per sone og samlet, andelen av landarealet, og endringen per periode, også for inngrepsnær natur',
+      forklaring:
+        'Hvert år telles på samme måte og i de samme rutene som nyeste år, av Miljødirektoratets kart for det året. Endringen i inngrepsnær natur er det inngrepsfri natur mister. Regnes først når siden for inngrepsfri natur vises, fordi den henter fire ganger så mange bilder.',
+      usikkerhet: [
+        'Alle årene er fra Miljødirektoratets utgave fra april 2024, og kan sammenlignes. Neste status gjelder 2028, og kan endre tallene for de tidligere årene.',
+        'Den første perioden er 20 år (1988 til 2008), de andre fem.',
+        'Inngrep med feil byggeår hos dataeierne kan gi feil utvikling noen steder, ifølge Miljødirektoratet.'
+      ],
+      etterBehov: true,
+      husk: 6,
+      etl: gullInon.inonUtvikling
+    }),
+    inonIVillreinUtvikling: tabell({
+      lag: 'gull',
+      navn: 'inonIVillreinUtvikling',
+      tittel: 'Inngrepsfri natur i villreinområdene over tid',
+      om: 'inngrepsfri natur innenfor villreinområdene i kommunen for hvert år Miljødirektoratet har status for: arealet per sone og samlet, og andelen av villreinområdene. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
+      forklaring:
+        'Som inngrepsfri natur i villreinområdene (gull.inonIVillrein), for hvert år, i de samme rutene med den samme andelen av hver rute. Villreinområdene er dagens.',
+      usikkerhet: ['Villreinområdene er dagens grenser for alle årene.'],
+      etterBehov: true,
+      husk: 6,
+      etl: gullInon.inonIVillreinUtvikling
     }),
     graaIVillrein: tabell({
       lag: 'gull',

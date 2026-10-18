@@ -28,6 +28,8 @@
   --kake-graa: #a9aaaa;
   --kake-vatmark: #72d4bc;
   --kake-myr: #b8b7e2;
+  /* Inngrepsnær natur i figuren om endringer per sone: nøytral grå, uten sone */
+  --inon-naer: #a9aaaa;
   /* Verneformene i figuren «Slik er naturen vernet» */
   --vf-nasjonalpark: #007a00;
   --vf-naturreservat: #ad0000;
@@ -652,6 +654,83 @@ main > .innhold > .figur {
   .liggende-rad {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Linjen over tid og stolpene for endringen: tynne merker, lyse streker og tekst i tekstfargen, som i designsystemets figurer */
+.linje svg,
+.endringsstolper svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.linje-strek {
+  stroke: var(--md-color-grey-2);
+  stroke-width: 1;
+}
+.linje-null {
+  stroke: #777;
+  stroke-width: 1;
+}
+.linje-akse {
+  font-size: 13px;
+  fill: var(--dempet);
+}
+.linje-tall {
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--tekst);
+}
+.linje-linje {
+  fill: none;
+  stroke: var(--inon1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.linje-punkt {
+  fill: var(--inon1);
+  stroke: var(--beige-flate);
+  stroke-width: 2;
+}
+.figur-tegn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-bottom: 8px;
+  font-size: 0.9375rem;
+}
+.figur-tegn li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.figur-tegn i {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+/* Tallene bak figuren, i en tabell som kan åpnes */
+.figurtall {
+  margin-top: 12px;
+  font-size: 0.9375rem;
+}
+.figurtall summary {
+  cursor: pointer;
+  color: var(--teal-lenke);
+}
+.figurtall table {
+  margin-top: 8px;
+  border-collapse: collapse;
+}
+.figurtall th,
+.figurtall td {
+  padding: 4px 12px 4px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--md-color-grey-2);
+}
+.figurtall .tall {
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* Det som ikke er laget ennå */

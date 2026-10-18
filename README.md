@@ -328,7 +328,7 @@ med ekte tall, uten å endre hovedsiden.
     henter dem ikke. Se METODE.md, SSB-tallene.
   - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per gruppe av verneformer (`gull.vernPerVerneform`), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
-    villreinområdene (`gull.inonIVillrein`). Og det som var merket «Kan regnes ut»: verdsatt natur som vurderes per lokalitet eller
+    villreinområdene (`gull.inonIVillrein`), også over tid (`gull.inonIVillreinUtvikling`, etter behov). Og det som var merket «Kan regnes ut»: verdsatt natur som vurderes per lokalitet eller
     per naturtype (`gull.verdsattVurderes`), verneområdene med gruppen for verneformen (`gull.verneformer`), grått areal i
     villreinområdene (`gull.graaIVillrein`) og grønne arealer i bebyggelse (`gull.gronneArealer`). Se METODE.md, loggen for 18.
     oktober 2026.
@@ -401,7 +401,8 @@ export async function inonbit(tc: Flis): Promise<Inonsoner> {
 ```
 
 Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.inon` kaller `solv.inon`, som kaller
-`solv.inonbit` for hver bit, som kaller `bronse.inonbit`, som henter bildet fra Miljødirektoratet. Slik kan man følge hvert tall fra siden ned til kilden.
+`solv.inonbit` for hver bit og år, som kaller `bronse.inonbit`, som henter bildet fra Miljødirektoratet. Utviklingen siden 1988
+(`gull.inonUtvikling`) kaller de samme tabellene med de tidligere årene. Slik kan man følge hvert tall fra siden ned til kilden.
 
 **Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
 ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes

@@ -4,7 +4,7 @@
 import { useId, type ReactNode } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { MdAccordionItem, MdIconArrowForward, MdIconChevronForward, MdIconOpenInNew } from '../md.ts';
-import { andelTekst, iTekst, pst } from '../../src/ui/tekst.ts';
+import { andelTekst, iTekst, nf, pst } from '../../src/ui/tekst.ts';
 import { lenke, type Rute } from '../navigasjon.ts';
 import { Illustrasjon } from '../illustrasjoner.tsx';
 import { GRUPPER, TEMAER, type Tema } from '../temaer.ts';
@@ -359,6 +359,193 @@ export function Liggende({ data, hva, tekst }: { data: Stolpe[]; hva: string; te
           </span>
         </div>
       ))}
+    </figure>
+  );
+}
+
+/* Rene tall for aksene: steget mellom strekene (1, 2 eller 5 ganger en tierpotens) som gir omtrent n streker opp til maks */
+function steg(maks: number, n = 4) {
+  const r = maks / n,
+    p = 10 ** Math.floor(Math.log10(r || 1)),
+    f = r / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+/* Tallene i figuren i en tabell som kan åpnes, så de kan leses uten å tolke fargene og høydene */
+function Talltabell({ hode, rader }: { hode: string[]; rader: string[][] }) {
+  return (
+    <details className="figurtall">
+      <summary>Vis tallene</summary>
+      <table>
+        <thead>
+          <tr>
+            {hode.map((h, i) => (
+              <th key={h} scope="col" className={i ? 'tall' : undefined}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rader.map(r => (
+            <tr key={r[0]}>
+              {r.map((c, i) =>
+                i ? (
+                  <td key={i} className="tall">
+                    {c}
+                  </td>
+                ) : (
+                  <th key={i} scope="row">
+                    {c}
+                  </th>
+                )
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  );
+}
+/* Dekar uten enhet, til aksene og tabellene */
+const daa = (km2: number) => nf(km2 * 1000, 0);
+
+/* En linje over tid: arealet (km2) per år, med årene i riktig avstand fra hverandre og aksen fra null, så endringen ikke ser større
+   ut enn den er. Tallet står ved første og siste punkt, og hvert punkt har tallet når man holder over det. Én serie, så navnet står
+   i figurens tittel. */
+export function Linje({ punkter, hva }: { punkter: { aar: number; km2: number }[]; hva: string }) {
+  const B = 760,
+    H = 320,
+    v = 72,
+    h = 28,
+    o = 28,
+    u = 40,
+    a0 = punkter[0].aar,
+    a1 = punkter[punkter.length - 1].aar,
+    s = steg(Math.max(...punkter.map(p => p.km2), 1e-9) * 1.15),
+    maks = Math.ceil((Math.max(...punkter.map(p => p.km2), 1e-9) * 1.15) / s) * s,
+    x = (a: number) => v + ((a - a0) / (a1 - a0 || 1)) * (B - v - h),
+    y = (km2: number) => o + (1 - km2 / maks) * (H - o - u),
+    streker = Array.from({ length: Math.round(maks / s) + 1 }, (_, i) => i * s);
+  return (
+    <figure className="linje" aria-label={hva}>
+      <svg viewBox={`0 0 ${B} ${H}`} role="img" aria-label={hva}>
+        {streker.map(t => (
+          <g key={t}>
+            <line x1={v} x2={B - h} y1={y(t)} y2={y(t)} className="linje-strek" />
+            <text x={v - 10} y={y(t) + 4} textAnchor="end" className="linje-akse">
+              {daa(t)}
+            </text>
+          </g>
+        ))}
+        <text x={v - 10} y={o - 12} textAnchor="end" className="linje-akse">
+          dekar
+        </text>
+        {punkter.map(p => (
+          <text key={p.aar} x={x(p.aar)} y={H - u + 22} textAnchor="middle" className="linje-akse">
+            {p.aar}
+          </text>
+        ))}
+        <polyline points={punkter.map(p => `${x(p.aar)},${y(p.km2)}`).join(' ')} className="linje-linje" />
+        {punkter.map((p, i) => (
+          <g key={p.aar}>
+            <circle cx={x(p.aar)} cy={y(p.km2)} r="5" className="linje-punkt">
+              <title>{`${p.aar}: ${daa(p.km2)} dekar`}</title>
+            </circle>
+            {(i === 0 || i === punkter.length - 1) && (
+              <text x={x(p.aar)} y={y(p.km2) - 14} textAnchor={i ? 'end' : 'start'} className="linje-tall">
+                {daa(p.km2)} dekar
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+      <Talltabell hode={['År', 'Dekar']} rader={punkter.map(p => [String(p.aar), daa(p.km2)])} />
+    </figure>
+  );
+}
+
+/* Stolper over og under null for endringen i hver periode, én stolpe per serie (som sonene), med tegnforklaringen over. Hver stolpe
+   har tallet når man holder over den, og alle tallene står i tabellen under. */
+export function Endringsstolper({
+  perioder,
+  serier,
+  hva
+}: {
+  perioder: { navn: string; km2: number[] }[];
+  serier: { navn: string; farge: string }[];
+  hva: string;
+}) {
+  const B = 760,
+    H = 356,
+    v = 72,
+    h = 12,
+    o = 34,
+    u = 44,
+    alle = perioder.flatMap(p => p.km2),
+    st = steg(Math.max(Math.max(...alle), -Math.min(...alle), 1e-9) * 1.1),
+    topp = Math.max(st, Math.ceil(Math.max(...alle, 0) / st) * st),
+    bunn = Math.min(0, Math.floor(Math.min(...alle, 0) / st) * st),
+    y = (km2: number) => o + ((topp - km2) / (topp - bunn)) * (H - o - u),
+    band = (B - v - h) / perioder.length,
+    bredde = Math.min(24, (band * 0.7) / serier.length - 2),
+    streker = Array.from({ length: Math.round((topp - bunn) / st) + 1 }, (_, i) => bunn + i * st);
+  /* En stolpe fra null med runde hjørner (4 px) bare i enden med tallet */
+  const stolpe = (x: number, km2: number) => {
+    const y0 = y(0),
+      y1 = y(km2),
+      r = Math.min(4, Math.abs(y1 - y0) / 2, bredde / 2);
+    if (km2 >= 0)
+      return `M${x} ${y0}V${y1 + r}Q${x} ${y1} ${x + r} ${y1}H${x + bredde - r}Q${x + bredde} ${y1} ${x + bredde} ${y1 + r}V${y0}Z`;
+    return `M${x} ${y0}V${y1 - r}Q${x} ${y1} ${x + r} ${y1}H${x + bredde - r}Q${x + bredde} ${y1} ${x + bredde} ${y1 - r}V${y0}Z`;
+  };
+  return (
+    <figure className="endringsstolper" aria-label={hva}>
+      <ul className="figur-tegn">
+        {serier.map(s => (
+          <li key={s.navn}>
+            <i style={{ background: `var(--${s.farge})` }} />
+            {s.navn}
+          </li>
+        ))}
+      </ul>
+      <svg viewBox={`0 0 ${B} ${H}`} role="img" aria-label={hva}>
+        {streker.map(t => (
+          <g key={t}>
+            <line x1={v} x2={B - h} y1={y(t)} y2={y(t)} className={t === 0 ? 'linje-null' : 'linje-strek'} />
+            <text x={v - 10} y={y(t) + 4} textAnchor="end" className="linje-akse">
+              {t > 0 ? '+' : ''}
+              {daa(t).replace('-', '−')}
+            </text>
+          </g>
+        ))}
+        <text x={v - 10} y={14} textAnchor="end" className="linje-akse">
+          dekar
+        </text>
+        {perioder.map((p, i) => {
+          const x0 = v + i * band + (band - serier.length * (bredde + 2)) / 2;
+          return (
+            <g key={p.navn}>
+              {p.km2.map((k, j) =>
+                Math.abs(k) * 1000 < 0.5 ? null : (
+                  <path key={j} d={stolpe(x0 + j * (bredde + 2), k)} fill={`var(--${serier[j].farge})`}>
+                    <title>{`${serier[j].navn}, ${p.navn}: ${k > 0 ? '+' : '−'}${daa(Math.abs(k))} dekar`}</title>
+                  </path>
+                )
+              )}
+              <text x={v + i * band + band / 2} y={H - u + 24} textAnchor="middle" className="linje-akse">
+                {p.navn}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <Talltabell
+        hode={['Periode', ...serier.map(s => s.navn)]}
+        rader={perioder.map(p => [
+          p.navn,
+          ...p.km2.map(k => (Math.abs(k) * 1000 < 0.5 ? '0' : (k > 0 ? '+' : '−') + daa(Math.abs(k))))
+        ])}
+      />
     </figure>
   );
 }

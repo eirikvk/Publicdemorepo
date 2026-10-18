@@ -14,11 +14,13 @@ import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
 import {
   Brodsmuler,
+  Endringsstolper,
   Figur,
   Fremhevet,
   Helt,
   Kake,
   Liggende,
+  Linje,
   NestePerspektiv,
   Ressurser,
   Sporsmal,
@@ -42,6 +44,8 @@ import {
   graa,
   graaIPlan,
   inon,
+  inonIVillreinUtvikling,
+  inonUtvikling,
   kartleggingen,
   naturtema
 } from '../tall.ts';
@@ -920,8 +924,28 @@ function Verdi({ tema }: { tema: Tema }) {
   );
 }
 
+/* Sonene i figuren om endringer per sone: villmarkspreget, sone 1 og sone 2, og inngrepsnær natur, som får det sonene mister */
+const ENDRINGSSERIER = [
+  ...INONSONER.map(([, farge, , , navn]) => ({ navn, farge })),
+  { navn: 'Inngrepsnær natur', farge: 'inon-naer' }
+];
+/* Endringen i inngrepsfri natur fra første til siste år, som setning */
+const endringTekst = (sum: number[], aar: number[]) => {
+  const d = sum[sum.length - 1] - sum[0];
+  return `Fra ${aar[0]} til ${aar[aar.length - 1]} har inngrepsfri natur ${d < 0 ? `gått ned med ${iTekst(-d)}` : d > 0 ? `økt med ${iTekst(d)}` : 'vært uendret'}${d && sum[0] > 0 ? ` (${andelTekst((Math.abs(d) / sum[0]) * 100)})` : ''}.`;
+};
+/* Merket for kartene for tidligere år mens de hentes, og når de ikke kunne hentes */
+const henterAar = (S: { s: string }) => (
+  <p className="henter">
+    {S.s === 'feil'
+      ? 'Kartene for tidligere år kunne ikke hentes fra Miljødirektoratet.'
+      : 'Henter kartene for tidligere år …'}
+  </p>
+);
+
 function Inon({ tema }: { tema: Tema }) {
-  const I = inon();
+  const I = inon(),
+    U = inonUtvikling();
   return (
     <Temaside
       tema={tema}
@@ -1008,23 +1032,35 @@ function Inon({ tema }: { tema: Tema }) {
       <Figur
         tittel={`Slik har den inngrepsfrie naturen endret seg i ${kommunen()}`}
         tekst={
-          <p>
-            Figuren viser hvordan arealet med inngrepsfri natur i {kommunen()} har endret seg siden 1988.
-            Miljødirektoratet har oppdatert status for inngrepsfri natur hvert femte år siden 2008. Når arealet blir
-            mindre, skyldes det nye inngrep som veier, kraftlinjer eller vannkraftutbygging.
-          </p>
+          <>
+            <p>
+              Figuren viser hvordan arealet med inngrepsfri natur i {kommunen()} har endret seg siden 1988.
+              Miljødirektoratet har status for 1988, og deretter hvert femte år siden 2008. Når arealet blir mindre,
+              skyldes det nye inngrep som veier, kraftlinjer eller vannkraftutbygging.
+            </p>
+            {U.s === 'ok' && <p>{endringTekst(U.v.sum, U.v.aar)}</p>}
+            <p>
+              Alle årene er fra Miljødirektoratets utgave fra april 2024, og telles i de samme rutene som i dag. Neste
+              status gjelder 2028.
+            </p>
+          </>
         }
         kilder={['inon']}
-        merke="Kilde finnes"
-        tom="Miljødirektoratets kart over inngrepsfri natur for 1988, 2008, 2013, 2018 og 2023. De finnes i det samme datasettet, men er ikke koblet."
-      />
+      >
+        {U.s === 'ok' ? (
+          <Linje hva="Inngrepsfri natur per år" punkter={U.v.aar.map((aar, i) => ({ aar, km2: U.v.sum[i] }))} />
+        ) : (
+          henterAar(U)
+        )}
+      </Figur>
       <Figur
         tittel="Endringer per sone"
         tekst={
           <>
             <p>
-              Figuren viser hvordan arealet i hver sone har endret seg i hver femårsperiode. Søyler over null betyr at
-              sonen har blitt større, og søyler under null betyr at den har blitt mindre.
+              Figuren viser hvordan arealet i hver sone har endret seg i hver periode. Den første perioden er 20 år, fra
+              1988 til 2008, de andre fem. Søyler over null betyr at sonen har blitt større, og søyler under null betyr
+              at den har blitt mindre.
             </p>
             <p>
               Når det kommer et nytt inngrep, flytter naturen rundt seg ned en sone: villmark blir til sone 1, sone 1
@@ -1034,9 +1070,17 @@ function Inon({ tema }: { tema: Tema }) {
           </>
         }
         kilder={['inon']}
-        merke="Kilde finnes"
-        tom="de samme kartene for tidligere år."
-      />
+      >
+        {U.s === 'ok' ? (
+          <Endringsstolper
+            hva="Endringen per sone i hver periode"
+            serier={ENDRINGSSERIER}
+            perioder={U.v.perioder.map(p => ({ navn: `${p.fra}–${p.til}`, km2: [...p.soner, p.naer] }))}
+          />
+        ) : (
+          henterAar(U)
+        )}
+      </Figur>
     </Temaside>
   );
 }
@@ -1046,7 +1090,8 @@ const VILLREIN_SKY =
   'Villrein er sky og holder seg unna veier, hytter, kraftlinjer og andre inngrep. Derfor trenger villreinen store områder uten slike inngrep. Inngrepsfri natur er områder som ligger mer enn én kilometer fra tyngre tekniske inngrep.';
 
 function Rein({ tema }: { tema: Tema }) {
-  const { T, plan } = naturtema('rein'),
+  const VU = inonIVillreinUtvikling(),
+    { T, plan } = naturtema('rein'),
     v = T.s === 'ok' ? T.v : null,
     R = villreinPerOmrade(),
     IV = inonIVillrein(),
@@ -1203,9 +1248,10 @@ function Rein({ tema }: { tema: Tema }) {
             <>
               <p>{VILLREIN_SKY}</p>
               <p>
-                Figuren viser hvor mye inngrepsfri natur det er i villreinområdene i {kommunen()} i dag, per sone.
-                Hvordan dette har endret seg over tid, krever kartene for tidligere år, som ikke er koblet.
+                Figuren viser hvor mye inngrepsfri natur det er i villreinområdene i {kommunen()} i dag, per sone, og
+                linjen under hvordan den har endret seg siden 1988, innenfor dagens villreinområder.
               </p>
+              {VU.s === 'ok' && VU.v && <p>{endringTekst(VU.v.sum, VU.v.aar)}</p>}
             </>
           }
           kilder={['inon', 'villrein']}
@@ -1217,6 +1263,14 @@ function Rein({ tema }: { tema: Tema }) {
           <p>
             {iTekst(IV.v.sum)} av {iTekst(IV.v.villrein)} villreinområde i kommunen er inngrepsfri natur.
           </p>
+          {VU.s === 'ok' && VU.v ? (
+            <Linje
+              hva="Inngrepsfri natur i villreinområdene per år"
+              punkter={VU.v.aar.map((aar, i) => ({ aar, km2: VU.v!.sum[i] }))}
+            />
+          ) : VU.s === 'ingen' ? null : (
+            henterAar(VU)
+          )}
         </Figur>
       ) : (
         <Figur

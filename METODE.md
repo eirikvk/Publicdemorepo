@@ -805,10 +805,10 @@ avviket under 0,2 %.
 vassdrag?
 
 **Kort fortalt.** Sonene kommer fra Miljødirektoratets kart over inngrepsfri natur, hentet i biter med ruter på 10,6 meter, like
-store i alle kommuner. Rutene i kommunen telles per sone og regnes om til areal. Inngrepsfri natur krysses ikke med planlagt
-utbygging.
+store i alle kommuner. Rutene i kommunen telles per sone og regnes om til areal. Utviklingen siden 1988 telles på samme måte i de
+samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses ikke med planlagt utbygging.
 
-**Tabeller.** Kortet viser `gull.inon`. Det står i `src/ui/komponenter/Inon.tsx`.
+**Tabeller.** Kortet viser `gull.inon` og `gull.inonUtvikling`. Det står i `src/ui/komponenter/Inon.tsx`.
 
 ### Fra kilde til tall
 
@@ -817,14 +817,16 @@ utbygging.
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit` → `solv.inon`). Hentes fra
-   `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit fra laget status (2023), med ruter på
-   10,6 meter, uten glatting av kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde:
-   [Miljødirektoratet, Inngrepsfri natur i
-   Norge](https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b), NLOD 2.0. Justeres: En rute som er
-   minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst
-   5 km). Justeres: Rutene i kommunen telles per sone, bit for bit. En rute langs grensen telles med den delen av den som ligger i
-   kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
+2. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit` → `solv.inon` → `solv.inonAar`). Hentes fra
+   `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit og år, med ruter på 10,6 meter, uten
+   glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med
+   de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Miljødirektoratet,
+   Inngrepsfri natur i Norge](https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b), NLOD 2.0.
+   Justeres: En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km)
+   eller villmarkspreget (minst 5 km). Alle årene tolkes likt. Justeres: Rutene i kommunen telles per sone, bit for bit. En rute
+   langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
+   Justeres: Det samme som for nyeste år (solv.inon), talt i de samme rutene med den samme andelen av hver rute i kommunen, men av
+   kartet for det året.
 3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
@@ -833,6 +835,9 @@ utbygging.
    siden (bronse.grensefil).
 4. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
    og andelen av landarealet regnes ut.
+5. **Inngrepsfri natur over tid** (`gull.inonUtvikling`). Hvert år telles på samme måte og i de samme rutene som nyeste år, av
+   Miljødirektoratets kart for det året. Endringen i inngrepsnær natur er det inngrepsfri natur mister. Regnes først når siden for
+   inngrepsfri natur vises, fordi den henter fire ganger så mange bilder.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
@@ -856,7 +861,13 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - Tallet krysses ikke med planlagt utbygging. Sonene følger avstanden til nærmeste inngrep, så et nytt inngrep flytter
   sonegrensene flere kilometer unna, også når det ikke ligger i en sone selv.
 - I kartet får bare klassen natur sonefarge.
+- Alle årene er fra Miljødirektoratets utgave fra april 2024. Neste status gjelder 2028, og kan endre tallene for de tidligere
+  årene. Den første perioden er 20 år, de andre fem.
 - Arealet gjelder alt innenfor sonene, også innsjøer, mens andelen regnes av landarealet.
+- Alle årene er fra Miljødirektoratets utgave fra april 2024, og kan sammenlignes. Neste status gjelder 2028, og kan endre tallene
+  for de tidligere årene.
+- Den første perioden er 20 år (1988 til 2008), de andre fem.
+- Inngrep med feil byggeår hos dataeierne kan gi feil utvikling noen steder, ifølge Miljødirektoratet.
 
 ### Kode
 
@@ -1142,6 +1153,27 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Inngrepsfri natur over tid, 18. oktober 2026.** Miljødirektoratets karttjeneste for inngrepsfri natur, som siden alt bruker, har
+et lag for hvert år med status: 1988, 2008, 2013, 2018 og 2023 (status). Lagene har de samme fargene, så de tolkes likt. Bitene i
+bronse og sølv (`bronse.inonbit` og `solv.inonbit`) har nå året som parameter, og de tidligere årene telles i de samme rutene og med
+den samme andelen av hver rute i kommunen (`solv.inonAar`). `gull.inonUtvikling` gir arealet per sone og samlet for hvert år, og
+endringen per periode, også for inngrepsnær natur, som er det inngrepsfri natur mister. `gull.inonIVillreinUtvikling` gir det samme
+i dagens villreinområder. Begge regnes først når siden ber om dem, fordi de henter fire ganger så mange bilder, og to år hentes om
+gangen. Hovedsiden viser utviklingen i en tabell på siden for inngrepsfri natur, og tvillingen i en linje og i stolper per periode.
+
+Alle årene er fra Miljødirektoratets utgave fra april 2024, og kan sammenlignes. Kontroll mot Miljødirektoratets regneark per
+kommune (nettotall 1988–2022, utgitt 29. april 2024):
+
+| Kommune | Endring 1988–2023 her | I regnearket | Villmarkspreget her | I regnearket |
+|---|---|---|---|---|
+| Trondheim | −3 480 daa | −3 456 daa | −10 daa | −12 daa |
+| Oppdal | −44 180 daa | −44 722 daa | −33 220 daa | −33 454 daa |
+| Kautokeino | −156 200 daa | −157 787 daa | −342 100 daa | −343 156 daa |
+
+Arealet selv er rundt 0,5 % høyere her enn i regnearket, som for nyeste år fra før, fordi rutene telles der de er minst halvt dekket.
+Med nyeste år alt talt tok resten 2 sekunder i Trondheim og 27 i Kautokeino, målt i Chromium og ikke på iPhone. Regresjonstesten for hovedsiden ga
+ingen avvik.
 
 **Tvillingen nærmere skissene og designsystemet, 18. oktober 2026.** En ny sammenligning med de sju skissene ga 36 ting å justere i
 tvillingen. De er gjort. Der designsystemet har en regel, følger tvillingen den, også der skissene er annerledes:

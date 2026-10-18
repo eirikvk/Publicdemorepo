@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felles.ts';
-import { byggInon } from '../src/data/gull/inon.ts';
+import { byggInon, byggUtvikling } from '../src/data/gull/inon.ts';
 import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
 import {
   byggEndring as byggBebygdEndring,
@@ -201,4 +201,24 @@ test('utbyggingen: planen alene og planen med egne områder telles hver av sitt 
   assert.equal(R.sum.rn, 50); /* med det egne området: halve feltet */
   assert.equal(finn(R.basis!.ryddet, v => v === 1).length, 100); /* tallet er det samme som rutenettet */
   assert.equal(finn(R.ryddet, v => v === 1).length, 50);
+});
+
+test('inngrepsfri natur over tid: endringen per periode, og inngrepsnær natur får det inngrepsfri natur mister', () => {
+  const U = byggUtvikling(
+    [
+      { km2: [3, 2, 5], sum: 10 },
+      { km2: [2, 2, 5], sum: 9 },
+      { km2: [2, 1.5, 5.5], sum: 9 },
+      { km2: [2, 1.5, 5], sum: 8.5 },
+      { km2: [1, 2, 5], sum: 8 }
+    ],
+    40
+  );
+  assert.deepEqual(U.aar, [1988, 2008, 2013, 2018, 2023]);
+  assert.deepEqual(U.sum, [10, 9, 9, 8.5, 8]);
+  assert.deepEqual(U.andel, [25, 22.5, 22.5, 21.25, 20]);
+  assert.deepEqual(U.perioder[0], { fra: 1988, til: 2008, soner: [-1, 0, 0], naer: 1 });
+  /* sone 1 kan krympe mens sone 2 vokser: sonene flytter seg, og summen er den samme */
+  assert.deepEqual(U.perioder[1], { fra: 2008, til: 2013, soner: [0, -0.5, 0.5], naer: 0 });
+  assert.deepEqual(U.perioder[3], { fra: 2018, til: 2023, soner: [-1, 0.5, 0], naer: 0.5 });
 });

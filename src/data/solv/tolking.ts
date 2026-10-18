@@ -39,6 +39,10 @@ export const INONSONER: [kode: string, farge: string, rgb: number[], avstand: st
   ['2', 'inon2', [204, 234, 127], '1–3 km fra inngrep', 'Sone 2']
 ];
 export const UTENFOR = 255; /* rute uten sone */
+/* Årene Miljødirektoratet har status for inngrepsfri natur, i den samme utgaven av datasettet (april 2024), så de kan sammenlignes.
+   Kartlagene for alle årene har de samme fargene, så de tolkes likt (tolkInon). Nyeste år er det tallene og kartet ellers viser. */
+export const INONAAR = [1988, 2008, 2013, 2018, 2023];
+export const INON_NYESTE = 2023;
 /* Sonen en farge ligger nærmest: 0 villmarkspreget, 1 sone 1, 2 sone 2 */
 const SONEFARGER = INONSONER.map(s => s[2]);
 export const inonSone = (r: number, g: number, b: number) => naermesteFarge(r, g, b, SONEFARGER);

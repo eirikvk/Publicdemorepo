@@ -1,10 +1,51 @@
-/* Temasiden for inngrepsfri natur. Tallene kommer ferdig regnet ut fra gull (katalog.gull.inon). */
+/* Temasiden for inngrepsfri natur. Tallene kommer ferdig regnet ut fra gull (katalog.gull.inon), og utviklingen siden 1988 fra
+   gull.inonUtvikling, som bare leses når siden vises. */
 import { katalog } from '../../data/katalog.ts';
 import { INONSONER } from '../../data/solv/inon.ts';
 import { bildetallet, valgt } from '../../data/motor/valgt.ts';
-import { Fargelinje } from './deler.tsx';
-import { dekar, iTekst, pst } from '../tekst.ts';
+import { ui } from '../tilstand.ts';
+import { Fargelinje, Talltabell } from './deler.tsx';
+import { andelTekst, dekar, iTekst, pst } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
+
+/* Inngrepsfri natur i kommunen for hvert år Miljødirektoratet har status for. Tabellen henter fire ganger så mange bilder som resten
+   av siden, så den leses bare når siden vises. */
+function Utvikling() {
+  const R = ui.side === 'inon' ? valgt(katalog.gull.inonUtvikling) : null;
+  if (!R) return null;
+  if (R.status === 'henter') return <p className="hint">Henter kartene for tidligere år …</p>;
+  if (R.status === 'feil' || !R.verdi)
+    return <p className="hint">Kartene for tidligere år kunne ikke hentes fra Miljødirektoratet.</p>;
+  const U = R.verdi,
+    fra = U.sum[0],
+    d = U.sum[U.sum.length - 1] - fra,
+    tall = (km2: number) => (km2 ? dekar(km2).replace(' daa', '') : '0');
+  return (
+    <>
+      <p>
+        Fra {U.aar[0]} til {U.aar[U.aar.length - 1]} har inngrepsfri natur i kommunen{' '}
+        {d < 0 ? `gått ned med ${iTekst(-d)}` : d > 0 ? `økt med ${iTekst(d)}` : 'vært uendret'}
+        {d && fra > 0 ? ` (${andelTekst((Math.abs(d) / fra) * 100)})` : ''}.
+      </p>
+      <Talltabell
+        tittel="Inngrepsfri natur per år, daa"
+        kolonner={['Sone', ...U.aar.map(String)]}
+        rader={[
+          ...[2, 1, 0].map(i => ({
+            navn: INONSONER[i][4],
+            farge: INONSONER[i][1],
+            tall: U.soner.map(s => [tall(s[i])] as [string])
+          })),
+          { navn: 'Til sammen', klasse: 'sum', tall: U.sum.map(s => [tall(s)] as [string]) }
+        ]}
+      />
+      <p className="hint">
+        Alle årene er fra Miljødirektoratets utgave fra april 2024, talt i de samme rutene. Den første perioden er 20
+        år, de andre fem.
+      </p>
+    </>
+  );
+}
 
 /* Inngrepsfri natur: sonene etter avstand til inngrep. Krysses ikke med planlagt utbygging. */
 export default function Inon() {
@@ -39,6 +80,7 @@ export default function Inon() {
             avstanden til nærmeste tyngre tekniske inngrep. Et nytt inngrep kan derfor flytte sonegrensene flere
             kilometer unna, også når det ikke ligger i en sone selv.
           </p>
+          <Utvikling />
         </>
       )}
     </Temaside>
