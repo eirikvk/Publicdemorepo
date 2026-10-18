@@ -493,14 +493,14 @@ export const katalog = {
       etl: nibioGraa.graabit,
       eksempel: u => (u.midt ? [0, flisVed(u.midt, BITNIVA)] : null)
     }),
-    graaflis: tabell<Flis, ArrayBuffer>({
+    graaflis: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
       navn: 'graaflis',
       endepunkt: E.GRAA,
       tittel: 'Kartbilder av grått areal',
-      om: 'kartbilder av grått areal fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
+      om: 'ett av de to bildene av grått areal fra NIBIO for en flis finere enn nivå 10, 512 x 512 piksler, kalt med [lag, flisen] som bitene (bronse.graabit). Bare til kartet zoomet inn. Nøkkel: «lag/z/x/y».',
       husk: 400,
-      nokkel: flisnavn,
+      nokkel: ([lag, tc]) => `${lag}/${flisnavn(tc)}`,
       etl: nibioGraa.graaflis
     }),
     verneomrader: tabell({
@@ -833,6 +833,30 @@ export const katalog = {
       husk: 3,
       etl: solvInon.inon
     }),
+    inonsoner: tabell<Flis, solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'inonsoner',
+      tittel: 'Inngrepsfri natur per flis',
+      om: 'sonen per piksel i en flis fra nivå 10, kalt med flisen [z, x, y]: 0 uten sone, 1 villmarkspreget, 2 sone 1, 3 sone 2. Til kartet. Nøkkel: flisen som «z/x/y».',
+      teknisk: true,
+      forklaring:
+        'Rutene i bitene tallene regnes av (10,6 meter): på nivå 10 én rute per piksel, og zoomet lenger inn ruta pikselen ligger i, så kartet henter ingenting nytt. Endrer ingen tall.',
+      husk: 32,
+      nokkel: flisnavn,
+      etl: solvInon.inonsoner
+    }),
+    inonsonerUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'inonsonerUt',
+      tittel: 'Inngrepsfri natur zoomet ut',
+      om: 'sonen per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]. Nøkkel: «nummer/z/x/y».',
+      teknisk: true,
+      forklaring:
+        'Hver piksel er flere ruter på 10,6 meter i kommunens biter. Den er villmarkspreget når minst halvparten av rutene er det, ellers sone 1 når minst halvparten er minst 3 km fra inngrep, og ellers sone 2 når minst halvparten er minst 1 km fra inngrep: halvregelen, som for én rute. Endrer ingen tall.',
+      husk: 32,
+      nokkel: ([nr, z, x, y]) => `${nr}/${z}/${x}/${y}`,
+      etl: solvInon.inonsonerUt
+    }),
     graabit: tabell<Flis, solvGraa.Graatrinn>({
       lag: 'solv',
       navn: 'graabit',
@@ -854,6 +878,30 @@ export const katalog = {
         'Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.',
       husk: 3,
       etl: solvGraa.graa
+    }),
+    graatrinn: tabell<Flis, solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'graatrinn',
+      tittel: 'Grått areal per flis',
+      om: 'trinnet per piksel i en flis fra nivå 10, kalt med flisen [z, x, y]: 0 ikke grått, ellers trinnet 1–6 som i bitene. Til kartet. Nøkkel: flisen som «z/x/y».',
+      teknisk: true,
+      forklaring:
+        'På nivå 10 er det rutene i bitene tallene regnes av (10,6 meter), så kartet henter ingenting nytt. Zoomet lenger inn leses de to kartbildene for flisen med den samme regelen som bitene: en piksel er grå når den er minst halvt dekket. Endrer ingen tall.',
+      husk: 32,
+      nokkel: flisnavn,
+      etl: solvGraa.graatrinn
+    }),
+    graatrinnUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
+      lag: 'solv',
+      navn: 'graatrinnUt',
+      tittel: 'Grått areal zoomet ut',
+      om: 'trinnet per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]. Nøkkel: «nummer/z/x/y».',
+      teknisk: true,
+      forklaring:
+        'Hver piksel er flere ruter på 10,6 meter i kommunens biter. Den er grå når minst halvparten av rutene er grå, halvregelen som for én rute, og får da trinnet flest av de grå rutene har. Endrer ingen tall.',
+      husk: 32,
+      nokkel: ([nr, z, x, y]) => `${nr}/${z}/${x}/${y}`,
+      etl: solvGraa.graatrinnUt
     }),
     planIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
       lag: 'solv',

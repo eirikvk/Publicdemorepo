@@ -175,7 +175,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som bilder per bit (2048 x 2048 ruter à 10,6 meter) og i ett punkt |
 | `mdir-naturskog.ts` | Kartet over naturskog (v1), som kartbilder til visning i tvillingen |
-| `nibio-graa.ts` | Kart over grå arealer, som bilder av kommunen og som fliser |
+| `nibio-graa.ts` | Kart over grå arealer, som to bilder per bit (alt grått areal, og andel vegetasjon) og som de samme to bildene per flis til kartet zoomet inn |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
 Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene side om side. METODE.md forklarer metoden bak hver fil.
@@ -195,8 +195,9 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
 | `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen, temaet som andel per rute i bitene med arealet per kategori (`solv.vernAndel` og de andre), og flatene som oppslag for rutene i utbyggingen |
-| `inon.ts` | Inngrepsfri natur: sone per rute |
-| `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon |
+| `inon.ts` | Inngrepsfri natur: sone per rute, sonen per piksel i kartet på hvert nivå (`solv.inonsoner` og `solv.inonsonerUt`), og sonene i naturen |
+| `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon, trinnet per piksel i kartet på hvert nivå (`solv.graatrinn` og `solv.graatrinnUt`), og grønt i bebygd område |
+| `nivaer.ts` | Én sannhet per nivå for temaene i biter: rutene i en bit lest for en flis på nivå 10 og finere, og halvregelen zoomet ut |
 | `punkt.ts` | Oppslag i ett punkt, til detaljene ved trykk i kartet: grunnkartet, kommuneplanen og inngrepsfri natur i punktet, og alle feltene for et område i et naturtema, som felt og verdi. Inngår ikke i tallene. |
 | `kodelister.ts` | Kodelister fra Geonorge og SOSI: arealformål, arealbruksstatus og eierform i kommuneplanen |
 
@@ -224,7 +225,8 @@ Datamotoren, i `src/data/motor/`.
 | `valgt.ts` | Valgt kommune, og en tabell lest for den: `valgt(katalog.gull.inon)` gir raden i cachen, og ber om den hvis den mangler |
 | `tilstand.ts` | Tilstanden som gjelder nå (`app`): valgene og det tekniske. Lageret som sier fra når noe er endret (`endret`, `abonner`), og tidtakingen. |
 | `kommune.ts` | Listen over kommuner, valg av kommune, og det som bes om med en gang: alle tabellene i gull for kommunen |
-| `grunnkart.ts` | Dagens klasser til kartet, fra `gull.dagensKlasser`, dagens klasser per flis for kartlagene (fra sølv på nivået kartet viser), og det sammensatte kartet mens blokkene hentes, med hvor langt hentingen er kommet. Legger nye fliser inn i det sammensatte kartet med en gang (tegningen står i sølv), og sier fra når kartet har stått stille med nye fliser og tallene bygger på det. |
+| `kartverdier.ts` | Hva hver piksel i en kartflis er, fra sølv på nivået flisen er på: dagens klasser, detaljklassene, grått areal og inngrepsfri natur. Begge sidene tegner kartlagene av dette. |
+| `grunnkart.ts` | Dagens klasser til kartet, fra `gull.dagensKlasser`, og det sammensatte kartet mens blokkene hentes, med hvor langt hentingen er kommet. Legger nye fliser inn i det sammensatte kartet med en gang (tegningen står i sølv), og sier fra når kartet har stått stille med nye fliser og tallene bygger på det. |
 | `plan.ts` | Det siden og kartet trenger å vite om utbyggingen: om kommunen har plan, utbyggingen for valgt kommune, og hvor langt den er kommet |
 | `egne.ts` | Egne områder, tegnede og opplastede: en kilde fra brukeren, som legges slik brukeren laget dem i `bronse.egne` |
 
@@ -254,12 +256,12 @@ Kartet, i `src/ui/kart/`. Hvert kartlag har sin fil og følger tilstanden selv.
 | `feltnavn.ts` | Lesbare navn på feltene fra kildene i detaljene, og hvilke felt som bare vises med kildenes egne navn |
 | `maaling.ts` | Måling av hvor jevnt kartet går, til teknisk visning |
 | `fargelegging.ts` | Fargelegging av kartbildene fra NIBIO, fra de rene fargene til kartfargene |
+| `verdilag.ts` | Tegnemotoren for lagene som tegnes piksel for piksel av datamotoren (`kartverdier.ts`), brukt av begge sidene: laget gir bare verdiene farger, uten utjevning |
 | `grunnkart.ts` | Dagens klasser i kartet, tegnet av sølv på nivået kartet viser, så alle kartlagene er enige om hver piksel |
 | `plan.ts` | Planlagt utbygging |
 | `naturtema.ts` | Verneområder og villrein med skravur (områdene er ofte store, og små områder vises som ring), verdsatt natur fylt, sløret over det som ikke er kartlagt, og markering av ett område |
-| `kommunebilde.ts` | Felles for lagene som tegnes av bitene: masken per kartflis, flisene og når laget vises |
-| `inon.ts` | Inngrepsfri natur: fargene for sonene |
-| `graa.ts` | Grått areal: fargene for trinnene, og fliser fra NIBIO når kartet er zoomet inn |
+| `inon.ts` | Inngrepsfri natur: fargene for sonene, og når laget vises |
+| `graa.ts` | Grått areal: fargene for trinnene og grønt i bebygd område, og når laget vises |
 | `egne.ts` | Egne områder: tegning i kartet og omrissene |
 
 React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme navn, for eksempel `Oversikt.css` ved siden av
@@ -350,7 +352,7 @@ med ekte tall, uten å endre hovedsiden.
 | `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
 | `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
 | `tall.ts` | Tallene sidene viser, slått opp ferdige i gull, med tilstanden (henter, feil, ingen, mangler eller ok) |
-| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, to lag fra kartet over naturskog, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse fra rutene for grått areal |
+| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, to lag fra kartet over naturskog, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse. Lagene av grunnkartet og grått areal bruker den samme datamotoren og tegnemotoren som hovedsiden (`kartverdier.ts` og `verdilag.ts`), og bestemmer bare fargene. |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
 | `sider/` | Hovedsidene og temasidene |

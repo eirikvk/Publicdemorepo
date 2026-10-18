@@ -23,7 +23,6 @@ import { graaLag } from './graa.ts';
 import {
   etterVenter,
   fargeleggAltSomVenter,
-  friskOppGamle,
   klare,
   oversiktLag,
   oversiktSynlig,
@@ -296,7 +295,6 @@ export function lagKart() {
     stoppMaaling();
     kartStatus();
     kart!.render();
-    friskOppGamle();
     if (etterVenter) planleggEtterarbeid();
     kartetFlyttes(false);
   });

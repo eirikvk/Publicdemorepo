@@ -15,7 +15,8 @@ import type { Utbygging } from '../../data/gull/utbygging.ts';
 import { flislerret, sti } from '../../data/solv/raster.ts';
 import { katalog } from '../../data/katalog.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
-import { dagensKlasser, lagret } from '../../data/motor/grunnkart.ts';
+import { lagret } from '../../data/motor/grunnkart.ts';
+import { klasserIFlis } from '../../data/motor/kartverdier.ts';
 import { utbyggingen } from '../../data/motor/plan.ts';
 import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
@@ -134,10 +135,10 @@ async function lastPlanFlis(tile: ImageTile) {
       tile.setImage(c);
       return;
     } /* lerretet brukes direkte som flisbilde, uten å pakke det som PNG og lese det inn igjen */
-    /* Planen og dagens klasser per piksel fra sølv, på nivået kartet viser (solv.kommuneplanruter og solv.klasser), med de samme
-       reglene som tallene */
+    /* Planen og dagens klasser per piksel fra sølv, på nivået kartet viser (solv.kommuneplanruter, og klasserIFlis i datamotoren som
+       de andre kartlagene), med de samme reglene som tallene */
     const [kl, P] = await Promise.all([
-      dagensKlasser(tile.getTileCoord() as Flis),
+      klasserIFlis(tile.getTileCoord() as Flis),
       katalog.solv.kommuneplanruter(tile.getTileCoord() as Flis)
     ]);
     if (!kl) throw new Error('mangler dagens klasser');

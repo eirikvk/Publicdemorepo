@@ -29,12 +29,13 @@ export interface Oversikt {
 }
 
 /* Dagens klasser i en blokk på nivå 10: 512 x 512 ruter, plassert i flisnettet som planen (Planruter i felles.ts). kl er klassen per
-   rute som i klasserIFlis: 0 ukjent, ellers plassen i ALLE pluss én (1 bebygd, 2 jordbruk, 3 natur, 4–6 vann). */
+   rute som i klasserIFlis: 0 ukjent, ellers plassen i ALLE pluss én (1 bebygd, 2 jordbruk, 3 natur, 4–6 vann). Det samme for en
+   flis på et annet nivå, og for temaene per flis (graa.ts og inon.ts), med 0 for ingenting. iBlokk gir plasseringen for flisen tc. */
 export interface Klasser extends Plassering {
   h: number;
   kl: Uint8Array;
 }
-const iBlokk = (tc: Flis): Plassering & { h: number } => ({
+export const iBlokk = (tc: Flis): Plassering & { h: number } => ({
   z: tc[0],
   cx0: tc[1] * 512,
   cy0: tc[2] * 512,

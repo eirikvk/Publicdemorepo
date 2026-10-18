@@ -1,105 +1,33 @@
-/* Kartlaget med dagens arealklasser i kartfargene, tegnet av den felles sannheten i sølv på nivået kartet viser, så hver piksel er
-   én klasse, den samme i alle kartlagene: fra nivå 10 og finere solv.klasser (nivå 10 er blokkene tallene regnes av), og zoomet ut
-   solv.klasserUt, utledet av blokkene. Kartbildene fra NIBIO hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn
-   i det sammensatte kartet. Under flisene ligger bildet zoomet ut, som vises mens flisene lages: blokkene satt sammen, eller det
-   sammensatte kartet datamotoren lager av flisene som er hentet (data/motor/grunnkart.ts). Begge er et lerret, og kartet har sin
-   egen kopi av det i kartfargene. */
+/* Kartlaget med dagens arealklasser i kartfargene, tegnet av datamotoren (klasserIFlis) med den felles tegnemotoren (verdilag.ts):
+   den felles sannheten i sølv på nivået kartet viser, så hver piksel er én klasse, den samme i alle kartlagene. Fra nivå 10 og finere
+   solv.klasser (nivå 10 er blokkene tallene regnes av), og zoomet ut solv.klasserUt, utledet av blokkene. Zoomet inn vises også det
+   som er utenfor kommunen. Kartbildene fra NIBIO hentes gjennom katalogen (bronse.grunnkartflis), som også legger dem inn i det
+   sammensatte kartet. Under flisene ligger bildet zoomet ut, som vises mens flisene lages: blokkene satt sammen, eller det sammensatte
+   kartet datamotoren lager av flisene som er hentet (data/motor/grunnkart.ts). Begge er et lerret, og kartet har sin egen kopi av det i
+   kartfargene. */
 import type ImageWrapper from 'ol/Image.js';
-import type ImageTile from 'ol/ImageTile.js';
-import type { LoadFunction } from 'ol/Tile.js';
 import type { Extent } from 'ol/extent.js';
-import type { TileCoord } from 'ol/tilecoord.js';
 import { ol } from './ol.ts';
 import type { Utsnitt } from '../../data/generelt/geometri.ts';
-import { FLISNIVA, UTM, type Flis } from '../../data/solv/felles.ts';
-import { katalog } from '../../data/katalog.ts';
+import { UTM } from '../../data/solv/felles.ts';
 import { oversikt } from '../../data/motor/grunnkart.ts';
-import { abonner, app, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
-import { verdi } from '../../data/motor/valgt.ts';
-import { flislerret, sti } from '../../data/solv/raster.ts';
+import { klasserIFlis } from '../../data/motor/kartverdier.ts';
+import { abonner, lytt, tidSlutt, type Sted } from '../../data/motor/tilstand.ts';
 import { klassefarger, tilFarge } from './fargelegging.ts';
-import {
-  KILDER,
-  MAKSRES,
-  TOM,
-  fargPiksel,
-  plannett,
-  friskOpp,
-  kartflagg,
-  nyttSiden,
-  utdaterte,
-  type Flislag,
-  type Flistegner
-} from './felles.ts';
+import { KILDER, MAKSRES, kartflagg, nyttSiden } from './felles.ts';
 import { kartStatus, opplosning } from './kart.ts';
 import { tegnPlan } from './plan.ts';
+import { verdilag } from './verdilag.ts';
 
-/* Flisene: dagens klasser fra sølv på flisens nivå, i kartfargene, én farge per piksel. Fra nivå 10 og finere solv.klasser, og
-   zoomet ut solv.klasserUt for valgt kommune, klippet mot kommunen. */
 export const klare = new Set<string>(); /* fliser som er ferdig tegnet, som «nivå/x/y» */
-const flisUrl = (tc: TileCoord) => tc.join('/');
-async function lastFlis(tile: ImageTile) {
-  try {
-    const tc = tile.getTileCoord() as Flis,
-      ut = tc[0] < FLISNIVA,
-      nr = app.valgt ? app.valgt.nr : null,
-      G = verdi(katalog.solv.grense),
-      u = plannett.getTileCoordExtent(tc);
-    if (ut && (!nr || !G || G.nr !== nr || !ol.extent.intersects(u, G.ext))) return tile.setState(TOM);
-    const K = await (ut ? katalog.solv.klasserUt([nr!, tc[0], tc[1], tc[2]]) : katalog.solv.klasser(tc)),
-      F = klassefarger(),
-      c = flislerret(),
-      g = c.getContext('2d')!,
-      d = g.createImageData(512, 512),
-      o = d.data;
-    for (let q = 0; q < K.kl.length; q++) {
-      const f = K.kl[q] ? F[K.kl[q] - 1] : null;
-      if (f) fargPiksel(o, 4 * q, f);
-    }
-    g.putImageData(d, 0, 0);
-    if (ut) {
-      g.globalCompositeOperation = 'destination-in';
-      sti(g, G!.koord, u, 512 / (u[2] - u[0]));
-      g.fill('evenodd');
-    }
-    tile.setImage(c);
-    klare.add(tc.join('/'));
-  } catch (e) {
-    tile.setState(3);
-  }
-}
-export const tema = new ol.layer.Tile({
-  className: 'tema',
-  properties: { tittel: 'Dagens arealklasser' },
-  source: new ol.source.XYZ({
-    attributions: [KILDER.nibio],
-    tileUrlFunction: flisUrl,
-    tileGrid: plannett,
-    tilePixelRatio: 2,
-    tileLoadFunction: lastFlis as Flistegner as LoadFunction,
-    transition: 0,
-    projection: UTM,
-    interpolate: false /* hver piksel i kartet er én rute, uten utjevning, som i de andre lagene av klassene */
-  })
+export const tema = verdilag({
+  tittel: 'Dagens arealklasser',
+  kilder: [KILDER.nibio],
+  verdier: klasserIFlis,
+  farger: () => [null, ...klassefarger()],
+  klipp: 'zoomet ut',
+  ferdig: tc => klare.add(tc.join('/'))
 });
-/* Ny kommune: flisene zoomet ut gjelder kommunen, og tegnes på nytt */
-const nyKommune = nyttSiden();
-abonner(() => {
-  const G = verdi(katalog.solv.grense);
-  if (nyKommune('grense', G)) friskOpp(tema);
-});
-
-/* Zoomet ut tegnes inngrepsfri natur og grått areal oppå dagens klasser fra det sammensatte kartet. Fliser som ble tegnet før
-   kartet fikk mer innhold, er derfor utdaterte. Lagene merkes når en ny flis legges inn, og tegnes på nytt neste gang kartet står
-   stille zoomet ut med laget på. Uten dette ble de stående tomme når man zoomet inn, så seg rundt og zoomet ut igjen. */
-export function friskOppGamle() {
-  if (kartflagg.iBevegelse || opplosning() < MAKSRES) return;
-  for (const lag of [...utdaterte]) if (lag.getVisible()) friskOpp(lag);
-}
-/* Lagene som tegnes oppå dagens klasser zoomet ut, og som må tegnes på nytt når det sammensatte kartet får nye fliser.
-   Kartlagene melder seg på her. */
-const oppaa: Flislag[] = [];
-export const tegnesOppaa = (lag: Flislag) => oppaa.push(lag);
 
 /* Bildet zoomet ut. Ett lag, i samme lerret som flisene. Bildet glattes når det vises forminsket, og tegnes med rene piksler når
    det forstørres som plassholder. Det styres per bilde i tegningen, ikke med to lag: et lag som først slås på midt i en
@@ -259,7 +187,6 @@ export function planleggEtterarbeid() {
     }
     if (kartflagg.iBevegelse) return;
     etterVenter = false;
-    friskOppGamle();
     if (antall)
       maalEtterarbeid[0] = `Siste fargelegging: ${Math.round(performance.now() - t0)} ms for ${antall} ${antall === 1 ? 'ny flis' : 'nye fliser'}.`;
   }, 400);
@@ -267,7 +194,6 @@ export function planleggEtterarbeid() {
 /* Datamotoren har lagt en ny flis inn i det sammensatte kartet c, på stedet r */
 lytt('nyFlis', (c, r) => {
   const k = kopi(c);
-  oppaa.forEach(lag => utdaterte.add(lag));
   k.venter.push(r); /* fargelegges når kartet står stille */
   if (opplosning() >= MAKSRES)
     fargeleggVentende(k); /* zoomet ut vises det sammensatte kartet, så flisen må inn med en gang */

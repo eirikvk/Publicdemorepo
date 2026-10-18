@@ -20,7 +20,8 @@ export type Oppgave =
       type: 'graa';
       P: ArrayBuffer;
       V: ArrayBuffer;
-    } /* de to bildene av grått areal i en bit: trinnet per rute, eller null */
+      side?: number;
+    } /* de to bildene av grått areal i en bit (side BIT, som er standard) eller en flis (side 512): trinnet per rute, eller null */
   | { type: 'inon'; P: ArrayBuffer } /* bildet av inngrepsfri natur i en bit: sonen per rute, eller null */
   | { type: 'planlag'; P: ArrayBuffer } /* hele planlaget i en bit: 1 der ruta er tegnet */
   | { type: 'planflis'; P: ArrayBuffer } /* kommuneplanen i en flis: 1 der minst halve ruta er planlagt utbygging */
@@ -45,8 +46,9 @@ export async function utfor(o: Oppgave, flate: (w: number, h: number) => Flate):
   const ut = (v: Uint8Array | null): Utfort => ({ svar: v, overfor: v ? [v.buffer] : [] });
   switch (o.type) {
     case 'graa': {
-      const P = await pakkUt(o.P, BIT, BIT, flate),
-        V = await pakkUt(o.V, BIT, BIT, flate);
+      const s = o.side || BIT,
+        P = await pakkUt(o.P, s, s, flate),
+        V = await pakkUt(o.V, s, s, flate);
       return ut(ellerTom(tolkGraa(P, V), 0));
     }
     case 'inon':

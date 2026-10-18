@@ -17,8 +17,9 @@ import {
   detaljklasseAv,
   klasseAv
 } from '../src/data/solv/klasser.ts';
-import { INONSONER, UTENFOR, inonSone, tolkInon } from '../src/data/solv/inon.ts';
-import { graaTrinn } from '../src/data/solv/graa.ts';
+import { INONSONER, UTENFOR, inonINatur, inonSone, tolkInon } from '../src/data/solv/inon.ts';
+import { GRONT, graaOgGront, graaTrinn } from '../src/data/solv/graa.ts';
+import { biterIFlisen, flestIFlisen, graaHalvpart, rutenIFlis, soneHalvpart } from '../src/data/solv/nivaer.ts';
 import { tolkAreal } from '../src/data/solv/ssb.ts';
 import { planType } from '../src/data/solv/egne.ts';
 import { tilUTM } from '../src/data/solv/projeksjoner.ts';
@@ -191,4 +192,79 @@ test('zoomet ut: klassen flest ruter har, og detaljklassen innenfor den', () => 
   const ut4 = new Uint8Array(512 * 512);
   flestIBlokk(K, 4, ut4, 0, 0, 6);
   assert.equal(ut4[0], 4); /* 13 av 16 er hav */
+});
+
+test('nivåene i kartet: rutene i en bit på nivå 10 og finere, og bitene i en flis', () => {
+  /* biten [8, 1, 2] har rutene 2048–4095 bortover og 4096–6143 nedover på nivå 10. Ruta (5, 7) i biten har verdien 3. */
+  const V = new Uint8Array(2048 * 2048);
+  V[7 * 2048 + 5] = 3;
+  const ut = new Uint8Array(512 * 512);
+  rutenIFlis(V, [8, 1, 2], [10, 4, 8], ut); /* flisen øverst til venstre i biten: én rute per piksel */
+  assert.equal(ut[7 * 512 + 5], 3);
+  assert.equal(
+    ut.reduce((a, v) => a + v, 0),
+    3
+  );
+  const fin = new Uint8Array(512 * 512);
+  rutenIFlis(V, [8, 1, 2], [11, 8, 16], fin); /* nivå 11: hver rute er 2 x 2 piksler */
+  for (const [x, y] of [
+    [10, 14],
+    [11, 14],
+    [10, 15],
+    [11, 15]
+  ])
+    assert.equal(fin[y * 512 + x], 3);
+  assert.equal(
+    fin.reduce((a, v) => a + v, 0),
+    12
+  );
+  const oversatt = new Uint8Array(512 * 512);
+  rutenIFlis(V, [8, 1, 2], [10, 4, 8], oversatt, [9, 8, 7, 6]); /* med tabell: 0 blir 9, 3 blir 6 */
+  assert.equal(oversatt[7 * 512 + 5], 6);
+  assert.equal(oversatt[0], 9);
+  assert.deepEqual(
+    biterIFlisen(
+      [
+        [8, 1, 2],
+        [8, 3, 2]
+      ],
+      [10, 4, 8]
+    ),
+    [[8, 1, 2]]
+  );
+  assert.deepEqual(
+    biterIFlisen(
+      [
+        [8, 1, 2],
+        [8, 3, 2],
+        [8, 4, 2]
+      ],
+      [7, 1, 1]
+    ),
+    [[8, 3, 2]]
+  ); /* nivå 7: bitene 2–3 bortover og 2–3 nedover */
+});
+
+test('nivåene i kartet: halvregelen zoomet ut for grått areal og inngrepsfri natur', () => {
+  /* på nivå 9 er hver piksel 2 x 2 ruter. Biten [8, 0, 0] fyller flisen [9, 0, 0] til og med piksel 1023, her de to første. */
+  const G = new Uint8Array(2048 * 2048);
+  G.set([2, 0], 0); /* piksel 0: to grå (trinn 2 og 6) av fire */
+  G.set([6, 0], 2048);
+  G.set([0, 4], 2); /* piksel 1: én grå av fire */
+  const ut = new Uint8Array(512 * 512);
+  flestIFlisen(G, [8, 0, 0], [9, 0, 0], ut, 7, graaHalvpart);
+  assert.equal(ut[0], 2); /* minst halvparten er grå, og likt mellom trinnene: det laveste */
+  assert.equal(ut[1], 0);
+  const S = new Uint8Array(2048 * 2048).fill(UTENFOR);
+  S.set([0, 1], 0); /* piksel 0: villmarkspreget og sone 1 øverst, sone 2 og uten sone nederst */
+  S.set([2, UTENFOR], 2048);
+  S.set([0, 2], 2); /* piksel 1: én villmarkspreget og én i sone 2 */
+  const us = new Uint8Array(512 * 512);
+  flestIFlisen(S, [8, 0, 0], [9, 0, 0], us, 3, soneHalvpart);
+  assert.equal(us[0], 2); /* halvparten er minst 3 km fra inngrep: sone 1 (pluss én) */
+  assert.equal(us[1], 3); /* bare halvparten er minst 1 km fra inngrep: sone 2 (pluss én) */
+  assert.equal(us[2], 0); /* uten sone */
+  /* sammen med dagens klasser på samme nivå: grønt i bebygd område og sonene bare i naturen */
+  assert.deepEqual([...graaOgGront([0, 3, 0, 0], [BEB + 1, BEB + 1, NAT + 1, 0])], [GRONT, 3, 0, 0]);
+  assert.deepEqual([...inonINatur([1, 2, 3], [NAT + 1, JOR + 1, NAT + 1])], [1, 0, 3]);
 });

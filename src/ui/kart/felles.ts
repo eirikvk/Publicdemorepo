@@ -40,38 +40,6 @@ export const kartflagg = {
 /* En flate fra OpenLayers som sti i et lerret der u er utsnittet og s er piksler per meter */
 export const geomSti = (g: CanvasRenderingContext2D, geom: MultiPolygon | Polygon, u: Utsnitt, s: number) =>
   sti(g, (geom.getType() === 'MultiPolygon' ? geom.getCoordinates() : [geom.getCoordinates()]) as Flerflate, u, s);
-/* Myker opp en maske litt, på stedet. Brukes for kommunebildene til inngrepsfri natur og grått areal. */
-export function jevn(P: Uint8ClampedArray, w: number, h: number) {
-  /* myker opp maskene litt (vekter 1-2-1 begge veier), så sonegrensene ikke får trappetrinn fra rutene når kartet er zoomet langt inn */
-  const n = 4 * w,
-    over = new Uint8Array(n),
-    denne = new Uint8Array(n);
-  for (let y = 0; y < h; y++) {
-    /* bortover, rad for rad */
-    const o = y * n;
-    denne.set(P.subarray(o, o + n));
-    for (let x = 0; x < n; x += 4) {
-      const a = x ? x - 4 : x,
-        b = x < n - 4 ? x + 4 : x;
-      P[o + x] = (denne[a] + 2 * denne[x] + denne[b] + 2) >> 2;
-      P[o + x + 1] = (denne[a + 1] + 2 * denne[x + 1] + denne[b + 1] + 2) >> 2;
-      P[o + x + 2] = (denne[a + 2] + 2 * denne[x + 2] + denne[b + 2] + 2) >> 2;
-    }
-  }
-  over.set(P.subarray(0, n));
-  for (let y = 0; y < h; y++) {
-    /* nedover: raden over er tatt vare på før den ble skrevet over */
-    const o = y * n,
-      u = y < h - 1 ? o + n : o;
-    denne.set(P.subarray(o, o + n));
-    for (let x = 0; x < n; x += 4) {
-      P[o + x] = (over[x] + 2 * denne[x] + P[u + x] + 2) >> 2;
-      P[o + x + 1] = (over[x + 1] + 2 * denne[x + 1] + P[u + x + 1] + 2) >> 2;
-      P[o + x + 2] = (over[x + 2] + 2 * denne[x + 2] + P[u + x + 2] + 2) >> 2;
-    }
-    over.set(denne);
-  }
-}
 export const TOM = 4; /* OpenLayers' tilstand for en flis uten innhold */
 /* Venter til nettleseren har fått gjort annet arbeid, som å svare på trykk. Tungt arbeid som deles opp med denne, blir flere korte
    oppgaver i stedet for én lang. */
@@ -106,12 +74,9 @@ export const tegnetKilde = (tegnFlis: Flistegner, kilder: string[], skarp = fals
   });
 /* Tegner flisene i et lag på nytt. De gamle står til de nye er klare. */
 let friskNr = 0;
-export const utdaterte =
-  new Set<Flislag>(); /* lag som skal tegnes på nytt neste gang kartet står stille zoomet ut, se friskOppGamle i grunnkart.ts */
 /* OpenLayers merker setKey som intern, men det er den som gir nye fliser uten å kaste de gamle først */
 type MedNokkel = { setKey(nokkel: string): void };
 export const friskOpp = (lag: Flislag) => {
-  utdaterte.delete(lag);
   (lag.getSource() as unknown as MedNokkel).setKey(String(++friskNr));
 };
 /* Kartlagene følger tilstanden. Hvert lag sjekker ved hver endring om det det tegnes av, er nytt: ny(nokkel, verdi) gir true første

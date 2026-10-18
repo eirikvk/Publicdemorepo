@@ -8,8 +8,8 @@ import { hent, lagHenter } from './henting.ts';
 import { wmsBilde } from './wms.ts';
 
 /* Egne stiler uten kantstrek. Alt grått areal tegnes i svart. Flatene med oppgitt andel vegetasjon får en rødfarge som sier hvilket
-   trinn de er i. Kartflisene henter begge lagene i ett bilde. Til tallene hentes de hver for seg: i ett bilde blandes fargene
-   langs kantene, og med ruter på 20 meter ga det for mye grått areal og for lite vegetasjon. */
+   trinn de er i. De to lagene hentes hver for seg, både til tallene og til kartet: i ett bilde blandes fargene langs kantene, og med
+   ruter på 20 meter ga det for mye grått areal og for lite vegetasjon. */
 const graaFyll = (f: string) =>
   `<PolygonSymbolizer><Fill><CssParameter name="fill">${f}</CssParameter></Fill></PolygonSymbolizer>`;
 const graaLagStil = [
@@ -23,13 +23,13 @@ const graaBilde = (hva: number[], u: Utsnitt, w: number, h: number) =>
     format: 'image/png',
     transparent: 'true'
   });
-/* Kartbildene til kartlaget, med begge lagene i ett bilde, hentes gjennom en egen kø */
-export const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
-/* Adressen til et kartbilde på 512 x 512 piksler av utsnittet u, med begge lagene */
-export const graaFlisUrl = (u: Utsnitt) => graaBilde([0, 1], u, 512, 512);
-/* Tabellen bronse.graaflis: et kartbilde av grått areal for flisen tc [z, x, y], til kartlaget */
-export async function graaflis(tc: Flis): Promise<ArrayBuffer> {
-  return hentGraaFlis(graaFlisUrl(flisUtsnitt(tc)));
+/* Kartbildene til kartet zoomet inn hentes gjennom en egen kø */
+const hentGraaFlis = lagHenter('NIBIO', 'Grått areal');
+/* Tabellen bronse.graaflis: ett av de to bildene av grått areal for flisen tc [z, x, y] finere enn nivå 10, 512 x 512 piksler, kalt
+   med [lag, tc]: lag 0 er alt grått areal, lag 1 flatene med oppgitt andel vegetasjon, som for bitene (graabit). Til kartet zoomet
+   inn (solv.graatrinn). */
+export async function graaflis([lag, tc]: [number, Flis]): Promise<ArrayBuffer> {
+  return hentGraaFlis(graaBilde([lag], flisUtsnitt(tc), 512, 512));
 }
 /* Tabellen bronse.graabit: ett av de to bildene av biten tc (en flis på nivå 8, solv/felles.ts) med 2048 x 2048 ruter à 10,6 meter,
    som PNG. lag 0 er alt grått areal, lag 1 flatene med oppgitt andel vegetasjon. De hentes hver for seg, fordi fargene blandes langs

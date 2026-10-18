@@ -143,29 +143,35 @@ de samme fire delradene. Når to rutenett krysses, slås midtpunktet av ruta i p
 | `EGET_MIN_M2` | 400 m² | Minste tegnede område som regnes ut |
 | `BERORT` | en halv rute, 56 m² | Et verneområde, villreinområde eller en lokalitet regnes som berørt av planlagt utbygging når utbyggingen dekker minst så mye av det. Arealet telles uansett |
 
-**Én sannhet per nivå i kartet.** Grunnkartet ligger i sølv på hvert nivå kartet kan vise, og alle kartlagene tegnes av det samme
-nivået, så hver piksel er den samme klassen i alle lagene (dagens arealklasser, planlagt utbygging, grått areal, inngrepsfri natur
-og tvillingens lag av skog og andre detaljklasser):
+**Én sannhet per nivå i kartet.** Grunnkartet, grått areal og inngrepsfri natur ligger i sølv på hvert nivå kartet kan vise, og
+alle kartlagene tegnes av det samme nivået, så hver piksel er det samme i alle lagene (dagens arealklasser, planlagt utbygging, grått
+areal, inngrepsfri natur og tvillingens lag av skog, andre detaljklasser og grått areal):
 
-- Nivå 10, ruter på 10,6 meter: blokkene tallene regnes av (`solv.klasser`), lagret for mange kommuner. Det er den ferdige
+- Nivå 10, ruter på 10,6 meter: rutene tallene regnes av. For grunnkartet blokkene (`solv.klasser`), lagret for mange kommuner, og
+  for grått areal og inngrepsfri natur bitene (`solv.graabit` og `solv.inonbit`), så kartet henter ingenting nytt. Det er den ferdige
   sannheten.
 - Finere nivåer, 11, 12 og videre (5,3, 2,6 meter og så videre): `solv.klasser` og `solv.detaljklasser` lest av NIBIOs kartbilde på
-  det nivået, med detaljklassen innenfor dagens klasse på det samme nivået. Ingen tall regnes av dem.
-- Zoomet ut, under nivå 10: `solv.klasserUt` og `solv.detaljklasserUt`, utledet av blokkene på nivå 10. Hver piksel er flere ruter, og
-  får klassen flest av dem har, og detaljklassen flest av rutene med den klassen har. Slik ligger skog alltid innenfor natur også
-  zoomet ut.
+  det nivået, med detaljklassen innenfor dagens klasse på det samme nivået. Grått areal (`solv.graatrinn`) lest av de to kartbildene
+  fra NIBIO på det nivået, med den samme regelen som bitene. Inngrepsfri natur (`solv.inonsoner`) er rutene på 10,6 meter, så
+  sonegrensene følger dem også zoomet inn. Ingen tall regnes av de finere nivåene.
+- Zoomet ut, under nivå 10: utledet av nivå 10 (`solv.klasserUt`, `solv.detaljklasserUt`, `solv.graatrinnUt` og
+  `solv.inonsonerUt`). Hver piksel er flere ruter. Den får klassen flest av dem har, og detaljklassen flest av rutene med den klassen
+  har, så skog alltid ligger innenfor natur. Grått areal og sonene følger halvregelen, som for én rute: en piksel er grå når minst
+  halvparten av rutene er grå, og i en sone når minst halvparten av rutene er minst så langt fra inngrep.
 
-Pikslene tegnes uten utjevning, også når nettleseren forstørrer kartet til skjermens tetthet, så det er ingen blandede kantfarger.
-Bildet zoomet ut av hele kommunen (`solv.klassekart`) ligger under flisene og vises bare mens de lages.
+Lagene som bygger på dagens klasser, leser dem på det samme nivået: grønt i bebygd område er bebygd, men ikke grått, og inngrepsfri
+natur vises bare der det er natur, som i tallene. Begge sidene bruker den samme datamotoren (`motor/kartverdier.ts`), som sier hva
+hver piksel er, og den samme tegnemotoren (`ui/kart/verdilag.ts`), som bare gir verdiene farger. Pikslene tegnes uten utjevning, også
+når nettleseren forstørrer kartet til skjermens tetthet, så det er ingen blandede kantfarger. Bildet zoomet ut av hele kommunen
+(`solv.klassekart`) ligger under flisene og vises bare mens de lages.
 
-**Kartets egne regler.** Kartet tegner de samme dataene piksel for piksel, og bruker de samme tersklene. På to steder har kartet
-egne regler, som bare gjelder det som vises, ikke tallene:
+**Kartets egne regler.** Kartet tegner de samme dataene piksel for piksel, og bruker de samme tersklene. To regler for planlagt
+utbygging gjelder bare det som vises, ikke tallene:
 
-- Grått areal zoomet inn (`ui/kart/graa.ts`): i flisene fra NIBIO er en piksel grå fra en fjerdedel dekning (`KART_GRAA`, 64 av
-  255), så kantene på små flater ikke forsvinner. Zoomet ut tegnes grønt i bebygd område langs kanten av det grå der den utjevnede
-  masken er under en fjerdedel (`KART_KANT`). Arealet regnes med halvregelen.
 - Smale striper zoomet inn (`ui/kart/plan.ts`): en piksel med planlagt utbygging vises når ruta den ligger i, eller en av de fire
   naborutene, er et felt som ble beholdt i planrutenettet (`iEllerInntil`). Tallene bruker selve rutenettet.
+- Planlagt utbygging zoomet ut (nivå 9 og grovere): en piksel får farge når minst én rute i den har planlagt utbygging, og styrken
+  følger hvor stor del av pikselen det gjelder, så små felt ikke forsvinner.
 
 **Enhet og avrunding.** Arealer regnes i km², som SSB oppgir. Planlagt utbygging og kryssingene med den telles i ruter i
 planrutenettet, og regnes om med 0,112 dekar per rute i gull. Inngrepsfri natur og grått areal rundes til nærmeste 10 dekar i gull.
@@ -1149,6 +1155,21 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Grått areal og inngrepsfri natur per nivå, og én kartmotor, 18. oktober 2026.** Grått areal zoomet inn ble tegnet av egne
+kartbilder fra NIBIO med en egen grense: en piksel var grå fra en fjerdedel dekket, mens tallene krever halvparten. Zoomet ut ble
+grått areal og inngrepsfri natur glattet, og inngrepsfri natur også zoomet inn. Kartet kunne derfor vise grått som ikke var med i
+tallene, og sonegrenser som ikke fulgte rutene. Nå ligger begge i sølv på hvert nivå (se Felles grunnlag). Nivå 10 er bitene
+tallene regnes av. Finere nivåer er for grått areal NIBIOs to bilder på nivået, lest med den samme regelen, og for inngrepsfri natur
+rutene forstørret. Zoomet ut gjelder halvregelen. Grønt i bebygd område er bebygd, men ikke grått, i dagens klasser på det samme
+nivået, som i tallene. Begge sidene tegner disse lagene og lagene av grunnkartet med den samme datamotoren (`motor/kartverdier.ts`)
+og den samme tegnemotoren (`ui/kart/verdilag.ts`). Tvillingens egne tegnefunksjoner og `ui/kart/kommunebilde.ts` er fjernet.
+To ting ser annerledes ut. Zoomet ut forsvinner smale veier fra grått areal når de dekker under halvparten av pikselen. Før viste
+tvillingen en piksel som grå når én rute i den var grå. Zoomet inn følger sonegrensene rutene på 10,6 meter som trappetrinn.
+Regresjonstesten ga de samme tallene. Kartbildene av grått areal i Trondheim (1,7–1,9 % ulike piksler) og av inngrepsfri natur
+zoomet ut i Surnadal (0,3–0,5 %) endret seg. Med grått areal slått på er ingen bebygde piksler synlige i Trondheim på 30, 8 og 2
+meter per skjermpunkt. Naturen på forsiden av tvillingen vises etter 1,8 sekunder i Trondheim og 4,8 sekunder i Kautokeino. Målt i
+Chromium, ikke på iPhone.
 
 **Én sannhet per nivå i kartet, 18. oktober 2026.** I Kautokeino endret elvene seg når skog ble slått av og på. Kartlaget med dagens
 arealklasser tegnet NIBIOs kartbilde direkte når kartet var zoomet inn, og bildet av hele kommunen med blandede farger når det var
