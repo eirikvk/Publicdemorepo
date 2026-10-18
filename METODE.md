@@ -95,14 +95,22 @@ GeoJSON. Arealet av en flate, utsnittet rundt den og hvilken vei en ring går ru
 **Areal og målestokk.** Arealet av en flate regnes ut fra koordinatene, med ytterkanten minus hullene (`areal`). I UTM er flater litt
 større i kartet enn i terrenget, og mer jo lenger øst eller vest for sonens midtlinje. Hvert areal deles derfor på k², der
 k = 0,9996 · (1 + (x − 500 000)² / (2 · 6 380 000²)) og x er øst-koordinaten midt i kommunen (`m2PerKm2`). For Trondheim utgjør
-rettelsen under 0,1 %, og lengst øst eller vest i Norge knapt 1 %.
+rettelsen under 0,1 %, og lengst øst eller vest i Norge knapt 1 %. Areal som telles i ruter, rettes med faktoren midt i biten ruta
+ligger i (`bitFaktor`), også rutene i planrutenettet. Da blir arealene like enten de telles i biter eller blokker, og de kan summeres
+over kommuner. Innenfor en bit endrer faktoren seg mindre enn 0,1 %.
 
-**Fra flater til ruter.** Når en flate skal legges i et rutenett, tegnes den i et lerret i nettleseren (`raster.ts`). Lerretet
-glatter kantene, så en rute i kanten får delvis dekning, fra 0 til 255. Det er det eneste sølv og gull trenger fra nettleseren.
-Resultatet avhenger litt av rekkefølgen flatene tegnes i, se Kontroller.
+**Fra flater til ruter.** Hvor stor andel av hver rute en flate dekker, regnes i egen kode (`generelt/dekning.ts`): hver ruterad
+deles i fire delrader, og langs hver delrad finnes nøyaktig hvor flaten begynner og slutter. Bortover er andelen eksakt, nedover er
+den et snitt av de fire delradene. Andelen lagres med 16 biter som spenn per rad. Overlapper flater, telles området én gang, og et
+hull i én flate er dekket hvis en annen flate ligger over det. Svaret er det samme i alle nettlesere, og regnes i bakgrunnstråden.
+Kommunegrensen bruker dette. De andre flatene tegnes foreløpig i et lerret i nettleseren (`raster.ts`), som glatter kantene, så en
+rute i kanten får delvis dekning fra 0 til 255. Resultatet der avhenger litt av rekkefølgen flatene tegnes i, se Kontroller.
 
 **Halvregelen.** En rute hører til en flate når flaten dekker minst halve ruta (`HALV`, 128 av 255). Det samme gjelder bildene fra
-tjenestene: en piksel teller når den er minst halvveis dekket. Det er tre unntak:
+tjenestene: en piksel teller når den er minst halvveis dekket. Det er fire unntak:
+
+- Kommunegrensen: en rute langs grensen telles med den delen av den som ligger i kommunen (`solv.kommunebiter`). Klassen i ruta
+  kommer fra bildet, og arealet er ruteareal ganger andelen. Slik telles ingen rute i to kommuner, og ingen faller mellom.
 
 - I bildene av grunnkartet brukes alle piksler som er minst 100 av 255 dekket (`SYNLIG`). Klassen er den det er mest av i pikselen.
 - Sjekken av om kommunen har kommuneplan bruker også 100 av 255.
@@ -479,10 +487,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Oversikt over kommuneplanen** (`bronse.planoversikt`). Hentes fra `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Ett
   bilde av kommuneplanen over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Det er et vanlig
   PNG, ikke med fargetabell, for der forsvinner piksler som en liten flate bare dekker en bit av.
-- **Kommunen i bitene** (`solv.kommunebiter`). Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som
-  telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.
-- **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen har minst én rute, etter halvregelen. For kommunene med lagrede
-  klasser står listen i registeret.
+- **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
+  bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
+  Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
+  dekker.
+- **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
 - **Dagens klasser satt sammen av blokkene** (`solv.klassekart`). Dagens klasser for hele kommunen zoomet ut, satt sammen av
   blokkene, til kartet.
 - **Hvor kommuneplanen ligger** (`solv.planoversikt`). Hvor i kommunen planen ligger, fra oversikten. Kartbildene fra DiBK hentes
@@ -744,12 +753,7 @@ utbygging.
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
-   `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
-   [Kartverket, Administrative enheter, kommuner
-   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
-3. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit` → `solv.inon`). Hentes fra
+2. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit` → `solv.inon`). Hentes fra
    `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit fra laget status (2023), med ruter på
    10,6 meter, uten glatting av kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde:
    [Miljødirektoratet, Inngrepsfri natur i
@@ -757,6 +761,11 @@ utbygging.
    minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst
    5 km). Justeres: Rutene i kommunen telles per sone, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve
    ruta.
+3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+   `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
+   [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
+   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
 4. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
    og andelen av landarealet regnes ut.
 
@@ -764,8 +773,10 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Kommunen i bitene** (`solv.kommunebiter`). Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som
-  telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.
+- **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
+  bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
+  Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
+  dekker.
 
 ### Usikkerhet
 
@@ -776,8 +787,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
-`src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`, `src/data/gull/inon.ts`. Kortet: `src/ui/komponenter/Inon.tsx`.
+`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`,
+`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/gull/inon.ts`. Kortet: `src/ui/komponenter/Inon.tsx`.
 
 <!-- /forklaringer:inon -->
 
@@ -831,8 +842,10 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Kommunen i bitene** (`solv.kommunebiter`). Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som
-  telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.
+- **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
+  bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
+  Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
+  dekker.
 
 ### Usikkerhet
 
@@ -1045,6 +1058,15 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Kommunegrensen med andel, og målestokken per bit, 18. oktober 2026.** Første trinn i forslaget om overlayanalyse med raster og
+vektor. Kommunegrensen klippet før rutene etter halvregelen. Nå får hver rute langs grensen andelen av den som ligger i kommunen,
+regnet i egen kode med fire delrader per ruterad (`generelt/dekning.ts`), i bakgrunnstråden. Alt som telles i kommunen, bruker den:
+dagens klasser og planlagt utbygging, grått areal, inngrepsfri natur, plandekningen og detaljklassene. Blokkene i kommunen er nå alle
+blokker der kommunen dekker noe av minst én rute, og listen i registeret over lagrede klasser brukes ikke lenger til det. Samtidig
+rettes alle arealer som telles i ruter, for målestokken i biten ruta ligger i. Arealet av planlagt utbygging var ikke rettet før.
+Endringene er små: planlagt utbygging på natur i Trondheim 2,422 → 2,421 km² (−0,06 %), i Surnadal −0,16 % og i Malvik −0,03 %,
+inngrepsfri natur i Trondheim 27,46 → 27,47 km², og grått areal i Oslo 125,32 → 125,34 km². Kartbildene er like.
 
 **Kortere stopp på siden, 18. oktober 2026.** En måling av hvor lenge siden er opptatt i ett strekk, uten å kunne svare på trykk,
 viste to stopp på over et halvt sekund. Ellers var alle under 0,2 sekunder.

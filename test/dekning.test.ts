@@ -15,6 +15,7 @@ import {
   intervallUnion,
   kanterI,
   regel,
+  ringer,
   type Nett
 } from '../src/data/generelt/dekning.ts';
 import { areal, flatesok, type Flerflate } from '../src/data/generelt/geometri.ts';
@@ -34,7 +35,7 @@ const firkant = (x0: number, y0: number, x1: number, y1: number): Flerflate => [
   ]
 ];
 const en = (flater: Flerflate[], R: Nett = NETT) =>
-  dekning(kanterI([{ lag: 0, flater }], R), R.w, R.h, regel([], [0]), 1, 1)[0];
+  dekning(kanterI([{ lag: 0, ringer: ringer(flater) }], R), R.w, R.h, regel([], [0]), 1, 1)[0];
 const ruter = (koord: Flerflate) => areal(koord) / (RES * RES);
 
 test('dekning: firkant langs rutekantene gir hele ruter', () => {
@@ -97,9 +98,9 @@ test('dekning: kategorier i rekkefølge, og maske', () => {
     b = firkant(100, 100, 300, 300),
     K = kanterI(
       [
-        { lag: 0, flater: [firkant(0, 0, 250, 400)] } /* masken, som kommunen */,
-        { lag: 1, flater: [a] },
-        { lag: 2, flater: [b] }
+        { lag: 0, ringer: ringer([firkant(0, 0, 250, 400)]) } /* masken, som kommunen */,
+        { lag: 1, ringer: ringer([a]) },
+        { lag: 2, ringer: ringer([b]) }
       ],
       NETT
     ),
@@ -146,8 +147,8 @@ test('dekning: én og én rute gir det samme som skanlinjen', () => {
     kommune = firkant(0, 0, 222.2, 400),
     K = kanterI(
       [
-        { lag: 0, flater: [kommune] },
-        { lag: 1, flater: [T] }
+        { lag: 0, ringer: ringer([kommune]) },
+        { lag: 1, ringer: ringer([T]) }
       ],
       NETT
     ),

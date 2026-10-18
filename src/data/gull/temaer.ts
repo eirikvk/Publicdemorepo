@@ -28,12 +28,13 @@ import {
   type Temaomrader
 } from '../solv/temaer.ts';
 import { andel, landareal } from './felles.ts';
-import type { Utbygging } from './utbygging.ts';
+import { ruteVekt, type Utbygging } from './utbygging.ts';
 
-/* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg) */
+/* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg). Rutene er vektet som i utbyggingen
+   (ruteVekt i utbygging.ts). */
 export interface Kryss {
-  alt: Int32Array;
-  eg: Int32Array[];
+  alt: Float64Array;
+  eg: Float64Array[];
 }
 /* Ruter med planlagt utbygging på natur (nat), og hvor mange av dem som ligger utenfor det kartlagte (ukjent) */
 export interface Ukjent {
@@ -49,8 +50,8 @@ export interface Gap extends Ukjent {
    med planlagt utbygging (plan) og i smale striper (smal) */
 export interface Kryssing {
   kryss: { S: Kryss; P: Kryss | null };
-  plan: Int32Array;
-  smal: Int32Array;
+  plan: Float64Array;
+  smal: Float64Array;
   ruteKm2: number;
 }
 /* Gir oppslaget for et område. lag() lager det, og den som kaller, kan huske det per område (nokkel). */
@@ -93,31 +94,32 @@ export function kryssNatur(O: TemaOmrade[], R: Utbygging, treff: Int32Array, nK:
   const B = R.basis || null,
     nE = R.eget ? R.antallEgne : 0,
     nC = R.celler.length; /* radene etter disse har bare planen alene */
-  const tom = (): Kryss => ({ alt: new Int32Array(nK), eg: Array.from({ length: nE }, () => new Int32Array(nK)) }),
+  const tom = (): Kryss => ({ alt: new Float64Array(nK), eg: Array.from({ length: nE }, () => new Float64Array(nK)) }),
     S = tom(),
     P = tom();
-  const plan = new Int32Array(O.length),
-    smal = new Int32Array(O.length);
+  const plan = new Float64Array(O.length),
+    smal = new Float64Array(O.length);
   for (let r = 0; r < R.rader.length && O.length; r++) {
     const a = treff[r];
     if (a < 0) continue;
     const i = R.rader[r],
-      v = O[a].v || 0;
+      v = O[a].v || 0,
+      w = ruteVekt(R, i);
     if (r < nC) {
       const e = nE ? verdi(R.eget!, i) : 0;
       if (verdi(R.ryddet, i)) {
-        plan[a]++;
-        S.alt[v]++;
-        if (e) S.eg[e - 1][v]++;
-      } else smal[a]++;
+        plan[a] += w;
+        S.alt[v] += w;
+        if (e) S.eg[e - 1][v] += w;
+      } else smal[a] += w;
       if (B && verdi(B.ryddet, i)) {
-        P.alt[v]++;
-        if (e) P.eg[e - 1][v]++;
+        P.alt[v] += w;
+        if (e) P.eg[e - 1][v] += w;
       }
     } else {
       const e = verdi(R.eget!, i);
-      P.alt[v]++;
-      if (e) P.eg[e - 1][v]++;
+      P.alt[v] += w;
+      if (e) P.eg[e - 1][v] += w;
     }
   }
   return { kryss: { S, P: B ? P : null }, plan, smal, ruteKm2: ruteKm2(R.z) };
@@ -138,12 +140,13 @@ export function kryssKartlagt(R: Utbygging, M: Omradesok | null): Gap {
     G = ny(),
     GP = ny();
   const tell = (T: Ukjent & { eg: Ukjent[] }, i: number, uk: boolean) => {
-    const e = nE ? verdi(R.eget!, i) : 0;
-    T.nat++;
-    if (uk) T.ukjent++;
+    const e = nE ? verdi(R.eget!, i) : 0,
+      w = ruteVekt(R, i);
+    T.nat += w;
+    if (uk) T.ukjent += w;
     if (e) {
-      T.eg[e - 1].nat++;
-      if (uk) T.eg[e - 1].ukjent++;
+      T.eg[e - 1].nat += w;
+      if (uk) T.eg[e - 1].ukjent += w;
     }
   };
   for (let r = 0; r < R.rader.length; r++) {

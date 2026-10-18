@@ -635,10 +635,9 @@ export const katalog = {
       lag: 'solv',
       navn: 'detaljblokker',
       tittel: 'Blokkene med detaljklasser',
-      om: 'blokkene på nivå 10 for kommunen, som [10, x, y]: de lagrede i registeret (bronse.detaljregister), eller ellers blokkene kommunen har ruter i (solv.blokker), som hentes fra NIBIO.',
+      om: 'blokkene på nivå 10 for kommunen, som [10, x, y]: de samme som for dagens klasser (solv.blokker). De lagrede leses fra filene, de andre hentes fra NIBIO.',
       teknisk: true,
-      forklaring:
-        'Blokkene med detaljklasser for kommunen: de som er lagret sammen med siden, eller ellers alle blokkene kommunen har ruter i.',
+      forklaring: 'Blokkene med detaljklasser for kommunen: de samme blokkene som for dagens klasser.',
       husk: 12,
       etl: solvGrunnkart.detaljblokker
     }),
@@ -646,14 +645,12 @@ export const katalog = {
       lag: 'solv',
       navn: 'blokker',
       tittel: 'Blokkene i kommunen',
-      om: 'blokkene på et nivå (10 for tallene) der kommunen har minst én rute, etter halvregelen, kalt med [kommunenummer, nivå]. For kommunene med lagrede klasser står listen i registeret (bronse.klasseregister). Nøkkel: «nummer/nivå».',
+      om: 'blokkene på nivå 10 der kommunen dekker noe av minst én rute, fra kommunens andel i bitene (solv.kommunebiter), kalt med [kommunenummer, nivå]. Nøkkel: «nummer/nivå».',
       teknisk: true,
-      forklaring:
-        'Blokkene der kommunen har minst én rute, etter halvregelen. For kommunene med lagrede klasser står listen i registeret.',
+      forklaring: 'Blokkene der kommunen dekker noe av minst én rute.',
       husk: 12,
       nokkel: ([nr, z]) => `${nr}/${z}`,
-      etl: solvGrunnkart.blokker,
-      lagret: solvGrunnkart.lagredeBlokker
+      etl: solvGrunnkart.blokker
     }),
     klassekart: tabell<string, solvGrunnkart.Oversikt>({
       lag: 'solv',
@@ -745,10 +742,10 @@ export const katalog = {
       lag: 'solv',
       navn: 'kommunebiter',
       tittel: 'Kommunen i bitene',
-      om: 'bitene kommunen har ruter i (2048 x 2048 ruter à 10,6 meter), med kommunens flate i hver etter halvregelen: én bit per rute, eller hel når hele biten er i kommunen',
+      om: 'bitene kommunen dekker noe av (2048 x 2048 ruter à 10,6 meter), med dekningsandelen per rute som spenn (generelt/dekning.ts), eller hel når hele biten er i kommunen, og målestokken i biten',
       teknisk: true,
       forklaring:
-        'Kommunens flate tegnes én gang i hver bit den berører, og deles av temaene som telles i kommunen: grått areal, inngrepsfri natur og hvor mye planen dekker.',
+        'Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner. Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen dekker.',
       husk: 3,
       etl: solvKommune.kommunebiter
     }),

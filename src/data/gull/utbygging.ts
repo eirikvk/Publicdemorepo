@@ -6,9 +6,11 @@
    datamodell, og dagens klasser (solv.klasser). Her settes de
    sammen: dagens klasser klippes til kommunen, et eget område erstatter kommuneplanen der det ligger, og planen legges oppå dagens
    klasser. Én rute er ruteKm2(z) km² (felles.ts). */
+import { HEL, andelVed, hverRute, type Andel } from '../generelt/dekning.ts';
 import {
   BLOKK,
   blokkAv,
+  blokkNokkel,
   finn,
   glissent,
   kopiAv,
@@ -21,11 +23,14 @@ import {
 import { katalog } from '../katalog.ts';
 import { PLANNIVA, ruteM, type Flis, type Plassering } from '../solv/felles.ts';
 import type { Egneruter } from '../solv/egne.ts';
-import { klasserIFlate } from '../solv/grunnkart.ts';
+import { klasserIKommunen } from '../solv/grunnkart.ts';
 import { JOR, NAT } from '../solv/klasser.ts';
+import { kommuneIBlokk } from '../solv/kommune.ts';
 import { kanHaPlan } from '../solv/kommuneplan.ts';
 
-/* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging */
+/* Antall ruter: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging. Alle antall av ruter i
+   utbyggingen er vektet: en rute langs kommunegrensen teller med den delen av den som ligger i kommunen, og alle ruter er rettet for
+   målestokken i biten de ligger i (ruteVekt). Areal i km² er da antallet ganger ruteKm2. */
 export interface Antall {
   beb: number;
   nat: number;
@@ -34,7 +39,8 @@ export interface Antall {
   pjor: number;
 }
 /* Én flis i utbyggingen, fra kombinerBlokk. sig sier hvor mange kartfliser den er regnet av (-1 for hele kommunen), og utenPlan at
-   den er regnet uten kommuneplan. d og pl er null når de bare har 0, som i de fleste blokkene. */
+   den er regnet uten kommuneplan. d og pl er null når de bare har 0, som i de fleste blokkene. andel er kommunens andel i blokken
+   (null når hele blokken er i kommunen), og faktor målestokken i biten den ligger i. */
 export interface Blokk {
   sig: number;
   d: Uint8Array | null;
@@ -42,6 +48,8 @@ export interface Blokk {
   pl: Uint8Array | null;
   n: Antall;
   utenPlan?: boolean;
+  andel: Andel | null;
+  faktor: number;
 }
 /* Utbyggingen med smale striper tatt bort: rutene med planlagt utbygging på natur eller jordbruk (celler), det som er beholdt
    per rute (ryddet: 1 natur, 2 jordbruk), og antallet natur (rn) og jordbruk (rj) som er beholdt */
@@ -91,6 +99,17 @@ export interface Utbygging extends Plassering {
   egneTall: EgetTall[];
   rader: Int32Array;
   egneIder: number[];
+  andeler: Map<number, Andel> /* kommunens andel i blokkene langs grensen, etter blokkNokkel */;
+  faktorer: Map<number, number> /* målestokken per blokk, etter blokkNokkel */;
+}
+/* Vekten til rute i i utbyggingen R: den delen av ruta som ligger i kommunen, ganger målestokken i biten */
+export function ruteVekt(R: Pick<Utbygging, 'cx0' | 'cy0' | 'w' | 'andeler' | 'faktorer'>, i: number): number {
+  const X = R.cx0 + (i % R.w),
+    Y = R.cy0 + Math.floor(i / R.w),
+    k = blokkNokkel(Math.floor(X / BLOKK), Math.floor(Y / BLOKK)),
+    A = R.andeler.get(k),
+    f = R.faktorer.get(k);
+  return (A ? andelVed(A, X % BLOKK, Y % BLOKK) / HEL : 1) * (f === undefined ? 1 : f);
 }
 
 /* Én flis: kommuneplanen lagt oppå dagens klasser. kl er dagens klasse per rute fra klasserIFlis (0 ukjent), plan planlagt
@@ -100,11 +119,24 @@ export interface Utbygging extends Plassering {
      d:  0 ingenting, 1 natur og 2 jordbruk satt av til utbygging, 3 ukjent
      kl: dagens klasse, 0 ukjent, 1 bebygd, 2 jordbruk, 3 natur, 4–6 vann
      pl: 1 der det er planlagt utbygging på land, også der det alt er bebygd
-   og antall ruter n: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging. */
-export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis, fliser: Flis[] | null): Blokk {
+   og antall ruter n: bebygd, natur og jordbruk i dag, og natur (pnat) og jordbruk (pjor) satt av til utbygging, vektet med kommunens
+   andel i blokken (andel, null når hele blokken er i kommunen) og målestokken (faktor). */
+export function kombinerBlokk(
+  kl: Uint8Array,
+  plan: Uint8Array | null,
+  tc: Flis,
+  fliser: Flis[] | null,
+  andel: Andel | null = null,
+  faktor = 1
+): Blokk {
   const d = new Uint8Array(262144),
     pl = new Uint8Array(262144),
     n: Antall = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 };
+  let vekt: Float32Array | null = null;
+  if (andel) {
+    const V = (vekt = new Float32Array(262144));
+    hverRute(andel, (q, a) => (V[q] = a / HEL));
+  }
   if (fliser) {
     d.fill(3);
     for (const [z, x, y] of fliser) {
@@ -118,20 +150,21 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
   for (let q = 0; q < 262144; q++) {
     if (!kl[q]) continue;
     const k = kl[q] - 1,
-      p = !!plan && plan[q] === 1; /* halvregelen er brukt i sølv */
+      p = !!plan && plan[q] === 1 /* halvregelen er brukt i sølv */,
+      v = (vekt ? vekt[q] : 1) * faktor;
     if (p && k <= NAT) pl[q] = 1;
     if (!k) {
-      n.beb++;
+      n.beb += v;
       continue;
     }
     if (k !== JOR && k !== NAT) continue; /* vann telles ikke */
     const jor = k === JOR;
     if (jor) {
-      n.jor++;
-      if (p) n.pjor++;
+      n.jor += v;
+      if (p) n.pjor += v;
     } else {
-      n.nat++;
-      if (p) n.pnat++;
+      n.nat += v;
+      if (p) n.pnat += v;
     }
     if (p) d[q] = jor ? 2 : 1;
   }
@@ -139,7 +172,7 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
     for (let q = 0; q < a.length; q++) if (a[q]) return true;
     return false;
   }; /* en vanlig løkke: some() med en funksjon per rute tok flere sekunder i store kommuner */
-  return { sig: fliser ? fliser.length : -1, d: noe(d) ? d : null, kl, pl: noe(pl) ? pl : null, n };
+  return { sig: fliser ? fliser.length : -1, d: noe(d) ? d : null, kl, pl: noe(pl) ? pl : null, n, andel, faktor };
 }
 
 /* Smale striper: felt som ikke er bredere enn to ruter (rundt 20 meter) noe sted. De oppstår mest der plangrensen og grunnkartet
@@ -147,8 +180,8 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
    fire sider. Så beholdes alt som henger sammen med en kjerne, også på skrå. Et større felt beholdes dermed helt, også der det
    smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk, 3 ukjent). Ukjente ruter teller som
    naboer, så et felt ikke skrelles av langs kanten av det som er hentet. Naboene finnes med nummeret på ruta, som i et vanlig
-   rutenett med bredden w. Gir de beholdte rutene (ryddet) og antallet natur (rn) og jordbruk (rj) i dem. */
-export function ryddStriper(d: Glissen): Rydding {
+   rutenett med bredden w. Gir de beholdte rutene (ryddet) og antallet natur (rn) og jordbruk (rj) i dem, vektet med vekt. */
+export function ryddStriper(d: Glissen, vekt: (i: number) => number = () => 1): Rydding {
   const w = d.w,
     n = d.w * d.h,
     v = (i: number) => verdi(d, i),
@@ -178,8 +211,8 @@ export function ryddStriper(d: Glissen): Rydding {
     rj = 0;
   for (const i of celler) {
     const x = verdi(ryddet, i);
-    if (x === 1) rn++;
-    else if (x === 2) rj++;
+    if (x === 1) rn += vekt(i);
+    else if (x === 2) rj += vekt(i);
   }
   return { celler, ryddet, rn, rj };
 }
@@ -214,27 +247,32 @@ export function byggUtbygging(
   const kl = glissent(G),
     pl = glissent(G),
     n: Antall = { beb: 0, nat: 0, jor: 0, pnat: 0, pjor: 0 },
-    null0 = delvis ? new Uint8Array(BLOKK * BLOKK) : null; /* en hentet blokk uten plan, når resten er ukjent */
+    null0 = delvis ? new Uint8Array(BLOKK * BLOKK) : null /* en hentet blokk uten plan, når resten er ukjent */,
+    andeler = new Map<number, Andel>(),
+    faktorer = new Map<number, number>();
   for (const [x, y] of nokler) {
     const b = blokker.get(`${Z}/${x}/${y}`)!;
     if (b.d || null0) leggInnDelt(d, x, y, b.d || null0!);
     if (b.pl) leggInnDelt(pl, x, y, b.pl);
     leggInnDelt(kl, x, y, b.kl);
     for (const k in n) n[k as keyof Antall] += b.n[k as keyof Antall];
+    if (b.andel) andeler.set(blokkNokkel(x, y), b.andel);
+    faktorer.set(blokkNokkel(x, y), b.faktor);
   }
+  const vekt = (i: number) => ruteVekt({ ...G, andeler, faktorer }, i);
   /* Egne områder: innenfor hvert område erstatter det kommuneplanen. */
   let basis: Rydding | null = null,
     eget: Glissen | null = null,
     egetType: Glissen | null = null;
   const egneIder = E ? E.ider : [];
   if (E) {
-    basis = ryddStriper(d);
+    basis = ryddStriper(d, vekt);
     d = kopiAv(d);
     eget = glissent(G);
     egetType = glissent(G);
     leggInnEgne(E, d, kl, eget, egetType);
   }
-  const { celler, ryddet, rn, rj } = ryddStriper(d);
+  const { celler, ryddet, rn, rj } = ryddStriper(d, vekt);
   const egneTall: EgetTall[] = egneIder.map(() => ({
     nat: 0,
     jor: 0,
@@ -251,16 +289,17 @@ export function byggUtbygging(
       const T = egneTall[verdi(eget, i)! - 1],
         c = verdi(kl, i)!,
         b = verdi(basis.ryddet, i),
-        ny = verdi(ryddet, i);
-      if (c === 3) T.nat++;
-      else if (c === 2) T.jor++;
-      else if (c === 1) T.beb++;
-      else if (c >= 4) T.vann++;
-      else T.ukjent++;
-      if (b === 1) T.fnat++;
-      else if (b === 2) T.fjor++;
-      if (ny === 1) T.nnat++;
-      else if (ny === 2) T.njor++;
+        ny = verdi(ryddet, i),
+        v = c ? vekt(i) : 1; /* utenfor kommunen er ruta ukjent, og telles helt */
+      if (c === 3) T.nat += v;
+      else if (c === 2) T.jor += v;
+      else if (c === 1) T.beb += v;
+      else if (c >= 4) T.vann += v;
+      else T.ukjent += v;
+      if (b === 1) T.fnat += v;
+      else if (b === 2) T.fjor += v;
+      if (ny === 1) T.nnat += v;
+      else if (ny === 2) T.njor += v;
     }
   /* Radene: rutene med planlagt utbygging nå, og så rutene som bare planen alene har, der egne områder har tatt planen bort */
   const bareBasis = basis
@@ -290,7 +329,9 @@ export function byggUtbygging(
     rute,
     egneTall,
     rader: Int32Array.from([...celler, ...bareBasis]),
-    egneIder
+    egneIder,
+    andeler,
+    faktorer
   };
 }
 
@@ -321,17 +362,18 @@ export function leggInnEgne(E: Egneruter, d: Glissen, kl: Glissen, eget: Glissen
 
 /* Tabellen gull.utbygging: utbyggingen i kommunen nr. null når det ikke finnes noe å regne på: uten kommuneplan og uten egne
    områder, eller når dagens klasser mangler.
-   Dagens klasser kommer fra blokkene (solv.klasser) på nivå 10, lagret eller hentet fra NIBIO, klippet til kommunen etter
-   halvregelen, og hele kommunen er med. Kan ikke blokkene lages for hele kommunen, regnes ingenting: det sammensatte kartet av
+   Dagens klasser kommer fra blokkene (solv.klasser) på nivå 10, lagret eller hentet fra NIBIO, klippet til kommunen med kommunens
+   andel i hver rute (solv.kommunebiter), og hele kommunen er med. Kan ikke blokkene lages for hele kommunen, regnes ingenting: det sammensatte kartet av
    flisene som er hentet, brukes bare til å vise kartet, for der er rutene grovere jo større kommunen er. Egne områder kommer fra
    solv.egneruter.
    Utbyggingen bygges av blokker på 512 x 512 ruter à 10,6 meter, én per flis på nivå 10 (PLANNIVA). Blokkene huskes i
    gull.utbyggingsblokker. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 export async function utbygging(nr: string): Promise<Utbygging | null> {
-  const [info, E, D] = await Promise.all([
+  const [info, E, D, KB] = await Promise.all([
     katalog.solv.planinfo(nr).catch(() => null),
     katalog.solv.egneruter(nr),
-    katalog.gull.dagensKlasser(nr)
+    katalog.gull.dagensKlasser(nr),
+    katalog.solv.kommunebiter(nr)
   ]);
   const ingenPlan = !!info && !info.finnes;
   if ((ingenPlan && !E) || !D) return null;
@@ -345,12 +387,16 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     under.map(async ([x, y]) => {
       const har = blokker.get(`${Z}/${x}/${y}`);
       if (har && har.kl && har.utenPlan === ingenPlan) return;
-      const tc: Flis = [Z, x, y];
+      const tc: Flis = [Z, x, y],
+        kom = kommuneIBlokk(KB, tc);
       const [kl, P] = await Promise.all([
-        katalog.solv.klasser(tc).then(K => klasserIFlate(K, D.koord)),
+        katalog.solv.klasser(tc).then(K => klasserIKommunen(K, kom.andel)),
         ingenPlan || (O && !kanHaPlan(O, tc)) ? null : katalog.solv.kommuneplanruter(tc)
       ]);
-      blokker.set(`${Z}/${x}/${y}`, { ...kombinerBlokk(kl, P ? P.plan : null, tc, null), utenPlan: ingenPlan });
+      blokker.set(`${Z}/${x}/${y}`, {
+        ...kombinerBlokk(kl, P ? P.plan : null, tc, null, kom.andel, kom.faktor),
+        utenPlan: ingenPlan
+      });
     })
   );
   if (E && E.z !== Z) throw new Error('egne områder er regnet på et annet nivå');

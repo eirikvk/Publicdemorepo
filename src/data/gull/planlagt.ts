@@ -7,7 +7,7 @@ import { FLISNIVA, OPPLOSNINGER, ruteKm2 } from '../solv/felles.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
 import type { Planinfo } from '../solv/kommuneplan.ts';
 import { andel, landareal } from './felles.ts';
-import type { Utbygging } from './utbygging.ts';
+import { ruteVekt, type Utbygging } from './utbygging.ts';
 
 /* Kortversjonen til oversikten og regnskapet: natur og jordbruk satt av i km², om bare en del av kommunen er hentet, og hvor mange
    egne områder som er med */
@@ -94,7 +94,7 @@ export async function planlagtPerDetaljklasse(nr: string): Promise<PlanlagtDetal
   }
   for (const [k, celler] of perBlokk) {
     if (!har.has(k)) {
-      n[0] += celler.length;
+      for (const i of celler) n[0] += ruteVekt(R, i);
       continue;
     }
     const [bx, by] = k.split('/').map(Number),
@@ -112,7 +112,7 @@ export async function planlagtPerDetaljklasse(nr: string): Promise<PlanlagtDetal
       let best = 0,
         flest = 0;
       for (const [kl, m] of tell) if (m > flest || (m === flest && kl < best)) [best, flest] = [kl, m];
-      n[best]++;
+      n[best] += ruteVekt(R, i);
     }
   }
   const km2 = ruteKm2(R.z);

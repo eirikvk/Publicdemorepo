@@ -1,7 +1,7 @@
 /* Gull, felles: små hjelpere som flere av svarene bruker. */
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import { HALV, bitRuter, type Flis } from '../solv/felles.ts';
+import { HALV, bitFaktor, bitRuter, type Flis } from '../solv/felles.ts';
 import type { Flerflate } from '../generelt/geometri.ts';
 import { flaterPiksler } from '../solv/raster.ts';
 
@@ -49,7 +49,7 @@ export function tellIMaske(
 }
 
 /* Teller rutene innenfor flatene (unionen av dem, klippet mot kommunen innenfor) bit for bit, som tellIMaske: antall ruter i
-   flatene (alle), og antall per plass i n. verdier gir verdien per rute i en bit, eller null når alle rutene har verdien tom. Bare
+   flatene (alle), og antall per plass i n, rettet for målestokken i hver bit. verdier gir verdien per rute i en bit, eller null når alle rutene har verdien tom. Bare
    bitene i biter som flatene berører, telles. Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
 export async function tellIBiter(
   biter: Flis[],
@@ -72,9 +72,10 @@ export async function tellIBiter(
         R,
         innenfor
       ),
-      T = tellIMaske(M, V, plasser, plass, tom);
-    alle += T.alle;
-    T.n.forEach((v, i) => (n[i] += v));
+      T = tellIMaske(M, V, plasser, plass, tom),
+      f = bitFaktor(tc); /* målestokken i biten */
+    alle += T.alle * f;
+    T.n.forEach((v, i) => (n[i] += v * f));
   }
   return { alle, n };
 }

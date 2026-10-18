@@ -1,6 +1,7 @@
 /* Gull for grått areal: arealet per trinn i kommunen (gull.graa), og kryssingen med utbyggingen (gull.graakryss og gull.graaIPlan).
    Grått areal krysses med utbyggingen for seg, ikke som en kolonne, fordi det også teller planlagt utbygging der det alt er bebygd,
    og grønt i bebygd område. */
+import { HEL, hverRute } from '../generelt/dekning.ts';
 import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
 import { bitAv, flisnavn, ruteKm2, ruteX, ruteY, type Flis } from '../solv/felles.ts';
@@ -42,15 +43,15 @@ export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undef
     ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }),
     S = ny(),
     P = ny();
-  const en = (x: Graatall, k: number, c: number) => {
-      x.tot++;
-      if (k) x.graa++;
-      else if (c === 1) x.gront++;
-      if (k === 4 || k === 5) x.gron++;
+  const en = (x: Graatall, k: number, c: number, w: number) => {
+      x.tot += w;
+      if (k) x.graa += w;
+      else if (c === 1) x.gront += w;
+      if (k === 4 || k === 5) x.gron += w;
     },
-    legg = (T: Graatall & { eg: Graatall[] }, e: number, k: number, c: number) => {
-      en(T, k, c);
-      if (e) en(T.eg[e - 1], k, c);
+    legg = (T: Graatall & { eg: Graatall[] }, e: number, k: number, c: number, w: number) => {
+      en(T, k, c, w);
+      if (e) en(T.eg[e - 1], k, c, w);
     };
   let bebygd = 0,
     gront = 0;
@@ -60,7 +61,15 @@ export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undef
       PL = R.pl.blokker.get(nokkel),
       ET = nE ? R.egetType!.blokker.get(nokkel) : undefined,
       EG = nE ? R.eget!.blokker.get(nokkel) : undefined,
-      D = bit(flisnavn(blokkensBit(R, bx, by)));
+      D = bit(flisnavn(blokkensBit(R, bx, by))),
+      A = R.andeler.get(nokkel),
+      f = R.faktorer.get(nokkel) ?? 1;
+    /* vekten per rute: kommunens andel i blokker langs grensen, og målestokken */
+    let vekt: Float32Array | null = null;
+    if (A) {
+      const V = (vekt = new Float32Array(KL.length));
+      hverRute(A, (q, a) => (V[q] = a / HEL));
+    }
     for (let q = 0; q < KL.length; q++) {
       const c = KL[q];
       if (c < 1 || c > 3) continue;
@@ -70,13 +79,14 @@ export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undef
       if (c !== 1 && !b && !s) continue;
       const i = nummer(R.kl, bx * BLOKK + (q % BLOKK), by * BLOKK + Math.floor(q / BLOKK)),
         k = D ? graaVed(D, ruteX(R, i), ruteY(R, i)) : 0,
-        e = EG ? EG[q] : 0;
+        e = EG ? EG[q] : 0,
+        w = (vekt ? vekt[q] : 1) * f;
       if (c === 1) {
-        bebygd++;
-        if (!k) gront++;
+        bebygd += w;
+        if (!k) gront += w;
       }
-      if (s) legg(S, e, k, c);
-      if (b) legg(P, e, k, c);
+      if (s) legg(S, e, k, c, w);
+      if (b) legg(P, e, k, c, w);
     }
   }
   return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, delvis, ruteKm2: ruteKm2(R.z) };

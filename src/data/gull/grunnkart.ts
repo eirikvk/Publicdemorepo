@@ -8,8 +8,9 @@
    foreløpig bare tvillingen fra Figma bruker. */
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { FLISNIVA, flisAvNavn, flisUtsnitt, m2PerKm2, ruteM, type Flis } from '../solv/felles.ts';
-import { tellIFlate, type Oversikt } from '../solv/grunnkart.ts';
+import { FLISNIVA, flisAvNavn, flisUtsnitt, ruteM, type Flis } from '../solv/felles.ts';
+import { tellIKommunen, type Oversikt } from '../solv/grunnkart.ts';
+import { kommuneIBlokk } from '../solv/kommune.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
 import { arealFraRuter, tiDekar } from './felles.ts';
 
@@ -48,8 +49,8 @@ export interface Detaljareal {
   hentet: string;
   versjon: string;
 }
-/* Tabellen gull.detaljareal: arealet per detaljklasse i kommunen nr, av blokkene på 10,6 meter (solv.detaljklasser) klippet til
-   kommunen etter halvregelen. For kommunene med lagrede detaljklasser (bronse.detaljregister) leses blokkene fra filene. For de
+/* Tabellen gull.detaljareal: arealet per detaljklasse i kommunen nr, av blokkene på 10,6 meter (solv.detaljklasser) med kommunens
+   andel i hver rute (solv.kommunebiter). For kommunene med lagrede detaljklasser (bronse.detaljregister) leses blokkene fra filene. For de
    andre hentes de fra NIBIO, ett kall per blokk, så det tar lenger tid. */
 export async function detaljareal(nr: string): Promise<Detaljareal | null> {
   return tellDetaljer(nr, null);
@@ -69,25 +70,25 @@ async function tellDetaljer(
   const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.detaljblokker(nr)]),
     lagret = !!(reg && reg.kommuner && reg.kommuner[nr]);
   if (!L.length) return null;
-  const g = await katalog.solv.grense(nr),
+  const [g, KB] = await Promise.all([katalog.solv.grense(nr), katalog.solv.kommunebiter(nr)]),
     n = new Array<number>(DETALJKLASSER.length + 1).fill(0),
     ko = L.filter(tc => !flater || flater.some(f => overlapper(f.ext, flisUtsnitt(tc)))),
-    koord = flater && flater.map(f => f.koord);
+    innenfor = flater ? { flater: flater.map(f => f.koord), koord: g.koord } : undefined;
   await Promise.all(
     Array.from({ length: 6 }, async () => {
       for (let b = ko.shift(); b; b = ko.shift()) {
         const K = await katalog.solv.detaljklasser(b);
-        tellIFlate(K, g.koord, n.length, koord || undefined).forEach((v, k) => (n[k] += v));
+        tellIKommunen(K, kommuneIBlokk(KB, b), n.length, innenfor).forEach((v, k) => (n[k] += v));
       }
     })
   );
+  /* rutene er alt rettet for målestokken (tellIKommunen) */
   const res = ruteM(FLISNIVA),
-    skala = m2PerKm2(g.ext),
-    { km2, sum } = arealFraRuter(n.slice(1), res, skala);
+    { km2, sum } = arealFraRuter(n.slice(1), res, 1e6);
   return {
     km2,
     sum,
-    ukjent: tiDekar((n[0] * res * res) / skala),
+    ukjent: tiDekar((n[0] * res * res) / 1e6),
     hentet: (lagret && reg && reg.hentet) || '',
     versjon: (lagret && reg && reg.versjon) || ''
   };

@@ -121,6 +121,12 @@ export const m2PerKm2 = (e: Utsnitt) => {
   return k * k * 1e6;
 };
 
+/* Målestokken for rutene i et utsnitt: hvor mye en rute i kartet er i terrenget, som andel, regnet midt i utsnittet. Rutene i en bit
+   og blokkene i den bruker bitens faktor (bitFaktor), så arealer regnet i biter og i blokker blir like, og kan summeres over
+   kommuner. Innenfor en bit endrer målestokken seg mindre enn 0,1 %. */
+export const terrengfaktor = (e: Utsnitt) => 1e6 / m2PerKm2(e);
+export const bitFaktor = (tc: Flis) => terrengfaktor(flisUtsnitt(bitAv(tc)));
+
 /* Arealet av en flerflate i km² i terrenget. e er utsnittet målestokken regnes midt i, til vanlig flatens eget utsnitt. */
 export const arealKm2 = (koord: Flerflate, e: Utsnitt = utsnitt(koord)) => areal(koord) / m2PerKm2(e);
 

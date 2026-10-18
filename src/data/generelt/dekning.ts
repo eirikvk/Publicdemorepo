@@ -32,7 +32,7 @@ export interface Nett {
   h: number;
 }
 /* Kantene til flatene i rutekoordinater: [x0, y0, x1, y1] per kant, med x mot høyre og y nedover fra øverste rad, og laget hver kant
-   hører til. Ytterkantene og hullene er snudd så de har motsatt omløpsretning. */
+   hører til. Ytterkantene og hullene har motsatt omløpsretning (se Ringer). */
 export interface Kanter {
   k: Float64Array;
   lag: Uint8Array;
@@ -50,6 +50,14 @@ export interface Andel {
   a: Uint16Array;
 }
 
+/* Flater i flat form, så de kan sendes til bakgrunnstråden uten å kopiere lister i lister: punktene som [x, y, x, y, …] (xy), hvor
+   hver ring begynner (start, med antall punkter til slutt), og utsnittet til hver ring [xmin, ymin, xmaks, ymaks] (boks). Ytterkanten i
+   hver flate går mot klokka og hullene med klokka, uansett hvordan kilden har tegnet dem. */
+export interface Ringer {
+  xy: Float64Array;
+  start: Int32Array;
+  boks: Float64Array;
+}
 /* Arealet av en ring med fortegn i koordinatenes enhet: positivt mot klokka */
 function ringAreal(ring: number[][]) {
   let a = 0;
@@ -57,43 +65,92 @@ function ringAreal(ring: number[][]) {
     a += (ring[j][0] - ring[i][0]) * (ring[j][1] + ring[i][1]);
   return a / 2;
 }
+/* Flerflatene i flat form, med omløpsretningen rettet */
+export function ringer(flater: Flerflate[]): Ringer {
+  let n = 0,
+    r = 0;
+  for (const koord of flater)
+    for (const flate of koord)
+      for (const ring of flate)
+        if (ring.length >= 3) {
+          n += ring.length;
+          r++;
+        }
+  const xy = new Float64Array(2 * n),
+    start = new Int32Array(r + 1),
+    boks = new Float64Array(4 * r);
+  let p = 0,
+    i = 0;
+  for (const koord of flater)
+    for (const flate of koord)
+      flate.forEach((ring, nr) => {
+        const ant = ring.length;
+        if (ant < 3) return;
+        const snu = ringAreal(ring) > 0 !== (nr === 0); /* mot klokka for ytterkanten, med klokka for hull */
+        let x0 = Infinity,
+          y0 = Infinity,
+          x1 = -Infinity,
+          y1 = -Infinity;
+        start[i] = p;
+        for (let k = 0; k < ant; k++) {
+          const q = ring[snu ? ant - 1 - k : k];
+          xy[2 * p] = q[0];
+          xy[2 * p + 1] = q[1];
+          p++;
+          if (q[0] < x0) x0 = q[0];
+          if (q[1] < y0) y0 = q[1];
+          if (q[0] > x1) x1 = q[0];
+          if (q[1] > y1) y1 = q[1];
+        }
+        boks.set([x0, y0, x1, y1], 4 * i);
+        i++;
+      });
+  start[r] = p;
+  return { xy, start, boks };
+}
+/* Om ringene har noe i utsnittet e */
+export function ringerI(F: Ringer, e: Utsnitt) {
+  for (let i = 0; i + 1 < F.start.length; i++)
+    if (F.boks[4 * i] < e[2] && F.boks[4 * i + 2] > e[0] && F.boks[4 * i + 1] < e[3] && F.boks[4 * i + 3] > e[1])
+      return true;
+  return false;
+}
 
-/* Kantene til flerflatene i settene, i rutenettet R. Hvert sett er flatene i ett lag. Ytterkanten i hver flate går mot klokka og
-   hullene med klokka, uansett hvordan kilden har tegnet dem. Kanter som ligger helt over, helt under eller helt til høyre for
-   rutenettet, tas ikke med: de endrer ikke vindingstallet i noen rute. Kanter til venstre tas med, for de gjør det. */
-export function kanterI(sett: { lag: number; flater: Flerflate[] }[], R: Nett): Kanter {
+/* Kantene til flatene i settene, i rutenettet R. Hvert sett er flatene i ett lag. Ringer som ligger helt utenfor rutenettet, og
+   kanter som ligger helt over, helt under eller helt til høyre for det, tas ikke med: de endrer ikke vindingstallet i noen rute.
+   Kanter til venstre tas med, for de gjør det. */
+export function kanterI(sett: { lag: number; ringer: Ringer }[], R: Nett): Kanter {
   let n = 0;
-  for (const s of sett)
-    for (const koord of s.flater) for (const flate of koord) for (const ring of flate) n += ring.length;
+  for (const s of sett) n += s.ringer.start[s.ringer.start.length - 1];
   const k = new Float64Array(4 * n),
     lag = new Uint8Array(n),
-    sx = 1 / R.res;
+    sx = 1 / R.res,
+    u = R.u;
   let m = 0;
-  for (const s of sett)
-    for (const koord of s.flater)
-      for (const flate of koord)
-        flate.forEach((ring, nr) => {
-          const ant = ring.length;
-          if (ant < 3) return;
-          /* mot klokka i kartet for ytterkanten, med klokka for hull */
-          const snu = ringAreal(ring) > 0 !== (nr === 0);
-          for (let i = 0; i < ant; i++) {
-            const p = ring[snu ? ant - 1 - i : i],
-              q = ring[snu ? (2 * ant - 2 - i) % ant : (i + 1) % ant],
-              x0 = (p[0] - R.u[0]) * sx,
-              y0 = (R.u[3] - p[1]) * sx,
-              x1 = (q[0] - R.u[0]) * sx,
-              y1 = (R.u[3] - q[1]) * sx;
-            if (y0 === y1) continue;
-            if ((y0 <= 0 && y1 <= 0) || (y0 >= R.h && y1 >= R.h) || (x0 >= R.w && x1 >= R.w)) continue;
-            k[4 * m] = x0;
-            k[4 * m + 1] = y0;
-            k[4 * m + 2] = x1;
-            k[4 * m + 3] = y1;
-            lag[m] = s.lag;
-            m++;
-          }
-        });
+  for (const s of sett) {
+    const F = s.ringer;
+    for (let r = 0; r + 1 < F.start.length; r++) {
+      const b = 4 * r;
+      if (F.boks[b] >= u[2] || F.boks[b + 2] <= u[0] || F.boks[b + 1] >= u[3] || F.boks[b + 3] <= u[1]) continue;
+      const fra = F.start[r],
+        til = F.start[r + 1];
+      for (let i = fra; i < til; i++) {
+        const j = i + 1 < til ? i + 1 : fra,
+          x0 = (F.xy[2 * i] - u[0]) * sx,
+          y0 = (u[3] - F.xy[2 * i + 1]) * sx,
+          x1 = (F.xy[2 * j] - u[0]) * sx,
+          y1 = (u[3] - F.xy[2 * j + 1]) * sx;
+        if (y0 === y1) continue;
+        if ((y0 <= 0 && y1 <= 0) || (y0 >= R.h && y1 >= R.h) || (x0 >= R.w && x1 >= R.w)) continue;
+        k[4 * m] = x0;
+        k[4 * m + 1] = y0;
+        k[4 * m + 2] = x1;
+        k[4 * m + 3] = y1;
+        lag[m] = s.lag;
+        m++;
+      }
+    }
+  }
   return { k, lag, n: m };
 }
 
@@ -261,6 +318,18 @@ export function dekning(
     U.rad[h] = U.x.length;
     return { w, h, rad: U.rad, x: Uint16Array.from(U.x), n: Uint16Array.from(U.n), a: Uint16Array.from(U.a) };
   });
+}
+
+/* Dekningen i rutenettet R av lagene, med regelen maske og kategorier (se regel): én Andel per klasse, eller null når ingen
+   klasse har noe i rutenettet */
+export function dekningI(lagene: Ringer[], R: Nett, maske: number[], kategorier: number[]): Andel[] | null {
+  for (const m of maske) if (!ringerI(lagene[m], R.u)) return null;
+  const K = kanterI(
+      lagene.map((r, lag) => ({ lag, ringer: r })),
+      R
+    ),
+    A = dekning(K, R.w, R.h, regel(maske, kategorier), Math.max(1, kategorier.length), lagene.length);
+  return A.some(a => a.a.length) ? A : null;
 }
 
 /* Summen av andelene i A, i hele ruter */

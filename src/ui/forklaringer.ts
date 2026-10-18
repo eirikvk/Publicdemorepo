@@ -180,7 +180,7 @@ export const KORT: Kort[] = [
         linje = (navn: string, uten: number, med: number, iDag: number, ordet: string) =>
           `${navn}: ${ant(uten)} ruter uten smale striper, altså ${daa(uten * r)}. Det er ${prosent(iDag ? (uten / iDag) * 100 : null)} av de ${ant(iDag)} rutene som er ${ordet} i dag. Med smale striper ${ant(med)} ruter, ${daa(med * r)}.`;
       return [
-        `Rutene er ${nf(ruteM(R.z))} meter, så hver rute er ${m2(r)} m².`,
+        `Rutene er ${nf(ruteM(R.z))} meter, så hver rute er ${m2(r)} m². Ruter langs kommunegrensen teller med den delen som ligger i kommunen, og alle er rettet for målestokken.`,
         linje('Natur', R.sum.rn, R.n.pnat, R.n.nat, 'natur'),
         linje('Jordbruk', R.sum.rj, R.n.pjor, R.n.jor, 'jordbruk'),
         ...(R.delvis ? ['Bare den delen av kommunen nettleseren har hentet kart for, er med.'] : []),

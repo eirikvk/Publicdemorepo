@@ -3,24 +3,17 @@
    henger mens det regnes, eller på siden når nettleseren ikke har bakgrunnstråder med lerret (se arbeid i raster.ts). Svaret er det
    samme begge steder: det er de samme funksjonene, og bildene tegnes på samme måte. Filen kjenner ikke katalogen: alt den trenger,
    kommer med oppgaven. */
+import { andelBuffere, dekningI, HEL, type Andel, type Nett, type Ringer } from '../generelt/dekning.ts';
 import { motKlokka, omriss, overlapper, type Flerflate, type FlateMedUtsnitt } from '../generelt/geometri.ts';
-import { BIT, HALV, biterI, bitRuter, m2PerKm2, type Flis } from './felles.ts';
+import { BIT, biterI, bitRuter, m2PerKm2 } from './felles.ts';
 import { detaljklasserIFlis, klasserIFlis } from './klasser.ts';
-import { dekketM2, flatePikslerI, pakkUt, sti, type Flate } from './raster.ts';
+import { dekketM2, pakkUt, sti, type Flate } from './raster.ts';
 import { ellerTom, planIFlis, planlagPerRute, tolkGraa, tolkInon, UTENFOR } from './tolking.ts';
 
-/* Kommunens flate i en bit (se Kommunebit i kommune.ts): antall ruter i kommunen, hel når hele biten er i kommunen, ellers én bit
-   per rute */
-export interface Kommunebit {
-  tc: Flis;
-  antall: number;
-  hel: boolean;
-  ruter: Uint8Array | null;
-}
-/* Telling av verdiene i en bit innenfor kommunen: antall ruter per verdi fra 0 til 255, og den midterste ruta som ikke er tom (-1 når
-   alle er tomme) */
+/* Telling av verdiene i en bit innenfor kommunen: andelen ruter per verdi fra 0 til 255 (en kantrute teller med den delen av den som
+   er i kommunen), og den midterste ruta i kommunen som ikke er tom (-1 når alle er tomme) */
 export interface Telling {
-  hist: Int32Array;
+  hist: Float64Array;
   midt: number;
 }
 
@@ -35,8 +28,14 @@ export type Oppgave =
   | { type: 'planflis'; P: ArrayBuffer } /* kommuneplanen i en flis: 1 der minst halve ruta er planlagt utbygging */
   | { type: 'klasser'; P: ArrayBuffer } /* grunnkartet i en blokk: dagens klasse per rute */
   | { type: 'detaljklasser'; P: ArrayBuffer } /* grunnkartet med 19 klasser i en blokk: detaljklassen per rute */
-  | { type: 'kommunebiter'; koord: Flerflate; biter: Flis[] } /* kommunens flate i bitene den berører */
-  | { type: 'telling'; V: Uint8Array; ruter: Uint8Array | null; tom: number } /* verdiene i en bit innenfor kommunen */
+  | {
+      type: 'andeler';
+      lagene: Ringer[];
+      maske: number[];
+      kategorier: number[];
+      nett: Nett[];
+    } /* dekningsandelen per klasse i hvert rutenett, se dekningI i generelt/dekning.ts */
+  | { type: 'telling'; V: Uint8Array; andel: Andel | null; tom: number } /* verdiene i en bit innenfor kommunen */
   | {
       type: 'klasseAreal';
       omrader: { koord: Flerflate; v: number }[];
@@ -68,12 +67,12 @@ export async function utfor(o: Oppgave, flate: (w: number, h: number) => Flate):
       return ut(klasserIFlis(await pakkUt(o.P, 512, 512, flate)));
     case 'detaljklasser':
       return ut(detaljklasserIFlis(await pakkUt(o.P, 512, 512, flate)));
-    case 'kommunebiter': {
-      const B = kommunebiter(o.koord, o.biter, flate);
-      return { svar: B, overfor: B.flatMap(b => (b.ruter ? [b.ruter.buffer] : [])) };
+    case 'andeler': {
+      const A = o.nett.map(R => dekningI(o.lagene, R, o.maske, o.kategorier));
+      return { svar: A, overfor: A.flatMap(a => (a ? a.flatMap(andelBuffere) : [])) };
     }
     case 'telling': {
-      const T = telling(o.V, o.ruter, o.tom);
+      const T = telling(o.V, o.andel, o.tom);
       return { svar: T, overfor: [T.hist.buffer] };
     }
     case 'klasseAreal':
@@ -81,45 +80,40 @@ export async function utfor(o: Oppgave, flate: (w: number, h: number) => Flate):
   }
 }
 
-/* Kommunens flate (koord) i bitene: først et grovt bilde (64 x 64) for å se om kommunen berører biten, så flaten tegnes bare i
-   bitene den berører. En rute er i kommunen etter halvregelen. Bitene uten ruter i kommunen er ikke med. */
-function kommunebiter(koord: Flerflate, biter: Flis[], flate: (w: number, h: number) => Flate): Kommunebit[] {
-  const ut: Kommunebit[] = [];
-  for (const tc of biter) {
-    const R = bitRuter(tc),
-      grov = flatePikslerI(flate(64, 64), koord, { u: R.u, res: R.res * (R.w / 64), w: 64, h: 64 });
-    let berort = false;
-    for (let i = 3; i < grov.length && !berort; i += 4) berort = grov[i] > 0;
-    if (!berort) continue;
-    const M = flatePikslerI(flate(BIT, BIT), koord, R),
-      ruter = new Uint8Array((BIT * BIT) >> 3);
-    let antall = 0;
-    for (let q = 0; q < BIT * BIT; q++)
-      if (M[4 * q + 3] >= HALV) {
-        antall++;
-        ruter[q >> 3] |= 1 << (q & 7);
+/* Verdiene V i en bit innenfor kommunen: andelen ruter per verdi, og den midterste ruta med en verdi som ikke er tom. A er kommunens
+   andel i biten, eller null når hele biten er i kommunen. */
+function telling(V: Uint8Array, A: Andel | null, tom: number): Telling {
+  const hist = new Float64Array(256);
+  let noe = 0;
+  if (!A)
+    for (let q = 0; q < V.length; q++) {
+      hist[V[q]]++;
+      if (V[q] !== tom) noe++;
+    }
+  else
+    for (let y = 0; y < A.h; y++)
+      for (let p = A.rad[y]; p < A.rad[y + 1]; p++) {
+        const a = A.a[p] / HEL;
+        for (let q = y * A.w + A.x[p], s = q + A.n[p]; q < s; q++) {
+          hist[V[q]] += a;
+          if (V[q] !== tom) noe++;
+        }
       }
-    if (!antall) continue;
-    const hel = antall === BIT * BIT;
-    ut.push({ tc, antall, hel, ruter: hel ? null : ruter });
-  }
-  return ut;
-}
-
-/* Verdiene V i en bit innenfor kommunen (ruter, én bit per rute, eller null når hele biten er i kommunen): antall ruter per verdi,
-   og den midterste ruta med en verdi som ikke er tom */
-function telling(V: Uint8Array, ruter: Uint8Array | null, tom: number): Telling {
-  const hist = new Int32Array(256);
-  if (!ruter) for (let q = 0; q < V.length; q++) hist[V[q]]++;
-  else for (let q = 0; q < V.length; q++) if ((ruter[q >> 3] >> (q & 7)) & 1) hist[V[q]]++;
-  const noe = hist.reduce((a, x) => a + x, 0) - hist[tom];
   let midt = -1;
-  if (noe > 0)
-    for (let q = 0, k = 0; q < V.length; q++)
-      if (V[q] !== tom && (!ruter || (ruter[q >> 3] >> (q & 7)) & 1) && k++ === noe >> 1) {
-        midt = q;
-        break;
-      }
+  if (noe > 0) {
+    let k = 0;
+    const finn = (q: number) => V[q] !== tom && k++ === noe >> 1;
+    if (!A) {
+      for (let q = 0; q < V.length && midt < 0; q++) if (finn(q)) midt = q;
+    } else
+      for (let y = 0; y < A.h && midt < 0; y++)
+        for (let p = A.rad[y]; p < A.rad[y + 1] && midt < 0; p++)
+          for (let q = y * A.w + A.x[p], s = q + A.n[p]; q < s; q++)
+            if (finn(q)) {
+              midt = q;
+              break;
+            }
+  }
   return { hist, midt };
 }
 

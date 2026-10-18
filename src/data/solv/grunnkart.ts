@@ -7,6 +7,7 @@
    For hele kommunen zoomet ut (Oversikt), fra to kilder side om side: blokkene satt sammen (solv.klassekart) og det sammensatte
    kartet av flisene som er hentet (solv.sammensatt). Gull velger mellom dem (gull.dagensKlasser).
    Kartbildene fra NIBIO leses som de er: klassen leses av fargen (klasserIFlis i klasser.ts). */
+import { HEL, type Andel } from '../generelt/dekning.ts';
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import {
@@ -23,6 +24,7 @@ import {
 } from './felles.ts';
 import { arbeid } from './arbeid.ts';
 import { ALLE, KLASSETABELL, klasseAv } from './klasser.ts';
+import { kommuneIBlokk } from './kommune.ts';
 import {
   bildePiksler,
   flatePiksler,
@@ -84,13 +86,11 @@ export async function detaljklasser(tc: Flis): Promise<Klasser> {
     kl: await arbeid<Uint8Array>({ type: 'detaljklasser', P: await katalog.bronse.detaljflis(tc) })
   };
 }
-/* Tabellen solv.detaljblokker: blokkene på nivå 10 for kommunen nr, som [10, x, y]: de lagrede i registeret (bronse.detaljregister),
-   eller ellers blokkene kommunen har ruter i (solv.blokker), som solv.detaljklasser lager av kartbildene fra NIBIO, ett kall per
-   blokk. Slik er logikken den samme for alle kommuner, bare raskere der blokkene er lagret. */
+/* Tabellen solv.detaljblokker: blokkene på nivå 10 for kommunen nr, som [10, x, y]: de samme som for dagens klasser (solv.blokker).
+   For de lagrede blokkene leser solv.detaljklasser filen, og for de andre kartbildet fra NIBIO, ett kall per blokk. Slik er logikken
+   den samme for alle kommuner, bare raskere der blokkene er lagret. */
 export async function detaljblokker(nr: string): Promise<Flis[]> {
-  const reg = await katalog.bronse.detaljregister(),
-    L = reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][FLISNIVA];
-  return L ? L.map(([x, y]): Flis => [FLISNIVA, x, y]) : katalog.solv.blokker([nr, FLISNIVA]);
+  return katalog.solv.blokker([nr, FLISNIVA]);
 }
 /* Det lagrede svaret for solv.detaljklasser: filen for blokken (bronse.detaljfil), et bilde med fargetabellen DETALJTABELL. null
    når blokken ikke er lagret. */
@@ -99,44 +99,71 @@ export async function lagredeDetaljklasser(tc: Flis): Promise<Klasser | null> {
   return buf ? { ...iBlokk(tc), kl: await arbeid<Uint8Array>({ type: 'detaljklasser', P: buf }) } : null;
 }
 
-/* Hvor mye av hver rute i blokken tc flaten koord dekker, som alfa fra 0 til 255 */
-const flateIBlokk = (koord: Flerflate, tc: Flis) =>
-  flatePiksler(koord, { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 });
-/* Dagens klasser K klippet til flaten koord (kommunen): ruter flaten dekker mindre enn halvparten av (HALV), blir ukjent (0) */
-export function klasserIFlate(K: Klasser, koord: Flerflate): Uint8Array {
-  const M = flateIBlokk(koord, [K.z, K.cx0 / 512, K.cy0 / 512]),
-    kl = K.kl.slice();
-  for (let q = 0; q < kl.length; q++) if (M[4 * q + 3] < HALV) kl[q] = 0;
+/* Dagens klasser K klippet til kommunen: ruter kommunen ikke dekker noe av, blir ukjent (0). A er kommunens andel i blokken
+   (kommuneIBlokk i kommune.ts), eller null når hele blokken er i kommunen. En kantrute beholder klassen, og telles senere med den delen
+   av den som er i kommunen. */
+export function klasserIKommunen(K: Klasser, A: Andel | null): Uint8Array {
+  const kl = K.kl.slice();
+  if (!A) return kl;
+  for (let y = 0; y < A.h; y++) {
+    let x = 0;
+    for (let p = A.rad[y]; p < A.rad[y + 1]; p++) {
+      kl.fill(0, y * A.w + x, y * A.w + A.x[p]);
+      x = A.x[p] + A.n[p];
+    }
+    kl.fill(0, y * A.w + x, (y + 1) * A.w);
+  }
   return kl;
 }
-/* Antall ruter per klasse i K innenfor flaten koord (kommunen), etter halvregelen. Plass 0 er ruter innenfor uten klasse, og klasse k
-   er plass k. antall er antall klasser pluss én. Med flater telles bare rutene innenfor dem også (unionen av dem, klippet mot
-   kommunen), for eksempel verneområdene. */
-export function tellIFlate(K: Klasser, koord: Flerflate, antall: number, flater?: Flerflate[]): number[] {
-  const tc: Flis = [K.z, K.cx0 / 512, K.cy0 / 512],
-    M = flater
-      ? flaterPiksler(flater, { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 }, koord)
-      : flateIBlokk(koord, tc),
-    n = new Array<number>(antall).fill(0);
-  for (let q = 0; q < K.kl.length; q++) if (M[4 * q + 3] >= HALV) n[K.kl[q]]++;
+/* Arealet per klasse i K innenfor kommunen, i ruter rettet for målestokken: plass 0 er ruter innenfor uten klasse, og klasse k er
+   plass k. antall er antall klasser pluss én. kommune er kommunens andel i blokken og målestokken (kommuneIBlokk). Med flater telles
+   bare rutene innenfor dem (unionen av dem, klippet mot kommunen etter halvregelen), for eksempel verneområdene. */
+export function tellIKommunen(
+  K: Klasser,
+  kommune: { andel: Andel | null; faktor: number },
+  antall: number,
+  flater?: { flater: Flerflate[]; koord: Flerflate }
+): number[] {
+  const n = new Array<number>(antall).fill(0),
+    f = kommune.faktor;
+  if (flater) {
+    const tc: Flis = [K.z, K.cx0 / 512, K.cy0 / 512],
+      M = flaterPiksler(
+        flater.flater,
+        { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 },
+        flater.koord
+      );
+    for (let q = 0; q < K.kl.length; q++) if (M[4 * q + 3] >= HALV) n[K.kl[q]] += f;
+    return n;
+  }
+  const A = kommune.andel;
+  if (!A) {
+    for (let q = 0; q < K.kl.length; q++) n[K.kl[q]] += f;
+    return n;
+  }
+  for (let y = 0; y < A.h; y++)
+    for (let p = A.rad[y]; p < A.rad[y + 1]; p++) {
+      const a = (A.a[p] / HEL) * f;
+      for (let q = y * A.w + A.x[p], s = q + A.n[p]; q < s; q++) n[K.kl[q]] += a;
+    }
   return n;
 }
-/* Tabellen solv.blokker: blokkene på nivå z der kommunen nr har minst én rute etter halvregelen, som [z, x, y]. Kalles med [nr, z].
- */
+/* Tabellen solv.blokker: blokkene på nivå z (10) der kommunen nr dekker noe av minst én rute, som [z, x, y], fra kommunens andel i
+   bitene (solv.kommunebiter). Kalles med [nr, z]. */
 export async function blokker([nr, z]: [string, number]): Promise<Flis[]> {
-  const g = await katalog.solv.grense(nr);
-  return fliserI(g.ext, z).filter(tc => {
-    const M = flateIBlokk(g.koord, tc);
-    for (let i = 3; i < M.length; i += 4) if (M[i] >= HALV) return true;
-    return false;
-  });
-}
-/* Det lagrede svaret for solv.blokker: blokkene på nivå z i registeret over de lagrede klassene, eller null når kommunen ikke står
-   der */
-export async function lagredeBlokker([nr, z]: [string, number]): Promise<Flis[] | null> {
-  const reg = await katalog.bronse.klasseregister(),
-    L = reg && reg.kommuner && reg.kommuner[nr] && reg.kommuner[nr][z];
-  return L ? L.map(([x, y]): Flis => [z, x, y]) : null;
+  if (z !== FLISNIVA) throw new Error('blokkene er på nivå 10');
+  const KB = await katalog.solv.kommunebiter(nr),
+    ut: Flis[] = [];
+  for (const K of KB) {
+    const f = 1 << (z - K.tc[0]);
+    for (let j = 0; j < f; j++)
+      for (let i = 0; i < f; i++) {
+        const tc: Flis = [z, K.tc[1] * f + i, K.tc[2] * f + j],
+          { andel } = kommuneIBlokk([K], tc);
+        if (!andel || andel.a.length) ut.push(tc);
+      }
+  }
+  return ut.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
 }
 /* Tabellen solv.klassekart: dagens klasser for kommunen nr zoomet ut, satt sammen av blokkene på 10,6 meter (solv.blokker og
    solv.klasser på nivå 10) og klippet til kommunen, så det er tomt utenfor. Bare til kartet: én piksel er 1, 2, 4 eller flere
