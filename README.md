@@ -182,10 +182,13 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | Fil | Innhold |
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
-| `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, og et tema som hentes i biter talt i kommunen (`tellIKommune`) |
+| `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, kommunens flate i bitene (`solv.kommunebiter`), og et tema som hentes i biter talt i kommunen (`tellIKommune`) |
 | `grunnkart.ts` | Grunnkartet fra NIBIO: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret), blokkene i kommunen, og dagens klasser for hele kommunen zoomet ut fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
-| `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Den eneste filen i sølv og gull som bruker nettleseren. |
+| `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Tegneflatene brukes om igjen, én per størrelse. Den eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden. |
+| `tolking.ts` | Tolkingen av kartbildene til verdier per rute for grått areal, inngrepsfri natur og kommuneplanen, uten katalogen, så den kan kjøres i bakgrunnstråden |
+| `oppgaver.ts` | Det tunge bildearbeidet som oppgaver: pakke ut og tolke bildene, tegne kommunens flate i bitene, telle i kommunen og arealet av verdsatt natur per verdikategori |
+| `arbeid.ts`, `arbeider.ts` | Bakgrunnstråden (Web Worker med OffscreenCanvas): oppgavene kjøres der, så siden ikke henger, og på siden når nettleseren ikke har den |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, tolking av fargene i kartbildene, og dagens klasse per rute i en flis |
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017, og hver arealklasse for seg per år (til tvillingen fra Figma) |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
@@ -531,7 +534,8 @@ Både mappen og navnet på en funksjon sier hva den gjør:
 | `src/ui/komponenter/` | Store bokstaver | React-komponenter: gjør gull om til tekst, tabeller og stolper. |
 
 Sølv og gull er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
-tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.ts`).
+tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.ts`, og bakgrunnstråden i `arbeid.ts` og
+`arbeider.ts`).
 
 `node verktoy/sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, generelt
 importerer ingenting, sølv og gull holder seg for seg selv, bronse og datamotoren bruker ikke OpenLayers eller React, React-komponentene henter ikke fra bronse og

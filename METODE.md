@@ -1046,6 +1046,16 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Bildearbeidet i en bakgrunnstråd, 18. oktober 2026.** Det tunge bildearbeidet kjøres nå i bakgrunnstråder i nettleseren (Web
+Worker med OffscreenCanvas, `solv/arbeid.ts`, `solv/arbeider.ts` og `solv/oppgaver.ts`), høyst tre: å pakke ut og tolke bildene av
+grått areal, inngrepsfri natur, kommuneplanen og grunnkartet, å tegne kommunens flate i bitene, å telle verdiene i kommunen, og
+arealet av verdsatt natur per verdikategori. Tolkingen er flyttet til en egen fil uten katalogen (`solv/tolking.ts`), og
+funksjonene er de samme. Har ikke nettleseren slike tråder, kjøres de samme oppgavene på siden som før. I Kautokeino stod siden
+uten arbeid i 13 av 24 sekunder til tallene for planlagt utbygging, mot under 2 av 26 før, så den svarer mens det regnes. Tallene
+er de samme: regresjonstesten ga ingen avvik i tall, tekst eller kartbilder, og tallene for Trondheim og Oppdal var like med og uten
+bakgrunnstråden. Det som ligger igjen på siden, er mest å klippe dagens klasser til kommunen og sette sammen oversiktskartet
+(rundt 2 sekunder i Kautokeino).
+
 **Mindre arbeid og minne med ruter på 10,6 meter, 18. oktober 2026.** En måling av Kautokeino viste at siden regnet i rundt 32 av
 de 35 sekundene til tallene for planlagt utbygging var ferdige, som før tiltakene 11. oktober. Fire tiltak, uten endring i metoden:
 - Kommunens flate tegnes én gang per bit (`solv.kommunebiter`) og deles av grått areal, inngrepsfri natur og plandekningen, i stedet

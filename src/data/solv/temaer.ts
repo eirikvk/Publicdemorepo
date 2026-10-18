@@ -7,9 +7,7 @@ import {
   flatesok,
   flerflate,
   iSok,
-  motKlokka,
   omriss,
-  overlapper,
   snitt,
   tomt,
   utsnitt,
@@ -20,8 +18,9 @@ import {
   type Utsnitt
 } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { BIT, biterI, bitRuter, m2PerKm2 } from './felles.ts';
-import { dekketM2, flaterPiksler, laanFlate, sti } from './raster.ts';
+import { arbeid } from './arbeid.ts';
+import { biterI, bitRuter, m2PerKm2 } from './felles.ts';
+import { dekketM2, flaterPiksler } from './raster.ts';
 
 /* Naturtemaene. samlet: mange små lokaliteter, der arealet per verdikategori regnes samlet og bare de som berøres av planlagt
    utbygging, listes. dekning: temaet har et kart over hvor det er kartlagt. klasser: verdikategoriene, [navn, farge], høyest verdi
@@ -288,62 +287,21 @@ export function byggDekning(features: Objekt[], kommune: FlateMedUtsnitt): Kartl
    meter, solv/felles.ts) og summere dekningen i rutene. Én tegning per kategori, der alle flater med minst den verdien tegnes som én
    sammenhengende form og klippes mot kommunen. Forskjellen mellom tegningene gir arealet per kategori uten dobbelttelling: der
    lokaliteter overlapper, teller den høyeste verdien, slik kartet også viser det. omrader har verdien v (0 er høyest). innenfor er en
-   flerflate arealet også klippes mot, for eksempel det kartlagte. Bit for bit, så lerretet aldri er større enn 2048 x 2048. */
-export function klasseAreal(omrader: Omrade[], antall: number, kommune: FlateMedUtsnitt, innenfor?: Flerflate) {
-  const skala = m2PerKm2(kommune.ext),
-    kum = new Array<number>(antall).fill(0),
-    ext = omrader.map(o => omriss(o.koord));
-  if (!omrader.length) return { klasser: kum, sum: 0 };
-  laanFlate(BIT, BIT, g => {
-    for (const tc of biterI(kommune.ext)) {
-      const R = bitRuter(tc),
-        u = R.u,
-        res = R.res,
-        her = omrader.filter((_, i) => overlapper(ext[i], u));
-      if (!her.length) continue;
-      let forrige = 0;
-      for (let v = 0; v < antall; v++) {
-        if (!her.some(o => (o.v || 0) === v)) {
-          kum[v] += forrige;
-          continue;
-        }
-        g.globalCompositeOperation = 'source-over';
-        g.clearRect(0, 0, BIT, BIT);
-        g.beginPath();
-        for (const o of her) {
-          if ((o.v || 0) > v) continue;
-          for (const flate of o.koord)
-            flate.forEach((ring, nr) => {
-              /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
-              const snu = motKlokka(ring) !== (nr === 0),
-                n = ring.length;
-              for (let i = 0; i < n; i++) {
-                const q = ring[snu ? n - 1 - i : i],
-                  x = (q[0] - u[0]) / res,
-                  y = (u[3] - q[1]) / res;
-                if (i) g.lineTo(x, y);
-                else g.moveTo(x, y);
-              }
-              g.closePath();
-            });
-        }
-        g.fill('nonzero');
-        g.globalCompositeOperation = 'destination-in';
-        sti(g, kommune.koord, u, 1 / res);
-        g.fill('evenodd');
-        if (innenfor) {
-          sti(g, innenfor, u, 1 / res);
-          g.fill('evenodd');
-        }
-        forrige = dekketM2(g.getImageData(0, 0, BIT, BIT).data, res) / skala;
-        kum[v] += forrige;
-      }
-    }
+   flerflate arealet også klippes mot, for eksempel det kartlagte. Bit for bit, så lerretet aldri er større enn 2048 x 2048, i
+   bakgrunnstråden (klasseAreal i oppgaver.ts). */
+export async function klasseAreal(
+  omrader: Omrade[],
+  antall: number,
+  kommune: FlateMedUtsnitt,
+  innenfor?: Flerflate
+): Promise<{ klasser: number[]; sum: number }> {
+  return arbeid({
+    type: 'klasseAreal',
+    omrader: omrader.map(o => ({ koord: o.koord, v: o.v || 0 })),
+    antall,
+    kommune: { koord: kommune.koord, ext: kommune.ext },
+    innenfor
   });
-  return {
-    klasser: Array.from({ length: antall }, (_, v) => Math.max(0, kum[v] - (v ? kum[v - 1] : 0))),
-    sum: kum[antall - 1]
-  };
 }
 
 /* Områdene i et tema fra svaret j: klippet mot kommunen (verdsatt natur uklippet), med utsnittet. ufullstendig sier at tjenesten ikke

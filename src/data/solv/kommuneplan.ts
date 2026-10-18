@@ -1,33 +1,18 @@
 /* Sølv for kommuneplanen fra DiBK: planlagt utbygging per rute i en flis (solv.kommuneplanruter), og om kommunen har kommuneplan hos
    DiBK og hvilken. Bare kommuneplanen: den legges oppå dagens klasser og egne områder i gull (gull/utbygging.ts). */
 import { katalog } from '../katalog.ts';
-import {
-  HALV,
-  PLANOVERSIKT,
-  PLANOVERSIKT_NIVA,
-  PLAN_FINNES,
-  SYNLIG,
-  BIT,
-  flisrammen,
-  type Flis,
-  type Piksler,
-  type Planruter
-} from './felles.ts';
-import { iKommunen, tellIKommune } from './kommune.ts';
+import { arbeid } from './arbeid.ts';
+import { PLANOVERSIKT, PLANOVERSIKT_NIVA, PLAN_FINNES, BIT, flisrammen, type Flis, type Planruter } from './felles.ts';
+import { tellIKommune } from './kommune.ts';
 import { bildePiksler } from './raster.ts';
+export { planIFlis, planlagPerRute } from './tolking.ts';
 
-/* Planlagt utbygging per rute i en flis, fra kartbildet P fra DiBK (piksler): 1 der minst halve ruta ligger i en planflate
-   (halvregelen), ellers 0 */
-export function planIFlis(P: Piksler): Uint8Array {
-  const pl = new Uint8Array(P.length / 4);
-  for (let i = 3, q = 0; i < P.length; i += 4, q++) if (P[i] >= HALV) pl[q] = 1;
-  return pl;
-}
 /* Tabellen solv.kommuneplanruter: kommuneplanen fra DiBK i flisen tc, som planen per rute (Planruter i felles.ts). plan er 1 der
-   minst halve ruta ligger i en flate for framtidig utbygging, ellers 0. Kommuneplanen har ingen områder. */
+   minst halve ruta ligger i en flate for framtidig utbygging, ellers 0 (planIFlis, i bakgrunnstråden). Kommuneplanen har ingen
+   områder. */
 export async function kommuneplanruter(tc: Flis): Promise<Planruter> {
-  const P = await bildePiksler(await katalog.bronse.planflis(tc), 512, 512);
-  return { z: tc[0], cx0: tc[1] * 512, cy0: tc[2] * 512, w: 512, h: 512, plan: planIFlis(P) };
+  const plan = await arbeid<Uint8Array>({ type: 'planflis', P: await katalog.bronse.planflis(tc) });
+  return { z: tc[0], cx0: tc[1] * 512, cy0: tc[2] * 512, w: 512, h: 512, plan };
 }
 
 /* Hvor kommuneplanen ligger i kommunen, grovt: for hver piksel i oversiktsbildet (bronse.planoversikt) om noe av planen ligger der.
@@ -66,13 +51,6 @@ export function kanHaPlan(O: Planoversikt, tc: Flis): boolean {
   return false;
 }
 
-/* Planlaget per rute i et kartbilde fra DiBK (piksler): 1 der ruta er tegnet (minst 100 av 255, SYNLIG), ellers 0 */
-export function planlagPerRute(P: Piksler): Uint8Array {
-  const pl = new Uint8Array(P.length / 4);
-  for (let i = 3, q = 0; i < P.length; i += 4, q++) if (P[i] >= SYNLIG) pl[q] = 1;
-  return pl;
-}
-
 /* Kommuneplanen DiBK har: plan-id, hvem som har levert den, og datoen den ble kopiert til DiBK som [år, måned, dag] */
 export interface Planopplysninger {
   id: string;
@@ -95,20 +73,13 @@ export async function plandekning(nr: string): Promise<Plandekning> {
   const T = await tellIKommune(
     nr,
     2,
-    async tc => planlagPerRute(await bildePiksler(await katalog.bronse.planbit(tc), BIT, BIT)),
+    async tc => arbeid<Uint8Array>({ type: 'planlag', P: await katalog.bronse.planbit(tc) }),
     v => v,
     0,
-    (tc, V, K) => {
-      if (!V) return;
-      let n = 0;
-      for (let q = 0; q < V.length; q++) if (V[q] && iKommunen(K, q)) n++;
-      if (n <= flest) return;
-      flest = n;
-      for (let q = 0, k = 0; q < V.length; q++)
-        if (V[q] && iKommunen(K, q) && k++ === n >> 1) {
-          punkt = { bit: tc, i: q % BIT, j: Math.floor(q / BIT) };
-          break;
-        }
+    (tc, T) => {
+      if (T.hist[1] <= flest || T.midt < 0) return;
+      flest = T.hist[1];
+      punkt = { bit: tc, i: T.midt % BIT, j: Math.floor(T.midt / BIT) };
     }
   );
   const inne = T.n[0] + T.n[1],

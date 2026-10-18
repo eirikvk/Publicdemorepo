@@ -1,8 +1,23 @@
 /* Sølv, felles standard: fra flater til ruter. Flatene tegnes i et lerret (canvas) i nettleseren, og dekningen leses per rute som
    alfa fra 0 til 255. Lerretet glatter kantene, så en rute i kanten av en flate får delvis dekning. Dette er den eneste filen i
-   sølv og gull som bruker nettleseren. Skal beregningene kjøres et annet sted, er det denne som må byttes ut. */
+   sølv og gull som bruker nettleseren, sammen med bakgrunnstråden (arbeid.ts og arbeider.ts). Skal beregningene kjøres et annet
+   sted, er det disse som må byttes ut. Det som tegnes og leses med en tegneflate som gis inn (Flate), virker både på siden og i
+   bakgrunnstråden. */
 import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
 import type { Piksler, Rutebilde } from './felles.ts';
+
+/* En tegneflate: et lerret på siden, eller i bakgrunnstråden (OffscreenCanvas) */
+export type Flate = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+/* Gjør tegneflaten g på w x h klar til bruk igjen: tom, uten forskyvning og med vanlige innstillinger */
+export function nullstill(g: Flate, w: number, h: number) {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = 'source-over';
+  g.globalAlpha = 1;
+  g.imageSmoothingEnabled = true;
+  g.fillStyle = '#000';
+  g.clearRect(0, 0, w, h);
+  g.beginPath();
+}
 
 /* Et lerret på w x h ruter, klart til å tegne i og lese fra */
 export function tegneflate(w: number, h: number): CanvasRenderingContext2D {
@@ -16,31 +31,25 @@ export function tegneflate(w: number, h: number): CanvasRenderingContext2D {
    lerretene på siden kan ta til sammen, også de som venter på å bli ryddet bort. En flate lånes bare mens noe tegnes og leses, uten
    å vente på noe i mellom, så to kall kan ikke bruke den samme samtidig. Svaret er alltid en kopi (getImageData), ikke flaten. */
 const flater = new Map<string, CanvasRenderingContext2D>();
-export function laanFlate<T>(w: number, h: number, bruk: (g: CanvasRenderingContext2D) => T): T {
+/* En tom tegneflate på w x h fra dem som brukes om igjen. Den kan brukes fram til neste await. */
+export function hentFlate(w: number, h: number): CanvasRenderingContext2D {
   const n = `${w}x${h}`;
   let g = flater.get(n);
   if (g) {
     flater.delete(n);
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.globalCompositeOperation = 'source-over';
-    g.globalAlpha = 1;
-    g.imageSmoothingEnabled = true;
-    g.fillStyle = '#000';
-    g.clearRect(0, 0, w, h);
-    g.beginPath();
+    nullstill(g, w, h);
   } else g = tegneflate(w, h);
-  try {
-    return bruk(g);
-  } finally {
-    flater.set(n, g);
-    /* høyst fire størrelser: den som er brukt lengst siden, frigjøres */
-    for (const [k, x] of flater) {
-      if (flater.size <= 4) break;
-      x.canvas.width = 0;
-      flater.delete(k);
-    }
+  flater.set(n, g);
+  /* høyst fire størrelser: den som er brukt lengst siden, frigjøres */
+  for (const [k, x] of flater) {
+    if (flater.size <= 4) break;
+    x.canvas.width = 0;
+    flater.delete(k);
   }
+  return g;
 }
+export const laanFlate = <T>(w: number, h: number, bruk: (g: CanvasRenderingContext2D) => T): T =>
+  bruk(hentFlate(w, h));
 
 /* Et lerret på 512 x 512 piksler: én flis i utbyggingen, eller én flis i kartet tegnet i dobbel tetthet */
 export function flislerret(): HTMLCanvasElement {
@@ -72,7 +81,7 @@ export function tegnUtsnitt(
 
 /* En flerflate som sti i lerretet g. u er utsnittet lerretet viser, og s er ruter per meter. Fylles med g.fill('evenodd'), så hull
    blir hull. */
-export function sti(g: CanvasRenderingContext2D, koord: Flerflate, u: Utsnitt, s: number) {
+export function sti(g: Flate, koord: Flerflate, u: Utsnitt, s: number) {
   g.beginPath();
   for (const flate of koord)
     for (const ring of flate) {
@@ -83,14 +92,14 @@ export function sti(g: CanvasRenderingContext2D, koord: Flerflate, u: Utsnitt, s
     }
 }
 
-/* En flerflate tegnet i rutenettet R, som piksler: dekningen av hver rute står i alfa. Kommunens flate brukes slik som maske. */
-export function flatePiksler(koord: Flerflate, R: Rutebilde) {
-  return laanFlate(R.w, R.h, g => {
-    sti(g, koord, R.u, 1 / R.res);
-    g.fill('evenodd');
-    return g.getImageData(0, 0, R.w, R.h).data;
-  });
+/* En flerflate tegnet i rutenettet R, som piksler: dekningen av hver rute står i alfa. Kommunens flate brukes slik som maske.
+   flatePikslerI tegner i en tom tegneflate som gis inn. */
+export function flatePikslerI(g: Flate, koord: Flerflate, R: Rutebilde) {
+  sti(g, koord, R.u, 1 / R.res);
+  g.fill('evenodd');
+  return g.getImageData(0, 0, R.w, R.h).data;
 }
+export const flatePiksler = (koord: Flerflate, R: Rutebilde) => flatePikslerI(hentFlate(R.w, R.h), koord, R);
 /* Flere flerflater tegnet i rutenettet R, hver for seg, så der de overlapper, er dekningen den samme som for én (unionen). Klippet
    mot flaten innenfor (kommunen). Dekningen av hver rute står i alfa. */
 export function flaterPiksler(flater: Flerflate[], R: Rutebilde, innenfor: Flerflate) {
@@ -105,18 +114,19 @@ export function flaterPiksler(flater: Flerflate[], R: Rutebilde, innenfor: Flerf
     return g.getImageData(0, 0, R.w, R.h).data;
   });
 }
-/* Et bilde fra en kilde (PNG) som piksler, skalert til w x h ruter */
-export async function bildePiksler(buf: ArrayBuffer, w: number, h: number) {
+/* Et bilde fra en kilde (PNG) som piksler, skalert til w x h ruter. pakkUt tegner i en tegneflate fra flate, som kan brukes fram til
+   neste await. */
+export async function pakkUt(buf: ArrayBuffer, w: number, h: number, flate: (w: number, h: number) => Flate) {
   const bm = await createImageBitmap(new Blob([buf]));
   try {
-    return laanFlate(w, h, g => {
-      g.drawImage(bm, 0, 0, w, h);
-      return g.getImageData(0, 0, w, h).data;
-    });
+    const g = flate(w, h);
+    g.drawImage(bm, 0, 0, w, h);
+    return g.getImageData(0, 0, w, h).data;
   } finally {
     if (bm.close) bm.close();
   }
 }
+export const bildePiksler = (buf: ArrayBuffer, w: number, h: number) => pakkUt(buf, w, h, hentFlate);
 /* Arealet en tegning dekker, i kvadratmeter i kartet: summen av dekningen (alfa) i rutene, med ruter på res meter */
 export function dekketM2(d: Piksler, res: number) {
   let sum = 0;

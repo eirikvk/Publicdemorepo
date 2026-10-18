@@ -16,8 +16,8 @@
      kart/              OpenLayers. Bruker ikke React-komponentene.
 
    For generelt, sølv og gull gjelder i tillegg, så beregningene kan leses, testes og flyttes til en annen løsning uten å ta med seg siden:
-   - De bruker ikke nettleseren (document, window, fetch og lignende) eller tilstanden (app). Unntaket er solv/raster.ts, som tegner
-     flater og leser bilder i et lerret.
+   - De bruker ikke nettleseren (document, window, fetch og lignende) eller tilstanden (app). Unntakene er solv/raster.ts, som tegner
+     flater og leser bilder i et lerret, og bakgrunnstråden (solv/arbeid.ts og solv/arbeider.ts).
    - De har ingen variabler på toppnivå som kan endres (let). Det som gis inn, kommer som argumenter.
    Og datamotoren har ingen regnefunksjoner: funksjoner som heter tolk, kryss, bygg eller tell noe, hører hjemme i sølv eller gull.
    Alt datapipelinen husker, ligger i cachen (data/cache.ts). Ingen andre filer i data har minne på toppnivå (new Map, WeakMap, Set
@@ -69,7 +69,8 @@ const LAG: Record<string, Regel> = {
 };
 const NETTLESER = ['document', 'window', 'fetch', 'navigator', 'location', 'history', 'createImageBitmap'];
 const UNNTAK: Record<string, string[]> = {
-  'data/solv/raster': ['document', 'createImageBitmap']
+  'data/solv/raster': ['document', 'createImageBitmap'],
+  'data/solv/arbeid': ['navigator'] /* hvor mange bakgrunnstråder nettleseren har plass til */
 }; /* fil uten endelse */
 const REGNENAVN = /^(tolk|kryss|bygg|tell)[A-ZÆØÅ]/;
 const MINNE = ['Map', 'WeakMap', 'Set', 'WeakSet'],

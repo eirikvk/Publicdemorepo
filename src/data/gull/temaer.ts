@@ -381,7 +381,7 @@ export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | nul
   const v = await katalog.solv.kartlagt(nr);
   if (!v.flate || !v.flate.length) return null;
   const [{ omrader }, g] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.solv.grense(nr)]);
-  return klasseAreal(omrader, VERDI.klasser!.length, g, v.flate).klasser;
+  return (await klasseAreal(omrader, VERDI.klasser!.length, g, v.flate)).klasser;
 }
 
 /* Tabellen gull.vernPerVerneform: det vernede arealet i kommunen nr per verneform, slik Miljødirektoratet skriver den
@@ -422,7 +422,7 @@ export interface VerdsattVurderes {
 export async function verdsattVurderes(nr: string): Promise<VerdsattVurderes> {
   const [T, g] = await Promise.all([katalog.solv.verdsattVurderes(nr), katalog.solv.grense(nr)]),
     n = VURDERES.klasser!.length,
-    A = klasseAreal(T.omrader, n, g);
+    A = await klasseAreal(T.omrader, n, g);
   return {
     omrader: T.omrader,
     antall: Array.from({ length: n }, (_, v) => T.omrader.filter(o => (o.v || 0) === v).length),

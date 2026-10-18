@@ -21,7 +21,8 @@ import {
   type Piksler,
   type Plassering
 } from './felles.ts';
-import { ALLE, KLASSETABELL, detaljklasserIFlis, klasseAv, klasserIFlis } from './klasser.ts';
+import { arbeid } from './arbeid.ts';
+import { ALLE, KLASSETABELL, klasseAv } from './klasser.ts';
 import {
   bildePiksler,
   flatePiksler,
@@ -61,13 +62,16 @@ const iBlokk = (tc: Flis): Plassering & { h: number } => ({
    er en blanding. */
 export async function klasser(tc: Flis): Promise<Klasser> {
   if (tc[0] !== FLISNIVA) throw new Error('blokkene er på nivå 10');
-  return { ...iBlokk(tc), kl: klasserIFlis(await bildePiksler(await katalog.bronse.grunnkartflis(tc), 512, 512)) };
+  return {
+    ...iBlokk(tc),
+    kl: await arbeid<Uint8Array>({ type: 'klasser', P: await katalog.bronse.grunnkartflis(tc) })
+  };
 }
 /* Det lagrede svaret for solv.klasser: filen for blokken (bronse.klassefil), et bilde med fargetabellen KLASSETABELL. Klassen
    leses av fargen som for kartbildene. null når blokken ikke er lagret. */
 export async function lagredeKlasser(tc: Flis): Promise<Klasser | null> {
   const buf = await katalog.bronse.klassefil(tc);
-  return buf ? { ...iBlokk(tc), kl: klasserIFlis(await bildePiksler(buf, 512, 512)) } : null;
+  return buf ? { ...iBlokk(tc), kl: await arbeid<Uint8Array>({ type: 'klasser', P: buf }) } : null;
 }
 
 /* Tabellen solv.detaljklasser: detaljklassen per rute i blokken tc [10, x, y], på 10,6 meter. Blokken er ett kartbilde fra NIBIO
@@ -75,7 +79,10 @@ export async function lagredeKlasser(tc: Flis): Promise<Klasser | null> {
    oppløsningen grunnkartet tegnes i. */
 export async function detaljklasser(tc: Flis): Promise<Klasser> {
   if (tc[0] !== FLISNIVA) throw new Error('detaljklassene er på nivå 10');
-  return { ...iBlokk(tc), kl: detaljklasserIFlis(await bildePiksler(await katalog.bronse.detaljflis(tc), 512, 512)) };
+  return {
+    ...iBlokk(tc),
+    kl: await arbeid<Uint8Array>({ type: 'detaljklasser', P: await katalog.bronse.detaljflis(tc) })
+  };
 }
 /* Tabellen solv.detaljblokker: blokkene på nivå 10 for kommunen nr, som [10, x, y]: de lagrede i registeret (bronse.detaljregister),
    eller ellers blokkene kommunen har ruter i (solv.blokker), som solv.detaljklasser lager av kartbildene fra NIBIO, ett kall per
@@ -89,7 +96,7 @@ export async function detaljblokker(nr: string): Promise<Flis[]> {
    når blokken ikke er lagret. */
 export async function lagredeDetaljklasser(tc: Flis): Promise<Klasser | null> {
   const buf = await katalog.bronse.detaljfil(tc);
-  return buf ? { ...iBlokk(tc), kl: detaljklasserIFlis(await bildePiksler(buf, 512, 512)) } : null;
+  return buf ? { ...iBlokk(tc), kl: await arbeid<Uint8Array>({ type: 'detaljklasser', P: buf }) } : null;
 }
 
 /* Hvor mye av hver rute i blokken tc flaten koord dekker, som alfa fra 0 til 255 */
