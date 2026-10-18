@@ -310,7 +310,7 @@ export async function verdsattVurderes(nr: string): Promise<Temaomrader> {
 }
 /* Naturtemaene som dekningsandel i kommunen (solv.vernAndel og de andre): verneområdene, villreinområdene, verdsatt natur og verdsatt natur
    som vurderes per kategori, det kartlagte, og verdsatt natur innenfor det kartlagte */
-export type Temaid = 'vern' | 'rein' | 'verdi' | 'vurderes' | 'kartlagt' | 'verdiKartlagt';
+export type Temaid = 'vern' | 'verneform' | 'rein' | 'verdi' | 'vurderes' | 'kartlagt' | 'verdiKartlagt';
 /* Et tema i kommunen som dekningsandel: bitene per kategori med andelen per rute (biter, se andelsbiter i kommune.ts), arealet per
    kategori i km² og samlet (sum). Der flater overlapper, telles arealet én gang, i den første kategorien (høyest verdi først). */
 export interface Temaandel {
@@ -360,6 +360,19 @@ async function temaandel(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[
    én kategori per verdi, og verdsatt natur i det kartlagte har det kartlagte som maske i tillegg til kommunen. */
 export async function vernAndel(nr: string): Promise<Temaandel> {
   return temaandel(nr, 'vern', perKategori((await katalog.solv.verneomrader(nr)).omrader, 1));
+}
+/* Tabellen solv.verneformAndel: verneområdene som dekningsandel med én kategori per gruppe av verneformer, i rekkefølgen i
+   VERNEFORMGRUPPER. Der områder fra ulike grupper overlapper, telles ruta i den første gruppen, så gruppene summerer til det samme
+   som solv.vernAndel. */
+export async function verneformAndel(nr: string): Promise<Temaandel> {
+  const O = (await katalog.solv.verneomrader(nr)).omrader;
+  return temaandel(
+    nr,
+    'verneform',
+    VERNEFORMGRUPPER.map(([id]) =>
+      ringer(O.filter(o => verneformgruppe(o.egenskaper.verneform) === id).map(o => o.koord))
+    )
+  );
 }
 export async function villreinAndel(nr: string): Promise<Temaandel> {
   return temaandel(nr, 'rein', perKategori((await katalog.solv.villrein(nr)).omrader, 1));

@@ -5,7 +5,7 @@
    (katalog.gull.verdsattNaturKartlagt). Temaet vises med en gang, og planen og kartleggingen legges til når de er klare. Siden
    setter bare tallene sammen: planlagt utbygging per område står på samme plass som området i listen. */
 import { useState } from 'react';
-import { TEMATABELLER } from '../../data/katalog.ts';
+import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import type { Kartleggingen, TemaIPlan, Temaet } from '../../data/gull/temaer.ts';
 import type { Rad } from '../../data/cache.ts';
 import type { Naturtema as Tema } from '../../data/solv/temaer.ts';
@@ -13,7 +13,7 @@ import { utenPlan } from '../../data/motor/egne.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
-import { Fargelinje, Forklaring, Stripe, type Stripedel } from './deler.tsx';
+import { Fargelinje, Forklaring, Stripe, Talltabell, type Stripedel } from './deler.tsx';
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.ts';
 import { antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
@@ -107,6 +107,48 @@ function Helhet({
   );
 }
 
+/* Det vernede arealet per verneform, på land og i sjø (gull.vernLandSjo). Tabellen teller rutene i grunnkartet, som kan måtte hentes
+   fra NIBIO, så den leses bare når siden for verneområder vises. */
+function VernLandSjo() {
+  const R = ui.side === 'vern' ? valgt(katalog.gull.vernLandSjo) : null;
+  if (!R) return null;
+  if (R.status === 'henter') return <p className="hint">Regner ut det vernede arealet på land og i sjø …</p>;
+  if (R.status === 'feil' || !R.verdi) return null;
+  const V = R.verdi.filter(g => g.land + g.sjo > 0);
+  if (!V.length) return null;
+  const tall = (km2: number) => (km2 ? dekar(km2).replace(' daa', '') : '0'),
+    sum = (f: (g: (typeof V)[number]) => number) => V.reduce((a, g) => a + f(g), 0);
+  return (
+    <>
+      <Talltabell
+        tittel="Vernet areal per verneform, daa"
+        kolonner={['Verneform', 'På land', 'I sjø', 'Til sammen']}
+        rader={[
+          ...V.map(g => ({
+            navn: g.navn,
+            tall: [[tall(g.land)], [tall(g.sjo)], [tall(g.land + g.sjo)]] as [string][]
+          })),
+          ...(V.length > 1
+            ? [
+                {
+                  navn: 'Til sammen',
+                  klasse: 'sum',
+                  tall: [[tall(sum(g => g.land))], [tall(sum(g => g.sjo))], [tall(sum(g => g.land + g.sjo))]] as [
+                    string
+                  ][]
+                }
+              ]
+            : [])
+        ]}
+      />
+      <p className="hint">
+        Talt i rutene i grunnkartet fra NIBIO: sjø er hav i grunnkartet, land er alt annet, også innsjøer og elver. Der
+        områder overlapper, telles arealet én gang.
+      </p>
+    </>
+  );
+}
+
 /* Et naturtema fra Miljødirektoratet, med områdene som liste. */
 export function Naturtema({ t: tema }: { t: Tema }) {
   /* Kommunen der hele listen er åpnet. Bytter man kommune, vises den korte listen igjen. */
@@ -193,6 +235,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       under={under}
     >
       <p>{sumTekst}</p>
+      {t.id === 'vern' && N.antall > 0 && <VernLandSjo />}
       {N.perKlasse && (
         <ul className="talliste">
           {t.klasser!.map(([navn, id], v) => {

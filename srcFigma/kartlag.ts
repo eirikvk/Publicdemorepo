@@ -1,8 +1,8 @@
 /* Kartlag som bare tvillingen har. Lagene av grunnkartet og grått areal tegnes av den samme datamotoren og den samme tegnemotoren som
    hovedsidens kartlag (data/motor/kartverdier.ts og src/ui/kart/verdilag.ts), så hver piksel er det sølv sier på nivået kartet viser,
    og lagene stemmer piksel for piksel med dagens arealklasser og hverandre. Tvillingen bestemmer bare fargene: detaljklassene, som
-   skogtyper og tresatt myr, én av dagens klasser for seg, til kortene på oversikten, og grått areal. Og lag fra Miljødirektoratets kart
-   over naturskog og flater fra tabellene, bare til visning. Alle lagene klippes mot kommunen. Kartet (Kart.tsx) legger lagene inn i det
+   skogtyper og tresatt myr, én av dagens klasser for seg, til kortene på oversikten, og grått areal. Og flater fra tabellene, bare
+   til visning. Alle lagene klippes mot kommunen. Kartet (Kart.tsx) legger lagene inn i det
    felles kartet når siden vises, og tar dem ut igjen etterpå. */
 import type ImageTile from 'ol/ImageTile.js';
 import type TileLayer from 'ol/layer/Tile.js';
@@ -14,7 +14,7 @@ import { verdi } from '../src/data/motor/valgt.ts';
 import type { Flis } from '../src/data/solv/felles.ts';
 import { ALLE, DETALJKLASSER, type Detaljklasse, type KlasseId } from '../src/data/solv/klasser.ts';
 import type { VerdsattVurderes, VernetFlate } from '../src/data/gull/temaer.ts';
-import { flislerret, lesBilde, sti } from '../src/data/solv/raster.ts';
+import { flislerret, sti } from '../src/data/solv/raster.ts';
 import { kart } from '../src/ui/kart/kart.ts';
 import { KILDER, TOM, friskOpp, nyttSiden, plannett, tegnetKilde, type Flistegner } from '../src/ui/kart/felles.ts';
 import { ol } from '../src/ui/kart/ol.ts';
@@ -42,7 +42,8 @@ function pikselag(
   verdier: (tc: Flis) => Promise<ArrayLike<number> | null>,
   farger: () => (number[] | null)[],
   maske?: () => Flerflate[] | null,
-  opacity?: number
+  opacity?: number,
+  prikket?: boolean
 ): TileLayer<XYZ> {
   return verdilag({
     tittel,
@@ -53,7 +54,8 @@ function pikselag(
     klasse: 'figma-lag',
     maske,
     folg: maske ? lag => [iKartet(lag) ? maske() : null] : undefined,
-    opacity
+    opacity,
+    prikket
   });
 }
 /* Om laget er i kartet nå (tvillingens egne lag legges inn bare mens siden som viser dem, er oppe) */
@@ -67,9 +69,9 @@ const detaljfarger = (farge: (k: Detaljklasse) => string | null) => () => [
     return f ? cssFarge(f) : null;
   })
 ];
-/* Et kartlag av detaljklassene (detaljerIFlis), i fargene farge gir */
-export const detaljlag = (tittel: string, farge: (k: Detaljklasse) => string | null) =>
-  pikselag(tittel, detaljerIFlis, detaljfarger(farge));
+/* Et kartlag av detaljklassene (detaljerIFlis), i fargene farge gir. prikket gir prikker over, som tresatt myr i skissene. */
+export const detaljlag = (tittel: string, farge: (k: Detaljklasse) => string | null, prikket?: boolean) =>
+  pikselag(tittel, detaljerIFlis, detaljfarger(farge), undefined, undefined, prikket);
 /* Som detaljlag, men bare innenfor flatene maske gir (som verneområdene) */
 export const detaljlagI = (
   tittel: string,
@@ -80,44 +82,6 @@ export const detaljlagI = (
    (klasserIFlis), så laget henter ikke noe mer enn kartet alt gjør */
 export const klasselag = (tittel: string, id: KlasseId) =>
   pikselag(tittel, klasserIFlis, () => [null, ...ALLE.map(([k]) => (k === id ? cssFarge(id) : null))]);
-
-/* Et kartlag fra Miljødirektoratets kart over naturskog (bronse.naturskogflis), klippet mot kommunen. Bare til visning. */
-type Naturskoglag = Parameters<typeof katalog.bronse.naturskogflis>[0][0];
-export function naturskoglag(tittel: string, navn: Naturskoglag): TileLayer<XYZ> {
-  async function tegn(tile: ImageTile) {
-    try {
-      const G = verdi(katalog.solv.grense),
-        tc = tile.getTileCoord() as Flis,
-        u = plannett.getTileCoordExtent(tc);
-      if (!G || !ol.extent.intersects(u, G.ext)) return tile.setState(TOM);
-      const bm = await lesBilde(await katalog.bronse.naturskogflis([navn, tc])),
-        c = flislerret(),
-        g = c.getContext('2d')!;
-      g.drawImage(bm, 0, 0, 512, 512);
-      if (bm.close) bm.close();
-      g.globalCompositeOperation = 'destination-in';
-      sti(g, G.koord, u, 512 / (u[2] - u[0]));
-      g.fill('evenodd');
-      tile.setImage(c);
-    } catch (e) {
-      tile.setState(3);
-    }
-  }
-  const lag = new ol.layer.Tile({
-    className: 'figma-lag',
-    opacity: 0.85,
-    properties: { tittel },
-    source: tegnetKilde(tegn as Flistegner, [KILDER.mdir])
-  });
-  const ny = nyttSiden();
-  abonner(() => {
-    const G = verdi(katalog.solv.grense);
-    if (!ny('grense', G)) return;
-    if (G) lag.setExtent(G.ext);
-    friskOpp(lag);
-  });
-  return lag;
-}
 
 /* Et kartlag av flater fra en tabell, som verneområdene per verneform: flatene gir flatene med utsnitt og farge (en variabel i
    stilen), eller null mens de hentes. Hver flate fylles halvt gjennomsiktig og får kant i fargen, klippet mot kommunen. Flatene leses
@@ -175,20 +139,18 @@ export function flatelag(
 }
 
 /* Lagene på skogsiden: skogen samlet, skogen etter treslag, tresatt myr og tresatt innmarksbeite fra grunnkartet (hvert sitt lag, som i
-   skissene), og to lag fra kartet over naturskog */
+   skissene, de to siste med prikker) */
 export const SKOGLAG = {
   skog: detaljlag('Økosystemtype skog', k => (k.treslag ? 'skog' : null)),
   skogtyper: detaljlag('Skogtyper', k => (k.treslag ? 'skog-' + k.treslag : null)),
-  myr: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null)),
-  beite: detaljlag('Tresatt innmarksbeite', k => (k.underlag === 'beite' ? 'beite-tresatt' : null)),
-  naerhet: naturskoglag('Naturskogsnærhet', 'naturskogsnaerhet'),
-  for1940: naturskoglag('Skog etablert før 1940, ikke flatehogd', 'skog_etablert_foer_1940_ikke_flatehogd')
+  myr: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null), true),
+  beite: detaljlag('Tresatt innmarksbeite', k => (k.underlag === 'beite' ? 'beite-tresatt' : null), true)
 };
 
 /* Lagene på våtmarkssiden: økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr fra grunnkartet */
 export const VATMARKLAG = {
   apen: detaljlag('Økosystemtype våtmark', k => (k.id === 'vat' ? 'myr-apen' : null)),
-  tresatt: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null))
+  tresatt: detaljlag('Tresatt myr', k => (k.underlag === 'myr' ? 'myr-tresatt' : null), true)
 };
 
 /* Lagene på oversikten: hver av dagens klasser for seg, til kortene natur, jordbruk og bebygd */
@@ -269,7 +231,8 @@ export function velgVerneformer(av: string[]) {
 export const VERDILAG = {
   vurderes: flatelag('Verdsatt natur som vurderes', () => vurderes(verdi(katalog.gull.verdsattVurderes)))
 };
-/* Lag av grått areal (graaIFlis), som hovedsidens lag: alt grått areal (trinn 1–6), til villreinsiden, og grønne arealer i bebyggelse
+/* Lag av grått areal (graaIFlis), som hovedsidens lag: alt grått areal (trinn 1–6), i den lysere gråfargen fra skissene, til
+   villreinsiden, og grønne arealer i bebyggelse
    (grått areal med minst halvparten vegetasjon, trinn 4 og 5), til bynaturen */
 const graafarger = (vis: (v: number) => string | null) => () =>
   Array.from({ length: 8 }, (_, v) => {
@@ -280,7 +243,7 @@ export const GRAALAG = {
   graa: pikselag(
     'Grått areal',
     graaIFlis,
-    graafarger(v => (v <= 6 ? 'graa0' : null)),
+    graafarger(v => (v <= 6 ? 'graa-rein' : null)),
     undefined,
     0.85
   ),

@@ -10,7 +10,7 @@ import { NATURTEMA } from '../../src/data/solv/temaer.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
 import type { Okosystemregnskap, Plassering } from '../../src/data/gull/syntetisk.ts';
 import { HOVEDOKOSYSTEMER } from '../../src/data/solv/klasser.ts';
-import { andelTekst, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
+import { andelTekst, dekar, iTekst, nf, pst } from '../tekst.ts';
 import { MdIconAdd, MdIconClose, MdRadioGroup } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import { KLASSELAG } from '../kartlag.ts';
@@ -58,8 +58,8 @@ const SYNTETISK_TEKST =
   'Tallene er syntetiske, til SSBs tabeller for naturregnskapet kommer 25. november 2026. De er laget av SSBs arealstatistikk for 2017 og 2024, som ikke måler endring direkte, og hvor mye som er bygget ned, er anslått med en fast regel. De skal bare ha riktig størrelsesorden.';
 /* Merket som sier at tallene er syntetiske */
 const Syntetisk = () => <p className="syntetisk-merke">Syntetiske tall</p>;
-/* En andel med to desimaler, for de små andelene i sammenligningen med Norge */
-const pst2 = (a: number | null) => (a === null ? '–' : nf(a, 2) + ' %');
+/* En liten andel, som i sammenligningen med Norge: én desimal, som ellers, og «< 0,1 %» når den er mindre */
+const pst2 = (a: number | null) => (a === null ? '–' : andelTekst(a));
 
 /* Kortet som er valgt på oversikten, og laget og merkelappen det gir i kartet */
 type Klassevalg = keyof typeof KLASSELAG;
@@ -164,7 +164,7 @@ function Endringer({ r }: { r: Okosystemregnskap }) {
                   ))}
                   {!x && <p className="hint">Vann og hav er ikke med i de syntetiske endringstallene.</p>}
                   {o.tema && (
-                    <Lenke til={{ side: 'utforsk', tema: o.tema[0] }} className="pil-lenke">
+                    <Lenke til={{ side: 'utforsk', tema: o.tema[0] }} className="pil-lenke md-link">
                       Mer om {o.tema[1]} →
                     </Lenke>
                   )}
@@ -313,7 +313,7 @@ export function Oversikt() {
         <section className="nedbygd">
           <div className="seksjonstopp">
             <h2 className="md-typography-heading-l">Hva slags natur ble bygget ned?</h2>
-            <Lenke til={{ side: 'naturtapet' }} className="pil-lenke">
+            <Lenke til={{ side: 'naturtapet' }} className="pil-lenke md-link">
               Mer om naturtapet →
             </Lenke>
           </div>
@@ -374,7 +374,7 @@ export function Oversikt() {
             'Hvor mye natur kommuneplanen setter av til utbygging, regnes ut når kartet for kommunen er hentet.'
           )}
         </p>
-        <Lenke til={{ side: 'naturtapet' }} className="pil-lenke baand-lenke">
+        <Lenke til={{ side: 'naturtapet' }} className="pil-lenke md-link baand-lenke">
           Mer om naturtap →
         </Lenke>
       </Baand>
@@ -456,7 +456,7 @@ export function Oversikt() {
         <section className="utforsk-del">
           <div className="seksjonstopp">
             <h2 className="md-typography-heading-l">Utforsk naturen i {k}</h2>
-            <Lenke til={{ side: 'utforsk' }} className="mer-lenke">
+            <Lenke til={{ side: 'utforsk' }} className="mer-lenke md-link">
               Mer →
             </Lenke>
           </div>

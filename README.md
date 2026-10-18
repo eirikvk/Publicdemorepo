@@ -174,7 +174,6 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
 | `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som bilder per bit (2048 x 2048 ruter à 10,6 meter) og i ett punkt |
-| `mdir-naturskog.ts` | Kartet over naturskog (v1), som kartbilder til visning i tvillingen |
 | `nibio-graa.ts` | Kart over grå arealer, som to bilder per bit (alt grått areal, og andel vegetasjon) og som de samme to bildene per flis til kartet zoomet inn |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
@@ -326,7 +325,7 @@ med ekte tall, uten å endre hovedsiden.
     hovedøkosystem (`gull.okosystemregnskap`). De samme for alle kommunene (`gull.okosystemerNorge`, ett kall til SSB) gir
     sammenligningen med Norge (`gull.sammenligning`). De to regnes først når tvillingen ber om dem (`etterBehov`), så hovedsiden
     henter dem ikke. Se METODE.md, SSB-tallene.
-  - Naturtemaene (`gull/temaer.ts` og `gull/inon.ts`): vernet areal per gruppe av verneformer (`gull.vernPerVerneform`), villreinområdene med
+  - Naturtemaene (`gull/temaer.ts`, `gull/grunnkart.ts` og `gull/inon.ts`): vernet areal per gruppe av verneformer, på land og i sjø (`gull.vernLandSjo`, etter behov), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
     villreinområdene (`gull.inonIVillrein`), også over tid (`gull.inonIVillreinUtvikling`, etter behov). Og det som var merket «Kan regnes ut»: verdsatt natur som vurderes per lokalitet eller
     per naturtype (`gull.verdsattVurderes`), verneområdene med gruppen for verneformen (`gull.verneformer`), grått areal i
@@ -337,12 +336,19 @@ med ekte tall, uten å endre hovedsiden.
 - Utseendet følger skissene fra 17. oktober 2026 så nær som mulig: bredden (1200 px), toppen, kortene, båndene, radene som kan
   åpnes, figurene og flisene, med fargene målt i skissene. Skissene ligger ikke i repoet. Tallene er de samme som før.
 - Der designsystemet har en regel, følger tvillingen designsystemet, også der skissene er annerledes: overskriftene
-  (`md-typography-heading-xl` til `-s`, vanlig vekt), luften i trekkspillene, sidevelgeren i tabellene, ikonene i zoomknappene og
-  tittelstørrelsen i flisene. Avvik i skissene fra designsystemet er innspill til skissene.
+  (`md-typography-heading-xl` til `-s`, vanlig vekt), luften i trekkspillene, sidevelgeren i tabellene, ikonene i zoomknappene,
+  tittelstørrelsen i flisene og lenkene med pil, som er designsystemets lenke med strek under. Avvik i skissene fra
+  designsystemet er innspill til skissene.
+- Tvillingen er et verktøy for å jobbe med designerne, så den har ikke egne tillegg som ikke er i skissene (avklart 18. oktober):
+  temasidene har bare kartlagene, lenkene og boksene skissene har, figurene har fast rekkefølge og viser også det som er tomt, og
+  arealer står i hele dekar. Fargene for verdsatte naturtyper, inngrepsfri natur, villrein, tresatt myr og grått areal på
+  villreinsiden er skissenes (`srcFigma/farger.ts`), med prikker der skissene har det, også i kartet. Svarene under «Ofte stilte
+  spørsmål» er skrevet med KI fra offentlige kilder og merket «KI-generert plassholdertekst», fordi skissene ikke har svar.
+  Bynaturen er ikke tegnet, så den er som før.
 - Det skissene viser som datamotoren ikke har ennå, står tomt: felt som krever en dataplattform har et tomt merke (–), og figurer
   og felt som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget
-  ned til (som utgår), viser kommuneplanen i stedet. Kartlagene og listene som ikke er i skissene, som dagens arealklasser,
-  planlagt utbygging og naturskog, er beholdt.
+  ned til (som utgår), viser kommuneplanen i stedet. Listene over områdene er beholdt, og «Utforsk i kart» har dagens
+  arealklasser og planlagt utbygging.
 - Bildene fra skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro (Open Sans
   står i stedet). Temaene og de blå båndene har i stedet en enkel illustrasjon hver, laget med KI og merket «KI-generert»
   (`srcFigma/illustrasjoner.tsx`).
@@ -355,7 +361,8 @@ med ekte tall, uten å endre hovedsiden.
 | `navigasjon.ts` | Hovedsidene i menyen, adressen, Tilbake og Frem, og oppstarten |
 | `temaer.ts` | Temasidene under «Utforsk naturen», i gruppene fra Figma |
 | `tall.ts` | Tallene sidene viser, slått opp ferdige i gull, med tilstanden (henter, feil, ingen, mangler eller ok) |
-| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, to lag fra kartet over naturskog, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse. Lagene av grunnkartet og grått areal bruker den samme datamotoren og tegnemotoren som hovedsiden (`kartverdier.ts` og `verdilag.ts`), og bestemmer bare fargene. |
+| `farger.ts`, `tekst.ts` | Fargene fra skissene, byttet i tvillingens kopi av fargetabellen før noe tegnes, og tallene som tekst med hele dekar |
+| `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse. Lagene av grunnkartet og grått areal bruker den samme datamotoren og tegnemotoren som hovedsiden (`kartverdier.ts` og `verdilag.ts`), og bestemmer bare fargene. |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
 | `sider/` | Hovedsidene og temasidene |

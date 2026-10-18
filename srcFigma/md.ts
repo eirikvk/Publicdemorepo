@@ -1,5 +1,6 @@
 /* Komponentene fra Miljødirektoratets designsystem: de hovedsiden bruker, og noen ikoner til i tvillingen. De hentes hver for seg, så
    bare disse kommer med i bygget. */
+import type { ReactElement, SVGAttributes } from 'react';
 export * from '../src/ui/komponenter/md.ts';
 export { MdIconAdd } from '@miljodirektoratet/md-react/dist/icons-material/MdIconAdd';
 export { MdIconArrowForward } from '@miljodirektoratet/md-react/dist/icons-material/MdIconArrowForward';
@@ -11,5 +12,12 @@ export { MdIconHelp } from '@miljodirektoratet/md-react/dist/icons-material/MdIc
 export { MdIconMenu } from '@miljodirektoratet/md-react/dist/icons-material/MdIconMenu';
 export { MdIconRemove } from '@miljodirektoratet/md-react/dist/icons-material/MdIconRemove';
 export { MdPagination } from '@miljodirektoratet/md-react/dist/pagination/MdPagination';
+
 export { MdIconSwapVert } from '@miljodirektoratet/md-react/dist/icons-material/MdIconSwapVert';
 export { MdIconWarning } from '@miljodirektoratet/md-react/dist/icons-material/MdIconWarning';
+/* Håndikonet finnes bare i det eldre ikonsettet, som bare har en standardeksport. Bygget pakker den inn én gang til, så den pakkes ut
+   her. */
+import * as pan from '@miljodirektoratet/md-react/dist/icons/MdPanIcon';
+type Ikon = (p: SVGAttributes<SVGElement>) => ReactElement;
+const panIkon = pan as unknown as { default: Ikon | { default: Ikon } };
+export const MdPanIcon: Ikon = typeof panIkon.default === 'function' ? panIkon.default : panIkon.default.default;

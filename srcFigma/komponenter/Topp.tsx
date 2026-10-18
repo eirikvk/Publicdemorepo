@@ -1,15 +1,18 @@
 /* Toppen av tvillingen, som i Figma: navnet med kommunen, «Bytt kommune» og «Hjelp og veileder», og menyen med hovedsidene under. På
    mobil ligger menyen og knappene bak en menyknapp. Over toppen står en smal linje som sier at dette er en prototyp. Logoen fra
    skissene er ikke med: det står et nøytralt merke i stedet, med den samme loddrette streken mot navnet. */
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { kommuner, listeFeil } from '../../src/data/motor/kommune.ts';
 import { app, endret } from '../../src/data/motor/tilstand.ts';
-import { MdIconClose, MdIconHelp, MdIconMenu, MdIconSwapVert } from '../md.ts';
+import { MdIconClose, MdIconMenu, MdIconSwapVert, MdPanIcon } from '../md.ts';
 import { MENY, byttKommune, figma } from '../navigasjon.ts';
 import { Lenke } from './deler.tsx';
 import './Topp.css';
 
 /* Et nøytralt merke: et blad i en sirkel */
+/* Håndikonet på «Hjelp og veileder», som i skissene. Det finnes bare i designsystemets eldre ikonsett, og skriver en advarsel om
+   det hver gang det tegnes, så det tegnes bare én gang. */
+const Haand = memo(() => <MdPanIcon className="haand" aria-hidden="true" />);
 const Merke = () => (
   <svg className="merke-ikon" viewBox="0 0 32 32" aria-hidden="true">
     <circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -70,7 +73,7 @@ export default function Topp() {
         Bytt kommune <MdIconSwapVert aria-hidden="true" />
       </button>
       <Lenke til={{ side: 'hjelp' }} className="topp-knapp" naa={r.side === 'hjelp'}>
-        Hjelp og veileder <MdIconHelp aria-hidden="true" />
+        Hjelp og veileder <Haand />
       </Lenke>
     </>
   );

@@ -17,7 +17,6 @@ import { BERORT, BIT, ruteKm2, ruteM, ruteX, ruteY } from '../solv/felles.ts';
 import type { Andelsbit } from '../solv/kommune.ts';
 import {
   NATURTEMA,
-  VERNEFORMGRUPPER,
   VURDERES,
   verneformgruppe,
   naturSok,
@@ -450,20 +449,6 @@ export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | nul
   return (await katalog.solv.verdsattIKartlagtAndel(nr)).km2;
 }
 
-/* Tabellen gull.vernPerVerneform: det vernede arealet i kommunen nr per gruppe av verneformer (VERNEFORMGRUPPER: nasjonalpark,
-   naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning), de samme gruppene som i kartet over
-   verneformene. Bare gruppene kommunen har, størst først. */
-export async function vernPerVerneform(nr: string): Promise<{ gruppe: string; navn: string; km2: number }[]> {
-  const T = await katalog.gull.verneomrader(nr),
-    m = new Map<string, number>();
-  T.omrader.forEach(o => {
-    const g = verneformgruppe(o.egenskaper.verneform);
-    m.set(g, (m.get(g) || 0) + o.km2);
-  });
-  return VERNEFORMGRUPPER.filter(([id]) => m.has(id))
-    .map(([gruppe, navn]) => ({ gruppe, navn, km2: m.get(gruppe)! }))
-    .sort((a, b) => b.km2 - a.km2);
-}
 /* Verneområdene i kommunen med gruppen for verneformen, til kartet over verneformene: flaten (koord, klippet mot kommunen) og gruppen */
 export interface VernetFlate {
   koord: TemaOmrade['koord'];

@@ -20,7 +20,6 @@ import * as dibk from './bronse/dibk-kommuneplan.ts';
 import * as kartverket from './bronse/kartverket.ts';
 import * as mdirInon from './bronse/mdir-inon.ts';
 import * as mdirNatur from './bronse/mdir-naturtema.ts';
-import * as mdirNaturskog from './bronse/mdir-naturskog.ts';
 import * as nibioGraa from './bronse/nibio-graa.ts';
 import * as nibioGrunnkart from './bronse/nibio-grunnkart.ts';
 import * as ssb from './bronse/ssb.ts';
@@ -59,7 +58,7 @@ const flisMidt =
     u.midt ? flisVed(u.midt, z === undefined ? u.z : z) : null;
 
 /* Kildene: hvem som eier dataene, datasettet, hvor det er beskrevet (Geonorge eller data.norge.no) og lisensen. Lisensene er
-   kontrollert mot Geonorge og data.norge.no 11. oktober 2026, naturskog 13. oktober (produktarket på Geonorge). Brukes av tabellene
+   kontrollert mot Geonorge og data.norge.no 11. oktober 2026. Brukes av tabellene
    i bronse (kilde) til infoknappene og METODE.md. */
 export const KILDE = {
   kartverket: {
@@ -120,12 +119,6 @@ export const KILDE = {
     navn: 'Miljødirektoratet',
     datasett: 'Inngrepsfri natur i Norge',
     adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b',
-    lisens: 'NLOD 2.0'
-  },
-  naturskog: {
-    navn: 'Miljødirektoratet',
-    datasett: 'Naturskog (v1)',
-    adresse: 'https://data.norge.no/datasets/faf40899-a6fe-38ce-9419-c4849530a98b',
     lisens: 'NLOD 2.0'
   }
 } satisfies Record<string, Kildeinfo>;
@@ -447,19 +440,6 @@ export const katalog = {
       husk: 400,
       nokkel: flisnavn,
       etl: dibk.planflis
-    }),
-    naturskogflis: tabell<[mdirNaturskog.Naturskoglag, Flis], ArrayBuffer>({
-      lag: 'bronse',
-      navn: 'naturskogflis',
-      endepunkt: E.NATURSKOG,
-      tittel: 'Kartbilder av naturskog',
-      om: 'kartbilder av et lag i Miljødirektoratets kart over naturskog (v1), 512 x 512 piksler, kalt med [lag, flisen]. Bare til visning i kartet, foreløpig bare i tvillingen fra Figma. Nøkkel: «lag/z/x/y».',
-      forklaring:
-        'Kartbilder fra Miljødirektoratets kart over naturskog, versjon 1: naturskogsnærhet, eller skog etablert før 1940 som ikke er flatehogd. Bare til visning; ingen tall bygger på dem.',
-      kilde: KILDE.naturskog,
-      husk: 200,
-      nokkel: ([l, tc]) => `${l}/${flisnavn(tc)}`,
-      etl: mdirNaturskog.naturskogflis
     }),
     inonbit: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
@@ -990,6 +970,17 @@ export const katalog = {
       husk: 30,
       etl: solvTemaer.vernAndel
     }),
+    verneformAndel: tabell<string, solvTemaer.Temaandel>({
+      lag: 'solv',
+      navn: 'verneformAndel',
+      tittel: 'Verneområdene per rute, per verneform',
+      om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med én kategori per gruppe av verneformer (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning), og arealet per gruppe',
+      forklaring:
+        'Som verneområdene per rute, men delt på gruppene av verneformer. Der områder fra ulike grupper overlapper, telles ruta i den første gruppen, så gruppene summerer til det vernede arealet. Brukes når det vernede arealet deles på land og sjø.',
+      etterBehov: true,
+      husk: 12,
+      etl: solvTemaer.verneformAndel
+    }),
     villreinAndel: tabell<string, solvTemaer.Temaandel>({
       lag: 'solv',
       navn: 'villreinAndel',
@@ -1088,6 +1079,20 @@ export const katalog = {
       husk: 12,
       etl: gullGrunnkart.detaljerIVerneomrader
     }),
+    vernLandSjo: tabell({
+      lag: 'gull',
+      navn: 'vernLandSjo',
+      tittel: 'Vernet areal på land og i sjø',
+      om: 'det vernede arealet i kommunen i km² per gruppe av verneformer, alle seks gruppene, på land og i sjø, av blokkene på 10,6 meter i grunnkartet og verneområdene per rute (solv.verneformAndel). Sjø er hav i grunnkartet; land er alt annet, også innsjøer og elver. Lagret for noen kommuner, ellers hentet fra NIBIO.',
+      forklaring:
+        'Hvor mye av det vernede som ligger på land og hvor mye i sjø, per verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Der verneområder overlapper, telles arealet én gang. Ruter uten klasse i grunnkartet er ikke med.',
+      usikkerhet: [
+        'Arealet er talt i ruter på 10,6 meter og kan avvike litt fra arealet av flatene. Grensen mellom land og sjø er grunnkartets, som kan være en annen enn verneområdets egen.'
+      ],
+      etterBehov: true,
+      husk: 12,
+      etl: gullGrunnkart.vernLandSjo
+    }),
     skog: tabell({
       lag: 'gull',
       navn: 'skog',
@@ -1132,16 +1137,6 @@ export const katalog = {
       husk: 6,
       brukerstyrt: true,
       etl: gullOkosystemer.planPerOkosystem
-    }),
-    vernPerVerneform: tabell({
-      lag: 'gull',
-      navn: 'vernPerVerneform',
-      tittel: 'Vernet areal per verneform',
-      om: 'det vernede arealet i kommunen per gruppe av verneformer fra Miljødirektoratet (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning), de samme gruppene som i kartet over verneformene. Brukes foreløpig bare av tvillingen fra Figma.',
-      forklaring:
-        'Arealet av verneområdene i kommunen summert per gruppe av verneformer, gruppert som i kartet over verneformene: dyre- og plantefredning er artsfredning, og det som ikke passer i de andre gruppene, som naturminne og biotopvern, er annen fredning. Overlapper to områder med ulik gruppe, telles overlappet i begge.',
-      husk: 12,
-      etl: gullTemaer.vernPerVerneform
     }),
     verneformer: tabell({
       lag: 'gull',
@@ -1655,7 +1650,6 @@ const ETL_FILER: [string, object][] = [
   ['bronse/dibk-kommuneplan.ts', dibk],
   ['bronse/mdir-inon.ts', mdirInon],
   ['bronse/mdir-naturtema.ts', mdirNatur],
-  ['bronse/mdir-naturskog.ts', mdirNaturskog],
   ['solv/kommune.ts', solvKommune],
   ['solv/ssb.ts', solvSsb],
   ['solv/grunnkart.ts', solvGrunnkart],

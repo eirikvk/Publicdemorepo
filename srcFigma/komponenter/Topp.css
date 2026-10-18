@@ -72,6 +72,13 @@
   width: 20px;
   height: 20px;
 }
+/* Håndikonet fra det eldre ikonsettet har ingen egen farge */
+.topp-knapp .haand {
+  width: 24px;
+  height: 24px;
+  margin: -2px 0;
+  fill: currentColor;
+}
 .menyknapp {
   display: none;
   border: 0;

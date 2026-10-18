@@ -4,7 +4,7 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { MdAccordionItem, MdIconArrowForward, MdIconChevronForward, MdIconOpenInNew } from '../md.ts';
-import { andelTekst, iTekst, nf, pst } from '../../src/ui/tekst.ts';
+import { andelTekst, iTekst, nf, pst } from '../tekst.ts';
 import { lenke, type Rute } from '../navigasjon.ts';
 import { Illustrasjon } from '../illustrasjoner.tsx';
 import { GRUPPER, TEMAER, type Tema } from '../temaer.ts';
@@ -216,8 +216,31 @@ export function Figur({
   );
 }
 
+/* Lange sammensatte ord i navnene under stolpene og i kolonnenavnene med myke bindestreker, så de deles mellom leddene og ikke midt
+   i et ledd, på smale skjermer og når mange stolper står ved siden av hverandre */
+const SAMMENSATTE = [
+  ['Villmarks', 'preget'],
+  ['Inngreps', 'nær'],
+  ['Nasjonal', 'park'],
+  ['Natur', 'reservat'],
+  ['Landskaps', 'vern', 'område'],
+  ['Arts', 'fredning'],
+  ['verne', 'område'],
+  ['Blandings', 'skog']
+].map(
+  d =>
+    [
+      new RegExp(d.join(''), 'i'),
+      (m: string) =>
+        d.reduce((u, del, i) => {
+          const fra = d.slice(0, i).join('').length;
+          return u + (i ? '\u00ad' : '') + m.slice(fra, fra + del.length);
+        }, '')
+    ] as const
+);
+const deleOrd = (t: string) => SAMMENSATTE.reduce((u, [r, f]) => u.replace(r, f), t);
 /* Stående stolper med arealet over og navnet under, i kartets farger. smale gir smale stolper med runde hjørner, og brede stolper
-   som fyller hele bredden, som i figurene i skissene. */
+   som fyller hele bredden, som i figurene i skissene. Er det for trangt, står stolpene liggende (Liggende). */
 export interface Stolpe {
   navn: string;
   km2: number;
@@ -235,9 +258,17 @@ export function Stolper({
   smale?: boolean;
   brede?: boolean;
 }) {
-  const maks = Math.max(...data.map(d => d.km2), 1e-9);
+  const [ref, B] = useBredde(),
+    maks = Math.max(...data.map(d => d.km2), 1e-9);
+  /* Mange stolper på en smal skjerm, som de seks verneformene på telefon, får ikke plass til navnene og tallene, så de står liggende */
+  if (data.length > 4 && B / data.length < 90)
+    return (
+      <div ref={ref as RefObject<HTMLDivElement>}>
+        <Liggende data={data} hva={hva} />
+      </div>
+    );
   return (
-    <figure className={'stolper' + (smale ? ' smale' : '') + (brede ? ' brede' : '')} aria-label={hva}>
+    <figure ref={ref} className={'stolper' + (smale ? ' smale' : '') + (brede ? ' brede' : '')} aria-label={hva}>
       {data.map(d => (
         <div className="stolpe" key={d.navn}>
           <div className="stolpe-ramme">
@@ -248,7 +279,7 @@ export function Stolper({
             />
           </div>
           <span className="stolpe-navn">
-            {d.navn}
+            {deleOrd(d.navn)}
             {d.under && <small>{d.under}</small>}
           </span>
         </div>
@@ -386,8 +417,6 @@ function useBredde(): [RefObject<HTMLElement | null>, number] {
   }, []);
   return [ref, b];
 }
-/* Lange sammensatte ord i kolonnenavnene med mykt bindestrek, så de kan deles på smale skjermer og tabellen får plass */
-const deleOrd = (t: string) => t.replace(/(Villmarks)(preget)/, '$1\u00ad$2').replace(/(Inngreps)(nær)/, '$1\u00ad$2');
 /* Tallene i figuren i en tabell som kan åpnes, så de kan leses uten å tolke fargene og høydene. Tabellen ruller til siden når den er
    bredere enn figuren, som på telefon, så siden ikke blir bredere. */
 function Talltabell({ hode, rader }: { hode: string[]; rader: string[][] }) {
@@ -607,8 +636,9 @@ export const Fremhevet = ({ children, varsel }: { children: ReactNode; varsel?: 
   <div className={'fremhevet' + (varsel ? ' varsel' : '')}>{children}</div>
 );
 
-/* Ressurser: lenker ut, i to kolonner */
+/* Ressurser: lenker ut, i to kolonner. Uten lenker vises ikke delen. */
 export function Ressurser({ lenker }: { lenker: [tekst: string, url: string][] }) {
+  if (!lenker.length) return null;
   return (
     <section className="ressurser">
       <h2 className="md-typography-heading-m">Ressurser</h2>
@@ -632,7 +662,8 @@ export function Ressurser({ lenker }: { lenker: [tekst: string, url: string][] }
   );
 }
 
-/* Ofte stilte spørsmål: [spørsmål, svar] */
+/* Ofte stilte spørsmål: [spørsmål, svar]. Tegningene har ingen svar, så alle svarene her er skrevet med KI fra offentlige kilder, som et
+   reelt forsøk, og er merket som plassholdertekst til Miljødirektoratet har skrevet de faktiske svarene. */
 export function Sporsmal({ liste }: { liste: [sporsmal: string, svar: ReactNode][] }) {
   return (
     <section className="sporsmal">
@@ -640,6 +671,7 @@ export function Sporsmal({ liste }: { liste: [sporsmal: string, svar: ReactNode]
       {liste.map(([s, sv]) => (
         <Trekkspill key={s} tittel={s}>
           {sv}
+          <p className="ki-tekst">KI-generert plassholdertekst</p>
         </Trekkspill>
       ))}
     </section>

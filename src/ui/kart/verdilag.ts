@@ -38,7 +38,24 @@ export interface Verdilag {
   maske?: () => Flerflate[] | null /* bare innenfor disse flatene, som verneområdene. null mens de hentes. */;
   folg?: (lag: Flislag) => unknown[] /* laget tegnes på nytt når en av disse endres */;
   opacity?: number;
+  prikket?: boolean /* prikker i en mørkere tone av fargen over det som tegnes, som tresatt myr i tvillingen fra Figma */;
 }
+
+/* Prikkene i en flis: runde prikker i et fast rutenett (16 flispiksler mellom, hver andre rad forskjøvet en halv), som går rett over
+   fra flis til flis. Regnes ut én gang. */
+let prikkene: Uint8Array | null = null;
+function prikker() {
+  if (prikkene) return prikkene;
+  const P = new Uint8Array(512 * 512),
+    r = 2.6;
+  for (let cy = 0, rad = 0; cy <= 512; cy += 8, rad++)
+    for (let cx = rad % 2 ? 8 : 0; cx <= 512; cx += 16)
+      for (let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(511, Math.ceil(cy + r)); y++)
+        for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(511, Math.ceil(cx + r)); x++)
+          if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r) P[y * 512 + x] = 1;
+  return (prikkene = P);
+}
+const MORKERE = 0.68;
 
 /* Klipper det som er tegnet i flisen g (utsnitt u) til flatene F, slått sammen. false mens flatene ikke er hentet (null), eller når
    det ikke finnes noen. */
@@ -74,10 +91,12 @@ export function verdilag(o: Verdilag): Flislag {
         d = g.createImageData(512, 512),
         p = d.data;
       let noe = false;
+      const P = o.prikket && V.length === 512 * 512 ? prikker() : null;
       for (let q = 0; q < V.length; q++) {
         const f = F[V[q]];
         if (!f) continue;
         fargPiksel(p, 4 * q, f);
+        if (P && P[q]) for (let k = 0; k < 3; k++) p[4 * q + k] = f[k] * MORKERE;
         if (f.length > 3) p[4 * q + 3] = f[3];
         noe = true;
       }

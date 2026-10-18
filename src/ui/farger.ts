@@ -38,6 +38,9 @@ export const FARGER: Record<string, string> = {
   inonv: '#1f6130',
   egne: '#0072ce' /* Blå mørk, omrisset av egne områder */
 };
+/* Temaene som tegnes med prikker og kant i kartet i stedet for skravur eller flate (naturtema.ts), med prikkene i fargen
+   «<tema>-prikk». Hovedsiden har ingen; tvillingen fra Figma tegner villreinområdene slik, som skissene. */
+export const PRIKKET: Record<string, boolean> = {};
 export const farge = (id: string) => FARGER[id];
 const rgbMinne: Record<string, number[]> = {};
 export const rgb = (id: string) =>

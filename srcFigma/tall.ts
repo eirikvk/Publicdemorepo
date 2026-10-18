@@ -43,8 +43,9 @@ const planIn = (T: Temaet, I: Rad<TemaIPlan | null> | null) =>
   I && I.status === 'ok' && I.verdi && I.verdi.omrader === T.omrader ? I.verdi.N : null;
 /* Kartleggingen av verdsatt natur */
 export const kartleggingen = () => fraRad(valgt(TEMATABELLER.verdi.kartlagt!));
-/* Naturtemaene gruppert: vernet areal per verneform, villreinområdene med andelen, og verdsatt natur per naturtype */
-export const vernPerVerneform = () => fraRad(valgt(katalog.gull.vernPerVerneform));
+/* Naturtemaene gruppert: vernet areal per verneform på land og i sjø (fra grunnkartet, så det kan mangle som svarene over),
+   villreinområdene med andelen, og verdsatt natur per naturtype */
+export const vernLandSjo = () => fraGrunnkart(katalog.gull.vernLandSjo);
 export const villreinPerOmrade = () => fraRad(valgt(katalog.gull.villreinPerOmrade));
 export const verdsattPerNaturtype = () => fraRad(valgt(katalog.gull.verdsattPerNaturtype));
 

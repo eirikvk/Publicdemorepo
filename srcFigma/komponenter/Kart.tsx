@@ -22,7 +22,7 @@ import { ol } from '../../src/ui/kart/ol.ts';
 import { planLag } from '../../src/ui/kart/plan.ts';
 import { byttTilValgt, plasserBytt, settByttKnapp } from '../../src/ui/kart/trykk.ts';
 import { ui } from '../../src/ui/tilstand.ts';
-import { henteKort } from '../../src/ui/tekst.ts';
+import { henteKort } from '../tekst.ts';
 import {
   MdButton,
   MdIconAdd,
@@ -49,16 +49,24 @@ export interface Kartlag {
   av?: boolean;
   skjul?: boolean;
 }
-/* Fargene med prikker, som i skissene: tresatt myr og tresatt innmarksbeite */
+/* Fargene med prikker, som i skissene: tresatt myr og tresatt innmarksbeite, og villreinområdene, som har lys bunn, prikker og kant
+   som i kartet */
 const PRIKKET = new Set(['myr-tresatt', 'beite-tresatt']);
 const fargeStil = (f: string): CSSProperties =>
-  PRIKKET.has(f)
+  f === 'rein'
     ? {
-        backgroundColor: `var(--${f})`,
-        backgroundImage: 'radial-gradient(rgb(0 0 0 / 0.32) 1.1px, transparent 1.6px)',
-        backgroundSize: '5px 5px'
+        backgroundColor: 'var(--rein-flate)',
+        backgroundImage: 'radial-gradient(var(--rein-prikk) 1.1px, transparent 1.6px)',
+        backgroundSize: '5px 5px',
+        boxShadow: 'inset 0 0 0 1.5px var(--rein)'
       }
-    : { background: `var(--${f})` };
+    : PRIKKET.has(f)
+      ? {
+          backgroundColor: `var(--${f})`,
+          backgroundImage: 'radial-gradient(rgb(0 0 0 / 0.32) 1.1px, transparent 1.6px)',
+          backgroundSize: '5px 5px'
+        }
+      : { background: `var(--${f})` };
 const OL_LAG: Record<string, () => { setOpacity(o: number): void }[]> = {
   klasser: () => [klasseLag],
   plan: () => [planLag],
@@ -167,19 +175,21 @@ function Bytt() {
 /* Kartet med lagvelgeren ved siden av (lag og det som står under den, etter), som et bånd over hele bredden. stor gir et høyere kart.
    enkel gir bare kartet, med en merkelapp nede til venstre, som på oversikten, og prikken i merkelappen har fargen enkelFarge (en
    variabel i stilen, til vanlig natur). Lag med farger som er slått på, får hver sin merkelapp under, så alt kartet viser, er
-   forklart. */
+   forklart. hint gir teksten «Trykk i kartet …» under lagvelgeren før man har trykket; temasidene har den ikke, som skissene. */
 export default function Kart({
   lag,
   etter,
   stor,
   enkel,
-  enkelFarge = 'nat'
+  enkelFarge = 'nat',
+  hint = true
 }: {
   lag: Kartlag[];
   etter?: ReactNode;
   stor?: boolean;
   enkel?: string;
   enkelFarge?: string;
+  hint?: boolean;
 }) {
   const startSkjult = () => Object.fromEntries(lag.filter(l => l.av || l.skjul).map(l => [l.id, true]));
   const [skjult, settSkjult] = useState<Record<string, boolean>>(startSkjult),
@@ -197,10 +207,14 @@ export default function Kart({
     settSkjult(startSkjult());
     settFargeAv({});
   }, [avPaa]);
-  /* Lagene som er skjult, er gjennomsiktige. Alt vises igjen når kartet tas ut av siden. */
+  /* Lagene som er skjult, er gjennomsiktige. Dagens arealklasser og planlagt utbygging er skjult også når siden ikke har dem i
+     lagvelgeren, som temasidene. Alt vises igjen når kartet tas ut av siden. */
+  const ider = lag.map(l => l.id).join();
   useEffect(() => {
-    for (const [id, f] of Object.entries(OL_LAG)) f().forEach(l => l.setOpacity(skjult[id] ? 0 : 1));
-  }, [skjult]);
+    const med = new Set(ider.split(','));
+    for (const [id, f] of Object.entries(OL_LAG))
+      f().forEach(l => l.setOpacity(skjult[id] || ((id === 'klasser' || id === 'plan') && !med.has(id)) ? 0 : 1));
+  }, [skjult, ider]);
   useEffect(() => () => Object.values(OL_LAG).forEach(f => f().forEach(l => l.setOpacity(1))), []);
   /* Fargene som er slått av i lag der hver farge kan velges, og alle på igjen når kartet tas ut av siden */
   useEffect(() => lag.forEach(l => l.velg && l.velg(fargeAv[l.id] || [])), [fargeAv, avPaa]);
@@ -346,9 +360,11 @@ export default function Kart({
                 );
               })}
           </ul>
-          <p className="probe">
-            {!p ? 'Trykk i kartet for å se hva som er der.' : p.punkt ? <b>{p.punkt}</b> : p.tekst}
-          </p>
+          {(p || hint) && (
+            <p className="probe">
+              {!p ? 'Trykk i kartet for å se hva som er der.' : p.punkt ? <b>{p.punkt}</b> : p.tekst}
+            </p>
+          )}
           {etter && <div className="lag-etter">{etter}</div>}
         </div>
       </div>

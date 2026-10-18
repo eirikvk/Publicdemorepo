@@ -18,6 +18,7 @@ import '@miljodirektoratet/md-css/src/messages/alertMessage.css';
 import '@miljodirektoratet/md-css/src/pagination/pagination.css';
 import 'ol/ol.css';
 import './stil.css';
+import './farger.ts';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FARGER } from '../src/ui/farger.ts';

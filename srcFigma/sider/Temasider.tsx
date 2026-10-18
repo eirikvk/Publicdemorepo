@@ -1,14 +1,15 @@
 /* Temasidene under «Utforsk naturen», etter skissene fra 17. oktober: brødsmuler, toppen med ikon, ingress, trekkspill og bilde,
    tallkort, kartet med lagvelgeren og trekkspill under den, figurer med tekst og kilde, ofte stilte spørsmål, ressurser og flisene
    til alle temaene. Tallene kommer fra datamotoren (se tall.ts). Det skissene viser som datamotoren ikke har ennå, står tomt, med et
-   merke som sier hva som trengs. Kartlagene og tallene som ikke er i skissene (dagens arealklasser, planlagt utbygging, naturskog og
-   listene over områdene), er beholdt. */
+   merke som sier hva som trengs. Ekstra kartlag, lenker og bokser som ikke er i skissene, er tatt ut (avklart 18. oktober), og figurene
+   har fast rekkefølge, som skissene, også for det som er tomt. Listene over områdene er beholdt. Bynaturen er ikke tegnet, så den har
+   fortsatt dagens arealklasser og planlagt utbygging. */
 import { useState, type ReactNode } from 'react';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { NATURTEMA, VERNEFORMGRUPPER } from '../../src/data/solv/temaer.ts';
-import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../../src/ui/tekst.ts';
+import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../tekst.ts';
 import { MdCheckbox } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
@@ -38,7 +39,7 @@ import {
   skog as skogen,
   vatmark as vatmarken,
   verdsattPerNaturtype,
-  vernPerVerneform,
+  vernLandSjo,
   vernetNatur,
   villreinPerOmrade,
   graa,
@@ -63,7 +64,7 @@ interface Temasideinnhold {
   tema: Tema;
   trekkspill?: ReactNode;
   kort: [string, ReactNode][];
-  kilde: ReactNode;
+  kilde?: ReactNode;
   fremhevet?: ReactNode;
   lag: Kartlag[];
   lagEtter?: ReactNode;
@@ -79,12 +80,14 @@ function Temaside(p: Temasideinnhold) {
         <Brodsmuler tema={p.tema} />
         <Helt tema={p.tema}>{p.trekkspill}</Helt>
         <Tallkort kort={p.kort} />
-        <div className="trekkspill-liste etter-tallkort">
-          <Trekkspill tittel="Hvor er tallene hentet fra?">{p.kilde}</Trekkspill>
-        </div>
+        {p.kilde && (
+          <div className="trekkspill-liste etter-tallkort">
+            <Trekkspill tittel="Hvor er tallene hentet fra?">{p.kilde}</Trekkspill>
+          </div>
+        )}
         {p.fremhevet}
       </div>
-      <Kart key={p.tema.id} lag={p.lag} etter={p.lagEtter} />
+      <Kart key={p.tema.id} lag={p.lag} etter={p.lagEtter} hint={false} />
       <div className="innhold">
         {p.children}
         <Sporsmal liste={p.sporsmal} />
@@ -92,34 +95,6 @@ function Temaside(p: Temasideinnhold) {
         <NestePerspektiv />
       </div>
     </>
-  );
-}
-
-/* Planlagt utbygging i et naturtema, som fremhevet melding */
-function PlanITema({ plan, hva }: { plan: ReturnType<typeof naturtema>['plan']; hva: string }) {
-  const T = naturtema(hva === 'verneområder' ? 'vern' : hva === 'villreinområder' ? 'rein' : 'verdi').T;
-  if (T.s !== 'ok' || !T.v.antall) return null;
-  return (
-    <Fremhevet>
-      {plan ? (
-        plan.planKm2 > 0 ? (
-          <>
-            <b>
-              Planlagt utbygging i {hva}: ca. {iTekst(plan.planKm2)}
-            </b>
-            <span>
-              I {antallOrd(plan.berort, hva === 'verdsatt natur' ? 'én' : 'ett')} av{' '}
-              {hva === 'verdsatt natur' ? 'lokalitetene' : 'områdene'}, etter kommuneplanen{' '}
-              {app.valgt ? `for ${app.valgt.navn}` : ''}. Smale striper er ikke med.
-            </span>
-          </>
-        ) : (
-          <b>Kommuneplanen har ingen utbygging i {hva}.</b>
-        )
-      ) : (
-        <span>Planlagt utbygging i {hva} regnes ut når kartet for kommunen er hentet.</span>
-      )}
-    </Fremhevet>
   );
 }
 
@@ -190,7 +165,7 @@ function Skog({ tema }: { tema: Tema }) {
       ]}
       kilde={GRUNNKART_KILDE}
       lag={[
-        { id: 'skog', navn: 'Økosystemtype skog', kilde: GK, farger: [['Skog', 'skog']], ol: SKOGLAG.skog, av: true },
+        { id: 'skog', navn: 'Økosystemtype skog', kilde: GK, farger: [['Skog', 'skog']], ol: SKOGLAG.skog },
         {
           id: 'skogtyper',
           navn: 'Skogtyper',
@@ -209,28 +184,7 @@ function Skog({ tema }: { tema: Tema }) {
           kilde: GK,
           farger: [['Tresatt innmarksbeite', 'beite-tresatt']],
           ol: SKOGLAG.beite
-        },
-        {
-          id: 'naerhet',
-          navn: 'Naturskogsnærhet',
-          kilde: 'Naturskog (v1), Miljødirektoratet',
-          farger: [
-            ['Lav', 'ns-lav'],
-            ['Høy', 'ns-hoy']
-          ],
-          ol: SKOGLAG.naerhet,
-          av: true
-        },
-        {
-          id: 'for1940',
-          navn: 'Skog etablert før 1940, ikke flatehogd',
-          kilde: 'Naturskog (v1), Miljødirektoratet',
-          farger: [['Før 1940, ikke flatehogd', 'ns-1940']],
-          ol: SKOGLAG.for1940,
-          av: true
-        },
-        { ...KLASSER, av: true },
-        { ...PLAN, av: true }
+        }
       ]}
       lagEtter={
         <>
@@ -245,21 +199,9 @@ function Skog({ tema }: { tema: Tema }) {
             SSB har egne arealklasser, mens tallene her er NIBIOs grunnkart for arealanalyse, med økosystemtyper. De to
             deler arealet inn på ulike måter, så de gir ikke helt samme areal for skog.
           </p>
-        ],
-        [
-          'Hvorfor er naturskog med i kartet?',
-          <p>
-            Kartet over naturskog fra Miljødirektoratet viser skog som har fått utvikle seg lenge uten flatehogst. Det
-            er med som to lag, av til du slår dem på. Laget for naturtyper i skog venter på Naturkart, et heldekkende
-            kart over naturtyper som ikke er klart ennå.
-          </p>
         ]
       ]}
-      ressurser={[
-        ['SSB, tabell 09594', KILDE.ssb.adresse],
-        ['Grunnkart for arealanalyse', KILDE.grunnkart.adresse],
-        ['Kommunen i dagens løsning', iDagens('')]
-      ]}
+      ressurser={[['SSB, tabell 09594', KILDE.ssb.adresse]]}
     >
       <Figur
         tittel={`Typer skog i ${kommunen()}`}
@@ -277,8 +219,8 @@ function Skog({ tema }: { tema: Tema }) {
         {svar(S, s => (
           <Stolper
             hva="Skog etter treslag"
-            data={[...s.treslag]
-              .sort((a, b) => b.km2 - a.km2)
+            data={['lauv', 'bar', 'bland']
+              .map(id => s.treslag.find(t => t.id === id)!)
               .map(t => ({ navn: t.navn, km2: t.km2, farge: 'skog-' + t.id }))}
           />
         ))}
@@ -313,42 +255,8 @@ function Skog({ tema }: { tema: Tema }) {
   );
 }
 
-/* Våtmark som er planlagt nedbygget, som fremhevet melding: åpen våtmark og tresatt myr satt av til utbygging */
-function VatmarkIPlan({ P }: { P: ReturnType<typeof planPerOkosystem> }) {
-  if (P.s === 'mangler') return null;
-  if (P.s !== 'ok')
-    return (
-      <Fremhevet>
-        <span>
-          {P.s === 'ingen'
-            ? 'Kommunen har ingen kommuneplan med utbygging hos DiBK.'
-            : P.s === 'feil'
-              ? 'Planlagt utbygging i våtmark kunne ikke regnes ut.'
-              : 'Planlagt utbygging i våtmark regnes ut når kartet for kommunen er hentet.'}
-        </span>
-      </Fremhevet>
-    );
-  const { km2, apen, tresatt } = P.v.vatmark;
-  return (
-    <Fremhevet>
-      {km2 > 0 ? (
-        <>
-          <b>Våtmark som er planlagt nedbygget: ca. {iTekst(km2)}</b>
-          <span>
-            {iTekst(apen)} åpen våtmark og {iTekst(tresatt)} tresatt myr, etter kommuneplanen
-            {app.valgt ? ` for ${app.valgt.navn}` : ''}. Smale striper er ikke med.
-          </span>
-        </>
-      ) : (
-        <b>Kommuneplanen har ingen utbygging i våtmark.</b>
-      )}
-    </Fremhevet>
-  );
-}
-
 function Vatmark({ tema }: { tema: Tema }) {
-  const W = vatmarken(),
-    P = planPerOkosystem();
+  const W = vatmarken();
   return (
     <Temaside
       tema={tema}
@@ -370,7 +278,6 @@ function Vatmark({ tema }: { tema: Tema }) {
         ['Andel av kommunens landareal som er våtmark', svar(W, w => prosent(w.andel))]
       ]}
       kilde={GRUNNKART_KILDE}
-      fremhevet={<VatmarkIPlan P={P} />}
       lag={[
         {
           id: 'vatmark',
@@ -385,9 +292,7 @@ function Vatmark({ tema }: { tema: Tema }) {
           kilde: GK,
           farger: [['Tresatt myr', 'myr-tresatt']],
           ol: VATMARKLAG.tresatt
-        },
-        { ...KLASSER, av: true },
-        { ...PLAN, av: true }
+        }
       ]}
       lagEtter={
         <>
@@ -441,10 +346,7 @@ function Vatmark({ tema }: { tema: Tema }) {
           </p>
         ]
       ]}
-      ressurser={[
-        ['Grunnkart for arealanalyse', KILDE.grunnkart.adresse],
-        ['Kommunen i dagens løsning', iDagens('')]
-      ]}
+      ressurser={[]}
     >
       <Figur
         tittel={`Dette dekker våtmarken i ${kommunen()}`}
@@ -460,9 +362,10 @@ function Vatmark({ tema }: { tema: Tema }) {
         {svar(W, w => (
           <Kake
             hva="Våtmark i grunnkartet"
+            fast
             data={[
-              { navn: 'Våtmark i grunnkartet', km2: w.apen, farge: 'kake-vatmark' },
-              { navn: 'Tresatt myr', km2: w.tresatt, farge: 'kake-myr', prikker: true }
+              { navn: 'Tresatt myr', km2: w.tresatt, farge: 'kake-myr', prikker: true },
+              { navn: 'Våtmark i grunnkartet', km2: w.apen, farge: 'kake-vatmark' }
             ]}
           />
         ))}
@@ -484,29 +387,34 @@ function vurderesTekst(v: { klasser: number[] }) {
   if (lok > 0 && typ > 0) return `: ${iTekst(lok)} vurderes per lokalitet og ${iTekst(typ)} per naturtype`;
   return lok > 0 ? ', som alle vurderes per lokalitet' : ', som alle vurderes per naturtype';
 }
-/* Fargen for et hovedøkosystem i figuren om naturen som er vernet, som i skissene */
-const OKOFARGE: Record<string, string> = {
-  Skog: 'oko-skog',
-  Våtmark: 'oko-vatmark',
-  'Innsjøer og vannmagasiner': 'oko-innsjo',
-  'Hei og buskmark': 'oko-hei',
-  Grasmark: 'oko-gras',
-  'Elver, bekker og kanaler': 'oko-elv',
-  'Lite vegetert mark': 'oko-lite',
-  'Kyststrender, svaberg og dyner': 'oko-kyst',
-  'Dyrket mark': 'oko-dyrket',
-  'Bebygd og opparbeidet areal': 'oko-bebygd',
-  Hav: 'oko-hav',
-  'Natur, uspesifisert': 'oko-annen',
-  'Jordbruk, uspesifisert': 'oko-annen'
-};
+/* Hovedøkosystemene i figuren og kartlaget om naturen som er vernet, i rekkefølgen og med navnene i skissene: navnet i dataene,
+   navnet i figuren, navnet i tegnforklaringen og fargen. Restklassene fra grunnkartet er ikke i skissene, og står til slutt når de har
+   areal. */
+const VERNET_NATUR: [data: string, figur: string, kart: string, farge: string][] = [
+  ['Skog', 'Skog', 'Skog', 'oko-skog'],
+  ['Våtmark', 'Våtmark (myr)', 'Våtmark', 'oko-vatmark'],
+  ['Innsjøer og vannmagasiner', 'Innsjø og tjern', 'Innsjø og tjern', 'oko-innsjo'],
+  ['Hei og buskmark', 'Hei og buskmark', 'Hei og buskmark', 'oko-hei'],
+  ['Grasmark', 'Grasmark', 'Grasmark', 'oko-gras'],
+  ['Elver, bekker og kanaler', 'Elver, bekker og kanaler', 'Elver, bekker og kanaler', 'oko-elv'],
+  ['Lite vegetert mark', 'Lite vegetert mark', 'Lite vegetert mark', 'oko-lite'],
+  ['Kyststrender, svaberg og dyner', 'Kyststrender, svaberg og dyner', 'Kyststrender, svaberg og dyner', 'oko-kyst'],
+  ['Dyrket mark', 'Dyrket mark', 'Dyrket mark', 'oko-dyrket'],
+  ['Bebygd og opparbeidet areal', 'Bebygd og opparbeidet areal', 'Bebygd og opparbeidet areal', 'oko-bebygd'],
+  ['Hav', 'Hav (sjøareal)', 'Hav (sjøareal)', 'oko-hav']
+];
+const RESTKLASSER = ['Natur, uspesifisert', 'Jordbruk, uspesifisert'];
+/* Gruppene av verneformer i figuren «Slik er naturen vernet», i rekkefølgen i skissene */
+const VERNEFORMER_I_FIGUREN = ['nasjonalpark', 'naturreservat', 'landskap', 'arts', 'marint', 'annen'];
 
 function Vern({ tema }: { tema: Tema }) {
-  const { T, plan } = naturtema('vern'),
+  const { T } = naturtema('vern'),
     v = T.s === 'ok' ? T.v : null,
-    F = vernPerVerneform(),
+    L = vernLandSjo(),
     V = vernetNatur(),
-    [hav, settHav] = useState(true);
+    [hav, settHav] = useState(true),
+    [land, settLand] = useState(true),
+    [sjo, settSjo] = useState(true);
   return (
     <Temaside
       tema={tema}
@@ -537,7 +445,6 @@ function Vern({ tema }: { tema: Tema }) {
           én gang.
         </p>
       }
-      fremhevet={<PlanITema plan={plan} hva="verneområder" />}
       lag={[
         {
           id: 'verneformer',
@@ -552,12 +459,13 @@ function Vern({ tema }: { tema: Tema }) {
           id: 'natur',
           navn: 'Naturen i verneområder',
           kilde: GK,
-          farger: Object.entries(OKOFARGE),
+          farger: [
+            ...VERNET_NATUR.map(([, , navn, farge]) => [navn, farge] as [string, string]),
+            ...RESTKLASSER.map(navn => [navn, 'oko-annen'] as [string, string])
+          ],
           ol: VERNLAG.natur,
           av: true
-        },
-        { ...KLASSER, av: true },
-        { ...PLAN, av: true }
+        }
       ]}
       lagEtter={
         <div className="trekkspill-liste">
@@ -598,9 +506,7 @@ function Vern({ tema }: { tema: Tema }) {
         [
           'Faktaark for verneområdene – Naturbase søk',
           'https://www.miljodirektoratet.no/tjenester/naturbase/enkelt-sok/'
-        ],
-        ['Naturvernområder, datasettet', KILDE.vern.adresse],
-        ['Verneområdene i dagens løsning', iDagens('vern')]
+        ]
       ]}
     >
       {v && v.antall > 0 && (
@@ -614,13 +520,22 @@ function Vern({ tema }: { tema: Tema }) {
               naturmangfoldloven.
             </p>
           }
-          kilder={['vern']}
+          kilder={['grunnkart', 'vern']}
         >
-          {svar(F, f => (
-            <Stolper
-              hva="Vernet areal per verneform"
-              data={f.map(x => ({ navn: x.navn, km2: x.km2, farge: VERNEFORMFARGE[x.gruppe] }))}
-            />
+          {svar(L, l => (
+            <>
+              <div className="figur-valg">
+                <MdCheckbox label="Landareal" checked={land} onChange={e => settLand(e.target.checked)} />
+                <MdCheckbox label="Sjøareal" checked={sjo} onChange={e => settSjo(e.target.checked)} />
+              </div>
+              <Stolper
+                hva="Vernet areal per verneform"
+                data={VERNEFORMER_I_FIGUREN.map(id => {
+                  const x = l.find(g => g.gruppe === id)!;
+                  return { navn: x.navn, km2: (land ? x.land : 0) + (sjo ? x.sjo : 0), farge: VERNEFORMFARGE[id] };
+                })}
+              />
+            </>
           ))}
         </Figur>
       )}
@@ -637,7 +552,15 @@ function Vern({ tema }: { tema: Tema }) {
       >
         {svar(V, d => {
           if (d.sum <= 0) return <p>Kommunen har ingen verneområder.</p>;
-          const rader = [...d.perOkosystem].filter(x => hav || x.navn !== 'Hav').sort((a, b) => b.km2 - a.km2),
+          const km2 = (navn: string) => (d.perOkosystem.find(x => x.navn === navn) || { km2: 0 }).km2,
+            rader = [
+              ...VERNET_NATUR.filter(([data]) => hav || data !== 'Hav').map(([data, navn, , farge]) => ({
+                navn,
+                km2: km2(data),
+                farge
+              })),
+              ...RESTKLASSER.filter(navn => km2(navn) > 0).map(navn => ({ navn, km2: km2(navn), farge: 'oko-annen' }))
+            ],
             sum = rader.reduce((a, x) => a + x.km2, 0) || 1;
           return (
             <>
@@ -646,7 +569,7 @@ function Vern({ tema }: { tema: Tema }) {
               </div>
               <Liggende
                 hva="Vernet areal per økosystemtype"
-                data={rader.map(x => ({ navn: x.navn, km2: x.km2, farge: OKOFARGE[x.navn] || 'oko-annen' }))}
+                data={rader}
                 tekst={x => `${iTekst(x.km2)} (${andelTekst((x.km2 / sum) * 100)})`}
               />
             </>
@@ -689,7 +612,7 @@ function Vern({ tema }: { tema: Tema }) {
 }
 
 function Verdi({ tema }: { tema: Tema }) {
-  const { T, plan } = naturtema('verdi'),
+  const { T } = naturtema('verdi'),
     K = kartleggingen(),
     v = T.s === 'ok' ? T.v : null,
     kartlagt = K.s === 'ok' && K.v ? K.v.kartlagt : null,
@@ -742,7 +665,6 @@ function Verdi({ tema }: { tema: Tema }) {
               </span>
             </Fremhevet>
           )}
-          <PlanITema plan={plan} hva="verdsatt natur" />
         </>
       }
       lag={[
@@ -762,9 +684,7 @@ function Verdi({ tema }: { tema: Tema }) {
           navn: 'Dekningskart for kartlegging',
           kilde: 'Naturtyper på land (NiN)',
           farger: [['Ikke kartlagt (slør)', 'slor-merke']]
-        },
-        { ...KLASSER, av: true },
-        { ...PLAN, av: true }
+        }
       ]}
       lagEtter={
         <div className="trekkspill-liste">
@@ -816,10 +736,7 @@ function Verdi({ tema }: { tema: Tema }) {
         [
           'Kartlegging etter NiN – Artsdatabanken',
           'https://artsdatabanken.no/naturtyper/natur-i-norge/kartlegging-etter-nin'
-        ],
-        ['Naturtyper – verdsatte, datasettet', KILDE.verdsatt.adresse],
-        ['Naturtyper på land (NiN), dekningskartet', KILDE.nin.adresse],
-        ['Verdsatt natur i dagens løsning', iDagens('verdi')]
+        ]
       ]}
     >
       {v && v.perKlasse && (
@@ -908,10 +825,7 @@ function Verdi({ tema }: { tema: Tema }) {
             ]}
             rader={typer.map((t, i) => [
               String(i + 1),
-              <span className="med-farge">
-                <i style={{ background: `var(--${klasser[t.v][1]})` }} title={klasser[t.v][0]} />
-                {t.navn}
-              </span>,
+              t.navn,
               dekar(t.km2, 'dekar'),
               <span className="tom-celle" title="Krever dataplattform">
                 –
@@ -924,10 +838,11 @@ function Verdi({ tema }: { tema: Tema }) {
   );
 }
 
-/* Sonene i figuren om endringer per sone: villmarkspreget, sone 1 og sone 2, og inngrepsnær natur, som får det sonene mister */
+/* Sonene i figuren om endringer per sone, i rekkefølgen i skissene: inngrepsnær natur, som får det sonene mister, sone 2, sone 1 og
+   villmarkspreget natur */
 const ENDRINGSSERIER = [
-  ...INONSONER.map(([, farge, , , navn]) => ({ navn, farge })),
-  { navn: 'Inngrepsnær natur', farge: 'inon-naer' }
+  { navn: 'Inngrepsnær natur', farge: 'inon-naer' },
+  ...[2, 1, 0].map(i => ({ navn: INONSONER[i][4], farge: INONSONER[i][1] }))
 ];
 /* Endringen i inngrepsfri natur fra første til siste år, som setning */
 const endringTekst = (sum: number[], aar: number[]) => {
@@ -966,7 +881,7 @@ function Inon({ tema }: { tema: Tema }) {
           <Trekkspill tittel="Datagrunnlaget bak inngrepsfri natur">
             <p>
               {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra kartbilder av kommunen i ruter på 10
-              meter.
+              meter. Andelen er av landarealet.
             </p>
           </Trekkspill>
         </>
@@ -975,21 +890,13 @@ function Inon({ tema }: { tema: Tema }) {
         ['Inngrepsfri natur i kommunen', svar(I, x => iTekst(x.sum), 'Ingen')],
         ['Andel av kommunens landareal som er inngrepsfri natur', svar(I, x => prosent(x.andelLand), '0 %')]
       ]}
-      kilde={
-        <p>
-          {KILDE.inon.datasett}, {KILDE.inon.navn}. Arealet er regnet ut fra kartbilder av kommunen i ruter på 10 meter.
-          Andelen er av landarealet.
-        </p>
-      }
       lag={[
         {
           id: 'tema',
           navn: 'Inngrepsfri natur',
           kilde: 'Inngrepsfri natur i Norge',
           farger: [2, 1, 0].map(i => [INONSONER[i][4], INONSONER[i][1]] as [string, string])
-        },
-        { ...KLASSER, av: true },
-        { ...PLAN, av: true }
+        }
       ]}
       sporsmal={[
         [
@@ -1000,10 +907,7 @@ function Inon({ tema }: { tema: Tema }) {
           </p>
         ]
       ]}
-      ressurser={[
-        ['Inngrepsfri natur i Norge, datasettet', KILDE.inon.adresse],
-        ['Inngrepsfri natur i dagens løsning', iDagens('inon')]
-      ]}
+      ressurser={[]}
     >
       {I.s === 'ok' && (
         <Figur
@@ -1075,7 +979,10 @@ function Inon({ tema }: { tema: Tema }) {
           <Endringsstolper
             hva="Endringen per sone i hver periode"
             serier={ENDRINGSSERIER}
-            perioder={U.v.perioder.map(p => ({ navn: `${p.fra}–${p.til}`, km2: [...p.soner, p.naer] }))}
+            perioder={U.v.perioder.map(p => ({
+              navn: `${p.fra}–${p.til}`,
+              km2: [p.naer, p.soner[2], p.soner[1], p.soner[0]]
+            }))}
           />
         ) : (
           henterAar(U)
@@ -1091,7 +998,7 @@ const VILLREIN_SKY =
 
 function Rein({ tema }: { tema: Tema }) {
   const VU = inonIVillreinUtvikling(),
-    { T, plan } = naturtema('rein'),
+    { T } = naturtema('rein'),
     v = T.s === 'ok' ? T.v : null,
     R = villreinPerOmrade(),
     IV = inonIVillrein(),
@@ -1117,7 +1024,8 @@ function Rein({ tema }: { tema: Tema }) {
           <Trekkspill tittel="Datagrunnlaget bak villreinområder">
             <p>
               {KILDE.villrein.datasett}, {KILDE.villrein.navn}. Arealet er den delen av hvert område som ligger i
-              kommunen.
+              kommunen. Grått areal i villreinområdene er fra {KILDE.graa.datasett}, {KILDE.graa.navn}, i ruter på 10
+              meter: hver rute teller med den delen av den som ligger i villreinområdene.
             </p>
           </Trekkspill>
         </>
@@ -1139,25 +1047,15 @@ function Rein({ tema }: { tema: Tema }) {
           )
         ]
       ]}
-      kilde={
-        <p>
-          {KILDE.villrein.datasett}, {KILDE.villrein.navn}. Arealet er den delen av hvert område som ligger i kommunen.
-          Grått areal i villreinområdene er fra {KILDE.graa.datasett}, {KILDE.graa.navn}, i ruter på 10 meter: hver rute
-          teller med den delen av den som ligger i villreinområdene.
-        </p>
-      }
-      fremhevet={<PlanITema plan={plan} hva="villreinområder" />}
       lag={[
         { id: 'tema', navn: 'Villreinområder', kilde: 'Villreinområder', farger: [['Villreinområde', 'rein']] },
         {
           id: 'graa',
           navn: 'Grått areal',
           kilde: KILDE.graa.datasett,
-          farger: [['Grått areal', 'graa0']],
+          farger: [['Grått areal', 'graa-rein']],
           ol: GRAALAG.graa
-        },
-        { ...KLASSER, av: true },
-        { ...PLAN, av: true }
+        }
       ]}
       sporsmal={[
         [
@@ -1186,9 +1084,7 @@ function Rein({ tema }: { tema: Tema }) {
       ]}
       ressurser={[
         ['Villrein i Norge', 'https://www.miljodirektoratet.no/ansvarsomrader/arter-naturtyper/vilt/villrein/'],
-        ['Villrein.no', 'https://villrein.no/'],
-        ['Villreinområder, datasettet', KILDE.villrein.adresse],
-        ['Villrein i dagens løsning', iDagens('rein')]
+        ['Villrein.no', 'https://villrein.no/']
       ]}
     >
       <div className="trekkspill-liste under-kart">

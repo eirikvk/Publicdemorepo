@@ -28,8 +28,8 @@
   --kake-graa: #a9aaaa;
   --kake-vatmark: #72d4bc;
   --kake-myr: #b8b7e2;
-  /* Inngrepsnær natur i figuren om endringer per sone: nøytral grå, uten sone */
-  --inon-naer: #a9aaaa;
+  /* Inngrepsnær natur i figuren om endringer per sone, som i skissene */
+  --inon-naer: #e86474;
   /* Verneformene i figuren «Slik er naturen vernet» */
   --vf-nasjonalpark: #007a00;
   --vf-naturreservat: #ad0000;
@@ -51,8 +51,10 @@
   --oko-hav: #bfd8ec;
   --oko-annen: #c9c4b3;
   /* Lokalitetene i verdsatt natur som vurderes per lokalitet eller per naturtype, som i skissene */
-  --vurderes1: #0b84a5;
-  --vurderes2: #a9c4f0;
+  --vurderes1: #0084a8;
+  --vurderes2: #bed2ff;
+  /* Grått areal på villreinsiden, som i skissene */
+  --graa-rein: #929292;
   /* Grønne arealer i bebyggelse: grått areal med minst halvparten vegetasjon */
   --gronne-arealer: #1e7b34;
   /* Sløret over det som ikke er kartlagt, i lagvelgeren */
@@ -71,14 +73,11 @@
   --skog-bland: #ffb800;
   --skog-lauv: #f7d776;
   --skog-ukjent: #c9c4b3;
-  /* Våtmarken i kartlagene: åpen våtmark, tresatt myr og tresatt innmarksbeite */
+  /* Våtmarken i kartlagene: åpen våtmark, tresatt myr og tresatt innmarksbeite. Tresatt myr har samme farge som åpen våtmark, med
+     prikker, som i skissene. */
   --myr-apen: #c9b0ec;
-  --myr-tresatt: #9c7fd6;
+  --myr-tresatt: #c9b0ec;
   --beite-tresatt: #ffd16e;
-  /* Kartet over naturskog, i fargene fra Miljødirektoratets tegnforklaring */
-  --ns-lav: #ead8bc;
-  --ns-hoy: #9b504f;
-  --ns-1940: #4c71b9;
   --luft: 24px;
   color-scheme: light;
 }
@@ -564,7 +563,7 @@ main > .innhold > .figur {
   padding-top: 12px;
   display: flex;
   flex-direction: column;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .stolpe-navn small {
   font-size: 0.9375rem;
@@ -682,13 +681,13 @@ main > .innhold > .figur {
 }
 .linje-linje {
   fill: none;
-  stroke: var(--inon1);
+  stroke: #6f6f6f;
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 .linje-punkt {
-  fill: var(--inon1);
+  fill: var(--topp);
   stroke: var(--beige-flate);
   stroke-width: 2;
 }
@@ -829,18 +828,6 @@ main > .innhold > .figur {
   justify-content: center;
   margin-top: 16px;
 }
-.med-farge {
-  display: inline-flex;
-  gap: 8px;
-  align-items: baseline;
-}
-.med-farge i {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-
 /* Ofte stilte spørsmål: lyse beige trekkspill med kant og mellomrom */
 main > .innhold > .sporsmal {
   margin-top: 90px;
@@ -860,6 +847,17 @@ main > .innhold > .sporsmal {
 }
 .sporsmal .md-accordion-item__header-label {
   font-size: 1.1875rem !important;
+}
+/* Merket for at svaret er en KI-generert plassholdertekst */
+.ki-tekst {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--teal-lys);
+  color: var(--tekst);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 /* Ressurser: lenker med pil, i to kolonner */
@@ -1215,12 +1213,10 @@ main > .innhold > .oversikt-topp {
   line-height: 1.62;
   max-width: 19em;
 }
-.baand-lenke {
+/* Lenken nederst i båndet: designsystemets lenke (md-link), med luft over */
+.pil-lenke.baand-lenke {
   margin-top: auto;
   padding-top: 40px;
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: var(--tekst);
 }
 .tallmerke {
   background: var(--blaa-merke);
@@ -1257,24 +1253,9 @@ main > .innhold > .oversikt-topp {
     font-size: 1.375rem;
     line-height: 1.6;
   }
-  .baand-lenke {
+  .pil-lenke.baand-lenke {
     padding-top: 8px;
-    font-size: 1.125rem;
   }
-}
-
-/* Lenker med pil, uten strek under til man holder over dem */
-.pil-lenke {
-  font-weight: 600;
-  text-decoration: none;
-}
-.pil-lenke:hover {
-  text-decoration: underline;
-}
-
-/* Lenken i det blå båndet har vanlig vekt, som designsystemets lenker */
-.pil-lenke.baand-lenke {
-  font-weight: 400;
 }
 
 /* En seksjon med overskrift og lenke til høyre, og en stor ingress under */
@@ -1284,14 +1265,9 @@ main > .innhold > .oversikt-topp {
   align-items: baseline;
   gap: 16px;
 }
-.seksjonstopp .pil-lenke {
-  white-space: nowrap;
-  font-size: 1.375rem;
-  font-weight: 400;
-  color: var(--tekst);
-}
+/* Lenkene med pil er designsystemets lenke (md-link), med strek under (avklart 18. oktober) */
+.seksjonstopp .pil-lenke,
 .mer-lenke {
-  font-size: 1.375rem;
   white-space: nowrap;
 }
 .seksjonsingress {
@@ -1318,10 +1294,6 @@ main > .innhold > .oversikt-topp {
   .seksjonstopp {
     flex-direction: column;
     gap: 6px;
-  }
-  .seksjonstopp .pil-lenke,
-  .mer-lenke {
-    font-size: 1.125rem;
   }
   .seksjonsingress {
     font-size: 1.25rem;
@@ -1395,11 +1367,7 @@ main > .innhold > .oversikt-topp {
   margin-top: 8px;
 }
 .endring-tekst .pil-lenke {
-  display: inline-block;
   margin-top: 20px;
-  font-weight: 400;
-  color: var(--tekst);
-  font-size: 1.1875rem;
 }
 .nedbygd .trekkspill-liste,
 .sammenligning .trekkspill-liste {

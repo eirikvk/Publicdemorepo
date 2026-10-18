@@ -16,7 +16,7 @@ import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA, type Naturtema, type TemaOmrade } from '../../data/solv/temaer.ts';
 import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
-import { farge, rgb } from '../farger.ts';
+import { PRIKKET, farge, rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { KILDER, TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
 import { rolig, tilKartet, view } from './kart.ts';
@@ -27,7 +27,9 @@ import { rolig, tilKartet, view } from './kart.ts';
      sammen med kommunegrensen, og zoomet inn var det ingenting som viste at man var innenfor. Med skrå striper og en strek langs
      kanten synes det, og dagens klasser og planlagt utbygging kan leses under.
    - Verdsatt natur er mange små lokaliteter, så de tegnes fylt og uten hvit kant, i fire toner av samme farge: mørkere jo høyere
-     verdi. */
+     verdi.
+   - Temaer i PRIKKET (farger.ts) tegnes med prikker og en strek langs kanten i stedet. Hovedsiden har ingen; tvillingen fra Figma
+     tegner villreinområdene slik, som skissene. */
 const SKRAVERT: Record<string, boolean> = { vern: true, rein: true };
 
 /* Ett lag per tema, med en kilde for flatene. Flatene lages én gang per hentet tema og huskes så lenge temaet ligger i katalogen. */
@@ -47,7 +49,10 @@ for (const t of NATURTEMA) {
     className: 'plan',
     properties: { tittel: t.navn },
     visible: false,
-    source: tegnetKilde((tile: ImageTile) => (SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile), [KILDER.mdir])
+    source: tegnetKilde(
+      (tile: ImageTile) => (PRIKKET[t.id] ? tegnPrikkflis : SKRAVERT[t.id] ? tegnSkravurflis : tegnFlateflis)(t, tile),
+      [KILDER.mdir]
+    )
   });
   LAG.set(t.id, { lag, kilde });
 }
@@ -189,6 +194,49 @@ function tegnSkravurflis(t: Naturtema, tile: ImageTile) {
     g.lineWidth = 5.5;
     g.beginPath();
     g.arc(x, y, RING, 0, 2 * Math.PI);
+    g.stroke();
+  }
+  tile.setImage(c);
+  tidSlutt(t.navn.toLowerCase() + ', fliser', t0);
+}
+/* Prikker: runde prikker i fargen «<tema>-prikk» over hele området, i et fast rutenett i kartet (PRIKK flispiksler mellom, hver
+   andre rad forskjøvet en halv), så de går rett over fra flis til flis, og en strek i temaets farge langs kanten */
+const PRIKK = 16,
+  PRIKKRADIUS = 2.6,
+  PRIKKANT = 3;
+function tegnPrikkflis(t: Naturtema, tile: ImageTile) {
+  const t0 = performance.now(),
+    u = plannett.getTileCoordExtent(tile.getTileCoord()),
+    s = 512 / (u[2] - u[0]),
+    fl = lagFor(t).kilde.getFeaturesInExtent(u);
+  if (!fl.length) {
+    tile.setState(TOM);
+    return;
+  }
+  const maske = flislerret(),
+    mg = maske.getContext('2d')!;
+  for (const f of fl) {
+    geomSti(mg, f.getGeometry()!, u, s);
+    mg.fill('evenodd');
+  }
+  const c = flislerret(),
+    g = c.getContext('2d')!;
+  g.fillStyle = farge(t.id + '-prikk') || farge(t.id);
+  g.beginPath();
+  for (let y = 0, r = 0; y < 512 + PRIKK; y += PRIKK / 2, r++)
+    for (let x = r % 2 ? PRIKK / 2 : 0; x < 512 + PRIKK; x += PRIKK) {
+      g.moveTo(x + PRIKKRADIUS, y);
+      g.arc(x, y, PRIKKRADIUS, 0, 2 * Math.PI);
+    }
+  g.fill();
+  g.globalCompositeOperation = 'destination-in'; /* prikkene bare innenfor områdene */
+  g.drawImage(maske, 0, 0);
+  g.globalCompositeOperation = 'source-over';
+  g.strokeStyle = farge(t.id);
+  g.lineWidth = PRIKKANT;
+  g.lineJoin = 'round';
+  for (const f of fl) {
+    geomSti(g, f.getGeometry()!, u, s);
     g.stroke();
   }
   tile.setImage(c);
