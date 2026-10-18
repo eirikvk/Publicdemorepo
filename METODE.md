@@ -1095,6 +1095,12 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Raskere kart over klassene i tvillingen, 18. oktober 2026.** Kartet på forsiden av tvillingen tegnet blokkene i hver kartflis
+én og én, med et lerret på 512 x 512 per blokk. Zoomet ut har en kartflis i Kautokeino opptil 64 blokker, og de ventet på hverandre
+i køen til bakgrunnstråden. Nå hentes blokkene i en kartflis samtidig, og hver krympes rett inn i flisen med snittet av fargene,
+uten et lerret per blokk. Naturen vises på forsiden etter rundt 3 sekunder i Trondheim, mot 6,5 før, og etter rundt 7 sekunder i
+Kautokeino, mot 29. Målt i Chromium med filene lokalt, ikke på iPhone. Tallene er de samme.
+
 **Detaljklassene innenfor dagens klasser, og lagret for Kautokeino, 18. oktober 2026.** Tredje trinn i forslaget om
 overlayanalyse med raster og vektor. Detaljklassene og dagens klasser er to kartbilder fra NIBIO, og i kanten mellom to flater kunne
 de gi ulik klasse for den samme ruta. Nå leses detaljklassen innenfor dagens klasse i ruta (`detaljIKlassen`). Hører den til en

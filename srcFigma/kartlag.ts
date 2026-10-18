@@ -35,6 +35,37 @@ function cssFarge(navn: string): number[] {
 /* Et kartlag av klassene i blokkene på nivå niva (9 eller 10): blokker gir blokkene for kommunen, klasser klassene per rute i en blokk
    (plassen i tabellen pluss én, 0 for ingen), og farger fargen for hver plass som [r, g, b], eller null når den ikke vises. En flis
    på nivået er én blokk, en flis zoomet ut er flere blokker forminsket, og en flis zoomet inn er en del av en blokk forstørret. */
+/* Krymper en blokk på 512 x 512 ruter inn i bildet o (512 piksler bredt) fra pikselen (ox, oy): hver piksel er n x n ruter, med
+   snittet av fargene F til de rutene som vises, og dekningen er andelen av dem. Det samme som å krympe blokken med utjevning. Gir
+   om noe ble tegnet. */
+function krymp(kl: ArrayLike<number>, F: (number[] | null)[], n: number, o: Uint8ClampedArray, ox: number, oy: number) {
+  const s = 512 / n;
+  let noe = false;
+  for (let py = 0; py < s; py++)
+    for (let px = 0; px < s; px++) {
+      let m = 0,
+        r = 0,
+        gr = 0,
+        b = 0;
+      for (let y = py * n; y < py * n + n; y++)
+        for (let x = px * n, q = y * 512 + x; x < px * n + n; x++, q++) {
+          const f = kl[q] ? F[kl[q] - 1] : null;
+          if (!f) continue;
+          m++;
+          r += f[0];
+          gr += f[1];
+          b += f[2];
+        }
+      if (!m) continue;
+      const i = 4 * ((oy + py) * 512 + ox + px);
+      o[i] = r / m;
+      o[i + 1] = gr / m;
+      o[i + 2] = b / m;
+      o[i + 3] = (255 * m) / (n * n);
+      noe = true;
+    }
+  return noe;
+}
 function blokklag(
   tittel: string,
   niva: number,
@@ -76,21 +107,21 @@ function blokklag(
         g = c.getContext('2d')!;
       let tegnet = false;
       if (z <= niva) {
-        /* zoomet ut: n x n blokker forminsket inn i flisen */
+        /* zoomet ut: n x n blokker forminsket inn i flisen. Blokkene hentes samtidig, og hver krympes rett inn i flisen så snart den
+           er lest (krymp), uten et lerret per blokk. */
         const n = 1 << (niva - z),
-          s = 512 / n;
-        g.imageSmoothingEnabled = true;
+          s = 512 / n,
+          d = g.createImageData(512, 512),
+          her: [number, number][] = [];
         for (let j = 0; j < n; j++)
-          for (let i = 0; i < n; i++) {
-            const bx = x * n + i,
-              by = y * n + j;
-            if (!har.has(`${bx}/${by}`)) continue;
-            const b = await blokk(bx, by, F);
-            if (!b) continue;
-            g.drawImage(b, i * s, j * s, s, s);
-            b.width = 0;
-            tegnet = true;
-          }
+          for (let i = 0; i < n; i++) if (har.has(`${x * n + i}/${y * n + j}`)) her.push([i, j]);
+        await Promise.all(
+          her.map(async ([i, j]) => {
+            const K = await klasser([niva, x * n + i, y * n + j]);
+            if (krymp(K.kl, F, n, d.data, i * s, j * s)) tegnet = true;
+          })
+        );
+        if (tegnet) g.putImageData(d, 0, 0);
       } else {
         /* zoomet inn: en del av én blokk, forstørret med skarpe ruter */
         const n = 1 << (z - niva),
