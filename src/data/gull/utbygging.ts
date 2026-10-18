@@ -9,7 +9,6 @@
 import { HEL, andelVed, hverRute, type Andel } from '../generelt/dekning.ts';
 import {
   BLOKK,
-  blokkAv,
   blokkNokkel,
   finn,
   glissent,
@@ -110,6 +109,13 @@ export function ruteVekt(R: Pick<Utbygging, 'cx0' | 'cy0' | 'w' | 'andeler' | 'f
     A = R.andeler.get(k),
     f = R.faktorer.get(k);
   return (A ? andelVed(A, X % BLOKK, Y % BLOKK) / HEL : 1) * (f === undefined ? 1 : f);
+}
+/* Målestokken i biten rute i i utbyggingen R ligger i */
+export function ruteFaktor(R: Pick<Utbygging, 'cx0' | 'cy0' | 'w' | 'faktorer'>, i: number): number {
+  const X = R.cx0 + (i % R.w),
+    Y = R.cy0 + Math.floor(i / R.w),
+    f = R.faktorer.get(blokkNokkel(Math.floor(X / BLOKK), Math.floor(Y / BLOKK)));
+  return f === undefined ? 1 : f;
 }
 
 /* Én flis: kommuneplanen lagt oppå dagens klasser. kl er dagens klasse per rute fra klasserIFlis (0 ukjent), plan planlagt

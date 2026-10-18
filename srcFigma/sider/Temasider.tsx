@@ -1021,8 +1021,8 @@ function Rein({ tema }: { tema: Tema }) {
       kilde={
         <p>
           {KILDE.villrein.datasett}, {KILDE.villrein.navn}. Arealet er den delen av hvert område som ligger i kommunen.
-          Grått areal i villreinområdene er fra {KILDE.graa.datasett}, {KILDE.graa.navn}, i ruter på 10 meter: en rute
-          hører til et villreinområde når området dekker minst halve ruta.
+          Grått areal i villreinområdene er fra {KILDE.graa.datasett}, {KILDE.graa.navn}, i ruter på 10 meter: hver rute
+          teller med den delen av den som ligger i villreinområdene.
         </p>
       }
       fremhevet={<PlanITema plan={plan} hva="villreinområder" />}

@@ -16,6 +16,7 @@ import {
   kanterI,
   regel,
   ringer,
+  ringerUtsnitt,
   type Nett
 } from '../src/data/generelt/dekning.ts';
 import { areal, flatesok, type Flerflate } from '../src/data/generelt/geometri.ts';
@@ -162,6 +163,17 @@ test('dekning: én og én rute gir det samme som skanlinjen', () => {
       if (Math.abs(Math.round(d * HEL) - andelVed(A, x, y)) > 2) ulike++;
     }
   assert.equal(ulike, 0);
+});
+
+test('dekning: ringene i et utsnitt gir det samme som alle', () => {
+  const F = ringer([firkant(10, 10, 120, 390), firkant(500, 500, 600, 600), firkant(-300, 50, -10, 60)]),
+    R: Nett = { u: [0, 0, 200, 400], res: RES, w: 20, h: 40 },
+    U = ringerUtsnitt(F, R.u);
+  assert.equal(U.start.length - 1, 1); /* bare den første ringen har noe i utsnittet */
+  const A = dekning(kanterI([{ lag: 0, ringer: F }], R), R.w, R.h, regel([], [0]), 1, 1)[0],
+    B = dekning(kanterI([{ lag: 0, ringer: U }], R), R.w, R.h, regel([], [0]), 1, 1)[0];
+  assert.equal(andelSum(A), andelSum(B));
+  assert.ok(Math.abs(andelSum(B) - (110 * 380) / 100) < 0.001);
 });
 
 test('intervaller: union, minus og snitt', () => {

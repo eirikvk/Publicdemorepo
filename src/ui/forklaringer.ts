@@ -59,8 +59,10 @@ const land = (hent: Hent) => {
 function omradesum(T: Temaet, flertall: string) {
   const o = [...T.omrader].sort((a, b) => b.km2 - a.km2),
     vis = o.slice(0, 3).map(x => `${x.navn} ${hele(x.km2)}`),
-    rest = o.length - vis.length;
-  return `${o.length === 1 ? 'Ett område' : `${ant(o.length)} ${flertall}`}: ${ramse([...vis, rest > 0 && `${ant(rest)} til med ${hele(o.slice(3).reduce((s, x) => s + x.km2, 0))}`])} dekar. Til sammen ${daa(T.sum)}.`;
+    rest = o.length - vis.length,
+    overlapp =
+      o.reduce((s, x) => s + x.km2, 0) - T.sum > Math.max(0.001, T.sum * 2e-4); /* mer enn én dekar og 0,02 % */
+  return `${o.length === 1 ? 'Ett område' : `${ant(o.length)} ${flertall}`}: ${ramse([...vis, rest > 0 && `${ant(rest)} til med ${hele(o.slice(3).reduce((s, x) => s + x.km2, 0))}`])} dekar. Til sammen ${daa(T.sum)}${overlapp ? ', der overlapp telles én gang' : ''}.`;
 }
 /* Planlagt utbygging i et tema, i ruter og dekar */
 function iPlanen(I: TemaIPlan | null, best: string, flertall = 'områder') {
@@ -223,7 +225,7 @@ export const KORT: Kort[] = [
     komponent: NATUR,
     sporsmal: 'Hvor mye av kommunen er verneområder, og hvor mye planlagt utbygging ligger innenfor?',
     kortFortalt:
-      'Verneområdene kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er summen av områdene. Planlagt utbygging innenfor er rutene i utbyggingen som ligger i et verneområde.',
+      'Verneområdene kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen som ligger i et verneområde.',
     tabeller: ['gull.verneomrader', 'gull.verneomraderIPlan'],
     regnestykke: hent => {
       const T = hent(katalog.gull.verneomrader);
@@ -243,7 +245,7 @@ export const KORT: Kort[] = [
     komponent: NATUR,
     sporsmal: 'Hvor mye av kommunen er leveområder for villrein, og hvor mye planlagt utbygging ligger innenfor?',
     kortFortalt:
-      'Leveområdene for villrein kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er summen av områdene. Planlagt utbygging innenfor er rutene i utbyggingen som ligger i et villreinområde.',
+      'Leveområdene for villrein kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen som ligger i et villreinområde.',
     tabeller: ['gull.villrein', 'gull.villreinIPlan'],
     regnestykke: hent => {
       const T = hent(katalog.gull.villrein);
@@ -264,7 +266,7 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye verdsatt natur er registrert i kommunen, hvor mye av kommunen er kartlagt, og hvor mye planlagt utbygging ligger i verdsatt natur eller der det ikke er kartlagt?',
     kortFortalt:
-      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes i et rutenett over kommunen, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.',
+      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.',
     tabeller: [
       'gull.verdsattNatur',
       'gull.verdsattNaturKartlagt',

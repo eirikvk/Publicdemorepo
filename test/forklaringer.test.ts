@@ -10,9 +10,9 @@ const kilder = (id: string) =>
   );
 
 test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () => {
-  assert.ok(kilder('vern').includes('bronse.verneomrader: solv.verneomrader'));
+  assert.ok(kilder('vern').includes('bronse.verneomrader: solv.verneomrader + solv.vernAndel'));
   /* en sølvtabell uten egen kilde hører til kilden for tabellen den bygger på */
-  assert.ok(kilder('verdi').includes('bronse.verdsattNatur: solv.verdsattNatur + solv.verdsattNaturAreal'));
+  assert.ok(kilder('verdi').includes('bronse.verdsattNatur: solv.verdsattNatur + solv.verdsattAndel'));
   /* én kilde kan justeres til to sølvtabeller */
   assert.ok(kilder('planlagt').includes('bronse.grunnkartflis: solv.klasser + solv.sammensatt'));
   /* egne områder i ruter hører til egne områder, ikke til rutestørrelsen */

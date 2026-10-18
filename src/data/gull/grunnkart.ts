@@ -6,11 +6,11 @@
    Utbyggingen (gull/utbygging.ts), kartet og sidene leser dagens klasser herfra.
    Nederst arealet per detaljklasse, i hele kommunen (gull.detaljareal) og i verneområdene (gull.detaljerIVerneomrader), som
    foreløpig bare tvillingen fra Figma bruker. */
-import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
+import type { Flerflate } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import { FLISNIVA, flisAvNavn, flisUtsnitt, ruteM, type Flis } from '../solv/felles.ts';
+import { FLISNIVA, bitAv, flisAvNavn, ruteM, type Flis } from '../solv/felles.ts';
 import { tellIKommunen, type Oversikt } from '../solv/grunnkart.ts';
-import { kommuneIBlokk } from '../solv/kommune.ts';
+import { kommuneIBlokk, type Andelsbit } from '../solv/kommune.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
 import { arealFraRuter, tiDekar } from './felles.ts';
 
@@ -55,30 +55,31 @@ export interface Detaljareal {
 export async function detaljareal(nr: string): Promise<Detaljareal | null> {
   return tellDetaljer(nr, null);
 }
-/* Tabellen gull.detaljerIVerneomrader: det samme, men bare innenfor verneområdene (solv.verneomrader). Der områder overlapper,
-   telles arealet én gang. Ruter teller når verneområdene dekker minst halve ruta. */
+/* Tabellen gull.detaljerIVerneomrader: det samme, men bare innenfor verneområdene, med andelen av hver rute som ligger i
+   verneområdene og i kommunen (solv.vernAndel). Der områder overlapper, telles arealet én gang. */
 export async function detaljerIVerneomrader(nr: string): Promise<Detaljareal | null> {
-  return tellDetaljer(nr, (await katalog.solv.verneomrader(nr)).omrader);
+  return tellDetaljer(nr, (await katalog.solv.vernAndel(nr)).biter[0]);
 }
-/* Arealet per detaljklasse i kommunen nr, eller bare innenfor flatene. Blokkene utenfor flatene hoppes over, og blokkene leses seks
-   om gangen. hentet og versjon er fra registeret når kommunen har lagrede detaljklasser, ellers tomme. null når kommunen ikke har
-   noen blokker. */
-async function tellDetaljer(
-  nr: string,
-  flater: { koord: Flerflate; ext: Utsnitt }[] | null
-): Promise<Detaljareal | null> {
+/* Arealet per detaljklasse i kommunen nr, eller bare innenfor et tema i kommunen (bitene med andelen, som solv.vernAndel). Blokkene
+   utenfor temaet hoppes over, og blokkene leses seks om gangen. hentet og versjon er fra registeret når kommunen har lagrede
+   detaljklasser, ellers tomme. null når kommunen ikke har noen blokker. */
+async function tellDetaljer(nr: string, tema: Andelsbit[] | null): Promise<Detaljareal | null> {
   const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.detaljblokker(nr)]),
     lagret = !!(reg && reg.kommuner && reg.kommuner[nr]);
   if (!L.length) return null;
-  const [g, KB] = await Promise.all([katalog.solv.grense(nr), katalog.solv.kommunebiter(nr)]),
+  const KB = tema || (await katalog.solv.kommunebiter(nr)),
     n = new Array<number>(DETALJKLASSER.length + 1).fill(0),
-    ko = L.filter(tc => !flater || flater.some(f => overlapper(f.ext, flisUtsnitt(tc)))),
-    innenfor = flater ? { flater: flater.map(f => f.koord), koord: g.koord } : undefined;
+    ko = L.filter(tc => {
+      const b = bitAv(tc);
+      return KB.some(K => K.tc[1] === b[1] && K.tc[2] === b[2]);
+    });
   await Promise.all(
     Array.from({ length: 6 }, async () => {
       for (let b = ko.shift(); b; b = ko.shift()) {
+        const A = kommuneIBlokk(KB, b);
+        if (A.andel && !A.andel.a.length) continue;
         const K = await katalog.solv.detaljklasser(b);
-        tellIKommunen(K, kommuneIBlokk(KB, b), n.length, innenfor).forEach((v, k) => (n[k] += v));
+        tellIKommunen(K, A, n.length).forEach((v, k) => (n[k] += v));
       }
     })
   );

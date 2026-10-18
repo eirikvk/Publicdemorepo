@@ -1,37 +1,36 @@
 /* Gull for naturtemaene, i deler som bygger på hverandre:
    - områdene i kommunen med arealet (gull.verneomrader, gull.villrein og gull.verdsattNatur)
    - kartleggingen av verdsatt natur (gull.verdsattNaturIKartlagt og gull.verdsattNaturKartlagt)
-   - kolonnen for hvert tema i utbyggingen: hvilket område hver rute med planlagt utbygging ligger i (gull.utbyggingIVerneomrader
-     og de andre)
+   - kolonnen for hvert tema i utbyggingen: hvor stor del av hver rute med planlagt utbygging som ligger i temaet, og i hvert område
+     (gull.utbyggingIVerneomrader og de andre)
    - summene over kolonnen: planlagt utbygging i temaet, samlet og per område (gull.verneomraderIPlan og de andre)
    - planlagt utbygging på natur utenfor det kartlagte (gull.utbyggingUtenforKartlagt)
    Delene er delt der det kommer inn en ny kilde: det kartlagte og utbyggingen kommer senere enn områdene, og siden viser områdene med
-   en gang. Bygger på områdene, arealet og oppslagene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i km²,
-   kryssinger i ruter. */
-import { omriss, punkterI, punktnett, type Flatesok } from '../generelt/geometri.ts';
+   en gang. Bygger på områdene, dekningsandelen og oppslagene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i
+   km², kryssinger i ruter rettet for målestokken. */
+import { andelVed, dekningIRute, HEL } from '../generelt/dekning.ts';
+import { punkterI, punktnett, type Flatesok } from '../generelt/geometri.ts';
 import { verdi } from '../generelt/glissen.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import { ruteKm2, ruteX, ruteY } from '../solv/felles.ts';
+import { BERORT, BIT, ruteKm2, ruteM, ruteX, ruteY } from '../solv/felles.ts';
+import type { Andelsbit } from '../solv/kommune.ts';
 import {
   NATURTEMA,
   VURDERES,
-  klasseAreal,
   verneformgruppe,
-  iOmradet,
   naturSok,
   type Kartlagt,
   type Omradesok,
   type Naturtema,
-  type Omrade,
   type TemaOmrade,
   type Temaomrader
 } from '../solv/temaer.ts';
 import { andel, landareal } from './felles.ts';
-import { ruteVekt, type Utbygging } from './utbygging.ts';
+import { ruteFaktor, ruteVekt, type Utbygging } from './utbygging.ts';
 
-/* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg). Rutene er vektet som i utbyggingen
-   (ruteVekt i utbygging.ts). */
+/* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg). En rute teller med den delen av
+   den som ligger i temaet og i kommunen, rettet for målestokken. */
 export interface Kryss {
   alt: Float64Array;
   eg: Float64Array[];
@@ -46,10 +45,14 @@ export interface Gap extends Ukjent {
   eg: Ukjent[];
   plan: (Ukjent & { eg: Ukjent[] }) | null;
 }
-/* Kryssingen av et tema med utbyggingen: per verdikategori for planen med egne områder (S) og planen alene (P), og ruter per område
-   med planlagt utbygging (plan) og i smale striper (smal) */
+/* Kryssingen av et tema med utbyggingen: per verdikategori for planen med egne områder (S) og planen alene (P), samlet for planen
+   med egne områder (samlet) og i smale striper (samletSmal), og per område (plan og smal). S, P og samlet er unionen av områdene, så
+   overlapp telles én gang. Per område teller hvert område med sin egen del av ruta, så summen over områdene kan bli større enn samlet
+   der områder overlapper. */
 export interface Kryssing {
   kryss: { S: Kryss; P: Kryss | null };
+  samlet: number;
+  samletSmal: number;
   plan: Float64Array;
   smal: Float64Array;
   ruteKm2: number;
@@ -57,81 +60,143 @@ export interface Kryssing {
 /* Gir oppslaget for et område. lag() lager det, og den som kaller, kan huske det per område (nokkel). */
 export type HuskSok = (nokkel: object, lag: () => Omradesok | null) => Omradesok | null;
 
-/* Om midtpunktet i ruta i i utbyggingen R ligger i området S */
-const iSoket = (S: Omradesok, R: Utbygging, i: number) => iOmradet(S, ruteX(R, i), ruteY(R, i));
+/* Kolonnene for et tema i utbyggingen: for hver rad og kategori andelen av ruta som ligger i temaet og i kommunen (union, rad · nK +
+   kategori, 0–1), og for hvert område radene det dekker noe av og andelen (radene for område a står fra omr[a] til omr[a + 1] − 1 i
+   rad og d) */
+export interface Andelskolonne {
+  nK: number;
+  union: Float32Array;
+  omr: Int32Array;
+  rad: Int32Array;
+  d: Float32Array;
+}
+/* Andelen 0–1 i den globale ruta (X, Y) på nivå 10 fra bitene i M (etter bitnøkkel) */
+function andelIRuta(M: Map<number, Andelsbit>, X: number, Y: number) {
+  const bx = Math.floor(X / BIT),
+    by = Math.floor(Y / BIT),
+    K = M.get(bx * 65536 + by);
+  if (!K) return 0;
+  return K.andel ? andelVed(K.andel, X - bx * BIT, Y - by * BIT) / HEL : 1;
+}
+/* Bitene i L etter bitnøkkel */
+const bitkart = (L: Andelsbit[]) => new Map(L.map(K => [K.tc[1] * 65536 + K.tc[2], K]));
+/* Andelen 0–1 av rute i i utbyggingen R som ligger i flaten bak bitene i M */
+export function andelIRute(R: Utbygging, M: Map<number, Andelsbit>, i: number) {
+  return andelIRuta(M, R.cx0 + (i % R.w), R.cy0 + Math.floor(i / R.w));
+}
 
-/* Kolonnen for et tema i utbyggingen: hvilket område hver rad ligger i, som plassen i O, eller -1. Midtpunktet i ruta slås opp i
-   områdene, og ruta hører til det første området den ligger i. kommune gir oppslaget i kommunen, som uklippede områder klippes
-   mot. Oppslagene lages med naturSok i sølv. sok(nokkel, lag) gir oppslaget: den som kaller, kan huske det per område (nokkel) og
-   bare kalle lag() første gang. Områdene gås gjennom i rekkefølge, og hvert område ser bare på midtpunktene innenfor omrisset sitt
-   (punktnett). En rute som alt har et område, hoppes over, så den beholder det første. */
-export function temaKolonne(O: TemaOmrade[], R: Utbygging, kommune: () => Flatesok, sok: HuskSok): Int32Array {
+/* Kolonnene for et tema i utbyggingen R. Unionen per kategori slås opp i dekningsandelen for temaet (A, bitene per kategori fra
+   solv.vernAndel og de andre). Per område regnes andelen av hver rute med dekningIRute (generelt/dekning.ts), med de samme fire delradene som
+   dekningsandelen: hvert område ser bare på rutene innenfor omrisset sitt (punktnett), og områder som ikke er klippet mot kommunen,
+   klippes mot oppslaget i kommunen (kommune). Oppslagene lages med naturSok i sølv. sok(nokkel, lag) gir oppslaget: den som kaller,
+   kan huske det per område (nokkel) og bare kalle lag() første gang. klipp sier om området skal klippes mot kommunen. */
+export function temaKolonne(
+  O: TemaOmrade[],
+  R: Utbygging,
+  A: Andelsbit[][],
+  kommune: () => Flatesok,
+  sok: HuskSok,
+  klipp: (o: TemaOmrade) => boolean
+): Andelskolonne {
   const n = R.rader.length,
-    treff = new Int32Array(n).fill(-1);
-  if (!n || !O.length) return treff;
+    nK = A.length,
+    union = new Float32Array(n * nK),
+    omr = new Int32Array(O.length + 1),
+    rad: number[] = [],
+    d: number[] = [];
+  if (!n) return { nK, union, omr, rad: new Int32Array(0), d: new Float32Array(0) };
+  A.forEach((L, v) => {
+    if (!L.length) return;
+    const M = bitkart(L);
+    for (let r = 0; r < n; r++) union[r * nK + v] = andelIRute(R, M, R.rader[r]);
+  });
   const x = new Float64Array(n),
-    y = new Float64Array(n);
+    y = new Float64Array(n),
+    res = ruteM(R.z),
+    h = res / 2;
   for (let r = 0; r < n; r++) {
     x[r] = ruteX(R, R.rader[r]);
     y[r] = ruteY(R, R.rader[r]);
   }
   const N = punktnett(x, y);
   O.forEach((o, a) => {
+    omr[a] = rad.length;
     let S: Omradesok | null | undefined;
-    punkterI(N, o.ext, r => {
-      if (treff[r] >= 0) return;
-      if (S === undefined) S = sok(o, () => naturSok(o, o.uklippet ? kommune() : null));
-      if (S && iOmradet(S, x[r], y[r])) treff[r] = a;
+    punkterI(N, [o.ext[0] - h, o.ext[1] - h, o.ext[2] + h, o.ext[3] + h], r => {
+      if (S === undefined) S = sok(o, () => naturSok(o, klipp(o) ? kommune() : null));
+      if (!S) return;
+      const da = dekningIRute(S.flate, x[r] - h, y[r] + h, res, S.kommune ? [S.kommune] : []);
+      if (da > 0) {
+        rad.push(r);
+        d.push(da);
+      }
     });
   });
-  return treff;
+  omr[O.length] = rad.length;
+  return { nK, union, omr, rad: Int32Array.from(rad), d: Float32Array.from(d) };
 }
 
-/* Summene for et tema over radene i utbyggingen R, med kolonnen treff fra temaKolonne. O er områdene og nK antall verdikategorier.
-   En rute telles én gang per tema, i området den hører til. Gir ruter per område (plan, og smal for ruter i smale striper), og per
-   verdikategori for planen med egne områder (S) og planen alene (P), for hele kommunen og per eget område. */
-export function kryssNatur(O: TemaOmrade[], R: Utbygging, treff: Int32Array, nK: number): Kryssing {
+/* Summene for et tema over radene i utbyggingen R, med kolonnene C fra temaKolonne og antall områder. Gir ruter per verdikategori for
+   planen med egne områder (S) og planen alene (P), for hele kommunen og per eget område, samlet og i smale striper, og per område
+   (plan, og smal for ruter i smale striper). */
+export function kryssNatur(R: Utbygging, C: Andelskolonne, antall: number): Kryssing {
   const B = R.basis || null,
     nE = R.eget ? R.antallEgne : 0,
-    nC = R.celler.length; /* radene etter disse har bare planen alene */
+    nC = R.celler.length /* radene etter disse har bare planen alene */,
+    nK = C.nK;
   const tom = (): Kryss => ({ alt: new Float64Array(nK), eg: Array.from({ length: nE }, () => new Float64Array(nK)) }),
     S = tom(),
     P = tom();
-  const plan = new Float64Array(O.length),
-    smal = new Float64Array(O.length);
-  for (let r = 0; r < R.rader.length && O.length; r++) {
-    const a = treff[r];
-    if (a < 0) continue;
-    const i = R.rader[r],
-      v = O[a].v || 0,
-      w = ruteVekt(R, i);
-    if (r < nC) {
-      const e = nE ? verdi(R.eget!, i) : 0;
-      if (verdi(R.ryddet, i)) {
-        plan[a] += w;
-        S.alt[v] += w;
-        if (e) S.eg[e - 1][v] += w;
-      } else smal[a] += w;
-      if (B && verdi(B.ryddet, i)) {
+  let samlet = 0,
+    samletSmal = 0;
+  for (let r = 0; r < R.rader.length; r++) {
+    const i = R.rader[r];
+    let f = -1;
+    for (let v = 0; v < nK; v++) {
+      const d = C.union[r * nK + v];
+      if (!d) continue;
+      if (f < 0) f = ruteFaktor(R, i);
+      const w = d * f;
+      if (r < nC) {
+        const e = nE ? verdi(R.eget!, i) : 0;
+        if (verdi(R.ryddet, i)) {
+          samlet += w;
+          S.alt[v] += w;
+          if (e) S.eg[e - 1][v] += w;
+        } else samletSmal += w;
+        if (B && verdi(B.ryddet, i)) {
+          P.alt[v] += w;
+          if (e) P.eg[e - 1][v] += w;
+        }
+      } else {
+        const e = verdi(R.eget!, i);
         P.alt[v] += w;
         if (e) P.eg[e - 1][v] += w;
       }
-    } else {
-      const e = verdi(R.eget!, i);
-      P.alt[v] += w;
-      if (e) P.eg[e - 1][v] += w;
     }
   }
-  return { kryss: { S, P: B ? P : null }, plan, smal, ruteKm2: ruteKm2(R.z) };
+  const plan = new Float64Array(antall),
+    smal = new Float64Array(antall);
+  for (let a = 0; a < antall; a++)
+    for (let p = C.omr[a]; p < C.omr[a + 1]; p++) {
+      const r = C.rad[p];
+      if (r >= nC) continue;
+      const i = R.rader[r],
+        w = C.d[p] * ruteFaktor(R, i);
+      if (verdi(R.ryddet, i)) plan[a] += w;
+      else smal[a] += w;
+    }
+  return { kryss: { S, P: B ? P : null }, samlet, samletSmal, plan, smal, ruteKm2: ruteKm2(R.z) };
 }
 
-/* Planlagt utbygging på natur i utbyggingen R, uten smale striper, delt på kartlagt og ikke kartlagt. M er oppslaget for det
-   kartlagte, eller null når ingenting er kartlagt. For planen med egne områder og planen alene, for hele kommunen og per eget
-   område. */
-export function kryssKartlagt(R: Utbygging, M: Omradesok | null): Gap {
+/* Planlagt utbygging på natur i utbyggingen R, uten smale striper, delt på kartlagt og ikke kartlagt. K er bitene med det kartlagte i
+   kommunen (solv.kartlagtAndel), tom når ingenting er kartlagt. Den delen av ruta som ligger i kommunen, men ikke i det kartlagte, er
+   ukjent. For planen med egne områder og planen alene, for hele kommunen og per eget område. */
+export function kryssKartlagt(R: Utbygging, K: Andelsbit[]): Gap {
   const B = R.basis || null,
     nE = R.eget ? R.antallEgne : 0,
-    nC = R.celler.length;
+    nC = R.celler.length,
+    M = bitkart(K);
   const ny = (): Ukjent & { eg: Ukjent[] } => ({
       nat: 0,
       ukjent: 0,
@@ -139,33 +204,30 @@ export function kryssKartlagt(R: Utbygging, M: Omradesok | null): Gap {
     }),
     G = ny(),
     GP = ny();
-  const tell = (T: Ukjent & { eg: Ukjent[] }, i: number, uk: boolean) => {
+  const tell = (T: Ukjent & { eg: Ukjent[] }, i: number, uk: number) => {
     const e = nE ? verdi(R.eget!, i) : 0,
       w = ruteVekt(R, i);
     T.nat += w;
-    if (uk) T.ukjent += w;
+    T.ukjent += uk;
     if (e) {
       T.eg[e - 1].nat += w;
-      if (uk) T.eg[e - 1].ukjent += w;
+      T.eg[e - 1].ukjent += uk;
     }
   };
+  const ukjent = (i: number) => Math.max(0, ruteVekt(R, i) - andelIRute(R, M, i) * ruteFaktor(R, i));
   for (let r = 0; r < R.rader.length; r++) {
     const i = R.rader[r];
     if (r < nC) {
       const s = verdi(R.ryddet, i) === 1,
         b = !!B && verdi(B.ryddet, i) === 1;
       if (!s && !b) continue;
-      const uk = !M || !iSoket(M, R, i);
+      const uk = ukjent(i);
       if (s) tell(G, i, uk);
       if (b) tell(GP, i, uk);
-    } else if (verdi(B!.ryddet, i) === 1) tell(GP, i, !M || !iSoket(M, R, i));
+    } else if (verdi(B!.ryddet, i) === 1) tell(GP, i, ukjent(i));
   }
   return { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
 }
-
-/* Arealet av et tema som er summen av områdene: verneområder og villreinområder. Overlapper to områder, telles overlappet to
-   ganger. */
-export const samletAreal = (omrader: Omrade[]) => summen(omrader.map(o => o.km2));
 
 /* Et naturtema i kommunen: områdene, arealet samlet og per verdikategori (verdsatt natur), andelen av landarealet, antall områder,
    og per verdikategori antall lokaliteter og arealet. Arealer er i km², andeler i prosent. */
@@ -243,33 +305,29 @@ export function byggKartleggingen(E: Kartlagt | null, inne: number[] | null, T: 
 export type Kartleggingen = ReturnType<typeof byggKartleggingen>;
 
 /* Tallene for planlagt utbygging i et tema, fra kryssingen K: per verdikategori (klasser, hvis temaet har det), samlet og i smale
-   striper, antall områder som berøres, per område (perOmrade, på samme plass som området i T.omrader), og de berørte områdene med
-   mest først (berorte, plassene i T.omrader). Ruter står både som antall og km². */
+   striper (unionen av områdene), antall områder som berøres (BERORT), per område (perOmrade, på samme plass som området i
+   T.omrader, der overlapp telles i hvert område), og de berørte områdene med mest først (berorte, plassene i T.omrader). Ruter står
+   både som antall og km². */
 export function byggTemaIPlan(T: Temaet, K: Kryssing, klasser: [navn: string, farge: string][] | undefined) {
   const o = T.omrader,
     P = K.plan,
-    plan = summen(P),
-    smal = summen(K.smal);
+    plan = K.samlet,
+    smal = K.samletSmal,
+    berort = (i: number) => P[i] >= BERORT;
   return {
     klasser:
       klasser && T.klasser && o.length
-        ? klasser.map((_, v) => {
-            let pl = 0;
-            o.forEach((x, i) => {
-              if (x.v === v) pl += P[i];
-            });
-            return { plan: pl, planKm2: pl * K.ruteKm2 };
-          })
+        ? klasser.map((_, v) => ({ plan: K.kryss.S.alt[v], planKm2: K.kryss.S.alt[v] * K.ruteKm2 }))
         : null,
     plan,
     planKm2: plan * K.ruteKm2,
     smal,
     smalKm2: smal * K.ruteKm2,
-    berort: o.filter((_, i) => P[i]).length,
+    berort: o.filter((_, i) => berort(i)).length,
     perOmrade: Array.from(P, p => p * K.ruteKm2),
     berorte: o
       .map((_, i) => i)
-      .filter(i => P[i])
+      .filter(berort)
       .sort((a, b) => P[b] - P[a])
   };
 }
@@ -283,28 +341,26 @@ export interface TemaIPlan {
 const [VERN, REIN, VERDI] = NATURTEMA;
 const ikke = () => null; /* det kartlagte kan mangle uten at svaret er feil: da er det ikke med */
 
-/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A. Arealet per
-   verdikategori kommer fra sølv for verdsatt natur, og er summen av områdene for de andre. Hver tabell gir sitt eget areal, så
-   koden viser hva hver av dem bygger på (verktoy/forklaringer.ts leser det). */
+/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A fra dekningsandelen
+   (solv.vernAndel, solv.villreinAndel og solv.verdsattAndel): samlet og per verdikategori, der overlapp telles én gang. Hver tabell gir sitt eget areal, så koden viser hva hver
+   av dem bygger på (verktoy/forklaringer.ts leser det). */
 async function temaet(
   tema: Naturtema,
   nr: string,
   O: Temaomrader,
-  A: Promise<{ sum: number; klasser?: number[] }> | { sum: number }
+  A: Promise<{ sum: number; km2: number[] }>
 ): Promise<Temaet> {
   const [land, a] = await Promise.all([landareal(nr), A]);
-  return byggTemaet(tema, nr, O, a, land);
+  return byggTemaet(tema, nr, O, { sum: a.sum, klasser: a.km2 }, land);
 }
 export async function verneomrader(nr: string): Promise<Temaet> {
-  const O = await katalog.solv.verneomrader(nr);
-  return temaet(VERN, nr, O, { sum: samletAreal(O.omrader) });
+  return temaet(VERN, nr, await katalog.solv.verneomrader(nr), katalog.solv.vernAndel(nr));
 }
 export async function villrein(nr: string): Promise<Temaet> {
-  const O = await katalog.solv.villrein(nr);
-  return temaet(REIN, nr, O, { sum: samletAreal(O.omrader) });
+  return temaet(REIN, nr, await katalog.solv.villrein(nr), katalog.solv.villreinAndel(nr));
 }
 export async function verdsattNatur(nr: string): Promise<Temaet> {
-  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr), katalog.solv.verdsattNaturAreal(nr));
+  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr), katalog.solv.verdsattAndel(nr));
 }
 
 /* Tabellen gull.verdsattNaturKartlagt: kartleggingen av verdsatt natur i kommunen nr. Uten det kartlagte er det ingen kartlegging å
@@ -319,40 +375,43 @@ export async function verdsattNaturKartlagt(nr: string): Promise<Kartleggingen> 
   return byggKartleggingen(E, inne, T, land);
 }
 
-/* Tabellene gull.utbyggingIVerneomrader, gull.utbyggingIVillrein og gull.utbyggingIVerdsattNatur: kolonnen for temaet i
-   utbyggingen for kommunen nr, med temaet (T) og utbyggingen (R) den er regnet av. null uten utbygging. Oppslagene for områdene
-   huskes i solv.naturoppslag. */
-export interface Temakolonne {
+/* Tabellene gull.utbyggingIVerneomrader, gull.utbyggingIVillrein og gull.utbyggingIVerdsattNatur: kolonnene for temaet i
+   utbyggingen for kommunen nr (temaKolonne), med temaet (T) og utbyggingen (R) de er regnet av. null uten utbygging. Oppslagene for
+   områdene huskes i solv.naturoppslag. */
+export interface Temakolonne extends Andelskolonne {
   T: Temaet;
   R: Utbygging;
-  treff: Int32Array;
 }
-async function kolonne(tema: Naturtema, nr: string, T: Temaet): Promise<Temakolonne | null> {
-  const [R, g] = await Promise.all([katalog.gull.utbygging(nr), katalog.solv.grense(nr)]);
+async function kolonne(tema: Naturtema, nr: string, T: Temaet, A: Promise<{ biter: Andelsbit[][] }>) {
+  const [R, g, { biter }] = await Promise.all([katalog.gull.utbygging(nr), katalog.solv.grense(nr), A]);
   if (!R) return null;
   const navn = new Map<object, string>(T.omrader.map((o, i) => [o, `${tema.id}/${nr}/${i}`]));
   const kommune = () => katalog.solv.naturoppslag.straks('kommune/' + nr, () => naturSok(g, null))!.flate;
-  return {
-    T,
+  const C = temaKolonne(
+    T.omrader,
     R,
-    treff: temaKolonne(T.omrader, R, kommune, (o, lag) => katalog.solv.naturoppslag.straks(navn.get(o)!, lag))
-  };
+    biter,
+    kommune,
+    (o, lag) => katalog.solv.naturoppslag.straks(navn.get(o)!, lag),
+    o => o.uklippet || !!tema.samlet
+  );
+  return { T, R, ...C };
 }
 export async function utbyggingIVerneomrader(nr: string): Promise<Temakolonne | null> {
-  return kolonne(VERN, nr, await katalog.gull.verneomrader(nr));
+  return kolonne(VERN, nr, await katalog.gull.verneomrader(nr), katalog.solv.vernAndel(nr));
 }
 export async function utbyggingIVillrein(nr: string): Promise<Temakolonne | null> {
-  return kolonne(REIN, nr, await katalog.gull.villrein(nr));
+  return kolonne(REIN, nr, await katalog.gull.villrein(nr), katalog.solv.villreinAndel(nr));
 }
 export async function utbyggingIVerdsattNatur(nr: string): Promise<Temakolonne | null> {
-  return kolonne(VERDI, nr, await katalog.gull.verdsattNatur(nr));
+  return kolonne(VERDI, nr, await katalog.gull.verdsattNatur(nr), katalog.solv.verdsattAndel(nr));
 }
 
 /* Tabellene gull.verneomraderIPlan, gull.villreinIPlan og gull.verdsattNaturIPlan: planlagt utbygging i temaet, summert over
-   kolonnen for temaet. null uten utbygging. */
+   kolonnene for temaet. null uten utbygging. */
 function temaIPlan(tema: Naturtema, C: Temakolonne | null): TemaIPlan | null {
   if (!C) return null;
-  const K = kryssNatur(C.T.omrader, C.R, C.treff, tema.klasser ? tema.klasser.length : 1);
+  const K = kryssNatur(C.R, C, C.T.omrader.length);
   return { omrader: C.T.omrader, K, N: byggTemaIPlan(C.T, K, tema.klasser) };
 }
 export async function verneomraderIPlan(nr: string): Promise<TemaIPlan | null> {
@@ -366,30 +425,28 @@ export async function verdsattNaturIPlan(nr: string): Promise<TemaIPlan | null> 
 }
 
 /* Tabellen gull.utbyggingUtenforKartlagt: planlagt utbygging på natur i kommunen nr, og hvor mye av den som ligger utenfor det som
-   er kartlagt for naturtyper etter Miljødirektoratets instruks. Der vet vi ikke om det finnes verdifull natur. null uten utbygging,
-   eller når det kartlagte ikke kan hentes. Oppslaget for det kartlagte huskes i solv.naturoppslag. */
+   er kartlagt for naturtyper etter Miljødirektoratets instruks. Der vet vi ikke om det finnes verdifull natur. Det kartlagte er
+   dekningsandelen per rute (solv.kartlagtAndel), så en rute kan være delvis kartlagt. null uten utbygging, eller når det kartlagte ikke
+   kan hentes. */
 export type UtenforKartlagt = Gap & { natKm2: number; ukjentKm2: number; andel: number | null };
 export async function utbyggingUtenforKartlagt(nr: string): Promise<UtenforKartlagt | null> {
-  const [R, E] = await Promise.all([katalog.gull.utbygging(nr), katalog.solv.kartlagt(nr).catch(ikke)]);
-  if (!R || !E) return null;
-  const M =
-    E.flate && E.flate.length
-      ? katalog.solv.naturoppslag.straks('kartlagt/' + nr, () =>
-          naturSok({ koord: E.flate!, ext: omriss(E.flate!) }, null)
-        )
-      : null;
-  const G = kryssKartlagt(R, M);
+  const [R, E, K] = await Promise.all([
+    katalog.gull.utbygging(nr),
+    katalog.solv.kartlagt(nr).catch(ikke),
+    katalog.solv.kartlagtAndel(nr).catch(ikke)
+  ]);
+  if (!R || !E || !K) return null;
+  const G = kryssKartlagt(R, K.biter[0]);
   const r = ruteKm2(R.z);
   return { ...G, natKm2: G.nat * r, ukjentKm2: G.ukjent * r, andel: andel(G.ukjent, G.nat) };
 }
 
-/* Tabellen gull.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte i kommunen nr, eller null når
-   ingenting er kartlagt */
+/* Tabellen gull.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte i kommunen nr, fra dekningsandelen
+   med det kartlagte som maske (solv.verdsattIKartlagtAndel), eller null når ingenting er kartlagt */
 export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | null> {
-  const v = await katalog.solv.kartlagt(nr);
-  if (!v.flate || !v.flate.length) return null;
-  const [{ omrader }, g] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.solv.grense(nr)]);
-  return (await klasseAreal(omrader, VERDI.klasser!.length, g, v.flate)).klasser;
+  const K = await katalog.solv.kartlagtAndel(nr);
+  if (!(K.sum > 0)) return null;
+  return (await katalog.solv.verdsattIKartlagtAndel(nr)).km2;
 }
 
 /* Tabellen gull.vernPerVerneform: det vernede arealet i kommunen nr per verneform, slik Miljødirektoratet skriver den
@@ -425,16 +482,15 @@ export interface VerdsattVurderes {
   sum: number;
   ufullstendig: boolean;
 }
-/* Tabellen gull.verdsattVurderes: lokalitetene fra solv.verdsattVurderes, med arealet per kategori klippet mot kommunen som for
-   verdsatt natur (klasseAreal), så overlapp telles én gang */
+/* Tabellen gull.verdsattVurderes: lokalitetene fra solv.verdsattVurderes, med arealet per kategori i kommunen fra dekningsandelen
+   (solv.vurderesAndel), så overlapp telles én gang, som for verdsatt natur */
 export async function verdsattVurderes(nr: string): Promise<VerdsattVurderes> {
-  const [T, g] = await Promise.all([katalog.solv.verdsattVurderes(nr), katalog.solv.grense(nr)]),
-    n = VURDERES.klasser!.length,
-    A = await klasseAreal(T.omrader, n, g);
+  const [T, A] = await Promise.all([katalog.solv.verdsattVurderes(nr), katalog.solv.vurderesAndel(nr)]),
+    n = VURDERES.klasser!.length;
   return {
     omrader: T.omrader,
     antall: Array.from({ length: n }, (_, v) => T.omrader.filter(o => (o.v || 0) === v).length),
-    klasser: A.klasser,
+    klasser: A.km2,
     sum: A.sum,
     ufullstendig: !!T.ufullstendig
   };

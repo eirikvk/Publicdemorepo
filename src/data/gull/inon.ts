@@ -1,16 +1,8 @@
 /* Gull for inngrepsfri natur: arealet per sone i kommunen, og i villreinområdene. */
 import { katalog } from '../katalog.ts';
 import { UTENFOR } from '../solv/inon.ts';
-import {
-  andel,
-  arealFraRuter,
-  bildetall,
-  landareal,
-  tellIBiter,
-  tiDekar,
-  type Bildetall,
-  type Kommunebilde
-} from './felles.ts';
+import { BITRES, tellIBitene } from '../solv/kommune.ts';
+import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Bildetall, type Kommunebilde } from './felles.ts';
 
 /* Inngrepsfri natur for kommunen: når den er hentet, areal per sone (villmarkspreget, sone 1, sone 2) i km² */
 export type Inon = Kommunebilde<{ soner: number[] }>;
@@ -40,23 +32,20 @@ export interface InonIVillrein {
   soner: number[];
   andel: number | null;
 }
-/* Tabellen gull.inonIVillrein: villreinområdene (solv.villrein) tegnet i bitene av inngrepsfri natur (solv.inonbit) og klippet
-   mot kommunen. En rute hører til villreinområdene når de dekker minst halve ruta, og der områder overlapper, telles ruta én gang.
-   Begge arealene telles i det samme rutenettet, så andelen ikke påvirkes av forskjellen mellom flaten og rutene. null når kommunen
-   ikke har villreinområder. */
+/* Tabellen gull.inonIVillrein: inngrepsfri natur (solv.inonbit) i villreinområdene i kommunen, talt med andelen av hver rute som
+   ligger i villreinområdene og i kommunen (solv.villreinAndel). Der områder overlapper, telles ruta én gang. Arealet av villreinområdene
+   er det samme som i gull.villrein. null når kommunen ikke har villreinområder. */
 export async function inonIVillrein(nr: string): Promise<InonIVillrein | null> {
-  const [S, V, g] = await Promise.all([katalog.solv.inon(nr), katalog.solv.villrein(nr), katalog.solv.grense(nr)]);
-  if (!V.omrader.length) return null;
-  const T = await tellIBiter(
-      S.biter,
-      tc => katalog.solv.inonbit(tc).then(D => D.sone),
-      V.omrader,
-      g.koord,
+  const V = await katalog.solv.villreinAndel(nr);
+  if (!(V.sum > 0)) return null;
+  const n = await tellIBitene(
+      V.biter[0],
       3,
+      tc => katalog.solv.inonbit(tc).then(D => D.sone),
       v => (v !== UTENFOR ? v : null),
       UTENFOR
     ),
-    A = arealFraRuter(T.n, S.res, S.skala),
-    villrein = tiDekar((T.alle * S.res * S.res) / S.skala);
+    A = arealFraRuter(n, BITRES, 1e6),
+    villrein = tiDekar(V.sum);
   return { villrein, sum: A.sum, soner: A.km2, andel: andel(A.sum, villrein) };
 }

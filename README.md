@@ -183,18 +183,18 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | Fil | Innhold |
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
-| `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, kommunens flate i bitene (`solv.kommunebiter`), og et tema som hentes i biter talt i kommunen (`tellIKommune`) |
+| `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, dekningsandelen til flater i bitene (`andelsbiter`), kommunens flate i bitene (`solv.kommunebiter`), og et tema som hentes i biter talt i kommunen eller i et naturtema i den (`tellIKommune`, `tellIBitene`) |
 | `grunnkart.ts` | Grunnkartet fra NIBIO: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret), blokkene i kommunen, og dagens klasser for hele kommunen zoomet ut fra to kilder: blokkene satt sammen og det sammensatte kartet av flisene som er hentet |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
-| `raster.ts` | Fra flater og bilder til ruter: flatene tegnes i et lerret, bildene leses inn, og dekningen regnes om til areal. Tegneflatene brukes om igjen, én per størrelse. Den eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden. |
+| `raster.ts` | Lerretet: bildene leses inn, og kartet tegnes. Dekningen av flater regnes ikke her, men i `generelt/dekning.ts`. Tegneflatene brukes om igjen, én per størrelse. Den eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden. |
 | `tolking.ts` | Tolkingen av kartbildene til verdier per rute for grått areal, inngrepsfri natur og kommuneplanen, uten katalogen, så den kan kjøres i bakgrunnstråden |
-| `oppgaver.ts` | Det tunge bildearbeidet som oppgaver: pakke ut og tolke bildene, tegne kommunens flate i bitene, telle i kommunen og arealet av verdsatt natur per verdikategori |
+| `oppgaver.ts` | Det tunge bildearbeidet som oppgaver: pakke ut og tolke bildene, dekningsandelen til flater i bitene (kommunen og naturtemaene), og telle i kommunen |
 | `arbeid.ts`, `arbeider.ts` | Bakgrunnstråden (Web Worker med OffscreenCanvas): oppgavene kjøres der, så siden ikke henger, og på siden når nettleseren ikke har den |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, tolking av fargene i kartbildene, og dagens klasse per rute i en flis |
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017, og hver arealklasse for seg per år (til tvillingen fra Figma) |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
-| `temaer.ts` | Verneområder, villrein og verdsatt natur: flatene klippet mot kommunen, arealet per verdikategori i bitene, og flatene som oppslag for punkter |
+| `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen, temaet som andel per rute i bitene med arealet per kategori (`solv.vernAndel` og de andre), og flatene som oppslag for rutene i utbyggingen |
 | `inon.ts` | Inngrepsfri natur: sone per rute |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon |
 | `punkt.ts` | Oppslag i ett punkt, til detaljene ved trykk i kartet: grunnkartet, kommuneplanen og inngrepsfri natur i punktet, og alle feltene for et område i et naturtema, som felt og verdi. Inngår ikke i tallene. |
@@ -205,7 +205,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 
 | Fil | Innhold |
 |---|---|
-| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, tilstanden for temaene som hentes i biter, og telling i flater bit for bit (`tellIBiter`) |
+| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes i biter |
 | `grunnkart.ts` | Dagens klasser for kommunen på tvers av de to kildene i sølv: blokkene for hele kommunen, lagret eller hentet fra NIBIO, og det sammensatte kartet når blokkene ikke kan lages (bare til kartet) |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
@@ -213,7 +213,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Foreløpig bare til tvillingen. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
-| `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnen for hvert tema i utbyggingen, summene over den, og planlagt utbygging utenfor det kartlagte |
+| `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte |
 | `inon.ts` | Tallene på siden |
 | `graa.ts` | Arealet per trinn, og kryssingen med utbyggingen |
 
@@ -534,9 +534,9 @@ Både mappen og navnet på en funksjon sier hva den gjør:
 | `src/ui/kart/` | `tegn`, `vis`, `last` | Tegner kartet: lag, fliser og markeringer. Regner ikke ut nye tall. |
 | `src/ui/komponenter/` | Store bokstaver | React-komponenter: gjør gull om til tekst, tabeller og stolper. |
 
-Sølv og gull er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter ved å
-tegne dem i et lerret, og det er det eneste de trenger fra nettleseren (`raster.ts`, og bakgrunnstråden i `arbeid.ts` og
-`arbeider.ts`).
+Sølv og gull er den delen som kan tas med uendret til en annen løsning, og kan kjøres i Node. Flatene gjøres om til ruter i egen
+kode (`generelt/dekning.ts`). Det eneste de trenger fra nettleseren, er lerretet til å lese kartbildene og tegne egne områder
+(`raster.ts`, og bakgrunnstråden i `arbeid.ts` og `arbeider.ts`).
 
 `node verktoy/sjekk-lag.ts` kontrollerer at lagene bare bruker hverandre i riktig retning: data importerer aldri fra ui, generelt
 importerer ingenting, sølv og gull holder seg for seg selv, bronse og datamotoren bruker ikke OpenLayers eller React, React-komponentene henter ikke fra bronse og
@@ -647,8 +647,8 @@ commit og kommentar.
 Testene ligger i `test/`, én fil for hvert av generelt, sølv og gull, og én for cachen. De prøver regnefunksjonene med små,
 faste eksempler, som arealet av et kvadrat med hull, tolking av fargene og avrunding til 10 dekar, og at cachen leser gjennom,
 holder seg innenfor grensen og husker feil riktig. De bruker Nodes egen testkjører, trenger verken nett
-eller nettleser, og tar under ett sekund: `npm test`. Funksjonene som tegner i et lerret (`solv/raster.ts` og arealet av verdsatt
-natur) trenger nettleseren og prøves av regresjonstesten.
+eller nettleser, og tar under ett sekund: `npm test`. Funksjonene som bruker et lerret (`solv/raster.ts`) trenger nettleseren og
+prøves av regresjonstesten.
 
 ## Verktøy
 

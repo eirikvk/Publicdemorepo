@@ -767,7 +767,7 @@ export const katalog = {
       tittel: 'Inngrepsfri natur i kommunen',
       om: 'antall ruter à 10,6 meter per sone innenfor kommunen, og bitene kommunen har ruter i',
       forklaring:
-        'Rutene i kommunen telles per sone, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve ruta.',
+        'Rutene i kommunen telles per sone, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.',
       husk: 3,
       etl: solvInon.inon
     }),
@@ -789,7 +789,7 @@ export const katalog = {
       tittel: 'Grått areal i kommunen',
       om: 'antall ruter à 10,6 meter per trinn innenfor kommunen, og bitene kommunen har ruter i',
       forklaring:
-        'Rutene i kommunen telles per trinn, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve ruta.',
+        'Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.',
       husk: 3,
       etl: solvGraa.graa
     }),
@@ -840,7 +840,7 @@ export const katalog = {
       tittel: 'Verneområder, klippet',
       om: 'verneområdene klippet mot kommunen, med areal og opplysninger',
       forklaring:
-        'Flatene klippes mot kommunegrensen, og arealet i kommunen regnes ut. Feiler klippingen, regnes arealet i et rutenett.',
+        'Flatene klippes mot kommunegrensen, og arealet av hvert område i kommunen regnes ut. Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter.',
       husk: 30,
       etl: solvTemaer.verneomrader,
       glemt: (_, nr) => glemMasker('vern/' + nr + '/')
@@ -851,7 +851,7 @@ export const katalog = {
       tittel: 'Villreinområder, klippet',
       om: 'villreinområdene klippet mot kommunen, med areal og opplysninger',
       forklaring:
-        'Flatene klippes mot kommunegrensen, og arealet i kommunen regnes ut. Feiler klippingen, regnes arealet i et rutenett.',
+        'Flatene klippes mot kommunegrensen, og arealet av hvert område i kommunen regnes ut. Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter.',
       husk: 30,
       etl: solvTemaer.villrein,
       glemt: (_, nr) => glemMasker('rein/' + nr + '/')
@@ -862,7 +862,7 @@ export const katalog = {
       tittel: 'Lokaliteter med verdsatt natur',
       om: 'lokalitetene med verdsatt natur, uklippet, med areal, verdi og opplysninger',
       forklaring:
-        'Lokalitetene sorteres med høyest verdi først og så etter areal, så en rute der lokaliteter overlapper, regnes til den høyeste.',
+        'Lokalitetene leses med verdien og arealet av hele lokaliteten, og sorteres med høyest verdi først og så etter areal. De klippes ikke mot kommunen: det gjør dekningsandelen (solv.verdsattAndel) og kryssingen med utbyggingen.',
       usikkerhet: [
         'Arealet per lokalitet i listen er arealet av hele lokaliteten, også en del som ligger utenfor kommunen. Summene per verdikategori er klippet mot kommunen.'
       ],
@@ -881,35 +881,85 @@ export const katalog = {
       husk: 30,
       etl: solvTemaer.verdsattVurderes
     }),
-    verdsattNaturAreal: tabell({
+    vernAndel: tabell<string, solvTemaer.Temaandel>({
       lag: 'solv',
-      navn: 'verdsattNaturAreal',
-      tittel: 'Arealet av verdsatt natur',
-      om: 'arealet av verdsatt natur i kommunen, samlet og per verdikategori',
+      navn: 'vernAndel',
+      tittel: 'Verneområdene per rute',
+      om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med arealet',
       forklaring:
-        'Arealet per verdikategori regnes i et rutenett: én tegning per kategori av alle flater med minst den verdien, klippet mot kommunen. Der lokaliteter overlapper, teller den høyeste verdien, så ingenting telles to ganger.',
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet av verneområdene i kommunen, og brukes når de krysses med utbyggingen og detaljklassene.',
       husk: 30,
-      etl: solvTemaer.verdsattNaturAreal
+      etl: solvTemaer.vernAndel
+    }),
+    villreinAndel: tabell<string, solvTemaer.Temaandel>({
+      lag: 'solv',
+      navn: 'villreinAndel',
+      tittel: 'Villreinområdene per rute',
+      om: 'villreinområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med arealet',
+      forklaring:
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet av villreinområdene i kommunen, og brukes når de krysses med utbyggingen, grått areal og inngrepsfri natur.',
+      husk: 30,
+      etl: solvTemaer.villreinAndel
+    }),
+    verdsattAndel: tabell<string, solvTemaer.Temaandel>({
+      lag: 'solv',
+      navn: 'verdsattAndel',
+      tittel: 'Verdsatt natur per rute',
+      om: 'verdsatt natur i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), per verdikategori, med arealet',
+      forklaring:
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet viser det. Gir arealet per verdikategori, og brukes når verdsatt natur krysses med utbyggingen.',
+      husk: 30,
+      etl: solvTemaer.verdsattAndel
+    }),
+    vurderesAndel: tabell<string, solvTemaer.Temaandel>({
+      lag: 'solv',
+      navn: 'vurderesAndel',
+      tittel: 'Verdsatt natur som vurderes per rute',
+      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype som andel per rute i bitene, per kategori, med arealet',
+      forklaring:
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller «vurderes per lokalitet» først. Gir arealet per kategori.',
+      husk: 30,
+      etl: solvTemaer.vurderesAndel
+    }),
+    kartlagtAndel: tabell<string, solvTemaer.Temaandel>({
+      lag: 'solv',
+      navn: 'kartlagtAndel',
+      tittel: 'Det kartlagte per rute',
+      om: 'det som er kartlagt for naturtyper i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med arealet',
+      forklaring:
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet som er kartlagt, og hvor mye av planlagt utbygging på natur som ligger utenfor det kartlagte.',
+      husk: 30,
+      etl: solvTemaer.kartlagtAndel
+    }),
+    verdsattIKartlagtAndel: tabell<string, solvTemaer.Temaandel>({
+      lag: 'solv',
+      navn: 'verdsattIKartlagtAndel',
+      tittel: 'Verdsatt natur i det kartlagte per rute',
+      om: 'verdsatt natur innenfor det kartlagte i kommunen som andel per rute i bitene, per verdikategori, med arealet',
+      forklaring:
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Både kommunen og det kartlagte er masker, så bare det som ligger i begge, telles. Gir arealet per verdikategori innenfor det kartlagte.',
+      husk: 30,
+      etl: solvTemaer.verdsattIKartlagtAndel
     }),
     kartlagt: tabell({
       lag: 'solv',
       navn: 'kartlagt',
       tittel: 'Det kartlagte',
       om: 'det som er kartlagt for naturtyper etter Miljødirektoratets instruks, klippet mot kommunen',
-      forklaring: 'Dekningsflatene slås sammen og klippes mot kommunen.',
+      forklaring:
+        'Arealet er dekningsflatene som andel per rute i kommunen (solv.kartlagtAndel), så overlapp telles én gang. Til kartet slås flatene sammen og klippes mot kommunen.',
       usikkerhet: ['Dekningsflatene kan ligge delvis i vann, mens kartleggingsgraden regnes av landarealet.'],
       husk: 30,
-      etl: solvTemaer.kartlagt,
-      glemt: (_, nr) => glemMasker('kartlagt/' + nr)
+      etl: solvTemaer.kartlagt
     }),
     naturoppslag: tabell<string, Omradesok | null>({
       lag: 'solv',
       navn: 'naturoppslag',
       fil: 'solv/temaer.ts',
       tittel: 'Oppslag i områdene',
-      om: 'hjelpetabell: områdene i naturtemaene, det kartlagte og kommunen som oppslag for punkter, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området, kartlagt/kommune eller kommune/kommune. Lages første gang en rute med planlagt utbygging kan ligge i området.',
+      om: 'hjelpetabell: områdene i naturtemaene og kommunen som oppslag, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området, eller kommune/kommune. Lages første gang en rute med planlagt utbygging kan ligge i området.',
       forklaring:
-        'Hvert område og det kartlagte får et oppslag som sier om et punkt ligger i flaten, laget første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor stort området er.',
+        'Hvert område får et oppslag som gir hvor stor del av en rute som ligger i flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor stort området er.',
       husk: Infinity
     })
   },
@@ -918,7 +968,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'detaljareal',
       tittel: 'Areal per detaljklasse',
-      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter klippet til kommunen etter halvregelen. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter, der en rute langs grensen telles med den delen av den som ligger i kommunen. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
       usikkerhet: [
@@ -932,7 +982,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'detaljerIVerneomrader',
       tittel: 'Areal per detaljklasse i verneområdene',
-      om: 'arealet i km² per detaljklasse innenfor verneområdene i kommunen, av blokkene på 10,6 meter. Ruter teller når verneområdene dekker minst halve ruta. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet i km² per detaljklasse innenfor verneområdene i kommunen, av blokkene på 10,6 meter. Hver rute teller med den delen av den som ligger i verneområdene og i kommunen (solv.vernAndel). Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
         'Grunnkartets økosystemtyper i verneområdene: hvor mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
       etterBehov: true,
@@ -989,7 +1039,8 @@ export const katalog = {
       navn: 'vernPerVerneform',
       tittel: 'Vernet areal per verneform',
       om: 'det vernede arealet i kommunen per verneform fra Miljødirektoratet. Brukes foreløpig bare av tvillingen fra Figma.',
-      forklaring: 'Arealet av verneområdene i kommunen summert per verneform.',
+      forklaring:
+        'Arealet av verneområdene i kommunen summert per verneform. Overlapper to områder med ulik verneform, telles overlappet i begge.',
       husk: 12,
       etl: gullTemaer.vernPerVerneform
     }),
@@ -1010,7 +1061,7 @@ export const katalog = {
       tittel: 'Verdsatt natur som vurderes',
       om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype: antall og arealet i kommunen per kategori, og flatene til kartet. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Arealet per kategori regnes som for verdsatt natur: flatene tegnes i et rutenett over kommunen og klippes mot den, så overlapp telles én gang.',
+        'Arealet per kategori regnes som for verdsatt natur, fra dekningsandelen (solv.vurderesAndel), så overlapp telles én gang.',
       usikkerhet: ['Kategoriene sier at verdien ikke er satt ennå, ikke at naturen er mindre verdifull.'],
       etterBehov: true,
       husk: 12,
@@ -1249,9 +1300,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'inonIVillrein',
       tittel: 'Inngrepsfri natur i villreinområdene',
-      om: 'inngrepsfri natur innenfor villreinområdene i kommunen: arealet samlet og per sone, og andelen av villreinområdene. Begge arealene telles i rutenettet for inngrepsfri natur. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'inngrepsfri natur innenfor villreinområdene i kommunen: arealet samlet og per sone, og andelen av villreinområdene. Begge arealene telles i de samme bitene. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Villreinområdene tegnes i det samme rutenettet som inngrepsfri natur. Rutene som er minst halvt dekket av villreinområdene, telles, og av dem rutene som ligger i en sone for inngrepsfri natur. Andelen er inngrepsfri natur av villreinområdene i kommunen.',
+        'Hver rute teller med den delen av den som ligger i villreinområdene og i kommunen (solv.villreinAndel), og sonen kommer fra bildet av inngrepsfri natur. Andelen er inngrepsfri natur av villreinområdene i kommunen.',
       husk: 12,
       etl: gullInon.inonIVillrein
     }),
@@ -1259,9 +1310,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'graaIVillrein',
       tittel: 'Grått areal i villreinområdene',
-      om: 'grått areal innenfor villreinområdene i kommunen: arealet og andelen av villreinområdene. Begge arealene telles i rutenettet for grått areal. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'grått areal innenfor villreinområdene i kommunen: arealet og andelen av villreinområdene. Begge arealene telles i de samme bitene. null uten villreinområder. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Villreinområdene tegnes i det samme rutenettet som grått areal. Rutene som er minst halvt dekket av villreinområdene, telles, og av dem rutene som er grå, uansett andel vegetasjon. Andelen er grått areal av villreinområdene i kommunen.',
+        'Hver rute teller med den delen av den som ligger i villreinområdene og i kommunen (solv.villreinAndel), og trinnet kommer fra bildet av grått areal. Alle trinnene er grått areal, uansett andel vegetasjon. Andelen er grått areal av villreinområdene i kommunen.',
       usikkerhet: [
         'Grått areal er areal som er tatt i bruk, ikke bare bygninger. Små inngrep under rutestørrelsen kommer ikke med.'
       ],
@@ -1323,10 +1374,10 @@ export const katalog = {
       navn: 'verneomrader',
       tittel: 'Verneområder',
       om: 'verneområdene i kommunen: listen, arealet og andelen av landarealet',
-      forklaring: 'Arealet i kommunen er summen av områdene, og andelen er regnet av landarealet.',
+      forklaring:
+        'Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i kommunen.',
       usikkerhet: [
-        'Verneområder kan ligge i sjø og innsjøer, men andelen regnes av landarealet. I kystkommuner kan den bli høy, og over 100 %, for eksempel på Frøya.',
-        'Overlapper to områder, telles overlappet to ganger i summen.'
+        'Verneområder kan ligge i sjø og innsjøer, men andelen regnes av landarealet. I kystkommuner kan den bli høy, og over 100 %, for eksempel på Frøya.'
       ],
       husk: 6,
       etl: gullTemaer.verneomrader
@@ -1335,9 +1386,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbyggingIVerneomrader',
       tittel: 'Utbyggingen i verneområder',
-      om: 'kolonnen for verneområdene i utbyggingen: hvilket område hver rad ligger i',
+      om: 'kolonnene for verneområdene i utbyggingen: hvor stor del av hver rad som ligger i verneområdene, samlet og per område',
       forklaring:
-        'Midtpunktet i hver rute med planlagt utbygging slås opp i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
+        'For hver rute med planlagt utbygging: hvor stor del av ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.',
       husk: 1,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingIVerneomrader
@@ -1346,9 +1397,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'verneomraderIPlan',
       tittel: 'Verneområder i planen',
-      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnen',
+      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnene',
       forklaring:
-        'Rutene summeres per område, og for verdsatt natur per verdikategori, og regnes om til areal. Ruter i smale striper telles for seg.',
+        'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 6,
       brukerstyrt: true,
       etl: gullTemaer.verneomraderIPlan
@@ -1358,8 +1409,8 @@ export const katalog = {
       navn: 'villrein',
       tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen: listen, arealet og andelen av landarealet',
-      forklaring: 'Arealet i kommunen er summen av områdene, og andelen er regnet av landarealet.',
-      usikkerhet: ['Overlapper to områder, telles overlappet to ganger i summen.'],
+      forklaring:
+        'Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i kommunen.',
       husk: 6,
       etl: gullTemaer.villrein
     }),
@@ -1367,9 +1418,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbyggingIVillrein',
       tittel: 'Utbyggingen i villreinområder',
-      om: 'kolonnen for villreinområdene i utbyggingen: hvilket område hver rad ligger i',
+      om: 'kolonnene for villreinområdene i utbyggingen: hvor stor del av hver rad som ligger i villreinområdene, samlet og per område',
       forklaring:
-        'Midtpunktet i hver rute med planlagt utbygging slås opp i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
+        'For hver rute med planlagt utbygging: hvor stor del av ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.',
       husk: 1,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingIVillrein
@@ -1378,9 +1429,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'villreinIPlan',
       tittel: 'Villreinområder i planen',
-      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnen',
+      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnene',
       forklaring:
-        'Rutene summeres per område, og for verdsatt natur per verdikategori, og regnes om til areal. Ruter i smale striper telles for seg.',
+        'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 6,
       brukerstyrt: true,
       etl: gullTemaer.villreinIPlan
@@ -1391,7 +1442,7 @@ export const katalog = {
       tittel: 'Verdsatt natur',
       om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, og andelen av landarealet',
       forklaring:
-        'Arealet samlet og per verdikategori fra rutenettet i sølv, antall lokaliteter per kategori, og andelen av landarealet.',
+        'Arealet samlet og per verdikategori fra dekningsandelen i sølv (solv.verdsattAndel), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet.',
       husk: 6,
       etl: gullTemaer.verdsattNatur
     }),
@@ -1401,7 +1452,7 @@ export const katalog = {
       tittel: 'Verdsatt natur i det kartlagte',
       om: 'verdsatt natur per verdikategori innenfor det kartlagte',
       forklaring:
-        'Verdsatt natur per verdikategori innenfor det kartlagte, med det samme rutenettet som arealet per kategori.',
+        'Verdsatt natur per verdikategori innenfor det kartlagte, fra dekningsandelen med både kommunen og det kartlagte som masker (solv.verdsattIKartlagtAndel).',
       husk: 30,
       etl: gullTemaer.verdsattNaturIKartlagt
     }),
@@ -1422,9 +1473,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbyggingIVerdsattNatur',
       tittel: 'Utbyggingen i verdsatt natur',
-      om: 'kolonnen for verdsatt natur i utbyggingen: hvilket område hver rad ligger i',
+      om: 'kolonnene for verdsatt natur i utbyggingen: hvor stor del av hver rad som ligger i verdsatt natur, per verdikategori og per lokalitet',
       forklaring:
-        'Midtpunktet i hver rute med planlagt utbygging slås opp i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.',
+        'For hver rute med planlagt utbygging: hvor stor del av ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.',
       husk: 1,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingIVerdsattNatur
@@ -1433,9 +1484,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'verdsattNaturIPlan',
       tittel: 'Verdsatt natur i planen',
-      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnen',
+      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnene',
       forklaring:
-        'Rutene summeres per område, og for verdsatt natur per verdikategori, og regnes om til areal. Ruter i smale striper telles for seg.',
+        'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 6,
       brukerstyrt: true,
       etl: gullTemaer.verdsattNaturIPlan
@@ -1446,7 +1497,7 @@ export const katalog = {
       tittel: 'Utbygging utenfor det kartlagte',
       om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper',
       forklaring:
-        'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt etter om midtpunktet ligger i flaten for det kartlagte.',
+        'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte (solv.kartlagtAndel), er ikke kartlagt.',
       husk: 6,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingUtenforKartlagt

@@ -76,6 +76,8 @@ export function motortall() {
         regnet: !!C,
         plan: plan.reduce((s, x) => s + x, 0),
         smal: smal.reduce((s, x) => s + x, 0),
+        /* unionen: planlagt utbygging i temaet der overlapp telles én gang, og i smale striper (fra 18. oktober 2026) */
+        samlet: C && 'samlet' in C ? [C.samlet, C.samletSmal] : null,
         berort: plan.filter(x => x).length,
         kryss: C ? { S: rund(C.kryss.S), P: C.kryss.P ? rund(C.kryss.P) : null } : null,
         gap: U ? { nat: U.nat, ukjent: U.ukjent, plan: U.plan ? rund(U.plan) : null } : null,

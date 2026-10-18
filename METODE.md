@@ -87,7 +87,7 @@ setter dem sammen i gull. I koden heter det utbyggingen (`gull.utbygging` i `src
 
 ## Felles grunnlag
 
-`src/data/solv/felles.ts`, `src/data/solv/raster.ts` og `src/data/generelt/geometri.ts`
+`src/data/solv/felles.ts`, `src/data/generelt/dekning.ts`, `src/data/generelt/geometri.ts` og `src/data/solv/raster.ts`
 
 **Koordinatsystem.** Alt regnes i UTM sone 33 (EPSG:25833), som dataene er laget i. Flater er lister med koordinater, som i
 GeoJSON. Arealet av en flate, utsnittet rundt den og hvilken vei en ring går rundt, regnes ett sted (`geometri.ts`).
@@ -103,30 +103,32 @@ over kommuner. Innenfor en bit endrer faktoren seg mindre enn 0,1 %.
 deles i fire delrader, og langs hver delrad finnes nøyaktig hvor flaten begynner og slutter. Bortover er andelen eksakt, nedover er
 den et snitt av de fire delradene. Andelen lagres med 16 biter som spenn per rad. Overlapper flater, telles området én gang, og et
 hull i én flate er dekket hvis en annen flate ligger over det. Svaret er det samme i alle nettlesere, og regnes i bakgrunnstråden.
-Kommunegrensen bruker dette. De andre flatene tegnes foreløpig i et lerret i nettleseren (`raster.ts`), som glatter kantene, så en
-rute i kanten får delvis dekning fra 0 til 255. Resultatet der avhenger litt av rekkefølgen flatene tegnes i, se Kontroller.
+Kommunegrensen og naturtemaene (verneområder, villreinområder, verdsatt natur og det kartlagte) bruker dette, med kommunen som
+maske: andelen i en rute er den delen som ligger både i temaet og i kommunen. Har temaet kategorier, som verdiene i verdsatt natur,
+får hver del av ruta den første kategorien den ligger i, med høyest verdi først. Egne områder tegnes fortsatt i et lerret i
+nettleseren (`solv/egne.ts`) og legges i rutene etter halvregelen.
 
 **Halvregelen.** En rute hører til en flate når flaten dekker minst halve ruta (`HALV`, 128 av 255). Det samme gjelder bildene fra
 tjenestene: en piksel teller når den er minst halvveis dekket. Det er fire unntak:
 
 - Kommunegrensen: en rute langs grensen telles med den delen av den som ligger i kommunen (`solv.kommunebiter`). Klassen i ruta
   kommer fra bildet, og arealet er ruteareal ganger andelen. Slik telles ingen rute i to kommuner, og ingen faller mellom.
-
 - I bildene av grunnkartet brukes alle piksler som er minst 100 av 255 dekket (`SYNLIG`). Klassen er den det er mest av i pikselen.
 - Sjekken av om kommunen har kommuneplan bruker også 100 av 255.
-- Arealet av verdsatt natur regnes ut fra hvor mye av hver rute som er dekket, ikke av hele ruter. Arealet av verneområder,
-  villreinområder og egne områder er arealet av selve flatene.
+- Naturtemaene telles med andelen av hver rute, som kommunegrensen. Arealet av hvert område i listene er arealet av selve flaten
+  klippet mot kommunen, og arealet av egne områder er arealet av selve flatene.
 
 **Rutenettene.** Analysene bruker flere rutenett. Planrutenettet og bitene følger Kartverkets flisnett. De andre er lagt over
 kommunen og tilpasset størrelsen på den. Alle tall skal over på faste ruter på 10,6 meter (bestemt 18. oktober 2026); bitene er
-første steg. Kryssingen av planrutenettet med verneområdene, villreinområdene, lokalitetene og det kartlagte bruker ikke noe rutenett:
-midtpunktet i hver planrute slås opp i flaten (`flatesok`, `naturSok`). Når to rutenett krysses, slås midtpunktet av ruta i planrutenettet opp i det andre.
+første steg. Naturtemaene ligger som andel per rute i de samme bitene (`solv.vernAndel` og de andre), så kryssingen med
+planrutenettet slår opp andelen i den samme ruta. Per område regnes andelen av hver planrute i flaten til området (`dekningIRute`), med
+de samme fire delradene. Når to rutenett krysses, slås midtpunktet av ruta i planrutenettet opp i det andre.
 
 | Rutenett | Ruter | Brukes til | I koden |
 |---|---|---|---|
 | Planrutenettet | 10,58 meter, nivå 10 i Kartverkets flisnett for UTM33, 512 ruter per flis. Én rute er 0,112 dekar. | Planlagt utbygging, dagens klasser, egne områder, og alt som krysses med dem | `PLANNIVA`, `RUTE_M`, `RUTE` |
 | Bitene | 10,6 meter, nivå 10 i flisnettet. Hentes i biter på 2048 x 2048 ruter (flisene på nivå 8, 21,7 km), like store i alle kommuner. | Inngrepsfri natur og grått areal | `BITNIVA`, `BIT` |
-| Verdsatt natur | Bitene, 10,6 meter | Arealet per verdikategori, og det samme innenfor det kartlagte | `klasseAreal` |
+| Naturtemaene | Bitene, 10,6 meter | Andelen per rute av verneområdene, villreinområdene, verdsatt natur per verdikategori og det kartlagte, i kommunen | `solv.vernAndel` og de andre |
 | Plandekning | Bitene, 10,6 meter | Om kommunen har kommuneplan hos DiBK, og hvor mye av kommunen planen dekker | `solv.plandekning` |
 
 **Tersklene.** Alle står i `src/data/solv/felles.ts`.
@@ -139,6 +141,7 @@ midtpunktet i hver planrute slås opp i flaten (`flatesok`, `naturSok`). Når to
 | `GRENSE_FLYTTET` | 0,5 % | Avviker kommunens samlede areal mer enn dette mellom 2017 og nyeste år, sammenlignes ikke årgangene |
 | `HAV_MIN_KM2`, `HAV_MIN_ANDEL` | 0,5 km² og 0,5 % av flaten | En rest som er mindre, er avvik mellom grense og statistikk, ikke hav |
 | `EGET_MIN_M2` | 400 m² | Minste tegnede område som regnes ut |
+| `BERORT` | en halv rute, 56 m² | Et verneområde, villreinområde eller en lokalitet regnes som berørt av planlagt utbygging når utbyggingen dekker minst så mye av det. Arealet telles uansett |
 
 **Kartets egne regler.** Kartet tegner de samme dataene piksel for piksel, og bruker de samme tersklene. På to steder har kartet
 egne regler, som bare gjelder det som vises, ikke tallene:
@@ -619,7 +622,8 @@ og tabellen viser forskjellen.
 **Spørsmål.** Hvor mye av kommunen er verneområder, og hvor mye planlagt utbygging ligger innenfor?
 
 **Kort fortalt.** Verneområdene kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er
-summen av områdene. Planlagt utbygging innenfor er rutene i utbyggingen som ligger i et verneområde.
+områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen som ligger i
+et verneområde.
 
 **Tabeller.** Kortet viser `gull.verneomrader` og `gull.verneomraderIPlan`. Det står i `src/ui/komponenter/Naturtema.tsx`.
 
@@ -628,7 +632,8 @@ summen av områdene. Planlagt utbygging innenfor er rutene i utbyggingen som lig
 **Spørsmål.** Hvor mye av kommunen er leveområder for villrein, og hvor mye planlagt utbygging ligger innenfor?
 
 **Kort fortalt.** Leveområdene for villrein kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i
-kommunen er summen av områdene. Planlagt utbygging innenfor er rutene i utbyggingen som ligger i et villreinområde.
+kommunen er områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen
+som ligger i et villreinområde.
 
 **Tabeller.** Kortet viser `gull.villrein` og `gull.villreinIPlan`. Det står i `src/ui/komponenter/Naturtema.tsx`.
 
@@ -637,9 +642,9 @@ kommunen er summen av områdene. Planlagt utbygging innenfor er rutene i utbyggi
 **Spørsmål.** Hvor mye verdsatt natur er registrert i kommunen, hvor mye av kommunen er kartlagt, og hvor mye planlagt utbygging
 ligger i verdsatt natur eller der det ikke er kartlagt?
 
-**Kort fortalt.** Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes i et rutenett over kommunen, der
-overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter
-Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
+**Kort fortalt.** Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes av hvor stor del av hver rute på 10,6
+meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet
+som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
 
 **Tabeller.** Kortet viser `gull.verdsattNatur`, `gull.verdsattNaturKartlagt`, `gull.verdsattNaturIPlan` og
 `gull.utbyggingUtenforKartlagt`. Det står i `src/ui/komponenter/Naturtema.tsx`.
@@ -651,57 +656,78 @@ Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite.
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Verneområder** (`bronse.verneomrader` → `solv.verneomrader`). Hentes fra
-   `https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer/0/query`: Verneområdene i kommunen som flater i UTM 33,
-   forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
-   Naturvernområder](https://kartkatalog.geonorge.no/metadata/uuid/5857ec0a-8d2c-4cd8-baa2-0dc54ae213b4), NLOD 2.0. Justeres:
-   Flatene klippes mot kommunegrensen, og arealet i kommunen regnes ut. Feiler klippingen, regnes arealet i et rutenett.
-3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+2. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
-4. **Villreinområder** (`bronse.villrein` → `solv.villrein`). Hentes fra
+3. **Verneområder** (`bronse.verneomrader` → `solv.verneomrader` → `solv.vernAndel`). Hentes fra
+   `https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer/0/query`: Verneområdene i kommunen som flater i UTM 33,
+   forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
+   Naturvernområder](https://kartkatalog.geonorge.no/metadata/uuid/5857ec0a-8d2c-4cd8-baa2-0dc54ae213b4), NLOD 2.0. Justeres:
+   Flatene klippes mot kommunegrensen, og arealet av hvert område i kommunen regnes ut. Feiler klippingen, regnes arealet med
+   dekningsandelen i ruter på 10,6 meter. Justeres: Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i
+   bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir
+   arealet av verneområdene i kommunen, og brukes når de krysses med utbyggingen og detaljklassene.
+4. **Villreinområder** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/villrein/MapServer/1/query`: Leveområdene for villrein i kommunen som
    flater i UTM 33, forenklet med 20 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
    Villreinområder](https://kartkatalog.geonorge.no/metadata/uuid/fc59e9a4-59df-4eb3-978a-1c173b84bf4e), NLOD 2.0. Justeres:
-   Flatene klippes mot kommunegrensen, og arealet i kommunen regnes ut. Feiler klippingen, regnes arealet i et rutenett.
-5. **Verdsatt natur** (`bronse.verdsattNatur` → `solv.verdsattNatur` → `solv.verdsattNaturAreal`). Hentes fra
+   Flatene klippes mot kommunegrensen, og arealet av hvert område i kommunen regnes ut. Feiler klippingen, regnes arealet med
+   dekningsandelen i ruter på 10,6 meter. Justeres: Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i
+   bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir
+   arealet av villreinområdene i kommunen, og brukes når de krysses med utbyggingen, grått areal og inngrepsfri natur.
+5. **Verdsatt natur** (`bronse.verdsattNatur` → `solv.verdsattNatur` → `solv.verdsattAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_kuverdi/MapServer/0/query`: Naturtyper med svært stor, stor,
    middels eller noe verdi i kommunen, som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar.
    Kilde: [Miljødirektoratet, Naturtyper – verdsatte (naturtyper med
    KU-verdi)](https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314), NLOD 2.0. Justeres:
-   Lokalitetene sorteres med høyest verdi først og så etter areal, så en rute der lokaliteter overlapper, regnes til den høyeste.
-   Justeres: Arealet per verdikategori regnes i et rutenett: én tegning per kategori av alle flater med minst den verdien, klippet
-   mot kommunen. Der lokaliteter overlapper, teller den høyeste verdien, så ingenting telles to ganger.
-6. **Kartlagt for naturtyper** (`bronse.kartlagt` → `solv.kartlagt`). Hentes fra
-   `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_nin/MapServer/1/query`: Dekningsflatene for
+   Lokalitetene leses med verdien og arealet av hele lokaliteten, og sorteres med høyest verdi først og så etter areal. De klippes
+   ikke mot kommunen: det gjør dekningsandelen (solv.verdsattAndel) og kryssingen med utbyggingen. Justeres: Hvor stor del av hver
+   rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene,
+   så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet viser det.
+   Gir arealet per verdikategori, og brukes når verdsatt natur krysses med utbyggingen.
+6. **Kartlagt for naturtyper** (`bronse.kartlagt` → `solv.kartlagtAndel` → `solv.verdsattIKartlagtAndel` → `solv.kartlagt`).
+   Hentes fra `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_nin/MapServer/1/query`: Dekningsflatene for
    naturtypekartlegging etter Miljødirektoratets instruks rundt kommunen, forenklet med 10 meter, side for side når de ikke kommer
    i ett svar. Kilde: [Miljødirektoratet, Naturtyper på land (NiN),
-   dekningskartet](https://kartkatalog.geonorge.no/metadata/uuid/eb48dd19-03da-41e1-afd9-7ebc3079265c), NLOD 2.0. Justeres:
-   Dekningsflatene slås sammen og klippes mot kommunen.
-7. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område og det kartlagte får et oppslag som sier om et punkt ligger i
-   flaten, laget første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor
-   stort området er.
-8. **Verneområder** (`gull.verneomrader`) og **Villreinområder** (`gull.villrein`). Arealet i kommunen er summen av områdene, og
-   andelen er regnet av landarealet.
+   dekningskartet](https://kartkatalog.geonorge.no/metadata/uuid/eb48dd19-03da-41e1-afd9-7ebc3079265c), NLOD 2.0. Justeres: Hvor
+   stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås
+   sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet som er kartlagt, og hvor mye av planlagt utbygging
+   på natur som ligger utenfor det kartlagte. Justeres: Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i
+   bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Både
+   kommunen og det kartlagte er masker, så bare det som ligger i begge, telles. Gir arealet per verdikategori innenfor det
+   kartlagte. Justeres: Arealet er dekningsflatene som andel per rute i kommunen (solv.kartlagtAndel), så overlapp telles én gang.
+   Til kartet slås flatene sammen og klippes mot kommunen.
+7. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i flaten,
+   med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er ingen
+   ruter i oppslaget, så svaret er det samme hvor stort området er.
+8. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder
+   overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
+   kommunen.
 9. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
 10. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
-    og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). Midtpunktet i hver rute med planlagt utbygging slås opp
-    i flatene, uten noe rutenett i mellom. Ruta hører til området når midtpunktet ligger i flaten, og til det første området den
-    treffer, så den telles én gang per tema. Det gir en kolonne i utbyggingen: hvilket område hver rute ligger i.
+    og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). For hver rute med planlagt utbygging: hvor stor del av
+    ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor
+    stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.
 11. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
-    i planen** (`gull.verdsattNaturIPlan`). Rutene summeres per område, og for verdsatt natur per verdikategori, og regnes om til
-    areal. Ruter i smale striper telles for seg.
-12. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori fra rutenettet i sølv, antall lokaliteter per
-    kategori, og andelen av landarealet.
-13. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Verdsatt natur per verdikategori innenfor det kartlagte,
-    med det samme rutenettet som arealet per kategori.
-14. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
+    i planen** (`gull.verdsattNaturIPlan`). Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og
+    for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område
+    regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.
+12. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to
+    områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
+    kommunen.
+13. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori fra dekningsandelen i sølv
+    (solv.verdsattAndel), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen
+    av landarealet.
+14. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Verdsatt natur per verdikategori innenfor det kartlagte,
+    fra dekningsandelen med både kommunen og det kartlagte som masker (solv.verdsattIKartlagtAndel).
+15. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
     vises som høyst 100 %. Helhetsbildet deler landarealet i kartlagt og ikke kartlagt, og viser verdsatt natur per verdi i hver
     del.
-15. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
-    striper, deles i kartlagt og ikke kartlagt etter om midtpunktet ligger i flaten for det kartlagte.
+16. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
+    striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte
+    (solv.kartlagtAndel), er ikke kartlagt.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
@@ -712,7 +738,6 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - Verneområder kan ligge i sjø og innsjøer, men andelen regnes av landarealet. I kystkommuner kan den bli høy, og over 100 %, for
   eksempel på Frøya.
-- Overlapper to områder, telles overlappet to ganger i summen.
 - Arealet per lokalitet i listen er arealet av hele lokaliteten, også en del som ligger utenfor kommunen. Summene per
   verdikategori er klippet mot kommunen.
 - Dekningsflatene kan ligge delvis i vann, mens kartleggingsgraden regnes av landarealet.
@@ -721,15 +746,17 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`,
-`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/gull/temaer.ts`. Kortene:
+`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
+`src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/gull/temaer.ts`. Kortene:
 `src/ui/komponenter/Naturtema.tsx`.
 
 <!-- /forklaringer:natur -->
 
 ### Kontroll
 
-Rutenettmetoden for verdsatt natur ga under 0,2 % avvik fra geometrisk sammenslåing av flatene i Trondheim.
+Dekningsandelen for verdsatt natur avviker 0,003 % fra geometrisk sammenslåing av flatene i Trondheim (høyst 0,009 % per
+verdikategori), og for verneområdene 0,0007 % (18. oktober 2026, i kartets kvadratmeter, uten målestokken). Før, med lerretet, var
+avviket under 0,2 %.
 
 ## Inngrepsfri natur
 
@@ -759,8 +786,8 @@ utbygging.
    [Miljødirektoratet, Inngrepsfri natur i
    Norge](https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b), NLOD 2.0. Justeres: En rute som er
    minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst
-   5 km). Justeres: Rutene i kommunen telles per sone, bit for bit. En rute er i kommunen når kommunens flate dekker minst halve
-   ruta.
+   5 km). Justeres: Rutene i kommunen telles per sone, bit for bit. En rute langs grensen telles med den delen av den som ligger i
+   kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
 3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
@@ -822,8 +849,8 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
    Kartverket og SSB, Kart over grå arealer, testversjon 1
    (2025)](https://kartkatalog.geonorge.no/metadata/uuid/c5f09d79-1546-495c-8b36-91efd4008bd7), Norge digitalt-lisensen. Justeres:
    En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått
-   uten oppgitt andel, som veier, for seg. Justeres: Rutene i kommunen telles per trinn, bit for bit. En rute er i kommunen når
-   kommunens flate dekker minst halve ruta.
+   uten oppgitt andel, som veier, for seg. Justeres: Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles
+   med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
 3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
@@ -1058,6 +1085,28 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Naturtemaene med andel per rute, 18. oktober 2026.** Andre trinn i forslaget om overlayanalyse med raster og vektor.
+Verneområdene, villreinområdene, verdsatt natur per verdikategori, lokalitetene som vurderes og det kartlagte regnes nå som andel
+per rute i bitene, med kommunen som maske, i den samme koden som kommunegrensen (`solv.vernAndel` og de andre). Flatene i et tema
+slås sammen i rutene, så overlapp telles én gang. Før var arealet av verneområdene og villreinområdene summen av områdene.
+Kryssingen med planlagt utbygging bruker andelen i stedet for midtpunktet i ruta: unionen per kategori gir summene, og hvert
+område får sin egen del av ruta. Et område som overlappes av et annet med høyere verdi, får nå også sin del. Et område regnes som
+berørt når utbyggingen dekker minst en halv rute av det (`BERORT`). Grått areal og inngrepsfri natur i villreinområdene, og
+detaljklassene i verneområdene, telles med den samme andelen, så arealet av områdene er det samme overalt. Lerretet brukes ikke
+lenger til arealet av verdsatt natur (`klasseAreal` er fjernet), og arealet per område i listene er rettet for målestokken midt i
+området.
+
+Endringene i tallene: verdsatt natur i Trondheim 30 736 → 30 748 dekar (+0,04 %), i Oslo +0,08 % og i Surnadal +0,02 %.
+Verneområdene i Kautokeino 1 138,6 → 1 137,7 km² (−0,08 %), som er målestokken per bit, for områdene overlapper ikke. Andre
+verneområder endres under 0,02 %. Verdsatt natur i det kartlagte går opp 0,1–2,2 %: lerretet ganget dekningene i kantruter der en
+lokalitet og det kartlagte har felles kant, og mistet en del av ruta. Planlagt utbygging i verdsatt natur i Trondheim går fra 94,8
+til 95,1 dekar, med 36 berørte lokaliteter mot 34. Blant de nye er Tanemsmyra med 19 dekar, som før ble regnet til en overlappende
+lokalitet med høyere verdi. Per verdikategori flytter det seg opptil noen få ruter. Utbygging utenfor det kartlagte endres under
+0,2 % for hele kommunen. I Oppdal er villreinområdene 1 214,59 km² både i temaet, i grått areal og i inngrepsfri natur (før
+1 214,52 og 1 214,33), og detaljklassene i verneområdene summerer til 1 301,27 km² mot 1 301,29 for verneområdene (før 1 300,96 mot
+1 301,32). Kartbildene er like. Verdsatt natur i Trondheim regnes på rundt 0,7 sekunder mot 3 før, og andelen av verneområdene i
+Kautokeino tar rundt 0,2 sekunder. Målt i Chromium, ikke på iPhone.
 
 **Kommunegrensen med andel, og målestokken per bit, 18. oktober 2026.** Første trinn i forslaget om overlayanalyse med raster og
 vektor. Kommunegrensen klippet før rutene etter halvregelen. Nå får hver rute langs grensen andelen av den som ligger i kommunen,

@@ -1,9 +1,6 @@
 /* Gull, felles: små hjelpere som flere av svarene bruker. */
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
-import { HALV, bitFaktor, bitRuter, type Flis } from '../solv/felles.ts';
-import type { Flerflate } from '../generelt/geometri.ts';
-import { flaterPiksler } from '../solv/raster.ts';
 
 /* Andelen del er av av, i prosent. null når det ikke er noe å regne andelen av. */
 export const andel = (del: number, av: number): number | null => (av > 0 ? (del / av) * 100 : null);
@@ -23,61 +20,6 @@ export function bildetall<E, T>(D: Kommunebilde<E> | null, tall: (H: HentetBilde
   if (!D || D.tilstand === 'henter') return { tilstand: 'henter' };
   if (D.tilstand !== 'ok') return { tilstand: 'feil' };
   return D.sum > 0 ? { tilstand: 'ok', ...tall(D) } : { tilstand: 'ingen' };
-}
-
-/* Rutene innenfor en maske M (RGBA, der en rute er med når den er minst halvt dekket, HALV): antall ruter i masken (alle), og antall
-   per plass i n. plass gir plassen i n for verdien i ruta (verdier), eller null når ruta ikke telles, og plasser er lengden på n.
-   verdier er null når alle rutene har verdien tom. Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
-export function tellIMaske(
-  M: ArrayLike<number>,
-  verdier: ArrayLike<number> | null,
-  plasser: number,
-  plass: (v: number) => number | null,
-  tom = 0
-) {
-  const n = new Array<number>(plasser).fill(0),
-    ruter = M.length >> 2,
-    pt = plass(tom);
-  let alle = 0;
-  for (let q = 0; q < ruter; q++) {
-    if (M[4 * q + 3] < HALV) continue;
-    alle++;
-    const p = verdier ? plass(verdier[q]) : pt;
-    if (p !== null) n[p]++;
-  }
-  return { alle, n };
-}
-
-/* Teller rutene innenfor flatene (unionen av dem, klippet mot kommunen innenfor) bit for bit, som tellIMaske: antall ruter i
-   flatene (alle), og antall per plass i n, rettet for målestokken i hver bit. verdier gir verdien per rute i en bit, eller null når alle rutene har verdien tom. Bare
-   bitene i biter som flatene berører, telles. Brukes til å telle inngrepsfri natur og grått areal i villreinområdene. */
-export async function tellIBiter(
-  biter: Flis[],
-  verdier: (tc: Flis) => Promise<ArrayLike<number> | null>,
-  flater: { koord: Flerflate; ext: number[] }[],
-  innenfor: Flerflate,
-  plasser: number,
-  plass: (v: number) => number | null,
-  tom: number
-) {
-  const n = new Array<number>(plasser).fill(0);
-  let alle = 0;
-  for (const tc of biter) {
-    const R = bitRuter(tc),
-      her = flater.filter(f => f.ext[0] < R.u[2] && f.ext[2] > R.u[0] && f.ext[1] < R.u[3] && f.ext[3] > R.u[1]);
-    if (!her.length) continue;
-    const V = await verdier(tc),
-      M = flaterPiksler(
-        her.map(f => f.koord),
-        R,
-        innenfor
-      ),
-      T = tellIMaske(M, V, plasser, plass, tom),
-      f = bitFaktor(tc); /* målestokken i biten */
-    alle += T.alle * f;
-    T.n.forEach((v, i) => (n[i] += v * f));
-  }
-  return { alle, n };
 }
 
 /* Et areal i km² avrundet til nærmeste 10 dekar (0,01 km²), som SSBs tall */

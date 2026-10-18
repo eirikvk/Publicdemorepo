@@ -50,6 +50,16 @@ export interface Andel {
   a: Uint16Array;
 }
 
+/* En tom Andel på w x h ruter */
+export const tomAndel = (w: number, h: number): Andel => ({
+  w,
+  h,
+  rad: new Int32Array(h + 1),
+  x: new Uint16Array(0),
+  n: new Uint16Array(0),
+  a: new Uint16Array(0)
+});
+
 /* Flater i flat form, så de kan sendes til bakgrunnstråden uten å kopiere lister i lister: punktene som [x, y, x, y, …] (xy), hvor
    hver ring begynner (start, med antall punkter til slutt), og utsnittet til hver ring [xmin, ymin, xmaks, ymaks] (boks). Ytterkanten i
    hver flate går mot klokka og hullene med klokka, uansett hvordan kilden har tegnet dem. */
@@ -114,6 +124,30 @@ export function ringerI(F: Ringer, e: Utsnitt) {
     if (F.boks[4 * i] < e[2] && F.boks[4 * i + 2] > e[0] && F.boks[4 * i + 1] < e[3] && F.boks[4 * i + 3] > e[1])
       return true;
   return false;
+}
+/* Ringene i F som har noe i utsnittet e, i samme form: det som må sendes til bakgrunnstråden for et rutenett i e. En ring utenfor e
+   endrer ikke vindingstallet noe sted i e, så svaret blir det samme. */
+export function ringerUtsnitt(F: Ringer, e: Utsnitt): Ringer {
+  const med: number[] = [];
+  let n = 0;
+  for (let i = 0; i + 1 < F.start.length; i++)
+    if (F.boks[4 * i] < e[2] && F.boks[4 * i + 2] > e[0] && F.boks[4 * i + 1] < e[3] && F.boks[4 * i + 3] > e[1]) {
+      med.push(i);
+      n += F.start[i + 1] - F.start[i];
+    }
+  if (med.length === F.start.length - 1) return F;
+  const xy = new Float64Array(2 * n),
+    start = new Int32Array(med.length + 1),
+    boks = new Float64Array(4 * med.length);
+  let p = 0;
+  med.forEach((i, j) => {
+    start[j] = p;
+    xy.set(F.xy.subarray(2 * F.start[i], 2 * F.start[i + 1]), 2 * p);
+    boks.set(F.boks.subarray(4 * i, 4 * i + 4), 4 * j);
+    p += F.start[i + 1] - F.start[i];
+  });
+  start[med.length] = p;
+  return { xy, start, boks };
 }
 
 /* Kantene til flatene i settene, i rutenettet R. Hvert sett er flatene i ett lag. Ringer som ligger helt utenfor rutenettet, og

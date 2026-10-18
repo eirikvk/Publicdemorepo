@@ -6,7 +6,8 @@ import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
 import { bitAv, flisnavn, ruteKm2, ruteX, ruteY, type Flis } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
-import { andel, arealFraRuter, bildetall, landareal, tellIBiter, tiDekar, type Kommunebilde } from './felles.ts';
+import { BITRES, tellIBitene } from '../solv/kommune.ts';
+import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Kommunebilde } from './felles.ts';
 import type { Utbygging } from './utbygging.ts';
 
 /* Grått areal for kommunen: når det er hentet, areal per trinn (plass 1–6) i km² */
@@ -163,23 +164,22 @@ export interface GraaIVillrein {
   sum: number;
   andel: number | null;
 }
-/* Tabellen gull.graaIVillrein: villreinområdene (solv.villrein) tegnet i bitene av grått areal (solv.graabit) og klippet mot
-   kommunen, som inngrepsfri natur i villreinområdene (gull.inonIVillrein). En rute hører til villreinområdene når de dekker minst
-   halve ruta. Alle trinnene er grått areal, også grått uten oppgitt andel vegetasjon. null når kommunen ikke har villreinområder. */
+/* Tabellen gull.graaIVillrein: det grå arealet (solv.graabit) i villreinområdene i kommunen, talt med andelen av hver rute som
+   ligger i villreinområdene og i kommunen (solv.villreinAndel), som inngrepsfri natur i villreinområdene (gull.inonIVillrein). Der
+   områder overlapper, telles ruta én gang. Alle trinnene er grått areal, også grått uten oppgitt andel vegetasjon. null når kommunen
+   ikke har villreinområder. */
 export async function graaIVillrein(nr: string): Promise<GraaIVillrein | null> {
-  const [S, V, g] = await Promise.all([katalog.solv.graa(nr), katalog.solv.villrein(nr), katalog.solv.grense(nr)]);
-  if (!V.omrader.length) return null;
-  const T = await tellIBiter(
-      S.biter,
-      tc => katalog.solv.graabit(tc).then(D => D.kl),
-      V.omrader,
-      g.koord,
+  const V = await katalog.solv.villreinAndel(nr);
+  if (!(V.sum > 0)) return null;
+  const n = await tellIBitene(
+      V.biter[0],
       1,
+      tc => katalog.solv.graabit(tc).then(D => D.kl),
       v => (v > 0 ? 0 : null),
       0
     ),
-    sum = tiDekar((T.n[0] * S.res * S.res) / S.skala),
-    villrein = tiDekar((T.alle * S.res * S.res) / S.skala);
+    sum = tiDekar((n[0] * BITRES * BITRES) / 1e6),
+    villrein = tiDekar(V.sum);
   return { villrein, sum, andel: andel(sum, villrein) };
 }
 

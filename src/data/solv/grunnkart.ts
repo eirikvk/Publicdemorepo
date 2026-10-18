@@ -10,31 +10,11 @@
 import { HEL, type Andel } from '../generelt/dekning.ts';
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
-import {
-  FLISNIVA,
-  HALV,
-  OPPLOSNINGER,
-  flisAvNavn,
-  flisUtsnitt,
-  flisnavn,
-  fliserI,
-  type Flis,
-  type Piksler,
-  type Plassering
-} from './felles.ts';
+import { FLISNIVA, OPPLOSNINGER, flisAvNavn, flisUtsnitt, flisnavn, type Flis, type Plassering } from './felles.ts';
 import { arbeid } from './arbeid.ts';
-import { ALLE, KLASSETABELL, klasseAv } from './klasser.ts';
+import { KLASSETABELL } from './klasser.ts';
 import { kommuneIBlokk } from './kommune.ts';
-import {
-  bildePiksler,
-  flatePiksler,
-  flaterPiksler,
-  flislerret,
-  lesBilde,
-  sti,
-  tegneflate,
-  tegnUtsnitt
-} from './raster.ts';
+import { flislerret, lesBilde, sti, tegneflate, tegnUtsnitt } from './raster.ts';
 
 /* Dagens klasser zoomet ut: lerretet med klassene i rene farger, utsnittet det dekker (ext) og meter per piksel (res). dynamisk sier
    at det fylles på med det som hentes (det sammensatte kartet). */
@@ -116,26 +96,11 @@ export function klasserIKommunen(K: Klasser, A: Andel | null): Uint8Array {
   return kl;
 }
 /* Arealet per klasse i K innenfor kommunen, i ruter rettet for målestokken: plass 0 er ruter innenfor uten klasse, og klasse k er
-   plass k. antall er antall klasser pluss én. kommune er kommunens andel i blokken og målestokken (kommuneIBlokk). Med flater telles
-   bare rutene innenfor dem (unionen av dem, klippet mot kommunen etter halvregelen), for eksempel verneområdene. */
-export function tellIKommunen(
-  K: Klasser,
-  kommune: { andel: Andel | null; faktor: number },
-  antall: number,
-  flater?: { flater: Flerflate[]; koord: Flerflate }
-): number[] {
+   plass k. antall er antall klasser pluss én. kommune er andelen i blokken og målestokken (kommuneIBlokk): kommunens, eller et temas
+   i kommunen, som verneområdene. */
+export function tellIKommunen(K: Klasser, kommune: { andel: Andel | null; faktor: number }, antall: number): number[] {
   const n = new Array<number>(antall).fill(0),
     f = kommune.faktor;
-  if (flater) {
-    const tc: Flis = [K.z, K.cx0 / 512, K.cy0 / 512],
-      M = flaterPiksler(
-        flater.flater,
-        { u: flisUtsnitt(tc), res: OPPLOSNINGER[tc[0]] / 2, w: 512, h: 512 },
-        flater.koord
-      );
-    for (let q = 0; q < K.kl.length; q++) if (M[4 * q + 3] >= HALV) n[K.kl[q]] += f;
-    return n;
-  }
   const A = kommune.andel;
   if (!A) {
     for (let q = 0; q < K.kl.length; q++) n[K.kl[q]] += f;

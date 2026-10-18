@@ -1,13 +1,11 @@
-/* Sølv, det tunge bildearbeidet som oppgaver: å pakke ut og tolke kartbildene, tegne kommunens flate i bitene, telle verdiene i
-   kommunen og regne arealet av verdsatt natur per verdikategori. Oppgavene kjøres i bakgrunnstråden (arbeider.ts), så siden ikke
+/* Sølv, det tunge bildearbeidet som oppgaver: å pakke ut og tolke kartbildene, regne dekningsandelen til flater per rute (kommunen
+   og naturtemaene, generelt/dekning.ts) og telle verdiene i kommunen. Oppgavene kjøres i bakgrunnstråden (arbeider.ts), så siden ikke
    henger mens det regnes, eller på siden når nettleseren ikke har bakgrunnstråder med lerret (se arbeid i raster.ts). Svaret er det
-   samme begge steder: det er de samme funksjonene, og bildene tegnes på samme måte. Filen kjenner ikke katalogen: alt den trenger,
-   kommer med oppgaven. */
+   samme begge steder: det er de samme funksjonene. Filen kjenner ikke katalogen: alt den trenger, kommer med oppgaven. */
 import { andelBuffere, dekningI, HEL, type Andel, type Nett, type Ringer } from '../generelt/dekning.ts';
-import { motKlokka, omriss, overlapper, type Flerflate, type FlateMedUtsnitt } from '../generelt/geometri.ts';
-import { BIT, biterI, bitRuter, m2PerKm2 } from './felles.ts';
+import { BIT } from './felles.ts';
 import { detaljklasserIFlis, klasserIFlis } from './klasser.ts';
-import { dekketM2, pakkUt, sti, type Flate } from './raster.ts';
+import { pakkUt, type Flate } from './raster.ts';
 import { ellerTom, planIFlis, planlagPerRute, tolkGraa, tolkInon, UTENFOR } from './tolking.ts';
 
 /* Telling av verdiene i en bit innenfor kommunen: andelen ruter per verdi fra 0 til 255 (en kantrute teller med den delen av den som
@@ -35,14 +33,7 @@ export type Oppgave =
       kategorier: number[];
       nett: Nett[];
     } /* dekningsandelen per klasse i hvert rutenett, se dekningI i generelt/dekning.ts */
-  | { type: 'telling'; V: Uint8Array; andel: Andel | null; tom: number } /* verdiene i en bit innenfor kommunen */
-  | {
-      type: 'klasseAreal';
-      omrader: { koord: Flerflate; v: number }[];
-      antall: number;
-      kommune: FlateMedUtsnitt;
-      innenfor?: Flerflate;
-    }; /* arealet per verdikategori, se klasseAreal i temaer.ts */
+  | { type: 'telling'; V: Uint8Array; andel: Andel | null; tom: number }; /* verdiene i en bit innenfor kommunen */
 export interface Utfort {
   svar: unknown;
   overfor: Transferable[];
@@ -75,8 +66,6 @@ export async function utfor(o: Oppgave, flate: (w: number, h: number) => Flate):
       const T = telling(o.V, o.andel, o.tom);
       return { svar: T, overfor: [T.hist.buffer] };
     }
-    case 'klasseAreal':
-      return { svar: klasseAreal(o.omrader, o.antall, o.kommune, flate, o.innenfor), overfor: [] };
   }
 }
 
@@ -115,68 +104,4 @@ function telling(V: Uint8Array, A: Andel | null, tom: number): Telling {
             }
   }
   return { hist, midt };
-}
-
-/* Verdsatt natur: arealet per verdikategori i km², se klasseAreal i temaer.ts. Bit for bit, så lerretet aldri er større enn
-   2048 x 2048. */
-function klasseAreal(
-  omrader: { koord: Flerflate; v: number }[],
-  antall: number,
-  kommune: FlateMedUtsnitt,
-  flate: (w: number, h: number) => Flate,
-  innenfor?: Flerflate
-) {
-  const skala = m2PerKm2(kommune.ext),
-    kum = new Array<number>(antall).fill(0),
-    ext = omrader.map(o => omriss(o.koord));
-  if (!omrader.length) return { klasser: kum, sum: 0 };
-  const g = flate(BIT, BIT);
-  for (const tc of biterI(kommune.ext)) {
-    const R = bitRuter(tc),
-      u = R.u,
-      res = R.res,
-      her = omrader.filter((_, i) => overlapper(ext[i], u));
-    if (!her.length) continue;
-    let forrige = 0;
-    for (let v = 0; v < antall; v++) {
-      if (!her.some(o => o.v === v)) {
-        kum[v] += forrige;
-        continue;
-      }
-      g.globalCompositeOperation = 'source-over';
-      g.clearRect(0, 0, BIT, BIT);
-      g.beginPath();
-      for (const o of her) {
-        if (o.v > v) continue;
-        for (const flate of o.koord)
-          flate.forEach((ring, nr) => {
-            /* ytterkanter én vei og hull motsatt vei, så overlapp fylles og hull blir hull */
-            const snu = motKlokka(ring) !== (nr === 0),
-              n = ring.length;
-            for (let i = 0; i < n; i++) {
-              const q = ring[snu ? n - 1 - i : i],
-                x = (q[0] - u[0]) / res,
-                y = (u[3] - q[1]) / res;
-              if (i) g.lineTo(x, y);
-              else g.moveTo(x, y);
-            }
-            g.closePath();
-          });
-      }
-      g.fill('nonzero');
-      g.globalCompositeOperation = 'destination-in';
-      sti(g, kommune.koord, u, 1 / res);
-      g.fill('evenodd');
-      if (innenfor) {
-        sti(g, innenfor, u, 1 / res);
-        g.fill('evenodd');
-      }
-      forrige = dekketM2(g.getImageData(0, 0, BIT, BIT).data, res) / skala;
-      kum[v] += forrige;
-    }
-  }
-  return {
-    klasser: Array.from({ length: antall }, (_, v) => Math.max(0, kum[v] - (v ? kum[v - 1] : 0))),
-    sum: kum[antall - 1]
-  };
 }

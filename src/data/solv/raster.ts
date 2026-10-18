@@ -1,10 +1,9 @@
-/* Sølv, felles standard: fra flater til ruter. Flatene tegnes i et lerret (canvas) i nettleseren, og dekningen leses per rute som
-   alfa fra 0 til 255. Lerretet glatter kantene, så en rute i kanten av en flate får delvis dekning. Dette er den eneste filen i
-   sølv og gull som bruker nettleseren, sammen med bakgrunnstråden (arbeid.ts og arbeider.ts). Skal beregningene kjøres et annet
-   sted, er det disse som må byttes ut. Det som tegnes og leses med en tegneflate som gis inn (Flate), virker både på siden og i
-   bakgrunnstråden. */
+/* Sølv, felles standard: lerretet (canvas) i nettleseren, til å pakke ut kartbildene og tegne kartet. Dekningen av flater regnes
+   ikke her, men i egen kode (generelt/dekning.ts), og noen få flater tegnes fortsatt med halvregelen (METODE.md). Dette er den
+   eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden (arbeid.ts og arbeider.ts). Skal beregningene
+   kjøres et annet sted, er det disse som må byttes ut. Det som tegnes og leses med en tegneflate som gis inn (Flate), virker både på
+   siden og i bakgrunnstråden. */
 import type { Flerflate, Utsnitt } from '../generelt/geometri.ts';
-import type { Piksler, Rutebilde } from './felles.ts';
 
 /* En tegneflate: et lerret på siden, eller i bakgrunnstråden (OffscreenCanvas) */
 export type Flate = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -48,8 +47,6 @@ export function hentFlate(w: number, h: number): CanvasRenderingContext2D {
   }
   return g;
 }
-export const laanFlate = <T>(w: number, h: number, bruk: (g: CanvasRenderingContext2D) => T): T =>
-  bruk(hentFlate(w, h));
 
 /* Et lerret på 512 x 512 piksler: én flis i utbyggingen, eller én flis i kartet tegnet i dobbel tetthet */
 export function flislerret(): HTMLCanvasElement {
@@ -92,28 +89,6 @@ export function sti(g: Flate, koord: Flerflate, u: Utsnitt, s: number) {
     }
 }
 
-/* En flerflate tegnet i rutenettet R, som piksler: dekningen av hver rute står i alfa. Kommunens flate brukes slik som maske.
-   flatePikslerI tegner i en tom tegneflate som gis inn. */
-export function flatePikslerI(g: Flate, koord: Flerflate, R: Rutebilde) {
-  sti(g, koord, R.u, 1 / R.res);
-  g.fill('evenodd');
-  return g.getImageData(0, 0, R.w, R.h).data;
-}
-export const flatePiksler = (koord: Flerflate, R: Rutebilde) => flatePikslerI(hentFlate(R.w, R.h), koord, R);
-/* Flere flerflater tegnet i rutenettet R, hver for seg, så der de overlapper, er dekningen den samme som for én (unionen). Klippet
-   mot flaten innenfor (kommunen). Dekningen av hver rute står i alfa. */
-export function flaterPiksler(flater: Flerflate[], R: Rutebilde, innenfor: Flerflate) {
-  return laanFlate(R.w, R.h, g => {
-    for (const koord of flater) {
-      sti(g, koord, R.u, 1 / R.res);
-      g.fill('evenodd');
-    }
-    g.globalCompositeOperation = 'destination-in';
-    sti(g, innenfor, R.u, 1 / R.res);
-    g.fill('evenodd');
-    return g.getImageData(0, 0, R.w, R.h).data;
-  });
-}
 /* Et bilde fra en kilde (PNG) som piksler, skalert til w x h ruter. pakkUt tegner i en tegneflate fra flate, som kan brukes fram til
    neste await. */
 export async function pakkUt(buf: ArrayBuffer, w: number, h: number, flate: (w: number, h: number) => Flate) {
@@ -127,13 +102,6 @@ export async function pakkUt(buf: ArrayBuffer, w: number, h: number, flate: (w: 
   }
 }
 export const bildePiksler = (buf: ArrayBuffer, w: number, h: number) => pakkUt(buf, w, h, hentFlate);
-/* Arealet en tegning dekker, i kvadratmeter i kartet: summen av dekningen (alfa) i rutene, med ruter på res meter */
-export function dekketM2(d: Piksler, res: number) {
-  let sum = 0;
-  for (let i = 3; i < d.length; i += 4) sum += d[i];
-  return (sum / 255) * res * res;
-}
-
 /* Et lerret på w x h piksler fra plassen i en fargetabell per piksel (indeks), med fargene [rød, grønn, blå] per plass. Plass 0 er
    gjennomsiktig. */
 export function palettLerret(indeks: Uint8Array, w: number, h: number, farger: number[][]): HTMLCanvasElement {
