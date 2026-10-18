@@ -28,6 +28,11 @@ export async function grense(nr: string): Promise<Grense> {
     ext = utsnitt(koord);
   return { nr, koord, ext, km2: arealKm2(koord, ext) };
 }
+/* Det lagrede svaret for solv.grense (bronse.grensefil), laget med den samme funksjonen. null når kommunen ikke er lagret. */
+export async function lagretGrense(nr: string): Promise<Grense | null> {
+  const G = await katalog.bronse.grensefil(nr);
+  return G ? { nr, koord: G.koord as Flerflate, ext: G.ext as Utsnitt, km2: G.km2 } : null;
+}
 
 /* Et tema som hentes i biter, talt i kommunen nr: ruter per verdi innenfor kommunen (n), bitene kommunen har ruter i (biter), meter
    per rute (res, 10,6) og skala. Rutene i n er alt rettet for målestokken per bit, og en kantrute teller med den delen av den som er i
@@ -89,6 +94,73 @@ export async function kommunebiter(nr: string): Promise<Kommunebit[]> {
   const g = await katalog.solv.grense(nr);
   return (await andelsbiter(biterI(g.ext), [ringer([g.koord])], [0], []))[0];
 }
+/* Kommunebitene som bytes, til lagring: versjon og antall biter, og for hver bit x og y, om den er hel, antall spenn, og ellers antall
+   spenn per rad og spennene (x, n og a, se Andel i generelt/dekning.ts). Tall som Int32 og Uint16 i maskinens rekkefølge (little
+   endian i alle nettlesere), med hver del på hele fire byte. Faktoren og summen regnes ut igjen når de leses. */
+export function kommunebiterTilBytes(KB: Kommunebit[]): Uint8Array {
+  const deler: ArrayBufferView[] = [Int32Array.from([1, KB.length])];
+  const firer = (a: Uint16Array) => (a.length % 2 ? Uint16Array.from([...a, 0]) : a);
+  for (const K of KB) {
+    const A = K.andel;
+    deler.push(Int32Array.from([K.tc[1], K.tc[2], K.hel ? 1 : 0, A ? A.x.length : 0]));
+    if (!A) continue;
+    const perRad = new Uint16Array(A.h);
+    for (let y = 0; y < A.h; y++) perRad[y] = A.rad[y + 1] - A.rad[y];
+    deler.push(firer(perRad), firer(A.x), firer(A.n), firer(A.a));
+  }
+  const ut = new Uint8Array(deler.reduce((s, d) => s + d.byteLength, 0));
+  let p = 0;
+  for (const d of deler) {
+    ut.set(new Uint8Array(d.buffer, d.byteOffset, d.byteLength), p);
+    p += d.byteLength;
+  }
+  return ut;
+}
+/* Kommunebitene fra bytes (kommunebiterTilBytes) */
+export function kommunebiterFraBytes(b: Uint8Array): Kommunebit[] {
+  const buf = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+  let p = 0;
+  const int32 = (n: number) => {
+      const v = new Int32Array(buf, p, n);
+      p += 4 * n;
+      return v;
+    },
+    uint16 = (n: number) => {
+      const v = new Uint16Array(buf.slice(p, p + 2 * n));
+      p += 4 * Math.ceil(n / 2);
+      return v;
+    };
+  const [versjon, antall] = int32(2);
+  if (versjon !== 1) throw new Error('ukjent versjon av kommunebitene');
+  const KB: Kommunebit[] = [];
+  for (let i = 0; i < antall; i++) {
+    const [x, y, hel, m] = int32(4),
+      tc: Flis = [BITNIVA, x, y];
+    if (hel) {
+      KB.push({ tc, antall: BIT * BIT, hel: true, andel: null, faktor: bitFaktor(tc) });
+      continue;
+    }
+    const perRad = uint16(BIT),
+      rad = new Int32Array(BIT + 1);
+    for (let r = 0; r < BIT; r++) rad[r + 1] = rad[r] + perRad[r];
+    const A: Andel = { w: BIT, h: BIT, rad, x: uint16(m), n: uint16(m), a: uint16(m) };
+    KB.push({ tc, antall: andelSum(A), hel: false, andel: A, faktor: bitFaktor(tc) });
+  }
+  return KB;
+}
+/* gzip og tilbake, med strømmene nettleseren og Node har */
+const strom = async (b: BufferSource, t: GenericTransformStream) =>
+  new Uint8Array(await new Response(new Blob([b]).stream().pipeThrough(t)).arrayBuffer());
+export const gzip = (b: Uint8Array) => strom(new Uint8Array(b), new CompressionStream('gzip'));
+export const gunzip = (b: ArrayBuffer) => strom(b, new DecompressionStream('gzip'));
+/* Det lagrede svaret for solv.kommunebiter (bronse.andelfil), laget med den samme funksjonen. null når kommunen ikke er lagret, eller
+   når nettleseren ikke kan pakke ut gzip. */
+export async function lagredeKommunebiter(nr: string): Promise<Kommunebit[] | null> {
+  if (typeof DecompressionStream === 'undefined') return null;
+  const buf = await katalog.bronse.andelfil(nr);
+  return buf ? kommunebiterFraBytes(await gunzip(buf)) : null;
+}
+
 /* Andelen i blokken tc på nivå 10 (512 x 512 ruter), fra bitene i KB (kommunen eller et tema i den): null når hele blokken er
    dekket, en tom Andel når ingenting er det */
 export function kommuneIBlokk(KB: Andelsbit[], tc: Flis): { andel: Andel | null; faktor: number } {

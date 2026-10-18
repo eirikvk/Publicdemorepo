@@ -309,7 +309,8 @@ innenfor kommunegrensen fra Kartverket.
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
+   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
+   siden (bronse.grensefil).
 4. **Utbredelsen nå** (`gull.utbredelse`). Arealet for hver klasse i nyeste år, og andelen av landarealet.
 5. **Endring fra 2017** (`gull.endring`). Forskjellen fra 2017 til nyeste år for hver klasse.
 6. **Regnskapsoppstillingen** (`gull.oppstilling`). Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA
@@ -322,6 +323,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
+  og andelen per rute lagret sammen med siden.
+- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
+  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
+  hentes fra Kartverket.
 
 ### Usikkerhet
 
@@ -447,7 +453,8 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
+   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
+   siden (bronse.grensefil).
 3. **Opplysninger om kommuneplanen** (`bronse.planopplysninger` → `solv.planinfo`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Plan-id, hvem som leverte planen og når den ble kopiert til DiBK, slått
    opp midt i det planen dekker. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
@@ -491,6 +498,14 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
+  og andelen per rute lagret sammen med siden.
+- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
+  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
+  kommunen velges.
+- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
+  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
+  hentes fra Kartverket.
 - **Register over lagrede klasser** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
   sammen med siden, og blokkene for hver.
 - **Lagrede klasser per blokk** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Dagens klasser i en blokk slik de er
@@ -502,7 +517,7 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
-  dekker.
+  dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
 - **Dagens klasser satt sammen av blokkene** (`solv.klassekart`). Dagens klasser for hele kommunen zoomet ut, satt sammen av
   blokkene, til kartet.
@@ -669,7 +684,8 @@ som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
+   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
+   siden (bronse.grensefil).
 3. **Verneområder** (`bronse.verneomrader` → `solv.verneomrader` → `solv.vernAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer/0/query`: Verneområdene i kommunen som flater i UTM 33,
    forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
@@ -742,6 +758,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
+  og andelen per rute lagret sammen med siden.
+- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
+  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
+  hentes fra Kartverket.
 
 ### Usikkerhet
 
@@ -801,7 +822,8 @@ utbygging.
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
+   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
+   siden (bronse.grensefil).
 4. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
    og andelen av landarealet regnes ut.
 
@@ -809,10 +831,18 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
+  og andelen per rute lagret sammen med siden.
+- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
+  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
+  kommunen velges.
+- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
+  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
+  hentes fra Kartverket.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
-  dekker.
+  dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 
 ### Usikkerhet
 
@@ -864,7 +894,8 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).
+   Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
+   siden (bronse.grensefil).
 4. **Grått areal** (`gull.graa`). Antall ruter per trinn regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall, og
    andelen av landarealet regnes ut.
 5. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
@@ -878,10 +909,18 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
+- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
+  og andelen per rute lagret sammen med siden.
+- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
+  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
+  kommunen velges.
+- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
+  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
+  hentes fra Kartverket.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
-  dekker.
+  dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 
 ### Usikkerhet
 
@@ -1094,6 +1133,14 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Kommunegrensen og andelen per rute lagret, 18. oktober 2026.** For de 45 kommunene som har dagens klasser eller detaljklassene
+lagret, er nå også kommunegrensen (`solv.grense`) og kommunens andel per rute i bitene (`solv.kommunebiter`) lagret sammen med siden,
+laget av `verktoy/kommunegrenser.ts` med de samme funksjonene. Grensen ligger som JSON, andelen som spenn i 16 bit pakket med gzip
+(`kommunebiterTilBytes`). Grensene endres sjelden, og de lagrede klassene bygger uansett på dem. Siden henter da ingenting fra
+Kartverket og regner ikke ut andelen når kommunen velges. Naturen på forsiden av tvillingen vises etter rundt 2,2 sekunder i
+Trondheim, mot 3,2, og 4,4–5,5 sekunder i Kautokeino, mot 7,4. Resten av tiden i Kautokeino går med til å lese de 393 blokkene.
+Tallene er de samme. Målt i Chromium med filene lokalt, ikke på iPhone.
 
 **Raskere kart over klassene i tvillingen, 18. oktober 2026.** Kartet på forsiden av tvillingen tegnet blokkene i hver kartflis
 én og én, med et lerret på 512 x 512 per blokk. Zoomet ut har en kartflis i Kautokeino opptil 64 blokker, og de ventet på hverandre

@@ -182,3 +182,36 @@ test('intervaller: union, minus og snitt', () => {
   assert.deepEqual(intervallMinus([0, 10, 12, 14], [-1, 1, 9, 13]), [1, 9, 13, 14]);
   assert.deepEqual(intervallSnitt([0, 5, 6, 10], [4, 7]), [4, 5, 6, 7]);
 });
+
+test('kommunebitene: til bytes, gzip og tilbake gir det samme', async () => {
+  const { kommunebiterTilBytes, kommunebiterFraBytes, gzip, gunzip } = await import('../src/data/solv/kommune.ts');
+  const { bitRuter, bitFaktor, BITNIVA } = await import('../src/data/solv/felles.ts');
+  const tc: [number, number, number] = [BITNIVA, 120, 230],
+    R = bitRuter(tc),
+    [x0, y0, x1, y1] = R.u,
+    trekant: Flerflate = [
+      [
+        [
+          [x0 + 100.3, y0 + 50.7],
+          [x1 - 333.1, y0 + 999.9],
+          [x0 + 5000.5, y1 - 17.2],
+          [x0 + 100.3, y0 + 50.7]
+        ]
+      ]
+    ],
+    A = dekning(kanterI([{ lag: 0, ringer: ringer([trekant]) }], R), R.w, R.h, regel([], [0]), 1, 1)[0];
+  const KB = [
+    { tc, antall: andelSum(A), hel: false, andel: A, faktor: bitFaktor(tc) },
+    { tc: [BITNIVA, 121, 230] as [number, number, number], antall: 2048 * 2048, hel: true, andel: null, faktor: 1 }
+  ];
+  const tilbake = kommunebiterFraBytes(await gunzip((await gzip(kommunebiterTilBytes(KB))).slice().buffer));
+  assert.equal(tilbake.length, 2);
+  assert.deepEqual(Array.from(tilbake[0].andel!.rad), Array.from(A.rad));
+  assert.deepEqual(Array.from(tilbake[0].andel!.a), Array.from(A.a));
+  assert.deepEqual(Array.from(tilbake[0].andel!.x), Array.from(A.x));
+  assert.deepEqual(Array.from(tilbake[0].andel!.n), Array.from(A.n));
+  assert.equal(tilbake[0].antall, KB[0].antall);
+  assert.equal(tilbake[1].hel, true);
+  assert.equal(tilbake[1].andel, null);
+  assert.equal(tilbake[1].faktor, bitFaktor([BITNIVA, 121, 230]));
+});

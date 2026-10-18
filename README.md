@@ -135,7 +135,7 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 | `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
 | `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
-| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for sju kommuner (`detaljklasser/` og `detaljklasser.json`) |
+| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 10 meter for noen kommuner (`klasser/` og `klasser.json`), detaljklassene per blokk på 10 meter for sju kommuner (`detaljklasser/` og `detaljklasser.json`), og kommunegrensen og kommunens andel per rute for de samme kommunene (`kommunegrenser/` og `kommunegrenser.json`) |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
@@ -410,7 +410,10 @@ slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (
 `public/klasser/`, på 10,6 meter (nivå 10), 3 020 filer og 21 MB. Siden slipper da kallene mot NIBIO, og nettleseren henter
 bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for Trondheim, Kautokeino, Malvik,
 Røros, Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 850 filer og 11 MB), lest innenfor de
-lagrede dagens klassene. For de andre kommunene lages de av kartbildene fra NIBIO, med den samme funksjonen.
+lagrede dagens klassene. For de andre kommunene lages de av kartbildene fra NIBIO, med den samme funksjonen. For de 45 kommunene
+med lagrede klasser eller detaljklasser er også kommunegrensen (`solv.grense`) og kommunens andel per rute i bitene
+(`solv.kommunebiter`) lagret (`verktoy/kommunegrenser.ts`, i `public/kommunegrenser/`, 3,0 MB grenser og 4,7 MB andeler pakket med
+gzip). Da hentes ingenting fra Kartverket, og andelen regnes ikke ut, når kommunen velges.
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 
@@ -671,6 +674,10 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `klasser.ts` lager de lagrede klassene på 10,6 meter, for eksempel `npm run klasser -- --fylke 50`. Arbeidet gjøres i Chromium med katalogen i `src` (`klasser-side.ts`): verktøyet kaller `solv.blokker` og
   `solv.klasser` uten registeret, så ETL-funksjonene kjøres, og lagrer svaret. Siden bruker da den samme funksjonens svar som
   ferdig svar (`lagret` i katalogen). En blokk koster ett kall mot NIBIO.
+- `kommunegrenser.ts` lager de lagrede kommunegrensene og andelene per rute, for eksempel `node verktoy/kommunegrenser.ts --lagrede
+  --hentet "18. oktober 2026"` for alle kommunene med lagrede klasser. Arbeidet gjøres i Chromium med katalogen i `src`
+  (`kommunegrenser-side.ts`): verktøyet kaller `solv.grense` og `solv.kommunebiter` uten registeret og lagrer svaret. Den må lages på
+  nytt når kommunegrensene endres.
 - `kommuneareal.ts` lager `public/kommuneareal.json`: flaten til hver kommune med land, ferskvann og hav, regnet av Kartverkets
   grenser én gang. De syntetiske tabellene bruker den til havet i alle kommunene. Den må lages på nytt når kommunene endres.
 - `figma-roykt.ts` er røyktesten for tvillingen fra Figma, se over.

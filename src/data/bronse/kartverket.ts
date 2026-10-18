@@ -93,6 +93,40 @@ export async function kommunegrense(nr: string): Promise<GeoJsonFlate> {
   return hentKommunegrense(await kommunen(nr));
 }
 
+/* Registeret over de lagrede kommunegrensene (kommunegrenser.json): når de er hentet, og kommunene. For hver kommune ligger svaret
+   fra solv.grense og fra solv.kommunebiter ferdig sammen med siden, laget av verktoy/kommunegrenser.ts med de samme funksjonene. */
+export interface Grenseregister {
+  hentet?: string;
+  kommuner?: string[];
+}
+/* Den lagrede grensen: svaret fra solv.grense uten nummeret */
+export interface LagretGrense {
+  koord: GeoJsonFlate['coordinates'];
+  ext: number[];
+  km2: number;
+}
+/* Tabellen bronse.grenseregister: registeret, eller null når det ikke kan hentes */
+export async function grenseregister(): Promise<Grenseregister | null> {
+  return (
+    hent('Egen fil', 'Register over lagrede kommunegrenser', 'kommunegrenser.json', true) as Promise<Grenseregister>
+  ).catch(() => null);
+}
+const erLagret = async (nr: string) => {
+  const reg = await katalog.bronse.grenseregister();
+  return !!(reg && reg.kommuner && reg.kommuner.includes(nr));
+};
+/* Tabellen bronse.grensefil: den lagrede grensen for kommunen nr, eller null når den ikke står i registeret */
+export async function grensefil(nr: string): Promise<LagretGrense | null> {
+  if (!(await erLagret(nr))) return null;
+  return hent('Egen fil', `Lagret grense ${nr}`, `kommunegrenser/${nr}.json`) as Promise<LagretGrense>;
+}
+/* Tabellen bronse.andelfil: kommunens andel per rute i bitene for kommunen nr slik den er lagret (gzip), eller null når den ikke står
+   i registeret */
+export async function andelfil(nr: string): Promise<ArrayBuffer | null> {
+  if (!(await erLagret(nr))) return null;
+  return hent('Egen fil', `Lagret andel ${nr}`, `kommunegrenser/${nr}-andel.bin.gz`, false, true);
+}
+
 /* Tabellen bronse.kommuneareal: flaten til hver kommune i km² (land, ferskvann og hav), regnet av Kartverkets grenser én gang og lagret
    sammen med siden (kommuneareal.json, laget av verktoy/kommuneareal.ts) */
 export interface Kommuneareal {

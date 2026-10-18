@@ -273,6 +273,41 @@ export const katalog = {
       husk: 1,
       etl: ssb.arealAlle
     }),
+    grenseregister: tabell<void, kartverket.Grenseregister | null>({
+      lag: 'bronse',
+      navn: 'grenseregister',
+      endepunkt: 'kommunegrenser.json',
+      tittel: 'Register over lagrede kommunegrenser',
+      om: 'kommunene som har kommunegrensen og andelen per rute i bitene lagret sammen med siden, og når de er hentet',
+      teknisk: true,
+      forklaring: 'Kommunene som har grensen og andelen per rute lagret sammen med siden.',
+      husk: 1,
+      etl: kartverket.grenseregister
+    }),
+    grensefil: tabell<string, kartverket.LagretGrense | null>({
+      lag: 'bronse',
+      navn: 'grensefil',
+      endepunkt: 'kommunegrenser/{kommunenummer}.json',
+      tittel: 'Lagret kommunegrense',
+      om: 'kommunegrensen slik den er lagret sammen med siden: svaret fra solv.grense. null når kommunen ikke er lagret.',
+      teknisk: true,
+      forklaring:
+        'Kommunegrensen som flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må hentes fra Kartverket.',
+      husk: 6,
+      etl: kartverket.grensefil
+    }),
+    andelfil: tabell<string, ArrayBuffer | null>({
+      lag: 'bronse',
+      navn: 'andelfil',
+      endepunkt: 'kommunegrenser/{kommunenummer}-andel.bin.gz',
+      tittel: 'Lagret andel per rute',
+      om: 'kommunens andel per rute i bitene slik den er lagret sammen med siden: svaret fra solv.kommunebiter som bytes, pakket med gzip. null når kommunen ikke er lagret.',
+      teknisk: true,
+      forklaring:
+        'Hvor stor del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når kommunen velges.',
+      husk: 3,
+      etl: kartverket.andelfil
+    }),
     kommuneareal: tabell<void, kartverket.Kommuneareal>({
       lag: 'bronse',
       navn: 'kommuneareal',
@@ -545,9 +580,11 @@ export const katalog = {
       navn: 'grense',
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen som flerflate i UTM33, med utsnitt og flate i km²',
-      forklaring: 'Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag).',
+      forklaring:
+        'Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med siden (bronse.grensefil).',
       husk: 6,
-      etl: solvKommune.grense
+      etl: solvKommune.grense,
+      lagret: solvKommune.lagretGrense
     }),
     arealtall: tabell({
       lag: 'solv',
@@ -745,9 +782,10 @@ export const katalog = {
       om: 'bitene kommunen dekker noe av (2048 x 2048 ruter à 10,6 meter), med dekningsandelen per rute som spenn (generelt/dekning.ts), eller hel når hele biten er i kommunen, og målestokken i biten',
       teknisk: true,
       forklaring:
-        'Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner. Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen dekker.',
+        'Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner. Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).',
       husk: 3,
-      etl: solvKommune.kommunebiter
+      etl: solvKommune.kommunebiter,
+      lagret: solvKommune.lagredeKommunebiter
     }),
     inonbit: tabell<Flis, solvInon.Inonsoner>({
       lag: 'solv',
