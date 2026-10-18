@@ -142,7 +142,7 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, tc: Flis,
   return { sig: fliser ? fliser.length : -1, d: noe(d) ? d : null, kl, pl: noe(pl) ? pl : null, n };
 }
 
-/* Smale striper: felt som ikke er bredere enn to ruter (rundt 40 meter) noe sted. De oppstår mest der plangrensen og grunnkartet
+/* Smale striper: felt som ikke er bredere enn to ruter (rundt 20 meter) noe sted. De oppstår mest der plangrensen og grunnkartet
    ikke er tegnet helt likt, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle
    fire sider. Så beholdes alt som henger sammen med en kjerne, også på skrå. Et større felt beholdes dermed helt, også der det
    smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk, 3 ukjent). Ukjente ruter teller som

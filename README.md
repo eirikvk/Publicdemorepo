@@ -159,6 +159,7 @@ regner likt. Filene importerer ingenting.
 | `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
 | `png.ts` | PNG-filer: bitene i en fil, og et bilde med fargetabell (til de lagrede klassene) |
 | `glissen.ts` | Glisne rutenett: et stort rutenett i blokker på 512 × 512 ruter, der bare blokkene som har noe, finnes. Leses rute for rute som et vanlig rutenett. Brukes av utbyggingen. |
+| `dekning.ts` | Dekningsandel: hvor stor andel av hver rute flater dekker, med en skanlinje i egen kode (fire delrader per rad, eksakt bortover), vindingstall per lag for union, masker og kategorier, og andelen lagret som spenn per rad. Også den samme regelen for én og én rute. |
 
 Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan det hentes og for kartjenester etter WMS.
 
