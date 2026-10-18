@@ -1,7 +1,7 @@
 /* Delene sidene i tvillingen er bygd av, etter Figma-skissene: brødsmuler, toppen av en temaside, tallkort, trekkspill, figurer med
    tekst og kilde, stolper, flisene for temaene, ressurser, og en ramme for det som ikke er laget ennå. Bildene fra skissene er ikke med
    (rettighetene er ikke avklart), så hvert tema har en KI-generert illustrasjon i stedet, merket med det. */
-import { useId, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { MdAccordionItem, MdIconArrowForward, MdIconChevronForward, MdIconOpenInNew } from '../md.ts';
 import { andelTekst, iTekst, nf, pst } from '../../src/ui/tekst.ts';
@@ -370,39 +370,60 @@ function steg(maks: number, n = 4) {
     f = r / p;
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
 }
-/* Tallene i figuren i en tabell som kan åpnes, så de kan leses uten å tolke fargene og høydene */
+/* Bredden figuren har på skjermen, til figurene under: de tegnes i den bredden, så teksten står i vanlig størrelse også på telefon.
+   Til den er målt, er den 760. */
+function useBredde(): [RefObject<HTMLElement | null>, number] {
+  const ref = useRef<HTMLElement | null>(null),
+    [b, settB] = useState(760);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const mal = () => settB(Math.max(280, Math.round(el.clientWidth)));
+    mal();
+    const R = new ResizeObserver(mal);
+    R.observe(el);
+    return () => R.disconnect();
+  }, []);
+  return [ref, b];
+}
+/* Lange sammensatte ord i kolonnenavnene med mykt bindestrek, så de kan deles på smale skjermer og tabellen får plass */
+const deleOrd = (t: string) => t.replace(/(Villmarks)(preget)/, '$1\u00ad$2').replace(/(Inngreps)(nær)/, '$1\u00ad$2');
+/* Tallene i figuren i en tabell som kan åpnes, så de kan leses uten å tolke fargene og høydene. Tabellen ruller til siden når den er
+   bredere enn figuren, som på telefon, så siden ikke blir bredere. */
 function Talltabell({ hode, rader }: { hode: string[]; rader: string[][] }) {
   return (
     <details className="figurtall">
       <summary>Vis tallene</summary>
-      <table>
-        <thead>
-          <tr>
-            {hode.map((h, i) => (
-              <th key={h} scope="col" className={i ? 'tall' : undefined}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rader.map(r => (
-            <tr key={r[0]}>
-              {r.map((c, i) =>
-                i ? (
-                  <td key={i} className="tall">
-                    {c}
-                  </td>
-                ) : (
-                  <th key={i} scope="row">
-                    {c}
-                  </th>
-                )
-              )}
+      <div className="figurtall-rull">
+        <table>
+          <thead>
+            <tr>
+              {hode.map((h, i) => (
+                <th key={h} scope="col" className={i ? 'tall' : undefined}>
+                  {deleOrd(h)}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rader.map(r => (
+              <tr key={r[0]}>
+                {r.map((c, i) =>
+                  i ? (
+                    <td key={i} className="tall">
+                      {c}
+                    </td>
+                  ) : (
+                    <th key={i} scope="row">
+                      {c}
+                    </th>
+                  )
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </details>
   );
 }
@@ -411,10 +432,10 @@ const daa = (km2: number) => nf(km2 * 1000, 0);
 
 /* En linje over tid: arealet (km2) per år, med årene i riktig avstand fra hverandre og aksen fra null, så endringen ikke ser større
    ut enn den er. Tallet står ved første og siste punkt, og hvert punkt har tallet når man holder over det. Én serie, så navnet står
-   i figurens tittel. */
+   i figurens tittel. Figuren tegnes i bredden den har på skjermen, og på smale skjermer står bare årstallene det er plass til. */
 export function Linje({ punkter, hva }: { punkter: { aar: number; km2: number }[]; hva: string }) {
-  const B = 760,
-    H = 320,
+  const [ref, B] = useBredde(),
+    H = B < 520 ? 260 : 320,
     v = 72,
     h = 28,
     o = 28,
@@ -426,8 +447,18 @@ export function Linje({ punkter, hva }: { punkter: { aar: number; km2: number }[
     x = (a: number) => v + ((a - a0) / (a1 - a0 || 1)) * (B - v - h),
     y = (km2: number) => o + (1 - km2 / maks) * (H - o - u),
     streker = Array.from({ length: Math.round(maks / s) + 1 }, (_, i) => i * s);
+  /* Årstallene under aksen med minst 44 px mellom, og alltid det siste */
+  const aarstall: number[] = [];
+  punkter.forEach((p, i) => {
+    const forrige = aarstall.length ? x(punkter[aarstall[aarstall.length - 1]].aar) : -Infinity;
+    if (x(p.aar) - forrige < 44) {
+      if (i < punkter.length - 1) return;
+      aarstall.pop();
+    }
+    aarstall.push(i);
+  });
   return (
-    <figure className="linje" aria-label={hva}>
+    <figure className="linje" aria-label={hva} ref={ref}>
       <svg viewBox={`0 0 ${B} ${H}`} role="img" aria-label={hva}>
         {streker.map(t => (
           <g key={t}>
@@ -440,9 +471,9 @@ export function Linje({ punkter, hva }: { punkter: { aar: number; km2: number }[
         <text x={v - 10} y={o - 12} textAnchor="end" className="linje-akse">
           dekar
         </text>
-        {punkter.map(p => (
-          <text key={p.aar} x={x(p.aar)} y={H - u + 22} textAnchor="middle" className="linje-akse">
-            {p.aar}
+        {aarstall.map(i => (
+          <text key={punkter[i].aar} x={x(punkter[i].aar)} y={H - u + 22} textAnchor="middle" className="linje-akse">
+            {punkter[i].aar}
           </text>
         ))}
         <polyline points={punkter.map(p => `${x(p.aar)},${y(p.km2)}`).join(' ')} className="linje-linje" />
@@ -465,7 +496,8 @@ export function Linje({ punkter, hva }: { punkter: { aar: number; km2: number }[
 }
 
 /* Stolper over og under null for endringen i hver periode, én stolpe per serie (som sonene), med tegnforklaringen over. Hver stolpe
-   har tallet når man holder over den, og alle tallene står i tabellen under. */
+   har tallet når man holder over den, og alle tallene står i tabellen under. Figuren tegnes i bredden den har på skjermen, og på smale
+   skjermer står periodene på to linjer. */
 export function Endringsstolper({
   perioder,
   serier,
@@ -475,12 +507,13 @@ export function Endringsstolper({
   serier: { navn: string; farge: string }[];
   hva: string;
 }) {
-  const B = 760,
-    H = 356,
+  const [ref, B] = useBredde(),
+    smal = (B - 84) / perioder.length < 90,
+    H = smal ? 300 : 356,
     v = 72,
     h = 12,
     o = 34,
-    u = 44,
+    u = smal ? 58 : 44,
     alle = perioder.flatMap(p => p.km2),
     st = steg(Math.max(Math.max(...alle), -Math.min(...alle), 1e-9) * 1.1),
     topp = Math.max(st, Math.ceil(Math.max(...alle, 0) / st) * st),
@@ -499,7 +532,7 @@ export function Endringsstolper({
     return `M${x} ${y0}V${y1 - r}Q${x} ${y1} ${x + r} ${y1}H${x + bredde - r}Q${x + bredde} ${y1} ${x + bredde} ${y1 - r}V${y0}Z`;
   };
   return (
-    <figure className="endringsstolper" aria-label={hva}>
+    <figure className="endringsstolper" aria-label={hva} ref={ref}>
       <ul className="figur-tegn">
         {serier.map(s => (
           <li key={s.navn}>
@@ -532,8 +565,18 @@ export function Endringsstolper({
                   </path>
                 )
               )}
+              {/* Perioden på to linjer når det er smalt: «1988–» og «2008» */}
               <text x={v + i * band + band / 2} y={H - u + 24} textAnchor="middle" className="linje-akse">
-                {p.navn}
+                {smal ? (
+                  <>
+                    <tspan x={v + i * band + band / 2}>{p.navn.split('–')[0]}–</tspan>
+                    <tspan x={v + i * band + band / 2} dy="16">
+                      {p.navn.split('–')[1]}
+                    </tspan>
+                  </>
+                ) : (
+                  p.navn
+                )}
               </text>
             </g>
           );

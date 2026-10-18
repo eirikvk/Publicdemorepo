@@ -709,10 +709,20 @@ main > .innhold > .figur {
   height: 14px;
   border-radius: 3px;
 }
-/* Tallene bak figuren, i en tabell som kan åpnes */
+/* Figurene krymper med flaten, også når tabellen under er åpen */
+.linje,
+.endringsstolper {
+  min-width: 0;
+}
+/* Tallene bak figuren, i en tabell som kan åpnes og ruller til siden når den er bredere enn figuren */
 .figurtall {
   margin-top: 12px;
   font-size: 0.9375rem;
+  min-width: 0;
+}
+.figurtall-rull {
+  max-width: 100%;
+  overflow-x: auto;
 }
 .figurtall summary {
   cursor: pointer;
@@ -730,7 +740,21 @@ main > .innhold > .figur {
 }
 .figurtall .tall {
   text-align: right;
+}
+.figurtall td {
   white-space: nowrap;
+}
+.figurtall thead th {
+  vertical-align: bottom;
+}
+@media (max-width: 600px) {
+  .figurtall {
+    font-size: 0.875rem;
+  }
+  .figurtall th,
+  .figurtall td {
+    padding-right: 8px;
+  }
 }
 
 /* Det som ikke er laget ennå */
