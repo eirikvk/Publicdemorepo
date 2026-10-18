@@ -206,13 +206,19 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
    Bildet har 24 bit farge, fordi fargetabellen i et bilde med 8 bit er for grov til å skille blandingene. Stilen er for lang til å
    stå i adressen (NIBIO svarer 414), så kartbildene hentes med POST. Klassen leses som i steg 2: den nærmeste blandingen av to av
    de 19 fargene, regnet ut én gang per farge i bildet (`detaljklasserIFlis`). Blokkene er på nivå 10 (10,6 meter), ett kartbilde
-   per blokk (`solv.detaljklasser`). Arealet per klasse i kommunen telles med halvregelen (`gull.detaljareal`).
+   per blokk (`solv.detaljklasser`).
+
+   Detaljklassen leses så innenfor dagens klasse i den samme ruta (`detaljIKlassen`). Hører den til en annen av dagens klasser,
+   som i kanten mellom to flater der de to kartbildene blander fargene ulikt, blir den en restklasse: «Jordbruk, uspesifisert» eller
+   «Natur, uspesifisert» (`RESTOKOSYSTEMER`). For bebygd og vannet, som har én detaljklasse hver, blir den den klassen. Slik summerer
+   detaljklassene til dagens klasser rute for rute, og en jordbruksrute får aldri en naturklasse. Arealet per klasse i kommunen
+   telles med andelen av kantrutene, som dagens klasser (`gull.detaljareal`).
 6. Detaljklassene krysses med to andre kilder:
-   - **Verneområdene** (`gull.detaljerIVerneomrader`). Verneområdene tegnes i hver blokk, hvert for seg, så der de overlapper, telles
-     ruta én gang. En rute teller når verneområdene dekker minst halve ruta.
-   - **Planlagt utbygging** (`gull.planlagtPerDetaljklasse`). Hver rute med planlagt utbygging på natur får den naturklassen det er
-     mest av i ruta, og hver rute på jordbruk den jordbruksklassen det er mest av. En rute er én detaljrute. Slik
-     blir summen den samme som natur og jordbruk satt av. Finnes ingen klasse av riktig slag i ruta, telles den som ukjent.
+   - **Verneområdene** (`gull.detaljerIVerneomrader`). Hver rute teller med den delen av den som ligger i verneområdene og i
+     kommunen (`solv.vernAndel`), så der områdene overlapper, telles den én gang.
+   - **Planlagt utbygging** (`gull.planlagtPerDetaljklasse`). Hver rute med planlagt utbygging på natur får naturklassen i ruta, og
+     hver rute på jordbruk jordbruksklassen. En rute er én detaljrute, og detaljklassen ligger innenfor dagens klasse, så summen
+     blir den samme som natur og jordbruk satt av. Ukjent er det bare der ruta ikke har noen detaljklasse.
 
 **Resultat.** Klassen per piksel: bebygd, jordbruk, natur, hav, innsjø eller elv. Og klassen per rute på 10,6 meter i hver
 blokk. Og arealet per detaljklasse i kommunen.
@@ -238,16 +244,19 @@ blokk. Og arealet per detaljklasse i kommunen.
 
   For hele Trondheim gir detaljklassene, summert til seks klasser, innenfor 0,7 % av dagens klasser for bebygd, jordbruk, natur og
   hav. Innsjø er 1,4 % og elv 2,6 % større. Lite vegetert mark er bare prøvd i Trondheim, og bør prøves i en fjellkommune.
-- Detaljklassene regnes på samme måte for alle kommuner. For seks kommuner er blokkene lagret sammen med siden
-  (`public/detaljklasser/`, laget med `verktoy/klasser.ts --detalj`): Trondheim (40 blokker), Malvik (17), Røros (91), Stavanger (47),
-  Sandnes (66) og Bodø (209), til sammen 457 filer og 5,1 MB. For de andre kommunene hentes de fra NIBIO når tvillingen trenger
-  dem, ett kall per blokk på rundt 5 × 5 km, så det tar lenger tid. Hovedsiden henter dem ikke (`etterBehov`).
+- Detaljklassene regnes på samme måte for alle kommuner. For sju kommuner er blokkene lagret sammen med siden
+  (`public/detaljklasser/`, laget med `verktoy/klasser.ts --detalj`): Trondheim (40 blokker), Kautokeino (393), Malvik (17), Røros
+  (91), Stavanger (47), Sandnes (66) og Bodø (209), til sammen 850 filer og 11 MB. De er lest innenfor de lagrede dagens klassene
+  der kommunen har dem, og de to stemmer rute for rute. For de andre kommunene hentes de fra NIBIO når tvillingen trenger dem, ett
+  kall per blokk på rundt 5 × 5 km, så det tar lenger tid. Hovedsiden henter dem ikke (`etterBehov`).
+- Restklassene er små: i Trondheim 0,34 km² jordbruk og 0,86 km² natur uspesifisert, i Kautokeino 0,03 og 5,9 km² (0,07 % av
+  naturen).
 
 **Kode.** Sølv: `src/data/solv/klasser.ts`. Bronse: stilen som sendes til NIBIO, i `src/data/bronse/nibio-grunnkart.ts`. Fargeleggingen i
 kartet: `src/ui/kart/fargelegging.ts`. Dagens klasser per blokk og for hele kommunen: `solv.klasser`, `solv.blokker`,
 `solv.klassekart` og `solv.sammensatt` i `src/data/solv/grunnkart.ts`, de lagrede blokkene i `bronse.klassefil` og
 `bronse.klasseregister`, og valget mellom kildene i `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis til
-kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`. Detaljklassene: `DETALJKLASSER` og `detaljklasserIFlis` i
+kartlagene: `dagensKlasserIFlis` i `src/data/solv/grunnkart.ts`. Detaljklassene: `DETALJKLASSER`, `detaljklasserIFlis`, `detaljIKlassen` og `detaljfilIFlis` i
 `src/data/solv/klasser.ts`, stilen og `bronse.detaljflis` i `src/data/bronse/nibio-grunnkart.ts`, `solv.detaljklasser` i
 `src/data/solv/grunnkart.ts` og `gull.detaljareal` i `src/data/gull/grunnkart.ts`.
 
@@ -1085,6 +1094,18 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Detaljklassene innenfor dagens klasser, og lagret for Kautokeino, 18. oktober 2026.** Tredje trinn i forslaget om
+overlayanalyse med raster og vektor. Detaljklassene og dagens klasser er to kartbilder fra NIBIO, og i kanten mellom to flater kunne
+de gi ulik klasse for den samme ruta. Nå leses detaljklassen innenfor dagens klasse i ruta (`detaljIKlassen`). Hører den til en
+annen klasse, blir den «Jordbruk, uspesifisert» eller «Natur, uspesifisert». Detaljklassene summerer dermed til dagens klasser rute
+for rute: i Trondheim bebygd 77,26 → 77,71 km², jordbruk 69,68 → 69,70 og natur 348,66 → 348,73, som er det samme som dagens klasser.
+Skogen i Trondheim går fra 293,49 til 292,89 km² (−0,2 %), og våtmarken fra 52,26 til 52,17. Planlagt utbygging uten detaljklasse
+(10,7 dekar i Trondheim) har nå en klasse. De lagrede filene har to farger til for restklassene og leses med eksakte farger
+(`detaljfilIFlis`). Detaljklassene er lagret på nytt for de seks kommunene som hadde dem, og for Kautokeino (393 blokker, 5,5 MB),
+til sammen 850 filer og 11 MB. Verktøyet leser dem innenfor de lagrede dagens klassene, og en kontroll av alle filene ga ingen ruter
+der de to er uenige. Skogsiden i tvillingen viser tallene for Kautokeino etter rundt 25 sekunder uten noen kall mot NIBIO for
+detaljklassene, mot rundt 200 sekunder og 793 kall før. Hovedsiden bruker ikke detaljklassene. Målt i Chromium, ikke på iPhone.
 
 **Naturtemaene med andel per rute, 18. oktober 2026.** Andre trinn i forslaget om overlayanalyse med raster og vektor.
 Verneområdene, villreinområdene, verdsatt natur per verdikategori, lokalitetene som vurderes og det kartlagte regnes nå som andel

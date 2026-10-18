@@ -2,8 +2,8 @@
    Per blokk (solv.klasser): klassen per rute i blokkene på nivå 10 (10,6 meter), i samme rutenett som planen. De lages av
    kartbildene fra NIBIO, og for noen kommuner ligger de lagret ferdig sammen med siden (bronse.klassefil). Det lagrede er laget med
    den samme funksjonen, så det er samme svar.
-   Detaljklassene per blokk (solv.detaljklasser): det samme med 19 klasser (se klasser.ts), bare på nivå 10, og lagret for noen
-   kommuner på samme måte (bronse.detaljfil).
+   Detaljklassene per blokk (solv.detaljklasser): det samme med 19 klasser fra NIBIO og to restklasser, lest innenfor dagens klasse
+   i hver rute (se klasser.ts), bare på nivå 10, og lagret for noen kommuner på samme måte (bronse.detaljfil).
    For hele kommunen zoomet ut (Oversikt), fra to kilder side om side: blokkene satt sammen (solv.klassekart) og det sammensatte
    kartet av flisene som er hentet (solv.sammensatt). Gull velger mellom dem (gull.dagensKlasser).
    Kartbildene fra NIBIO leses som de er: klassen leses av fargen (klasserIFlis i klasser.ts). */
@@ -12,7 +12,7 @@ import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.t
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, OPPLOSNINGER, flisAvNavn, flisUtsnitt, flisnavn, type Flis, type Plassering } from './felles.ts';
 import { arbeid } from './arbeid.ts';
-import { KLASSETABELL } from './klasser.ts';
+import { KLASSETABELL, detaljIKlassen } from './klasser.ts';
 import { kommuneIBlokk } from './kommune.ts';
 import { flislerret, lesBilde, sti, tegneflate, tegnUtsnitt } from './raster.ts';
 
@@ -57,14 +57,13 @@ export async function lagredeKlasser(tc: Flis): Promise<Klasser | null> {
 }
 
 /* Tabellen solv.detaljklasser: detaljklassen per rute i blokken tc [10, x, y], på 10,6 meter. Blokken er ett kartbilde fra NIBIO
-   (bronse.detaljflis). kl er 0 for ukjent, ellers plassen i DETALJKLASSER pluss én. Bare nivå 10, for tallene regnes på den
-   oppløsningen grunnkartet tegnes i. */
+   (bronse.detaljflis), og detaljklassen leses innenfor dagens klasse i den samme ruta (solv.klasser): hører den til en annen av
+   dagens klasser, blir den en restklasse (detaljIKlassen i klasser.ts). kl er 0 for ukjent, ellers plassen i DETALJKLASSER pluss
+   én. Bare nivå 10, for tallene regnes på den oppløsningen grunnkartet tegnes i. */
 export async function detaljklasser(tc: Flis): Promise<Klasser> {
   if (tc[0] !== FLISNIVA) throw new Error('detaljklassene er på nivå 10');
-  return {
-    ...iBlokk(tc),
-    kl: await arbeid<Uint8Array>({ type: 'detaljklasser', P: await katalog.bronse.detaljflis(tc) })
-  };
+  const [K, P] = await Promise.all([katalog.solv.klasser(tc), katalog.bronse.detaljflis(tc)]);
+  return { ...iBlokk(tc), kl: detaljIKlassen(await arbeid<Uint8Array>({ type: 'detaljklasser', P }), K.kl) };
 }
 /* Tabellen solv.detaljblokker: blokkene på nivå 10 for kommunen nr, som [10, x, y]: de samme som for dagens klasser (solv.blokker).
    For de lagrede blokkene leser solv.detaljklasser filen, og for de andre kartbildet fra NIBIO, ett kall per blokk. Slik er logikken
@@ -72,11 +71,12 @@ export async function detaljklasser(tc: Flis): Promise<Klasser> {
 export async function detaljblokker(nr: string): Promise<Flis[]> {
   return katalog.solv.blokker([nr, FLISNIVA]);
 }
-/* Det lagrede svaret for solv.detaljklasser: filen for blokken (bronse.detaljfil), et bilde med fargetabellen DETALJTABELL. null
-   når blokken ikke er lagret. */
+/* Det lagrede svaret for solv.detaljklasser: filen for blokken (bronse.detaljfil), et bilde med fargetabellen DETALJTABELL, laget
+   med den samme funksjonen og med de lagrede dagens klasser. Fargene leses eksakt (detaljfilIFlis). null når blokken ikke er
+   lagret. */
 export async function lagredeDetaljklasser(tc: Flis): Promise<Klasser | null> {
   const buf = await katalog.bronse.detaljfil(tc);
-  return buf ? { ...iBlokk(tc), kl: await arbeid<Uint8Array>({ type: 'detaljklasser', P: buf }) } : null;
+  return buf ? { ...iBlokk(tc), kl: await arbeid<Uint8Array>({ type: 'detaljfil', P: buf }) } : null;
 }
 
 /* Dagens klasser K klippet til kommunen: ruter kommunen ikke dekker noe av, blir ukjent (0). A er kommunens andel i blokken

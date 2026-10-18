@@ -135,7 +135,7 @@ som siden, så en endring i tilstanden som testen ikke er rettet for, stopper i 
 | `tsconfig.json` | Typesjekken for `src`. `verktoy/tsconfig.json` gjelder verktøyene og `vite.config.ts`. |
 | `src/data/` | Alt om dataene: bronse, sølv, gull og datamotoren. Uten React og OpenLayers. |
 | `src/ui/` | Brukergrensesnittet: React-komponentene og kartet |
-| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for seks kommuner (`detaljklasser/` og `detaljklasser.json`) |
+| `public/` | Filer som legges ut som de er: listen over kommuner, flaten til hver kommune (`kommuneareal.json`), dagens klasser lagret per blokk på 10 meter for noen kommuner (`klasser/` og `klasser.json`), og detaljklassene per blokk på 10 meter for sju kommuner (`detaljklasser/` og `detaljklasser.json`) |
 | `.github/workflows/legg-ut.yml` | Bygger og legger ut siden på GitHub Pages ved push til `main` |
 | `.nvmrc` | Node-versjonen, for nvm og for arbeidsflyten |
 
@@ -316,7 +316,7 @@ med ekte tall, uten å endre hovedsiden.
   - Grunnkartet med detaljklassene (`gull/okosystemer.ts`): skog (`gull.skog`), våtmark (`gull.vatmark`), naturen i
     verneområdene (`gull.vernetNatur`) og planlagt utbygging per økosystemtype (`gull.planPerOkosystem`). De bygger på arealet
     per detaljklasse (`gull.detaljareal`, `gull.detaljerIVerneomrader` og `gull.planlagtPerDetaljklasse`). Detaljklassene er lagret
-    for Trondheim, Malvik, Røros, Stavanger, Sandnes og Bodø, og hentes fra NIBIO for de andre kommunene. Tabellene regnes etter
+    for Trondheim, Kautokeino, Malvik, Røros, Stavanger, Sandnes og Bodø, og hentes fra NIBIO for de andre kommunene. Tabellene regnes etter
     behov (`etterBehov`), så hovedsiden henter dem ikke (se METODE.md, Arealklassene).
   - De syntetiske tabellene til SSBs naturregnskap kommer (`gull/syntetisk.ts`): arealet per hovedøkosystem i 2024
     (`gull.okosystemfordeling`) og endringen mellom bebygd og landklassene 2017–2024 (`gull.bebygdEndring`), og det tvillingen
@@ -408,9 +408,9 @@ svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som 
 svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Dagens klasser per blokk (`solv.klasser`) er
 slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (`verktoy/klasser.ts`) og lagret som små bilder i
 `public/klasser/`, på 10,6 meter (nivå 10), 3 020 filer og 21 MB. Siden slipper da kallene mot NIBIO, og nettleseren henter
-bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for Trondheim, Malvik, Røros,
-Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 457 filer og 5,1 MB). For de andre kommunene
-lages de av kartbildene fra NIBIO, med den samme funksjonen.
+bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for Trondheim, Kautokeino, Malvik,
+Røros, Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 850 filer og 11 MB), lest innenfor de
+lagrede dagens klassene. For de andre kommunene lages de av kartbildene fra NIBIO, med den samme funksjonen.
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
 

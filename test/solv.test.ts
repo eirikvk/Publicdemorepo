@@ -7,8 +7,11 @@ import {
   DATAFARGE,
   DETALJFARGE,
   DETALJKLASSER,
+  DETALJTABELL,
   JOR,
   NAT,
+  detaljfilIFlis,
+  detaljIKlassen,
   detaljklasseAv,
   klasseAv
 } from '../src/data/solv/klasser.ts';
@@ -127,10 +130,37 @@ test('detaljklassene: de rene fargene, og en blanding gir klassen det er mest av
   const F = DETALJFARGE,
     blanding = (a: number, b: number, t: number) =>
       F[a].map((v, k) => Math.round(t * v + (1 - t) * F[b][k])) as [number, number, number];
-  assert.equal(DETALJKLASSER.length, 19);
+  assert.equal(DETALJKLASSER.filter(k => !k.rest).length, 19);
+  assert.equal(F.length, 19);
   F.forEach((f, i) => assert.equal(detaljklasseAv(f[0], f[1], f[2]), i));
   const skog = DETALJKLASSER.findIndex(k => k.id === 'skog-bar-vanlig'),
     myr = DETALJKLASSER.findIndex(k => k.id === 'skog-bar-myr');
   assert.equal(detaljklasseAv(...blanding(skog, myr, 0.7)), skog);
   assert.equal(detaljklasseAv(...blanding(skog, myr, 0.3)), myr);
+});
+
+test('detaljklassene: lest innenfor dagens klasse, med restklasse, og lagret med eksakte farger', () => {
+  const d = (id: string) => DETALJKLASSER.findIndex(k => k.id === id) + 1,
+    /* dagens klasse: 0 ukjent, 1 bebygd, 2 jordbruk, 3 natur, 4 hav, 5 innsjø, 6 elv */
+    K = Uint8Array.from([0, BEB + 1, JOR + 1, JOR + 1, NAT + 1, NAT + 1, NAT + 1, 4, 5]),
+    D = Uint8Array.from([d('hei'), d('hei'), d('dyrket'), d('hei'), d('hei'), d('dyrket'), 0, d('inn'), d('hav')]);
+  assert.deepEqual(Array.from(detaljIKlassen(D, K)), [
+    0,
+    d('beb'),
+    d('dyrket'),
+    d('jor-rest'),
+    d('hei'),
+    d('nat-rest'),
+    d('nat-rest'),
+    d('hav'),
+    d('inn')
+  ]);
+  /* hver plass i fargetabellen leses tilbake som seg selv */
+  const P = new Uint8Array(4 * DETALJTABELL.length);
+  DETALJTABELL.forEach(([r, g, b], i) => P.set([r, g, b, i ? 255 : 0], 4 * i));
+  assert.deepEqual(
+    Array.from(detaljfilIFlis(P)),
+    DETALJTABELL.map((_, i) => i)
+  );
+  assert.equal(new Set(DETALJTABELL.map(f => f.join())).size, DETALJTABELL.length);
 });

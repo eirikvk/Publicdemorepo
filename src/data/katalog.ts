@@ -622,9 +622,9 @@ export const katalog = {
       lag: 'solv',
       navn: 'detaljklasser',
       tittel: 'Detaljklasser per blokk',
-      om: 'detaljklassen per rute i en blokk på nivå 10 (10,6 meter), kalt med blokken [10, x, y], laget av ett kartbilde fra NIBIO (bronse.detaljflis). For noen kommuner ligger svaret lagret sammen med siden (bronse.detaljfil). Nøkkel: blokken som «z/x/y».',
+      om: 'detaljklassen per rute i en blokk på nivå 10 (10,6 meter), kalt med blokken [10, x, y], laget av ett kartbilde fra NIBIO (bronse.detaljflis) lest innenfor dagens klasser (solv.klasser). For noen kommuner ligger svaret lagret sammen med siden (bronse.detaljfil). Nøkkel: blokken som «z/x/y».',
       forklaring:
-        'Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er mest av, når fargen er en blanding. Foreløpig lagret bare for Trondheim.',
+        'Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er mest av, når fargen er en blanding. Så leses den innenfor dagens klasse i ruta (solv.klasser): hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur, uspesifisert», så detaljklassene summerer til dagens klasser. De lagrede filene leses med eksakte farger.',
       husk: 64,
       nokkel: flisnavn,
       etl: solvGrunnkart.detaljklasser,

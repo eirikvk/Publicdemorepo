@@ -9,8 +9,10 @@
        node verktoy/klasser.ts --fylke 50 --hentet "11. oktober 2026"
        node verktoy/klasser.ts 5001 --detalj --hentet "13. oktober 2026"
 
-   Med --detalj lages detaljklassene (19 klasser, solv.detaljklasser) i stedet, bare på nivå 10, i public/detaljklasser/ og
-   public/detaljklasser.json. En blokk koster da ett kall mot NIBIO.
+   Med --detalj lages detaljklassene (19 klasser fra NIBIO og to restklasser, solv.detaljklasser) i stedet, bare på nivå 10, i
+   public/detaljklasser/ og public/detaljklasser.json. Detaljklassen leses innenfor dagens klasse i ruta, og dagens klasser tas da
+   fra de lagrede når kommunen har dem, så de to stemmer overens. En blokk koster ett kall mot NIBIO, og ett til for dagens klasser
+   når de ikke er lagret.
 
    Blokkene legges i public/klasser/z/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
    --paa-nytt. En blokk koster ett kall mot NIBIO. Grunnkartet er lisensiert «Norge digitalt begrenset». Tallene regnes bare på nivå
@@ -72,8 +74,8 @@ const regfil = path.join(valg.ut!, NAVN + '.json'),
 const blokkfil = (z: number, [x, y]: number[]) => path.join(valg.ut!, NAVN, String(z), String(x), `${y}.png`);
 const DEKNING = TABELL.map((_, i) => (i ? 255 : 0)); /* plass 0 er gjennomsiktig */
 
-/* Koden i src serveres av Vite, og nettleseren henter den gjennom en side på http://klasser.test/. Registeret over lagrede
-   klasser finnes ikke der, så katalogen lager svarene selv. */
+/* Koden i src serveres av Vite, og nettleseren henter den gjennom en side på http://klasser.test/. Registeret for det som lages,
+   finnes ikke der, så katalogen lager svarene selv. Med --detalj finnes registeret over dagens klasser, så de lagrede brukes. */
 const vite = await createServer({ root: ROT, logLevel: 'error', server: { port: 5198 } });
 await vite.listen();
 const adresse = vite.resolvedUrls!.local[0].replace(/\/$/, '');
@@ -83,7 +85,7 @@ await side.route('http://klasser.test/**', async r => {
   const u = new URL(r.request().url());
   if (u.pathname === '/')
     return r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Lagrede klasser</title>' });
-  if (u.pathname === '/klasser.json' || u.pathname === '/detaljklasser.json')
+  if (u.pathname === '/' + NAVN + '.json' || u.pathname === '/detaljklasser.json')
     return r.fulfill({ status: 404, body: '' });
   const svar = await fetch(adresse + u.pathname + u.search);
   return r.fulfill({

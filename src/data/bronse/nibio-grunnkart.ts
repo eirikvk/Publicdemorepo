@@ -51,10 +51,12 @@ const DETALJSLD = (() => {
       beite: dekke('jordbruk')
     };
   return stil(
-    DETALJKLASSER.map((k, i) => {
-      const o1 = er('okosystemtypeniva1', k.okosystem);
-      return regel(k.treslag ? og(o1, TRESLAG[k.treslag], UNDERLAG[k.underlag!]) : o1, DETALJFARGE[i]);
-    }).join('')
+    DETALJKLASSER.filter(k => !k.rest)
+      .map((k, i) => {
+        const o1 = er('okosystemtypeniva1', k.okosystem);
+        return regel(k.treslag ? og(o1, TRESLAG[k.treslag], UNDERLAG[k.underlag!]) : o1, DETALJFARGE[i]);
+      })
+      .join('')
   );
 })();
 

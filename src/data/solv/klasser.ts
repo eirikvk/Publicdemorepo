@@ -147,7 +147,7 @@ export function klasserIFlis(K: Piksler): Uint8Array {
 export type Treslag = 'bar' | 'lauv' | 'bland';
 export type Underlag = 'vanlig' | 'myr' | 'beite';
 /* En detaljklasse: id, navn, klassen den hører til blant dagens seks (gruppe), og økosystemtypen i grunnkartet
-   (okosystemtypeniva1). Skogen har også treslag og underlag. */
+   (okosystemtypeniva1). Skogen har også treslag og underlag. rest er restklassene, som ikke finnes hos NIBIO (se under). */
 export interface Detaljklasse {
   id: string;
   navn: string;
@@ -155,6 +155,7 @@ export interface Detaljklasse {
   okosystem: string;
   treslag?: Treslag;
   underlag?: Underlag;
+  rest?: boolean;
 }
 const TRESLAG: [Treslag, string][] = [
     ['bar', 'Barskog'],
@@ -166,7 +167,14 @@ const TRESLAG: [Treslag, string][] = [
     ['myr', ' på myr'],
     ['beite', ' på innmarksbeite']
   ];
-/* De 19 klassene, i rekkefølgen fargene er valgt for */
+/* Restklassene: jordbruk eller natur i dagens klasser, der kartbildet med detaljklasser viser en klasse fra en annen av dagens
+   klasser, som i kanten mellom to flater, eller ingenting. Slik ligger detaljklassen alltid innenfor dagens klasse i ruta, og
+   detaljklassene summerer til dagens klasser. Koden er ikke en økosystemtype i grunnkartet. */
+export const RESTOKOSYSTEMER: { kode: string; navn: string; gruppe: KlasseId }[] = [
+  { kode: 'jordbrukUspesifisert', navn: 'Jordbruk, uspesifisert', gruppe: 'jor' },
+  { kode: 'naturUspesifisert', navn: 'Natur, uspesifisert', gruppe: 'nat' }
+];
+/* De 19 klassene fra NIBIO, i rekkefølgen fargene er valgt for, og til slutt de to restklassene */
 export const DETALJKLASSER: Detaljklasse[] = [
   { id: 'beb', navn: 'Bebygd og opparbeidet', gruppe: 'beb', okosystem: 'bebygdOpparbeidetAreal' },
   { id: 'dyrket', navn: 'Dyrket mark', gruppe: 'jor', okosystem: 'dyrketmark' },
@@ -187,7 +195,14 @@ export const DETALJKLASSER: Detaljklasse[] = [
   { id: 'kyst', navn: 'Kyststrender, svaberg og dyner', gruppe: 'nat', okosystem: 'kyststrenderSvabergDyner' },
   { id: 'elv', navn: 'Elver og bekker', gruppe: 'elv', okosystem: 'elverBekkerKanaler' },
   { id: 'inn', navn: 'Innsjøer', gruppe: 'inn', okosystem: 'innsjoerVannmagasiner' },
-  { id: 'hav', navn: 'Hav', gruppe: 'hav', okosystem: 'hav' }
+  { id: 'hav', navn: 'Hav', gruppe: 'hav', okosystem: 'hav' },
+  ...RESTOKOSYSTEMER.map(o => ({
+    id: o.gruppe + '-rest',
+    navn: o.navn,
+    gruppe: o.gruppe,
+    okosystem: o.kode,
+    rest: true
+  }))
 ];
 /* Navnene på treslagene og underlagene som egne grupper, i rekkefølgen sidene viser dem */
 export const TRESLAGNAVN: [Treslag, string][] = [
@@ -230,8 +245,9 @@ export const DETALJFARGE: number[][] = [
   [64, 0, 64],
   [204, 153, 153]
 ];
-/* Fargetabellen for de lagrede detaljklassene: plass 0 er ukjent og gjennomsiktig, plass 1–19 er klassene */
-export const DETALJTABELL = [[0, 0, 0], ...DETALJFARGE];
+/* Fargetabellen for de lagrede detaljklassene: plass 0 er ukjent og gjennomsiktig, plass 1–19 er klassene fra NIBIO, og plass 20
+   og 21 restklassene, i to gråtoner ingen av de andre har. De lagrede filene leses med eksakte farger (detaljfilIFlis). */
+export const DETALJTABELL = [[0, 0, 0], ...DETALJFARGE, [128, 128, 128], [160, 160, 160]];
 
 /* Klassen det er mest av i en piksel med fargen (r, g, b): plass i DETALJKLASSER. Fargen leses som en blanding av de to klassene den
    ligger nærmest linjen mellom, og klassen er den det er minst halvparten av. */
@@ -273,6 +289,39 @@ export function detaljklasserIFlis(K: Piksler): Uint8Array {
     let k = perFarge.get(f);
     if (k === undefined) perFarge.set(f, (k = detaljklasseAv(K[i], K[i + 1], K[i + 2]) + 1));
     kl[q] = k;
+  }
+  return kl;
+}
+
+/* Detaljklassen D per rute lest innenfor dagens klasse K i den samme ruta (begge med 0 for ukjent, ellers plassen pluss én). Hører
+   detaljklassen til en annen av dagens klasser, eller er den ukjent, blir den restklassen for dagens klasse, eller den eneste
+   detaljklassen i den (bebygd og vannet). Er dagens klasse ukjent, er detaljklassen det også. Slik summerer detaljklassene til
+   dagens klasser rute for rute. */
+const RESTFOR = ALLE.map(([id]) => {
+  const her = DETALJKLASSER.map((k, i) => (k.gruppe === id ? i + 1 : 0)).filter(Boolean),
+    rest = DETALJKLASSER.findIndex(k => k.rest && k.gruppe === id);
+  return rest >= 0 ? rest + 1 : her[0];
+});
+export function detaljIKlassen(D: Uint8Array, K: Uint8Array): Uint8Array {
+  const kl = new Uint8Array(K.length),
+    gruppe = DETALJKLASSER.map(k => ALLE.findIndex(([id]) => id === k.gruppe) + 1);
+  for (let q = 0; q < K.length; q++) {
+    const k = K[q];
+    if (!k) continue;
+    const d = D[q];
+    kl[q] = d && gruppe[d - 1] === k ? d : RESTFOR[k - 1];
+  }
+  return kl;
+}
+/* Detaljklassen per piksel i en lagret fil (bronse.detaljfil): fargene er eksakt fargene i DETALJTABELL, så plassen slås opp
+   direkte. En farge som ikke står i tabellen, leses som et kartbilde fra NIBIO (detaljklasseAv). Plass 0 er gjennomsiktig. */
+export function detaljfilIFlis(K: Piksler): Uint8Array {
+  const kl = new Uint8Array(K.length / 4),
+    DETALJPLASS = new Map(DETALJTABELL.map(([r, g, b], i) => [(r << 16) | (g << 8) | b, i]));
+  for (let i = 0, q = 0; i < K.length; i += 4, q++) {
+    if (K[i + 3] < SYNLIG) continue;
+    const p = DETALJPLASS.get((K[i] << 16) | (K[i + 1] << 8) | K[i + 2]);
+    kl[q] = p ? p : detaljklasseAv(K[i], K[i + 1], K[i + 2]) + 1;
   }
   return kl;
 }

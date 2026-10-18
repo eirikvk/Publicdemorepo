@@ -40,7 +40,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'solv.arealdetaljerAlle': ['bronse.arealAlle'],
   'solv.kommuneareal': ['bronse.kommuneareal'],
   'solv.klasser': ['bronse.grunnkartflis', 'bronse.klassefil'],
-  'solv.detaljklasser': ['bronse.detaljfil', 'bronse.detaljflis'],
+  'solv.detaljklasser': ['bronse.detaljfil', 'bronse.detaljflis', 'solv.klasser'],
   'solv.detaljblokker': ['solv.blokker'],
   'solv.blokker': ['solv.kommunebiter'],
   'solv.klassekart': ['solv.blokker', 'solv.grense', 'solv.klasser'],

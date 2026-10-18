@@ -4,7 +4,7 @@
    samme begge steder: det er de samme funksjonene. Filen kjenner ikke katalogen: alt den trenger, kommer med oppgaven. */
 import { andelBuffere, dekningI, HEL, type Andel, type Nett, type Ringer } from '../generelt/dekning.ts';
 import { BIT } from './felles.ts';
-import { detaljklasserIFlis, klasserIFlis } from './klasser.ts';
+import { detaljfilIFlis, detaljklasserIFlis, klasserIFlis } from './klasser.ts';
 import { pakkUt, type Flate } from './raster.ts';
 import { ellerTom, planIFlis, planlagPerRute, tolkGraa, tolkInon, UTENFOR } from './tolking.ts';
 
@@ -26,6 +26,7 @@ export type Oppgave =
   | { type: 'planflis'; P: ArrayBuffer } /* kommuneplanen i en flis: 1 der minst halve ruta er planlagt utbygging */
   | { type: 'klasser'; P: ArrayBuffer } /* grunnkartet i en blokk: dagens klasse per rute */
   | { type: 'detaljklasser'; P: ArrayBuffer } /* grunnkartet med 19 klasser i en blokk: detaljklassen per rute */
+  | { type: 'detaljfil'; P: ArrayBuffer } /* de lagrede detaljklassene i en blokk, med eksakte farger */
   | {
       type: 'andeler';
       lagene: Ringer[];
@@ -58,6 +59,8 @@ export async function utfor(o: Oppgave, flate: (w: number, h: number) => Flate):
       return ut(klasserIFlis(await pakkUt(o.P, 512, 512, flate)));
     case 'detaljklasser':
       return ut(detaljklasserIFlis(await pakkUt(o.P, 512, 512, flate)));
+    case 'detaljfil':
+      return ut(detaljfilIFlis(await pakkUt(o.P, 512, 512, flate)));
     case 'andeler': {
       const A = o.nett.map(R => dekningI(o.lagene, R, o.maske, o.kategorier));
       return { svar: A, overfor: A.flatMap(a => (a ? a.flatMap(andelBuffere) : [])) };

@@ -419,7 +419,9 @@ export const OKOSYSTEMFARGE: Record<string, string> = {
   kyststrenderSvabergDyner: 'oko-kyst',
   dyrketmark: 'oko-dyrket',
   bebygdOpparbeidetAreal: 'oko-bebygd',
-  hav: 'oko-hav'
+  hav: 'oko-hav',
+  jordbrukUspesifisert: 'oko-annen',
+  naturUspesifisert: 'oko-annen'
 };
 /* Fargen for hver gruppe av verneformer (VERNEFORMGRUPPER i solv/temaer.ts), som i figuren for verneformene */
 export const VERNEFORMFARGE: Record<string, string> = {

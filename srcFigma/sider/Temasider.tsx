@@ -455,7 +455,9 @@ const OKOFARGE: Record<string, string> = {
   'Kyststrender, svaberg og dyner': 'oko-kyst',
   'Dyrket mark': 'oko-dyrket',
   'Bebygd og opparbeidet areal': 'oko-bebygd',
-  Hav: 'oko-hav'
+  Hav: 'oko-hav',
+  'Natur, uspesifisert': 'oko-annen',
+  'Jordbruk, uspesifisert': 'oko-annen'
 };
 
 function Vern({ tema }: { tema: Tema }) {

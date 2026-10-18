@@ -74,8 +74,9 @@ export interface PlanlagtDetaljer {
 /* Tabellen gull.planlagtPerDetaljklasse: den planlagte utbyggingen i kommunen nr (gull.utbygging, uten smale striper) fordelt på
    detaljklassene i grunnkartet (solv.detaljklasser). Hver rute med planlagt utbygging på natur får den naturklassen det er mest av
    i ruta, og hver rute på jordbruk den jordbruksklassen det er mest av. Detaljklassene er på 10,6 meter, som rutene i utbyggingen, så
-   hver rute er én av dem. Slik blir summen den samme som natur og jordbruk satt av i gull.plansum. Finnes ingen klasse av riktig slag i ruta,
-   telles den som ukjent. null uten utbygging, eller når kommunen ikke har lagrede detaljklasser. */
+   hver rute er én av dem. Slik blir summen den samme som natur og jordbruk satt av i gull.plansum. Detaljklassene er lest innenfor
+   dagens klasser (solv.detaljklasser), så ruta har alltid en klasse av riktig slag, om ikke annet en restklasse. Ukjent er det bare
+   når ruta ikke har noen detaljklasse. null uten utbygging, eller når kommunen ikke har noen blokker. */
 export async function planlagtPerDetaljklasse(nr: string): Promise<PlanlagtDetaljer | null> {
   const [L, R] = await Promise.all([katalog.solv.detaljblokker(nr), katalog.gull.utbygging(nr)]);
   if (!R || !L.length) return null;

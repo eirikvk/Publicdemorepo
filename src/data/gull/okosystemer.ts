@@ -13,6 +13,7 @@ import {
   erSkog,
   erVatmark,
   HOVEDOKOSYSTEMER,
+  RESTOKOSYSTEMER,
   type Detaljklasse,
   type KlasseId,
   type Treslag,
@@ -23,7 +24,10 @@ import { andel } from './felles.ts';
 /* Arealet av detaljklassene som passer, fra km² per detaljklasse */
 export const arealAv = (km2: number[], passer: (k: Detaljklasse) => boolean) =>
   summen(DETALJKLASSER.map((k, i) => (passer(k) ? km2[i] : 0)));
-/* Arealet per hovedøkosystem (økosystemtypene på nivå 1), med skogen samlet, i rekkefølgen i HOVEDOKOSYSTEMER, uten de som er 0 */
+/* Hovedøkosystemene og restklassene (jordbruk og natur uspesifisert), i den rekkefølgen svarene viser dem */
+const OKOSYSTEMER = [...HOVEDOKOSYSTEMER, ...RESTOKOSYSTEMER];
+/* Arealet per hovedøkosystem (økosystemtypene på nivå 1), med skogen samlet, i rekkefølgen i HOVEDOKOSYSTEMER og med restklassene
+   til slutt, uten de som er 0 */
 export interface Okosystemrad {
   kode: string;
   navn: string;
@@ -33,7 +37,7 @@ export interface Okosystemrad {
 export function perOkosystem(km2: number[]): Okosystemrad[] {
   const m = new Map<string, number>();
   DETALJKLASSER.forEach((k, i) => m.set(k.okosystem, (m.get(k.okosystem) || 0) + km2[i]));
-  return HOVEDOKOSYSTEMER.map(h => ({ ...h, km2: m.get(h.kode) || 0 })).filter(r => r.km2 > 0);
+  return OKOSYSTEMER.map(h => ({ ...h, km2: m.get(h.kode) || 0 })).filter(r => r.km2 > 0);
 }
 
 /* Skogen i kommunen: arealet, andelen av landarealet i grunnkartet, og arealet per treslag og per underlag */
@@ -122,7 +126,7 @@ export async function planPerOkosystem(nr: string): Promise<PlanPerOkosystem | n
   const plan = perOkosystem(P.km2),
     iDag = perOkosystem(D.km2),
     km2 = (R: Okosystemrad[], kode: string) => (R.find(x => x.kode === kode) || { km2: 0 }).km2,
-    rader = HOVEDOKOSYSTEMER.filter(h => h.gruppe === 'jor' || h.gruppe === 'nat').map(h => ({
+    rader = OKOSYSTEMER.filter(h => h.gruppe === 'jor' || h.gruppe === 'nat').map(h => ({
       navn: h.navn,
       km2: km2(plan, h.kode),
       andel: andel(km2(plan, h.kode), km2(iDag, h.kode))
