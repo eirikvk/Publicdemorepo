@@ -51,16 +51,20 @@ export interface Kartlag {
   av?: boolean;
   skjul?: boolean;
 }
-/* Fargene med prikker, som i skissene: tresatt myr og tresatt innmarksbeite, og villreinområdene, som har lys bunn, prikker og kant
-   som i kartet */
+/* Fargene med prikker, som i skissene: tresatt myr og tresatt innmarksbeite, og villreinområdene og dekningskartet, som har lys
+   bunn og prikker i fargen fra kartet, og villrein også kanten */
 const PRIKKET = new Set(['myr-tresatt', 'beite-tresatt']);
+const MED_BUNN: Record<string, { prikk: string; kant?: string }> = {
+  rein: { prikk: 'rein-prikk', kant: 'rein' },
+  dekning: { prikk: 'dekning' }
+};
 const fargeStil = (f: string): CSSProperties =>
-  f === 'rein'
+  MED_BUNN[f]
     ? {
-        backgroundColor: 'var(--rein-flate)',
-        backgroundImage: 'radial-gradient(var(--rein-prikk) 1.1px, transparent 1.6px)',
+        backgroundColor: `var(--${f}-flate)`,
+        backgroundImage: `radial-gradient(var(--${MED_BUNN[f].prikk}) 1.1px, transparent 1.6px)`,
         backgroundSize: '5px 5px',
-        boxShadow: 'inset 0 0 0 1.5px var(--rein)'
+        boxShadow: MED_BUNN[f].kant ? `inset 0 0 0 1.5px var(--${MED_BUNN[f].kant})` : undefined
       }
     : PRIKKET.has(f)
       ? {

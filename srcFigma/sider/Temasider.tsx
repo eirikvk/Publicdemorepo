@@ -719,7 +719,7 @@ function Verdi({ tema }: { tema: Tema }) {
           id: 'dekning',
           navn: 'Dekningskart for kartlegging',
           kilde: 'Naturtyper på land (NiN)',
-          farger: [['Ikke kartlagt (slør)', 'slor-merke']]
+          farger: [['Kartlagt', 'dekning']]
         }
       ]}
       lagEtter={
@@ -739,8 +739,8 @@ function Verdi({ tema }: { tema: Tema }) {
           </Trekkspill>
           <Trekkspill tittel="Hva er dekningskart?">
             <p>
-              Dekningskartet viser hvor det er kartlagt naturtyper etter Miljødirektoratets instruks. Det som ikke er
-              kartlagt, har et lyst slør i kartet.
+              Dekningskartet viser hvor det er kartlagt naturtyper etter Miljødirektoratets instruks. Det som er
+              kartlagt, har lilla prikker i kartet.
             </p>
           </Trekkspill>
         </div>

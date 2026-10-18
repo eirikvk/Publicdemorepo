@@ -57,8 +57,6 @@
   --graa-rein: #929292;
   /* Grønne arealer i bebyggelse: grått areal med minst halvparten vegetasjon */
   --gronne-arealer: #1e7b34;
-  /* Sløret over det som ikke er kartlagt, i lagvelgeren */
-  --slor-merke: #e4e4de;
   --linje: var(--md-color-border-secondary);
   --dempet: var(--md-color-grey-6);
   --kort: var(--md-color-primary-10);

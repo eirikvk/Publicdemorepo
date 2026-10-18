@@ -344,7 +344,9 @@ med ekte tall, uten å endre hovedsiden.
   arealer står i hele dekar. Fargene for verdsatte naturtyper, inngrepsfri natur, villrein, tresatt myr og grått areal på
   villreinsiden er skissenes (`srcFigma/farger.ts`), med prikker der skissene har det, også i kartet. Svarene under «Ofte stilte
   spørsmål» er skrevet med KI fra offentlige kilder og merket «KI-generert plassholdertekst», fordi skissene ikke har svar.
-  Siden om verneområder har to kart, som skissene: verneformene øverst og naturen i verneområdene lenger ned.
+  Siden om verneområder har to kart, som skissene: verneformene øverst og naturen i verneområdene lenger ned. Dekningskartet
+  for verdsatte naturtyper viser det som er kartlagt med lilla prikker, som skissene, der hovedsiden har slør over det som ikke er
+  kartlagt.
   Bynaturen er ikke tegnet, så den er som før.
 - Det skissene viser som datamotoren ikke har ennå, står tomt: felt som krever en dataplattform har et tomt merke (–), og figurer
   og felt som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget

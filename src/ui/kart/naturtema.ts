@@ -16,7 +16,7 @@ import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA, type Naturtema, type TemaOmrade } from '../../data/solv/temaer.ts';
 import { verdi } from '../../data/motor/valgt.ts';
 import { abonner, app, endret, tidSlutt } from '../../data/motor/tilstand.ts';
-import { PRIKKET, farge, rgb } from '../farger.ts';
+import { DEKNING, PRIKKET, farge, rgb } from '../farger.ts';
 import { ui } from '../tilstand.ts';
 import { KILDER, TOM, friskOpp, geomSti, nyttSiden, plannett, tegnetKilde, type Flislag } from './felles.ts';
 import { rolig, tilKartet, view } from './kart.ts';
@@ -100,11 +100,34 @@ function tegnSlorflis(tile: ImageTile) {
   tile.setImage(c);
   tidSlutt('slør, fliser', t0);
 }
+/* Dekningskartet som prikker over det som er kartlagt, i fargen «dekning», i stedet for slør over det som ikke er (DEKNING i
+   farger.ts). Hovedsiden har sløret; tvillingen fra Figma har prikkene, som skissene. */
+function tegnDekningsprikker(tile: ImageTile) {
+  const u = plannett.getTileCoordExtent(tile.getTileCoord()),
+    fl = dekKilde.getFeaturesInExtent(u);
+  if (!fl.length) {
+    tile.setState(TOM);
+    return;
+  }
+  const s = 512 / (u[2] - u[0]),
+    maske = flislerret(),
+    mg = maske.getContext('2d')!;
+  for (const f of fl) {
+    geomSti(mg, f.getGeometry()!, u, s);
+    mg.fill('evenodd');
+  }
+  const c = flislerret(),
+    g = c.getContext('2d')!;
+  prikker(g, farge('dekning'));
+  g.globalCompositeOperation = 'destination-in'; /* prikkene bare innenfor det kartlagte, alle flatene slått sammen */
+  g.drawImage(maske, 0, 0);
+  tile.setImage(c);
+}
 export const dekLag = new ol.layer.Tile({
   className: 'plan',
   properties: { tittel: 'Slør over det som ikke er kartlagt' },
   visible: false,
-  source: tegnetKilde(tegnSlorflis, [KILDER.mdir])
+  source: tegnetKilde(tile => (DEKNING.prikker ? tegnDekningsprikker : tegnSlorflis)(tile as ImageTile), [KILDER.mdir])
 });
 const kartlagteFlater = new WeakMap<Kartlagt, Feature<Polygon>[]>();
 function settDekning(E: Kartlagt | null | undefined) {
@@ -204,6 +227,17 @@ function tegnSkravurflis(t: Naturtema, tile: ImageTile) {
 const PRIKK = 16,
   PRIKKRADIUS = 2.6,
   PRIKKANT = 3;
+/* Prikker over hele flisen i lerretet g, i fargen f */
+function prikker(g: CanvasRenderingContext2D, f: string) {
+  g.fillStyle = f;
+  g.beginPath();
+  for (let y = 0, r = 0; y < 512 + PRIKK; y += PRIKK / 2, r++)
+    for (let x = r % 2 ? PRIKK / 2 : 0; x < 512 + PRIKK; x += PRIKK) {
+      g.moveTo(x + PRIKKRADIUS, y);
+      g.arc(x, y, PRIKKRADIUS, 0, 2 * Math.PI);
+    }
+  g.fill();
+}
 function tegnPrikkflis(t: Naturtema, tile: ImageTile) {
   const t0 = performance.now(),
     u = plannett.getTileCoordExtent(tile.getTileCoord()),
@@ -221,14 +255,7 @@ function tegnPrikkflis(t: Naturtema, tile: ImageTile) {
   }
   const c = flislerret(),
     g = c.getContext('2d')!;
-  g.fillStyle = farge(t.id + '-prikk') || farge(t.id);
-  g.beginPath();
-  for (let y = 0, r = 0; y < 512 + PRIKK; y += PRIKK / 2, r++)
-    for (let x = r % 2 ? PRIKK / 2 : 0; x < 512 + PRIKK; x += PRIKK) {
-      g.moveTo(x + PRIKKRADIUS, y);
-      g.arc(x, y, PRIKKRADIUS, 0, 2 * Math.PI);
-    }
-  g.fill();
+  prikker(g, farge(t.id + '-prikk') || farge(t.id));
   g.globalCompositeOperation = 'destination-in'; /* prikkene bare innenfor områdene */
   g.drawImage(maske, 0, 0);
   g.globalCompositeOperation = 'source-over';

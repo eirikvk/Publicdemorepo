@@ -41,6 +41,9 @@ export const FARGER: Record<string, string> = {
 /* Temaene som tegnes med prikker og kant i kartet i stedet for skravur eller flate (naturtema.ts), med prikkene i fargen
    «<tema>-prikk». Hovedsiden har ingen; tvillingen fra Figma tegner villreinområdene slik, som skissene. */
 export const PRIKKET: Record<string, boolean> = {};
+/* Dekningskartet for verdsatt natur: slør over det som ikke er kartlagt (hovedsiden), eller prikker i fargen «dekning» over det som
+   er kartlagt (tvillingen fra Figma, som skissene) */
+export const DEKNING = { prikker: false };
 export const farge = (id: string) => FARGER[id];
 const rgbMinne: Record<string, number[]> = {};
 export const rgb = (id: string) =>

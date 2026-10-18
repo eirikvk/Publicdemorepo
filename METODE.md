@@ -1199,6 +1199,12 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Dekningskartet som prikker i tvillingen, 19. oktober 2026.** Dekningskartet for verdsatte naturtyper viser nå det som er
+kartlagt med lilla prikker i tvillingen, som skissene, i stedet for et slør over det som ikke er kartlagt. Dataene er de samme:
+laget `dekningskart_naturtyper_nin` i Miljødirektoratets tjeneste for naturtyper etter NiN (`bronse.kartlagt`). Hovedsiden har
+fortsatt sløret. I Trondheim er det kartlagte 42 flater med til sammen ca. 149,5 km². Prikkene fylles innenfor alle flatene slått
+sammen. Regresjonstesten for Trondheim ga ingen avvik, og røyktesten for tvillingen ingen feil. Målt i Chromium, ikke på iPhone.
+
 **To kart på siden om verneområder, 19. oktober 2026.** Tvillingen har nå to kart på siden om verneområder, som skissene:
 verneformene øverst, og naturen i verneområdene i et eget kart under figurene (`srcFigma/kart2.ts`). Før var naturen et lag i det
 øverste kartet, slått av fra start. Det andre kartet deler kildene til bakgrunnskartet og kommunegrensen med hovedkartet, og
