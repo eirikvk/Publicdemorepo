@@ -1,4 +1,4 @@
-/* Tester for src/data/generelt: geometri, tall, farger, PNG og glisne rutenett. Kjør: npm test */
+/* Tester for src/data/generelt: geometri, tall, farger, PNG, glisne rutenett og egne kopier. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -17,9 +17,10 @@ import {
   punkterI
 } from '../src/data/generelt/geometri.ts';
 import { summen } from '../src/data/generelt/tall.ts';
+import { egenKopi } from '../src/data/generelt/kopi.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
 import { palettPng, pngBit, pngBiter } from '../src/data/generelt/png.ts';
-import { finn, glissent, leggInnDelt, sett, verdi } from '../src/data/generelt/glissen.ts';
+import { finn, glissent, leggInnDelt, sett, verdi, verdier } from '../src/data/generelt/glissen.ts';
 import { deflateSync } from 'node:zlib';
 
 const kvadrat = (x: number, y: number, s: number) => [
@@ -69,6 +70,22 @@ test('summen og nærmeste farge', () => {
   ); /* likt: den første vinner */
 });
 
+test('egen kopi: de samme tallene, men egne objekter og tallrekker', () => {
+  const svar = {
+      natur: { km2: 0.714, andel: 5.0, medStriper: null },
+      klasser: new Float64Array([1.5, 2.5]),
+      rader: [{ km2: 3.25 }]
+    },
+    k = egenKopi(svar);
+  assert.deepEqual(k, svar);
+  assert.notEqual(k.natur, svar.natur);
+  assert.notEqual(k.klasser, svar.klasser);
+  svar.natur.km2 = 14.265;
+  svar.klasser[0] = 9;
+  assert.equal(k.natur.km2, 0.714);
+  assert.equal(k.klasser[0], 1.5);
+});
+
 test('PNG: biter med kontrollsum, og bilde med fargetabell', () => {
   assert.deepEqual([...pngBit('IEND', new Uint8Array(0)).subarray(8)], [0xae, 0x42, 0x60, 0x82]);
   const png = palettPng(
@@ -104,6 +121,8 @@ test('glissent rutenett: som et vanlig rutenett, og en delt blokk kopieres før 
     finn(L, v => v === 1 || v === 2),
     [2, 5]
   );
+  /* mange ruter på en gang: det samme som verdi for hver, også over blokkgrensen, og tom utenfor */
+  assert.deepEqual(Array.from(verdier(L, [0, 1, 2, 3, 4, 5, 6, 7, 8, -1])), [0, 0, 2, 3, 0, 1, 3, 3, 3, 3]);
 });
 
 test('punkt i flate: inne, ute og i hullet', () => {

@@ -45,13 +45,40 @@ export function nummer(L: Glissen, X: number, Y: number) {
     y = Y - L.cy0;
   return x < 0 || y < 0 || x >= L.w || y >= L.h ? -1 : y * L.w + x;
 }
-/* Verdien i ruta i, som i et vanlig rutenett: undefined når i er utenfor (mindre enn 0, eller w x h og mer) */
+/* Verdien i ruta i, som i et vanlig rutenett: undefined når i er utenfor (mindre enn 0, eller w x h og mer). Den kalles svært ofte, så
+   blokken og plassen i den regnes med heltall og skift (BLOKK er 512 = 2⁹, og plasseringen i flisnettet er aldri negativ). */
 export function verdi(L: Glissen, i: number): number | undefined {
   if (i < 0 || i >= L.w * L.h) return undefined;
-  const X = L.cx0 + (i % L.w),
-    Y = L.cy0 + Math.floor(i / L.w),
-    b = L.blokker.get(blokkNokkel(Math.floor(X / BLOKK), Math.floor(Y / BLOKK)));
-  return b ? b[(Y % BLOKK) * BLOKK + (X % BLOKK)] : L.tom;
+  const y = (i / L.w) | 0,
+    X = L.cx0 + i - y * L.w,
+    Y = L.cy0 + y,
+    b = L.blokker.get((X >> 9) * 65536 + (Y >> 9));
+  return b ? b[((Y & 511) << 9) + (X & 511)] : L.tom;
+}
+/* Verdiene i rutene celler (i stigende rekkefølge, som utbyggingens rader), som en tallrekke i samme rekkefølge. Blokken huskes
+   mellom rutene som ligger i den samme, så dette går mye fortere enn verdi for hver rute. Ruter utenfor får verdien tom. */
+export function verdier(L: Glissen, celler: ArrayLike<number>): Uint8Array {
+  const ut = new Uint8Array(celler.length),
+    n = L.w * L.h;
+  let nokkel = -1,
+    b: Uint8Array | undefined;
+  for (let k = 0; k < celler.length; k++) {
+    const i = celler[k];
+    if (i < 0 || i >= n) {
+      ut[k] = L.tom;
+      continue;
+    }
+    const y = (i / L.w) | 0,
+      X = L.cx0 + i - y * L.w,
+      Y = L.cy0 + y,
+      kb = (X >> 9) * 65536 + (Y >> 9);
+    if (kb !== nokkel) {
+      nokkel = kb;
+      b = L.blokker.get(kb);
+    }
+    ut[k] = b ? b[((Y & 511) << 9) + (X & 511)] : L.tom;
+  }
+  return ut;
 }
 /* Setter verdien v i ruta i, som må være innenfor. Blokken lages, eller kopieres hvis den er delt. */
 export function sett(L: Glissen, i: number, v: number) {

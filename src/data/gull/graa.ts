@@ -2,14 +2,15 @@
    Grått areal krysses med utbyggingen for seg, ikke som en kolonne, fordi det også teller planlagt utbygging der det alt er bebygd,
    og grønt i bebygd område. Kryssingen regnes for et utvalg av utbyggingen (Utvalg i gull/utbygging.ts): den nye planen eller den
    gamle, i hele kommunen eller i ett eget område, med den samme funksjonen. Nøkkelen er utvalget, som 5001 eller 5001/gammel. */
-import { HEL, hverRute } from '../generelt/dekning.ts';
+import { HEL, andelVed } from '../generelt/dekning.ts';
 import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
+import { egenKopi } from '../generelt/kopi.ts';
 import { katalog } from '../katalog.ts';
 import { bitAv, flisnavn, ruteKm2, ruteX, ruteY, type Flis } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
 import { BITRES, tellIBitene } from '../solv/kommune.ts';
 import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Kommunebilde } from './felles.ts';
-import { lesUtvalg, utvalg, type Utbygging, type Utvalg } from './utbygging.ts';
+import { lesUtvalg, type Utbygging, type Utvalg } from './utbygging.ts';
 
 /* Grått areal for kommunen: når det er hentet, areal per trinn (plass 1–6) i km² */
 export type Graa = Kommunebilde<{ trinn: number[] }>;
@@ -38,11 +39,17 @@ export interface Graakryss {
    utbygging ingen). Midtpunktet i hver rute slås opp i bitene av grått areal.
    For hele kommunen telles også det som er bebygd i grunnkartet, og gront: ruter som er bebygd, men ikke grå, altså grønne arealer som
    parker og idrettsanlegg. R er utbyggingen, og bit biten av grått areal med navnet (z/x/y). */
-export function kryssGraa(U: Utvalg, bit: (navn: string) => Graatrinn | undefined): Graakryss {
+export function kryssGraa(
+  U: Pick<Utvalg, 'R' | 'plan' | 'omrade'>,
+  bit: (navn: string) => Graatrinn | undefined,
+  utenBebygd = false
+): Graakryss {
   const R = U.R,
     nE = R.egetType ? R.antallEgne : 0,
     ny = U.plan === 'ny',
     o = U.omrade,
+    /* bebygd og grønt i bebygd telles for hele kommunen, når den som kaller, ikke har dem fra før (utenBebygd) */
+    helKommune = o === null && !utenBebygd,
     tall: Graatall = { tot: 0, graa: 0, gron: 0, gront: 0 };
   let bebygd = 0,
     gront = 0;
@@ -51,20 +58,13 @@ export function kryssGraa(U: Utvalg, bit: (navn: string) => Graatrinn | undefine
   for (const [nokkel, KL] of R.kl.blokker) {
     const EG = nE ? R.eget!.blokker.get(nokkel) : undefined;
     if (o !== null && !EG) continue;
+    const PL = R.pl.blokker.get(nokkel),
+      ET = nE && ny ? R.egetType!.blokker.get(nokkel) : undefined;
+    if (!PL && !ET && !helKommune) continue;
     const [bx, by] = blokkAv(nokkel),
-      PL = R.pl.blokker.get(nokkel),
-      ET = nE && ny ? R.egetType!.blokker.get(nokkel) : undefined,
       D = bit(flisnavn(blokkensBit(R, bx, by))),
       A = R.andeler.get(nokkel),
-      f = R.faktorer.get(nokkel) ?? 1,
-      helKommune = o === null;
-    if (!PL && !ET && !helKommune) continue;
-    /* vekten per rute: kommunens andel i blokker langs grensen, og målestokken */
-    let vekt: Float32Array | null = null;
-    if (A) {
-      const V = (vekt = new Float32Array(KL.length));
-      hverRute(A, (q, a) => (V[q] = a / HEL));
-    }
+      f = R.faktorer.get(nokkel) ?? 1;
     for (let q = 0; q < KL.length; q++) {
       const c = KL[q];
       if (c < 1 || c > 3) continue;
@@ -73,9 +73,12 @@ export function kryssGraa(U: Utvalg, bit: (navn: string) => Graatrinn | undefine
         ty = ET ? ET[q] : 0,
         s = ty === 1 ? 1 : ty === 2 ? 0 : b;
       if (!s && !(helKommune && c === 1)) continue;
-      const i = nummer(R.kl, bx * BLOKK + (q % BLOKK), by * BLOKK + Math.floor(q / BLOKK)),
+      /* vekten: kommunens andel i ruta langs grensen, og målestokken */
+      const x = q & (BLOKK - 1),
+        y = q >> 9,
+        i = nummer(R.kl, bx * BLOKK + x, by * BLOKK + y),
         k = D ? graaVed(D, ruteX(R, i), ruteY(R, i)) : 0,
-        w = (vekt ? vekt[q] : 1) * f;
+        w = (A ? Math.fround(andelVed(A, x, y) / HEL) /* som før, da vekten lå i en Float32Array */ : 1) * f;
       if (helKommune && c === 1) {
         bebygd += w;
         if (!k) gront += w;
@@ -87,20 +90,23 @@ export function kryssGraa(U: Utvalg, bit: (navn: string) => Graatrinn | undefine
       if (k === 4 || k === 5) tall.gron += w;
     }
   }
-  return { nr: R.nr, tall, bebygd, gront, antallEgne: nE, ruteKm2: ruteKm2(R.z) };
+  /* kommuneplanen alene har ingen egne områder, og er den samme uansett dem (se cache.ts) */
+  return { nr: R.nr, tall, bebygd, gront, antallEgne: ny ? nE : 0, ruteKm2: ruteKm2(R.z) };
 }
 
 /* Biten blokken (bx, by) i utbyggingen R ligger i. En blokk i utbyggingen er en flis på nivå 10 og ligger i én bit. */
 const blokkensBit = (R: Utbygging, bx: number, by: number): Flis => bitAv([R.z, bx, by]);
-/* Bitene utbyggingen R har ruter i som krysses: bebygd i dag, eller med planlagt utbygging */
-function biterIUtbygging(R: Utbygging): Flis[] {
+/* Bitene utbyggingen R har ruter i som krysses: bebygd i dag, eller med planlagt utbygging. For et eget område (omrade) bare bitene
+   området har ruter i, og uten bebygd (utenBebygd) bare bitene med planlagt utbygging. */
+function biterIUtbygging(R: Utbygging, omrade: number | null, utenBebygd: boolean): Flis[] {
   const ut = new Map<string, Flis>();
   for (const [nokkel, KL] of R.kl.blokker) {
+    if (omrade !== null && !(R.eget && R.eget.blokker.has(nokkel))) continue;
     const [bx, by] = blokkAv(nokkel),
       PL = R.pl.blokker.get(nokkel),
       ET = R.egetType ? R.egetType.blokker.get(nokkel) : undefined;
     let noe = !!PL || !!ET;
-    for (let q = 0; q < KL.length && !noe; q++) noe = KL[q] === 1;
+    for (let q = 0; q < KL.length && !noe && !utenBebygd && omrade === null; q++) noe = KL[q] === 1;
     if (!noe) continue;
     const b = blokkensBit(R, bx, by);
     ut.set(flisnavn(b), b);
@@ -137,15 +143,22 @@ export async function graakryss(n: string): Promise<Graakryss | null> {
   const u = lesUtvalg(n),
     R = await katalog.gull.utbygging(u.nr);
   if (!R) return null;
-  const B = new Map<string, Graatrinn>();
-  for (const b of biterIUtbygging(R)) B.set(flisnavn(b), await katalog.solv.graabit(b));
-  return kryssGraa(utvalg(R, u.plan, u.omrade), n => B.get(n));
+  /* Bebygd og grønt i bebygd er de samme for begge planene, så den nye planen med egne områder tar dem fra kommuneplanen alene, som
+     huskes mellom endringene (se cache.ts), og teller bare den planlagte utbyggingen. */
+  const G =
+      u.plan === 'ny' && u.omrade === null && R.antallEgne ? await katalog.gull.graakryss(u.nr + '/gammel') : null,
+    B = new Map<string, Graatrinn>();
+  for (const b of biterIUtbygging(R, u.omrade, !!G)) B.set(flisnavn(b), await katalog.solv.graabit(b));
+  const K = kryssGraa({ R, plan: u.plan, omrade: u.omrade }, n => B.get(n), !!G);
+  return egenKopi(
+    G ? { ...K, bebygd: G.bebygd, gront: G.gront } : K
+  ); /* mot feilen i JavaScript-motoren (generelt/kopi.ts) */
 }
 /* Tabellen gull.graaIPlan: det temasiden viser fra kryssingen for utvalget n, se byggGraaIPlan. null uten utbygging. */
 export type GraaIPlan = ReturnType<typeof byggGraaIPlan>;
 export async function graaIPlan(n: string): Promise<GraaIPlan | null> {
   const K = await katalog.gull.graakryss(n);
-  return K ? byggGraaIPlan(K) : null;
+  return K ? egenKopi(byggGraaIPlan(K)) : null;
 }
 /* Tabellen gull.graa: det temasiden, oversikten og kartet viser for kommunen nr: ok med tallene, eller ingen når kartet over grå
    arealer ikke har noe i kommunen. Arealet samlet (sum) og per trinn (trinn) står med uansett. */

@@ -3,6 +3,7 @@
    land, står i solv/klasser.ts. Alle arealer er i km², andeler i prosent. Økosystemtypene er hovedøkosystemene (HOVEDOKOSYSTEMER),
    med de samme navnene og i samme rekkefølge som i de syntetiske tabellene fra SSB (gull/syntetisk.ts), så tabellene kan
    sammenlignes. Foreløpig bruker bare tvillingen fra Figma dem. */
+import { egenKopi } from '../generelt/kopi.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import {
@@ -133,5 +134,9 @@ export async function planPerOkosystem(n: string): Promise<PlanPerOkosystem | nu
       andel: andel(km2(plan, h.kode), km2(iDag, h.kode))
     }));
   if (P.ukjent > 0) rader.push({ navn: 'Uten type i grunnkartet', km2: P.ukjent, andel: null });
-  return { rader, vatmark: vatmarkAv(P.km2), ingenPlan: false };
+  return egenKopi({
+    rader,
+    vatmark: vatmarkAv(P.km2),
+    ingenPlan: false
+  }); /* mot feilen i JavaScript-motoren (generelt/kopi.ts) */
 }

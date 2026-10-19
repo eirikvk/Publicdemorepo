@@ -201,6 +201,22 @@ test('utbyggingen: planen alene og planen med egne områder telles hver av sitt 
   assert.equal(R.sum.rn, 50); /* med det egne området: halve feltet */
   assert.equal(finn(R.basis!.ryddet, v => v === 1).length, 100); /* tallet er det samme som rutenettet */
   assert.equal(finn(R.ryddet, v => v === 1).length, 50);
+  /* utvalgene: radene i utbyggingen og verdiene står ved hver rute, og et eget område har bare sine ruter */
+  const { byggUtvalg } = await import('../src/data/gull/utbygging.ts');
+  for (const [plan, omrade, antall] of [
+    ['gammel', null, 100],
+    ['ny', null, 50],
+    ['gammel', 1, 50],
+    ['ny', 1, 0]
+  ] as const) {
+    const U = byggUtvalg(R, plan, omrade);
+    assert.equal(U.celler.length, antall, `${plan} ${omrade}`);
+    U.celler.forEach((i, k) => {
+      assert.equal(R.rader[U.rader[k]], i);
+      assert.equal(U.ryddetV[k], 1);
+      assert.equal(U.alleV[k], 1);
+    });
+  }
 });
 
 test('inngrepsfri natur over tid: endringen per periode, og inngrepsnær natur får det inngrepsfri natur mister', () => {

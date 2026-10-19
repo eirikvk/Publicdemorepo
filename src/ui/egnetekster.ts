@@ -1,8 +1,10 @@
 /* Tekstene om egne områder, som hovedsiden (komponenter/Egne.tsx) og tvillingen fra Figma (srcFigma/komponenter/Egne.tsx) viser
    likt: meldingen om siste tegning eller opplasting, hva en opplastet plan inneholder, hva som ligger i et område i dag, og når et
-   område er for smalt til å gi utslag. Tallene kommer ferdig regnet ut fra datamotoren og gull. */
+   område er for smalt til å gi utslag, og hvorfor planlagt utbygging ikke kunne regnes ut. Tallene kommer ferdig regnet ut fra
+   datamotoren og gull. */
 import { katalog } from '../data/katalog.ts';
 import type { EgneRader } from '../data/gull/egne.ts';
+import { dibkFeilet } from '../data/motor/plan.ts';
 import { verdi } from '../data/motor/valgt.ts';
 import type { EgetOmrade, EgneStatus } from '../data/motor/tilstand.ts';
 import { antallOrd, iTekst, nf, ramse } from './tekst.ts';
@@ -78,3 +80,9 @@ export const smalTekst = (g: EgetOmrade, O: Omradet | null) =>
   O && g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && O.smal
     ? 'Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.'
     : '';
+
+/* Hvorfor planlagt utbygging ikke kunne regnes ut (planTall er feil): kommuneplanen fra DiBK, eller et annet kart */
+export const planFeil = () =>
+  dibkFeilet()
+    ? 'Kommuneplanen kunne ikke hentes fra Direktoratet for byggkvalitet (DiBK) akkurat nå. Prøv igjen om litt.'
+    : 'Kartene planlagt utbygging regnes ut av, kunne ikke hentes akkurat nå. Prøv igjen om litt.';

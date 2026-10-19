@@ -533,8 +533,12 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
 - **Hvor kommuneplanen ligger** (`solv.planoversikt`). Hvor i kommunen planen ligger, fra oversikten. Kartbildene fra DiBK hentes
   bare for blokkene der oversikten har noe, i blokken eller én piksel utenfor.
+- **Kommuneplanen alene, sist regnet ut** (`gull.planAlene`). Kommuneplanen alene er den samme uansett egne områder, så den ryddes
+  for smale striper én gang så lenge blokkene med planen er de samme.
 - **Utbyggingen i blokker** (`gull.utbyggingsblokker`). Utbyggingen i blokker på 512 × 512 ruter, så bare blokker med nytt kart
   regnes ut på nytt.
+- **Utvalg av utbyggingen** (`gull.utvalg`). Rutene med planlagt utbygging på natur eller jordbruk i den nye eller den gamle
+  planen, i hele kommunen eller i ett eget område. Alle analysene for et utvalg bruker de samme rutene.
 
 ### Usikkerhet
 
@@ -835,6 +839,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
 - **Blokkene med detaljklasser** (`solv.detaljblokker`). Blokkene med detaljklasser for kommunen: de samme blokkene som for dagens
   klasser.
+- **Radene i utbyggingen i rekkefølge** (`gull.radorden`). Rekkefølgen på radene i utbyggingen, regnet én gang for alle temaene.
+- **Kolonnene for temaene, sist regnet ut** (`gull.temaminne`). De siste kolonnene for temaet, så andelen bare regnes ut for ruter
+  som ikke var med sist. Andelen i en rute avhenger bare av ruta.
+- **Utvalg av utbyggingen** (`gull.utvalg`). Rutene med planlagt utbygging på natur eller jordbruk i den nye eller den gamle
+  planen, i hele kommunen eller i ett eget område. Alle analysene for et utvalg bruker de samme rutene.
 
 ### Usikkerhet
 
@@ -855,7 +864,7 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 `src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
 `src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/bronse/nibio-grunnkart.ts`,
-`src/data/solv/grunnkart.ts`, `src/data/gull/temaer.ts`, `src/data/gull/grunnkart.ts`. Kortene:
+`src/data/solv/grunnkart.ts`, `src/data/gull/temaer.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/utbygging.ts`. Kortene:
 `src/ui/komponenter/Naturtema.tsx`.
 
 <!-- /forklaringer:natur -->
@@ -1339,6 +1348,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
 - **Blokkene med detaljklasser** (`solv.detaljblokker`). Blokkene med detaljklasser for kommunen: de samme blokkene som for dagens
   klasser.
+- **Utvalg av utbyggingen** (`gull.utvalg`). Rutene med planlagt utbygging på natur eller jordbruk i den nye eller den gamle
+  planen, i hele kommunen eller i ett eget område. Alle analysene for et utvalg bruker de samme rutene.
+- **Radene i utbyggingen i rekkefølge** (`gull.radorden`). Rekkefølgen på radene i utbyggingen, regnet én gang for alle temaene.
+- **Kolonnene for temaene, sist regnet ut** (`gull.temaminne`). De siste kolonnene for temaet, så andelen bare regnes ut for ruter
+  som ikke var med sist. Andelen i en rute avhenger bare av ruta.
 
 ### Usikkerhet
 
@@ -1367,8 +1381,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 `src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`,
 `src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`, `src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`,
 `src/data/gull/grunnkart.ts`, `src/data/gull/okosystemer.ts`, `src/data/gull/temaer.ts`, `src/data/gull/inon.ts`,
-`src/data/gull/graa.ts`, `src/data/gull/planlagt.ts`, `src/data/gull/syntetisk.ts`. Kortene: `srcFigma/sider/Temasider.tsx`,
-`srcFigma/sider/Hovedsider.tsx`.
+`src/data/gull/graa.ts`, `src/data/gull/planlagt.ts`, `src/data/gull/syntetisk.ts`, `src/data/gull/utbygging.ts`. Kortene:
+`srcFigma/sider/Temasider.tsx`, `srcFigma/sider/Hovedsider.tsx`.
 
 <!-- /forklaringer:tvilling -->
 
@@ -1565,6 +1579,70 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Feil i JavaScript-motoren: tallene får en egen kopi, 19. oktober 2026.** Under egne områder ble kommuneplanen alene for et
+tegnet område av og til lik tallet med egne områder: 14 265 dekar natur i stedet for 714 i testområdet i Trondheim. Jordbruket var
+riktig. Det skjedde i omtrent én av ti kjøringer av testen, og oftere når maskinen hadde mye å gjøre. Feilsøkingen logget hver
+utregning og sjekket alle ferdige svar etter hvert nytt svar. Den fant dette:
+
+1. Kommuneplanen alene i området ble regnet ut riktig, med 714 dekar natur.
+2. Rett etterpå regnet den samme funksjonen (`byggPlanlagt`) ut den nye planen i det samme området.
+3. I det øyeblikket fikk naturtallene i det første svaret verdiene fra det nye svaret. Jordbruket i det første svaret ble stående.
+4. Ingen kode skriver til de tallene, og det samme svaret regnet ut på nytt ga 714 dekar.
+
+Feilen ligger trolig i JavaScript-motoren i Chromium (V8), i oversettelsen av koden til maskinkode mens siden kjører (JIT). Testene
+kjører i Chromium 141. Feilen 18. oktober, da kommuneplanen alene ble lik tallet med egne områder (se «Kommuneplanen alene telles
+av rutenettet»), var trolig den samme. Den gangen ble summen flyttet, og da forsvant feilen.
+
+Omveien: analysene som regnes for flere utvalg etter hverandre, gir nå fra seg en egen kopi av svaret (`egenKopi` i
+`src/data/generelt/kopi.ts`). Kopien tas med en gang svaret er regnet ut, før neste utregning starter. Nettleseren lager kopien
+selv, så den deler ingenting med det neste svaret. Det gjelder planlagt utbygging, grått areal, verneområder, villrein, verdsatt
+natur, det som ikke er kartlagt, økosystemtypene og summene i utbyggingen. Tallene er ikke endret.
+
+**Regelen for lignende feil:** får et tall i et ferdig svar en annen verdi uten at koden skriver til det, er det denne feilen.
+Omveien er den samme hver gang. Svaret kopieres med `egenKopi` i det samme steget som det regnes ut, uten `await` imellom, og
+endringen skrives her i loggen. Store ting som deles med vilje, som listen over områdene i et tema, kopieres ikke. Regelen står
+også i README.md (regel 7 under Prinsippene for dataflyten) og i `kopi.ts`.
+
+Kontroll: et eget testoppsett tegnet området i Trondheim om og om igjen, med fire nettlesere samtidig og en etterlignet
+kommuneplan. Med logging av hvert svar ble svaret uten kopi endret én gang i 40 kjøringer, men kopien ble aldri endret, og siden
+viste riktige tall i alle 40. Uten logging ga 20 kjøringer uten omveien feil tall én gang, og 20 kjøringer med omveien ga ingen
+feil. Uten omveien kom feilen i alt fra én av 20 til tre av åtte kjøringer. Regresjonstesten for Trondheim mot forrige utgave ga
+ingen avvik. Testet i Chromium, ikke på iPhone. Safari på iPhone bruker en annen JavaScript-motor, så vi vet ikke om feilen finnes
+der.
+
+**Raskere egne områder, 19. oktober 2026.** Når et område tegnes, regnes alle analysene for kommuneplanen alene og for planen med
+egne områder, i hele kommunen og i hvert område. På en iPhone tok det merkbar tid. Metoden er ikke endret, men mindre regnes ut på
+nytt:
+
+- Kommuneplanen alene i hele kommunen er den samme uansett egne områder. Den regnes ikke ut på nytt når områdene endres
+  (`gammelFast` i katalogen). Når det første området tegnes, brukes svarene som alt er regnet ut for planen.
+- Kommuneplanen alene ryddes for smale striper én gang, så lenge planen er den samme (`gull.planAlene`).
+- Hvert utvalg av utbyggingen slås opp én gang, med rutene, radene og verdiene, i stedet for i hver analyse (`gull.utvalg`).
+- Kolonnene for naturtemaene regnes bare ut for ruter som er nye siden sist (`gull.temaminne` og `gull.radorden`). Radene legges
+  sammen i den samme rekkefølgen som før, så summene blir nøyaktig de samme.
+- Oppslagene i de glisne rutenettene og vektene i kryssingen med grått areal går raskere.
+
+Målt i tvillingen med et område tegnet i Bymarka i Trondheim, med nettleseren gjort fire ganger tregere, omtrent som en mobil, og
+en etterlignet kommuneplan: sammenligningen (`gull.egneRader`) tok 6,7 og 7,3 sekunder i to målinger før, og 1,6 til 2,2 sekunder
+i tre målinger nå. Under arbeidet kom feilen i JavaScript-motoren fram igjen (over), og omveien er med i målingene. Regresjonstesten
+for Trondheim mot forrige utgave, med DiBK, ga ingen avvik. Målt i Chromium, ikke på iPhone.
+
+**Melding når DiBK ikke svarer, 19. oktober 2026.** Kartjenesten for kommuneplaner hos DiBK svarte ikke i flere timer 19. oktober.
+Den sendte en feilmelding i XML («Connect timed out») i stedet for kartbildet. Siden sa bare at arealet ikke kunne regnes ut. Nå:
+
+- En melding sier at kommuneplanen ikke kunne hentes fra DiBK når det siste kallet dit feilet, og ellers at kartene ikke kunne
+  hentes (`planFeil` i `src/ui/egnetekster.ts`). Hentingen husker for hver kilde om det siste kallet feilet (`feiletSist` i
+  `bronse/henting.ts`), fordi kall-loggen bare har de åtte siste kallene fra alle kildene.
+- Knappen «Prøv igjen» glemmer alt som feilet, og henter planen og regner ut på nytt (`provPlanIgjen` i `motor/plan.ts` og
+  `glemFeilede` i `cache.ts`). Før prøvde ikke siden selv igjen tall som hadde feilet.
+- En feilmelding i XML regnes nå som et kall som feilet. Før kunne den bli husket som et bilde, så et nytt forsøk ga den samme
+  feilen.
+- I tvillingen sier tallkortene på Naturtapet «Kunne ikke regnes ut», med et varsel og den samme knappen under dem.
+
+Tallene er ikke endret. Kontroll: et testoppsett sendte den samme feilmeldingen som DiBK gjorde. Meldingen nevnte DiBK, og knappen
+sto på begge sidene, på 390 og 1280 px, uten at siden ble for bred. Da den etterlignede planen svarte igjen, ga «Prøv igjen» tallene
+etter 3 til 5 sekunder. Testet i Chromium, ikke på iPhone.
 
 **Lenke til tvillingen fra hovedsiden, 19. oktober 2026.** Hovedsiden har fått en smal linje øverst, som tvillingen har, med
 lenke til prototypen med utseendet fra Figma. Lenkene går begge veier til samme kommune og samme tema der det finnes
@@ -2139,6 +2217,9 @@ Svakheter:
 - Prosent av landarealet er misvisende for tema som også ligger i vann: verneområder, inngrepsfri natur og kartleggingsgrad.
 - Tallene kommer fra tjenester som kan endre seg.
 - Siden er testet i Chromium med mobilvisning. Den er ikke testet systematisk på andre nettlesere.
+- JavaScript-motoren i Chromium kan av og til gi et ferdig svar tallene fra det neste svaret den samme funksjonen regner ut. Det er
+  sett to ganger, 18. og 19. oktober 2026. Analysene som regnes for flere utvalg, tar derfor en egen kopi av svaret (`egenKopi`), og
+  den samme omveien brukes for lignende feil. Se loggen under Kontroller, 19. oktober 2026.
 
 Åpne spørsmål om metoden:
 

@@ -147,7 +147,7 @@ Katalogen og cachen, i `src/data/`. Se «Katalogen og cachen» under.
 |---|---|
 | `katalog.ts` | Katalogen: listen over tabellene i bronse, sølv og gull, som `katalog.lag.tabell`. Hver tabell er en ETL-funksjon med samme navn, og har et kort, lesbart navn (`tittel`), hva den er (`om`) og hvor mange kommuner som huskes. Tabellene bak tallene har også forklaringen, usikkerheten og kilden (`forklaring`, `usikkerhet`, `kilde`), og oppslag, lagrede svar og hjelpetabeller er merket som tekniske (`teknisk`). Kildene står samlet øverst (`KILDE`), med lisensen. |
 | `avhengigheter.ts` | Hvilke tabeller i katalogen hver tabell bygger på, lest ut av koden. Laget av `verktoy/forklaringer.ts`, ikke rediger for hånd. |
-| `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok) og tid. Gjør kallene, deler kall som pågår, og glemmer det eldste. Importerer ingenting. |
+| `cache.ts` | Cachen: svarene fra ETL-funksjonene, per tabell og kommune, med status (henter, feil, ok) og tid. Gjør kallene, deler kall som pågår, og glemmer det eldste, og alt som feilet når brukeren ber om et nytt forsøk (`glemFeilede`). Importerer ingenting. |
 
 Generelt, i `src/data/generelt/`. Det som ikke vet noe om natur, kommuner eller kilder. Hver ting finnes bare her, så alle lagene
 regner likt. Filene importerer ingenting.
@@ -156,6 +156,7 @@ regner likt. Filene importerer ingenting.
 |---|---|
 | `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp, oppslag av mange punkter i en flate, og et rutenett av punkter for å finne punktene i et utsnitt |
 | `tall.ts` | Summen av en liste tall (`summen`) |
+| `kopi.ts` | En egen kopi av et ferdig svar (`egenKopi`), som omvei rundt en feil i JavaScript-motoren. Se regel 7 under Prinsippene for dataflyten. |
 | `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
 | `png.ts` | PNG-filer: bitene i en fil, og et bilde med fargetabell (til de lagrede klassene) |
 | `glissen.ts` | Glisne rutenett: et stort rutenett i blokker på 512 × 512 ruter, der bare blokkene som har noe, finnes. Leses rute for rute som et vanlig rutenett. Brukes av utbyggingen. |
@@ -165,7 +166,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 
 | Fil | Innhold |
 |---|---|
-| `henting.ts` | Henting, kall-loggen, hvor sidens egne filer ligger, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
+| `henting.ts` | Henting, kall-loggen, hvor sidens egne filer ligger, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. En feilmelding i XML i stedet for et bilde regnes som et kall som feilet, og for hver kilde står det om siste kall feilet (`feiletSist`). Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
 | `endepunkter.ts` | Endepunktene for alle kildene, samlet. Filene i bronse bygger kallene på dem, og katalogen viser dem ved hver kilde i infoknappene og METODE.md |
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 eller ett punkt |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve, summert til tre klasser og hver arealklasse for seg |
@@ -208,13 +209,13 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes i biter |
 | `grunnkart.ts` | Dagens klasser for hele kommunen: alle blokkene lest, lagret eller hentet fra NIBIO når kommunen velges, og arealet per detaljklasse |
 | `planflis.ts` | Planlagt utbygging per piksel i kartet, én sannhet per nivå: rutene i utbyggingen på nivå 10, finere nivåer i eller inntil feltene der, og zoomet ut innenfor dagens klasse i pikselen |
-| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging i den nye eller den gamle planen. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. Utvalgene (`Utvalg`) sier hvilke ruter en analyse regnes over: den nye planen eller den gamle (kommuneplanen alene), i hele kommunen eller i ett eget område. Nøkkelen er utvalget, som `5001`, `5001/gammel` eller `5001/ny/1`. |
+| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging i den nye eller den gamle planen. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. Utvalgene (`Utvalg`) sier hvilke ruter en analyse regnes over: den nye planen eller den gamle (kommuneplanen alene), i hele kommunen eller i ett eget område. Nøkkelen er utvalget, som `5001`, `5001/gammel` eller `5001/ny/1`. Hvert utvalg slås opp én gang (`gull.utvalg`), med raden og verdien for hver rute, så analysene slipper. Kommuneplanen alene ryddes for smale striper én gang så lenge blokkene med planen er de samme (`gull.planAlene`). |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer, av SSBs arealstatistikk alene: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, for kommunen og for alle kommunene i Norge, og summene, regnskapet og sammenligningen med Norge som tvillingen viser. Merket syntetisk. |
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Brukes av tvillingen og i sammenligningen for egne områder. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, for et utvalg, kortversjonen til oversikten, og planlagt utbygging per detaljklasse |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner den gamle planen med den nye, for hele kommunen og hvert område. Analysene er de samme som for kommuneplanen, regnet for hvert utvalg; her settes bare radene og forskjellen sammen. |
-| `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte |
+| `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte. Når egne områder endres, regnes kolonnene bare ut for rutene som er nye (`gull.temaminne` og `gull.radorden`). |
 | `inon.ts` | Tallene på siden |
 | `graa.ts` | Arealet per trinn, og kryssingen med utbyggingen |
 
@@ -227,7 +228,7 @@ Datamotoren, i `src/data/motor/`.
 | `kommune.ts` | Listen over kommuner, valg av kommune, og det som bes om med en gang: alle tabellene i gull for kommunen |
 | `kartverdier.ts` | Hva hver piksel i en kartflis er, fra sølv og gull på nivået flisen er på: dagens klasser, detaljklassene, grått areal, inngrepsfri natur og planlagt utbygging. Begge sidene tegner kartlagene av dette, og trykk i kartet slår opp i det samme (`verdiIPunkt`). |
 | `grunnkart.ts` | Om kommunen har lagrede klasser, og hvor langt hentingen av blokkene fra NIBIO er kommet |
-| `plan.ts` | Det siden og kartet trenger å vite om utbyggingen: om kommunen har plan, utbyggingen for valgt kommune, og hvor langt den er kommet |
+| `plan.ts` | Det siden og kartet trenger å vite om utbyggingen: om kommunen har plan, utbyggingen for valgt kommune, og hvor langt den er kommet. Om siste kall til DiBK feilet (`dibkFeilet`), og et nytt forsøk (`provPlanIgjen`). |
 | `egne.ts` | Egne områder, tegnede og opplastede: en kilde fra brukeren, som legges slik brukeren laget dem i `bronse.egne` |
 
 ### Brukergrensesnittet
@@ -241,7 +242,7 @@ Felles, i `src/ui/`:
 | `farger.ts` | Fargene i kartet og i tegnforklaringene |
 | `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
 | `tvilling.ts` | Lenkene mellom hovedsiden og tvillingen fra Figma: hvilken side i den ene som svarer til en side i den andre, så lenken i linjen øverst åpner samme kommune og tema |
-| `egnetekster.ts` | Tekstene om egne områder, som hovedsiden og tvillingen viser likt: meldingen om tegning og opplasting, hva en opplastet plan inneholder, hva som ligger i et område i dag, og når et område er for smalt |
+| `egnetekster.ts` | Tekstene om egne områder, som hovedsiden og tvillingen viser likt: meldingen om tegning og opplasting, hva en opplastet plan inneholder, hva som ligger i et område i dag, når et område er for smalt, og hvorfor planlagt utbygging ikke kunne regnes ut (`planFeil`) |
 | `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser (og andre det forklarer) og regnestykket for valgt kommune, og stegene fra kilde til tall. Et steg et annet kort forklarer, blir en henvisning dit. I infoknappene står hver kilde i bronse sammen med sølvtabellene som justerer den (`infostegFor`): «hentes … justeres …». Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
 | `teknisk.ts` | Formen på `window.motor`: det siden gjør tilgjengelig med `?teknisk`, til feilsøking og regresjonstesten |
 
@@ -285,7 +286,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Naturtema.tsx` | Sidene for verneområder, villrein og verdsatt natur, med lister over områdene, og ordene sidene bruker om hvert tema |
 | `Inon.tsx` | Siden for inngrepsfri natur |
 | `Graa.tsx` | Siden for grått areal |
-| `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
+| `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder. Kan planlagt utbygging ikke regnes ut, sier en melding hvorfor (DiBK eller kartene), med knappen «Prøv igjen». |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner den gamle planen med den nye: natur og jordbruk, grått areal, temaene, verdsatt natur, områder som berøres og økosystemtypene |
 | `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
 | `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter ETL-filen, med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
@@ -468,9 +469,13 @@ Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:
   underveis, deles, så to som spør etter det samme, gir ett kall til kilden.
 - **Én rad per tabell og kommune**, med status (henter, feil eller ok), svaret og tiden det tok.
 - **Det som bygger på brukeren, regnes ut på nytt** når egne områder endres. Tabellene det gjelder, er merket `brukerstyrt` i
-  katalogen: utbyggingen og alt som bygger på den. Siden viser de gamle tallene til de nye er klare.
-- **Ingen kopier.** Svarene lagres som de er, uten å gjøres om til tekst. Et nytt svar erstatter det gamle. Unntaket er merket
-  voksende: utbyggingens blokker.
+  katalogen: utbyggingen og alt som bygger på den. Siden viser de gamle tallene til de nye er klare. Kommuneplanen alene i hele
+  kommunen (`5001/gammel`) er den samme uansett egne områder, så i tabellene merket `gammelFast` blir den ikke utdatert. Når det
+  første egne området kommer, legges svarene som alt er regnet ut for planen, inn som svarene for kommuneplanen alene
+  (`kommuneplanAlene` i `motor/egne.ts`).
+- **Ingen kopier i cachen.** Svarene lagres som de er, uten å gjøres om til tekst. Et nytt svar erstatter det gamle. Unntaket er
+  merket voksende: utbyggingens blokker. Analysene for et utvalg tar selv en egen kopi av svaret før de gir det fra seg, se regel 7
+  under.
 - **Grensene** står per tabell i katalogen (`husk`). Svar fra kildene er store og huskes for noen få kommuner. Gull er små tabeller
   og huskes for flere. Det som er brukt lengst siden, går ut først.
 - **Bare så lenge siden er åpen.** Siden lagrer ingenting selv i nettleseren: ingen informasjonskapsler og ingen lokal lagring.
@@ -513,6 +518,20 @@ fyller en ETL-funksjon underveis: utbyggingens blokker og oppslagene i områdene
 6. **Gull lagres, sølv og bronse bare når noen vil spørre etter dem igjen.** Det er når gull regnes ut på nytt fordi brukeren
    har gjort noe, når kartet spør, og når mange bruker det samme, som kommunegrensen. Ellers hentes sølv og bronse rett før de
    trengs (`husk: 0`). Svarene fra Miljødirektoratet lagres for eksempel ikke, for sølv lagrer det som trengs av dem.
+7. **Et svar med tall får en egen kopi før det gis videre, når den samme funksjonen regner for flere utvalg etter hverandre.**
+   Dette er en omvei rundt en feil i JavaScript-motoren i Chromium, sett 18. og 19. oktober 2026 (METODE.md, under Kontroller): et
+   ferdig svar kan få tallene fra det neste svaret den samme funksjonen regner ut, uten at noen kode skriver til det. Feilen kommer
+   bare av og til, når siden har mye å gjøre. Omveien er fast, og skal brukes på samme måte for lignende feil:
+   - Regner en funksjon det samme for den gamle og den nye planen, eller for hele kommunen og hvert eget område, og brukes et eldre
+     svar videre, gis svaret fra seg som `egenKopi(svar)` (`src/data/generelt/kopi.ts`).
+   - Kopien tas i det samme synkrone steget som svaret ble regnet ut, uten `await` imellom. Feilen slår til når det neste svaret
+     regnes ut, og da må kopien alt være tatt.
+   - Store ting som deles med vilje, som listen over områdene i et tema, kopieres ikke. Bare tallene kopieres.
+   - Ses et tall i et ferdig svar endre seg uten at koden skriver til det, er det denne feilen. Da brukes den samme omveien der,
+     og det skrives i loggen i METODE.md. Feilsøkingen som fant den, står der også.
+   Analysene som gjør dette nå: `gull.planlagt`, `gull.planlagtPerDetaljklasse`, `gull.graakryss`, `gull.graaIPlan`,
+   `gull.verneomraderIPlan`, `gull.villreinIPlan`, `gull.verdsattNaturIPlan`, `gull.utbyggingUtenforKartlagt`,
+   `gull.planPerOkosystem` og summene i utbyggingen (`tellRyddet`).
 
 **Utbyggingen er midtpunktet.** Siden handler om ett spørsmål: hvor er det planlagt utbygging, og hva treffer den?
 `gull.utbygging` er svaret i rutenettform: kommuneplanen og egne områder lagt oppå dagens klasser, med én rad per rute med planlagt

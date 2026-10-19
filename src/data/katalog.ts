@@ -1146,6 +1146,7 @@ export const katalog = {
       etterBehov: true,
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullOkosystemer.planPerOkosystem
     }),
     verneformer: tabell({
@@ -1347,6 +1348,55 @@ export const katalog = {
       brukerstyrt: true,
       etl: gullUtbygging.utbygging
     }),
+    planAlene: tabell<string, { alene: gullUtbygging.PlanAlene | null }>({
+      lag: 'gull',
+      navn: 'planAlene',
+      fil: 'gull/utbygging.ts',
+      tittel: 'Kommuneplanen alene, sist regnet ut',
+      om: 'hjelpetabell: kommuneplanen alene ryddet for smale striper, og summen, fra sist utbyggingen ble regnet ut, så den ikke regnes ut på nytt når egne områder endres',
+      teknisk: true,
+      forklaring:
+        'Kommuneplanen alene er den samme uansett egne områder, så den ryddes for smale striper én gang så lenge blokkene med planen er de samme.',
+      husk: 2,
+      voksende: true
+    }),
+    radorden: tabell({
+      lag: 'gull',
+      navn: 'radorden',
+      fil: 'gull/temaer.ts',
+      tittel: 'Radene i utbyggingen i rekkefølge',
+      om: 'hjelpetabell: radene i utbyggingen sortert etter rute, og i rekkefølgen punktnettet gir dem, som kolonnene for alle temaene bruker',
+      teknisk: true,
+      forklaring: 'Rekkefølgen på radene i utbyggingen, regnet én gang for alle temaene.',
+      husk: 2,
+      brukerstyrt: true,
+      etl: gullTemaer.radorden
+    }),
+    temaminne: tabell<string, { forrige: gullTemaer.Temakolonne | null }>({
+      lag: 'gull',
+      navn: 'temaminne',
+      fil: 'gull/temaer.ts',
+      tittel: 'Kolonnene for temaene, sist regnet ut',
+      om: 'hjelpetabell: de siste kolonnene for hvert tema i utbyggingen, så bare nye ruter regnes ut når egne områder endres. Nøkkel: temaet og kommunen, som vern/5001.',
+      teknisk: true,
+      forklaring:
+        'De siste kolonnene for temaet, så andelen bare regnes ut for ruter som ikke var med sist. Andelen i en rute avhenger bare av ruta.',
+      husk: 6,
+      voksende: true
+    }),
+    utvalg: tabell({
+      lag: 'gull',
+      navn: 'utvalg',
+      fil: 'gull/utbygging.ts',
+      tittel: 'Utvalg av utbyggingen',
+      om: 'hjelpetabell: rutene en analyse regnes over, for den nye eller den gamle planen, i hele kommunen eller i ett eget område, med raden i utbyggingen og verdien i planen slått opp én gang per rute. Nøkkelen er utvalget, som 5001, 5001/gammel eller 5001/ny/1.',
+      teknisk: true,
+      forklaring:
+        'Rutene med planlagt utbygging på natur eller jordbruk i den nye eller den gamle planen, i hele kommunen eller i ett eget område. Alle analysene for et utvalg bruker de samme rutene.',
+      husk: 8,
+      brukerstyrt: true,
+      etl: gullUtbygging.utvalg
+    }),
     utbyggingsblokker: tabell<string, Map<string, Blokk>>({
       lag: 'gull',
       navn: 'utbyggingsblokker',
@@ -1367,6 +1417,7 @@ export const katalog = {
         'De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.',
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullPlan.planlagt
     }),
     planlagtPerDetaljklasse: tabell({
@@ -1379,6 +1430,7 @@ export const katalog = {
       etterBehov: true,
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullPlan.planlagtPerDetaljklasse
     }),
     plansum: tabell({
@@ -1478,6 +1530,7 @@ export const katalog = {
       ],
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullGraa.graakryss
     }),
     graa: tabell({
@@ -1500,6 +1553,7 @@ export const katalog = {
         'Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon (trinnene fra 50 % og opp), og på grønt i bebygd område.',
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullGraa.graaIPlan
     }),
     verneomrader: tabell({
@@ -1535,6 +1589,7 @@ export const katalog = {
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullTemaer.verneomraderIPlan
     }),
     villrein: tabell({
@@ -1567,6 +1622,7 @@ export const katalog = {
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullTemaer.villreinIPlan
     }),
     verdsattNatur: tabell({
@@ -1622,6 +1678,7 @@ export const katalog = {
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullTemaer.verdsattNaturIPlan
     }),
     utbyggingUtenforKartlagt: tabell({
@@ -1633,6 +1690,7 @@ export const katalog = {
         'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte (solv.kartlagtAndel), er ikke kartlagt.',
       husk: 40,
       brukerstyrt: true,
+      gammelFast: true,
       etl: gullTemaer.utbyggingUtenforKartlagt
     }),
     egneRader: tabell({

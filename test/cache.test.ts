@@ -1,7 +1,7 @@
 /* Tester for cachen: les-gjennom, grensen for hvor mye som huskes, feil, utgaver, brukerstyrte tabeller og lagrede svar. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { brukerEndret, les, se, tabell, utgave } from '../src/data/cache.ts';
+import { brukerEndret, glemFeilede, les, se, tabell, utgave } from '../src/data/cache.ts';
 
 test('les-gjennom: ETL-funksjonen kjøres én gang, også når to spør samtidig', async () => {
   let kjort = 0;
@@ -85,6 +85,30 @@ test('brukerstyrt: utdatert gis til visningen mens det nye regnes ut, og regnes 
   assert.equal(les(T, '5001')!.verdi, 1); /* det gamle, mens det nye regnes ut */
   assert.equal(await T('5001'), 2);
   assert.equal(await U('5001'), 1); /* bygger ikke på det brukeren gjør */
+  /* kommuneplanen alene i hele kommunen blir ikke utdatert, men utvalgene for egne områder blir det */
+  const forsok = new Map<string, number>(),
+    V = tabell<string, number>({
+      lag: 'gull',
+      navn: 'g',
+      tittel: '',
+      om: '',
+      husk: 6,
+      brukerstyrt: true,
+      gammelFast: true,
+      etl: async n => {
+        forsok.set(n, (forsok.get(n) || 0) + 1);
+        return forsok.get(n)!;
+      }
+    });
+  for (const n of ['5001/gammel', '5001/gammel/1', '5001/ny/1']) assert.equal(await V(n), 1);
+  brukerEndret('5001');
+  assert.equal(await V('5001/gammel'), 1);
+  assert.equal(await V('5001/gammel/1'), 2);
+  assert.equal(await V('5001/ny/1'), 2);
+  /* uten gammelFast blir også kommuneplanen alene utdatert */
+  assert.equal(await T('5001/gammel'), 3);
+  brukerEndret('5001');
+  assert.equal(await T('5001/gammel'), 4);
 });
 
 test('lagret: det lagrede svaret brukes, og ETL-funksjonen kjøres bare der det mangler', async () => {
@@ -101,4 +125,28 @@ test('lagret: det lagrede svaret brukes, og ETL-funksjonen kjøres bare der det 
   assert.equal(await T('x'), 'lagret');
   assert.equal(await T('y'), 'y!');
   assert.equal(kjort, 1);
+});
+
+test('et nytt forsøk: det som feilet, glemmes og hentes på nytt også fra visningen', async () => {
+  let nede = true;
+  const T = tabell<string, string>({
+    lag: 'gull',
+    navn: 'provIgjen',
+    tittel: '',
+    om: '',
+    husk: 5,
+    etl: async n => {
+      if (nede) throw new Error('nede');
+      return n + '!';
+    }
+  });
+  await T('x').catch(() => null);
+  assert.equal(les(T, 'x')!.status, 'feil');
+  nede = false;
+  assert.equal(les(T, 'x')!.status, 'feil'); /* visningen prøver ikke igjen av seg selv */
+  glemFeilede();
+  assert.equal(se(T, 'x'), null);
+  les(T, 'x');
+  assert.equal(await T('x'), 'x!');
+  assert.equal(les(T, 'x')!.status, 'ok');
 });
