@@ -52,11 +52,15 @@ Alle kall går direkte fra nettleseren til tjenesten. Ingen av dem krever innlog
 | NIBIO | Grunnkart for arealanalyse | wms.nibio.no/cgi-bin/grunnkart_arealanalyse | WMS | Dagens arealklasser |
 | NIBIO | Kart over grå arealer | wms.nibio.no/cgi-bin/graastruktur | WMS | Grått areal |
 | DiBK | Kommuneplaner | nap.ft.dibk.no/services/wms/kommuneplaner | WMS | Planlagt utbygging, og opplysninger om planen |
-| Miljødirektoratet | Naturvernområder, villrein, naturtyper med KU-verdi, dekningskart | kart.miljodirektoratet.no/arcgis/rest/services | ArcGIS REST | Naturtema som flater |
+| Miljødirektoratet | Naturvernområder, villrein, verdsatte naturtyper (tjenesten heter KU-verdi), dekningskartet for naturtyper (NiN) | kart.miljodirektoratet.no/arcgis/rest/services | ArcGIS REST | Naturtema som flater |
 | Miljødirektoratet | Inngrepsfrie naturområder | kart.miljodirektoratet.no/geoserver/inngrepsfrinatur | WMS | Inngrepsfri natur |
 
-Lagret sammen med siden ligger listen over fylker og kommuner (`public/kommuner.json`, fra Kartverket) og dagens klasser per blokk
-på 21 og 10 meter for 42 kommuner (`public/klasser/` og `public/klasser.json`, laget fra NIBIOs grunnkart med `verktoy/klasser.ts`).
+Lagret sammen med siden ligger:
+- listen over fylker og kommuner (`public/kommuner.json`) og flaten til hver kommune (`public/kommuneareal.json`), fra Kartverket
+- dagens klasser per blokk på 10 meter for 57 kommuner (`public/klasser/` og `public/klasser.json`) og detaljklassene for 59
+  kommuner (`public/detaljklasser/` og `public/detaljklasser.json`), laget fra NIBIOs grunnkart med `verktoy/klasser.ts`
+- kommunegrensen og andelen per rute for 60 kommuner (`public/kommunegrenser/` og `public/kommunegrenser.json`), laget fra
+  Kartverkets grenser med `verktoy/kommunegrenser.ts`
 
 ## Drift
 
@@ -79,8 +83,8 @@ GitHub Pages må ha «GitHub Actions» som kilde, se README.
 - NIBIOs grunnkart for arealanalyse er lisensiert «Norge digitalt begrenset». Det gjelder både kartflisene og de lagrede
   klassene. Dette må avklares før siden brukes utenfor en prototype.
 - Kart over grå arealer er en testversjon.
-- Lisensene for de andre dataene er kontrollert mot Geonorge og data.norge.no 11. oktober 2026: arealtallene fra SSB og
-  kommunegrensene fra Kartverket har CC BY 4.0. Verneområder, villreinområder, verdsatte naturtyper, dekningskartet for
+- Lisensene for de andre dataene er kontrollert mot Geonorge og data.norge.no 11. oktober 2026: arealtallene fra SSB, og
+  kommunegrensene og bakgrunnskartet fra Kartverket, har CC BY 4.0. Verneområder, villreinområder, verdsatte naturtyper, dekningskartet for
   naturtypekartlegging (Naturtyper på land, NiN) og inngrepsfri natur fra Miljødirektoratet har NLOD 2.0. Kart over grå arealer
   (NIBIO) og kommuneplanene fra DiBK har Norge digitalt-lisensen. Lisensen og lenken til beskrivelsen står ved hver kilde i
   katalogen (`KILDE` i `src/data/katalog.ts`), og vises i infoknappene og i METODE.md.

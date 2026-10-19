@@ -58,13 +58,20 @@ const flisMidt =
     u.midt ? flisVed(u.midt, z === undefined ? u.z : z) : null;
 
 /* Kildene: hvem som eier dataene, datasettet, hvor det er beskrevet (Geonorge eller data.norge.no) og lisensen. Lisensene er
-   kontrollert mot Geonorge og data.norge.no 11. oktober 2026. Brukes av tabellene
+   kontrollert mot Geonorge og data.norge.no 11. oktober 2026, bakgrunnskartet 19. oktober (data.norge.no oppgir det som tjeneste for
+   Kartverkets kartdata, som har CC BY 4.0). Brukes av tabellene
    i bronse (kilde) til infoknappene og METODE.md. */
 export const KILDE = {
   kartverket: {
     navn: 'Kartverket',
     datasett: 'Administrative enheter, kommuner (Kommuneinfo-API-et)',
     adresse: 'https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b',
+    lisens: 'CC BY 4.0'
+  },
+  bakgrunn: {
+    navn: 'Kartverket',
+    datasett: 'Topografisk norgeskart, gråtone (WMTS-cache)',
+    adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/8f381180-1a47-4453-bee7-9a3d64843efa',
     lisens: 'CC BY 4.0'
   },
   ssb: {
@@ -155,6 +162,7 @@ export const katalog = {
       endepunkt: `${E.BAKGRUNN}/{z}/{y}/{x}.png`,
       tittel: 'Bakgrunnskartet',
       om: 'fliser av Kartverkets topografiske kart i gråtoner, kalt med flisen [z, x, y]. Lagres ikke: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.',
+      kilde: KILDE.bakgrunn,
       husk: 0,
       nokkel: flisnavn,
       etl: kartverket.bakgrunnsflis,
@@ -166,6 +174,7 @@ export const katalog = {
       endepunkt: `${E.KOMMUNEINFO}/punkt`,
       tittel: 'Kommune i et punkt',
       om: 'hvilken kommune et punkt i kartet ligger i, fra Kartverket, når man trykker utenfor valgt kommune. Nøkkel: punktet i hele meter.',
+      kilde: KILDE.kartverket,
       husk: 20,
       nokkel: kartverket.punktNokkel,
       etl: kartverket.kommuneIPunkt
@@ -478,6 +487,7 @@ export const katalog = {
       endepunkt: E.GRAA,
       tittel: 'Kartbilder av grått areal',
       om: 'ett av de to bildene av grått areal fra NIBIO for en flis finere enn nivå 10, 512 x 512 piksler, kalt med [lag, flisen] som bitene (bronse.graabit). Bare til kartet zoomet inn. Nøkkel: «lag/z/x/y».',
+      kilde: KILDE.graa,
       husk: 400,
       nokkel: ([lag, tc]) => `${lag}/${flisnavn(tc)}`,
       etl: nibioGraa.graaflis
