@@ -30,6 +30,13 @@ export interface Kildeinfo {
   adresse: string;
   lisens: string;
 }
+/* Et datasett i sølv: ett sett data fra virkeligheten, gjort om til vår standard. Navnet og én setning om hva det er. Tabellene i
+   bronse og sølv som henter og lager det, hører til datasettet (datasett i Tabelldef), som data eller støttedata. Står i katalogen
+   (DATASETT). */
+export interface Datasettinfo {
+  navn: string;
+  om: string;
+}
 export type Status = 'henter' | 'feil' | 'ok';
 /* Én rad: status, verdien (den siste som ble ferdig), utgaven (et løpenummer som er nytt hver gang en verdi legges inn, så det aldri
    brukes to ganger), når den ble laget, hvor lenge ETL-funksjonen brukte, og kallet som er underveis. bruker er hvor mange ganger brukeren hadde endret noe i kommunen da raden ble regnet ut. */
@@ -69,6 +76,9 @@ export interface Tabelldef<N, V> {
   forklaring?: string /* hva tabellen gjør, på klarspråk, til infoknappene og metodebeskrivelsen (verktoy/forklaringer.ts) */;
   usikkerhet?: string[] /* forbehold ved tallene som kommer fra dette steget */;
   kilde?: Kildeinfo /* i bronse: hvor dataene hentes fra */;
+  datasett?: Datasettinfo /* i bronse og sølv: datasettet i sølv tabellen hører til */;
+  stotte?: string /* i et datasett: tabellen er støttedata, og dette er hva den brukes til. Uten er den data: det innholdet i
+     datasettet lages av. */;
   endepunkt?: string /* i bronse: adressen som kalles, uten parametre ({…} er det som settes inn), eller filen sammen med siden */;
   teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i
      infoknappene, bare i en liste for seg i metodebeskrivelsen. */;
@@ -385,6 +395,8 @@ export function innhold() {
     brukerstyrt: !!t.brukerstyrt,
     lagret: !!t.lagret,
     forklaring: t.forklaring || '',
+    datasett: t.datasett || null,
+    stotte: t.stotte || '',
     sporbar: !t.husk && !!t.etl,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,

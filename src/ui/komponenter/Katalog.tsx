@@ -1,5 +1,6 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
-   etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. «Info» viser hva tabellen er, det tekniske navnet og hvor
+   etter datasettet i sølv de hører til (DATASETT i katalogen), delt i data og støttedata, og ellers etter ETL-filen, med tittelen og
+   hvor mye cachen har lagret i hver. «Info» viser hva tabellen er, det tekniske navnet og hvor
    ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
@@ -205,11 +206,17 @@ function Sporring({ d }: { d: Tabellen }) {
   );
 }
 
-/* Det «Info» viser: hva tabellen er, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som huskes */
+/* Det «Info» viser: hva tabellen er, hvilket datasett den hører til, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som
+   huskes */
 function Info({ d }: { d: Tabellen }) {
   return (
     <>
       <p>{stor(d.om)}</p>
+      {d.datasett && (
+        <p>
+          {d.stotte ? 'Støttedata' : 'Data'} i datasettet «{d.datasett.navn}».{d.stotte ? ' ' + stor(d.stotte) : ''}
+        </p>
+      )}
       <p>
         Kalles som <code>katalog.{d.navn}(nøkkel)</code>.{' '}
         {d.etl ? (
@@ -309,7 +316,10 @@ function Tabellrad({
   return (
     <>
       <tr>
-        <th scope="row">{d.tittel}</th>
+        <th scope="row">
+          {d.tittel}
+          {d.stotte && <small>{d.stotte}</small>}
+        </th>
         <td className="tall">
           {d.husk ? `${nf(r.length, 0)} av ${d.husk === Infinity ? 'alle' : nf(d.husk, 0)}` : 'lagres ikke'}
           {r.length > 0 && <small>{kb(sum(d))}</small>}
@@ -377,10 +387,13 @@ export default function Katalog() {
     <section className="prosa katalog">
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
-        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. «Info» sier hva tabellen er og hvor
-        ETL-funksjonen ligger. «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i stedet,
-        også fra kildene, men ikke etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes: siden
-        lagrer ingenting selv i nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra
+        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. I bronse og sølv er tabellene samlet i
+        datasett der det er gjort. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Under
+        datasettet står dataene, som innholdet lages av, og støttedataene, som trengs for å hente og forstå dem.
+        Foreløpig gjelder det kommuneplanen. De andre tabellene står etter filen de lages i. «Info» sier hva tabellen er
+        og hvor ETL-funksjonen ligger. «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i
+        stedet, også fra kildene, men ikke etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes:
+        siden lagrer ingenting selv i nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra
         tjenestene, slik tjenestene selv bestemmer.
       </p>
       <MdButton
@@ -396,7 +409,9 @@ export default function Katalog() {
       {K &&
         (['bronse', 'solv', 'gull'] as const).map(lag => {
           const T = K.filter(d => d.lag === lag),
-            filer = [...new Set(T.map(d => d.fil))];
+            sett = [...new Map(T.flatMap(d => (d.datasett ? [[d.datasett.navn, d.datasett] as const] : []))).values()],
+            filer = [...new Set(T.filter(d => !d.datasett).map(d => d.fil))],
+            rad = (d: Tabellen) => <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} />;
           return (
             <MdAccordionItem
               key={lag}
@@ -416,6 +431,31 @@ export default function Katalog() {
                       <td />
                     </tr>
                   </thead>
+                  {sett.map(ds => {
+                    const I = T.filter(d => d.datasett && d.datasett.navn === ds.navn);
+                    return (
+                      <tbody key={ds.navn} className="datasett">
+                        <tr className="gruppe">
+                          <th colSpan={3} scope="colgroup">
+                            Datasett: {ds.navn}
+                            <small>{ds.om}</small>
+                          </th>
+                        </tr>
+                        <tr className="undergruppe">
+                          <th colSpan={3} scope="colgroup">
+                            Data
+                          </th>
+                        </tr>
+                        {I.filter(d => !d.stotte).map(rad)}
+                        <tr className="undergruppe">
+                          <th colSpan={3} scope="colgroup">
+                            Støttedata
+                          </th>
+                        </tr>
+                        {I.filter(d => d.stotte).map(rad)}
+                      </tbody>
+                    );
+                  })}
                   {filer.map(fil => (
                     <tbody key={fil}>
                       <tr className="gruppe">
@@ -423,9 +463,7 @@ export default function Katalog() {
                           <code>{fil.startsWith(lag + '/') ? fil.slice(lag.length + 1) : fil}</code>
                         </th>
                       </tr>
-                      {T.filter(d => d.fil === fil).map(d => (
-                        <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} />
-                      ))}
+                      {T.filter(d => !d.datasett && d.fil === fil).map(rad)}
                     </tbody>
                   ))}
                 </table>

@@ -14,7 +14,7 @@
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
-import { glem, tabell, type Kildeinfo, type Tabell, type Utgangspunkt } from './cache.ts';
+import { glem, tabell, type Datasettinfo, type Kildeinfo, type Tabell, type Utgangspunkt } from './cache.ts';
 import * as E from './bronse/endepunkter.ts';
 import * as dibk from './bronse/dibk-kommuneplan.ts';
 import * as kartverket from './bronse/kartverket.ts';
@@ -130,6 +130,20 @@ export const KILDE = {
   }
 } satisfies Record<string, Kildeinfo>;
 
+/* Datasettene i sølv. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Tabellene i bronse og sølv som henter
+   og lager det, hører til datasettet (datasett på tabellen) på én av to måter:
+   - data: det innholdet i datasettet lages av
+   - støttedata (stotte på tabellen, med hva den brukes til): det som trengs for å hente og forstå dataene, som en sjekk av om
+     dataene finnes, en oversikt som gjør hentingen raskere, opplysninger om dataene, eller oppslag når man trykker i kartet.
+   Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen, men tallene regnes ikke av dem. Foreløpig er bare
+   kommuneplanen delt inn slik. */
+export const DATASETT = {
+  utbyggingsareal: {
+    navn: 'Areal satt av til framtidig utbygging i kommuneplanen',
+    om: 'For hver rute på 10,6 meter i kommunen: om ruta ligger i areal kommuneplanen setter av til framtidig bebyggelse og anlegg, eller samferdsel. Laget av kommuneplanene hos DiBK. Det er ikke hele kommuneplanen: andre arealformål og nåværende byggeområder er valgt bort.'
+  }
+} satisfies Record<string, Datasettinfo>;
+
 export const katalog = {
   bronse: {
     kommuner: tabell<void, Fylke[]>({
@@ -182,6 +196,9 @@ export const katalog = {
     planIPunkt: tabell<number[], unknown>({
       lag: 'bronse',
       navn: 'planIPunkt',
+      datasett: DATASETT.utbyggingsareal,
+      stotte:
+        'Oppslag når man trykker i kartet: flatene i kommuneplanen i punktet, med alle arealformål. Brukes ikke i tallene.',
       endepunkt: E.KOMMUNEPLAN,
       tittel: 'Kommuneplanen i et punkt',
       om: 'flatene i kommuneplanene i et punkt fra DiBK, med egenskapene og flaten, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke: sølv lagrer det som trengs. Nøkkel: punktet i hele meter.',
@@ -398,6 +415,9 @@ export const katalog = {
     planbit: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'planbit',
+      datasett: DATASETT.utbyggingsareal,
+      stotte:
+        'Sjekken av om DiBK har kommuneplanen for kommunen: hele planen, med alle arealformål, til å regne ut hvor mye av kommunen den dekker.',
       endepunkt: E.KOMMUNEPLAN,
       tittel: 'Bilder av kommuneplanen',
       om: 'hele kommuneplanen fra DiBK i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
@@ -412,6 +432,8 @@ export const katalog = {
     planopplysninger: tabell({
       lag: 'bronse',
       navn: 'planopplysninger',
+      datasett: DATASETT.utbyggingsareal,
+      stotte: 'Opplysninger om planen: hvilken plan det er, hvem som leverte den og når den ble kopiert til DiBK.',
       endepunkt: E.KOMMUNEPLAN,
       tittel: 'Opplysninger om kommuneplanen',
       om: 'hvilken kommuneplan DiBK har, slått opp midt i det planen dekker',
@@ -424,6 +446,9 @@ export const katalog = {
     planoversikt: tabell({
       lag: 'bronse',
       navn: 'planoversikt',
+      datasett: DATASETT.utbyggingsareal,
+      stotte:
+        'Gjør hentingen raskere: en grov oversikt over hvor planen ligger, så kartbildene bare hentes der det er plan.',
       endepunkt: E.KOMMUNEPLAN,
       tittel: 'Oversikt over kommuneplanen',
       om: 'ett bilde av kommuneplanen fra DiBK over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Brukes til å hente kartbildene bare der det er plan.',
@@ -437,6 +462,7 @@ export const katalog = {
     planflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'planflis',
+      datasett: DATASETT.utbyggingsareal,
       endepunkt: E.KOMMUNEPLAN,
       tittel: 'Kartbilder av kommuneplanen',
       om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
@@ -727,6 +753,9 @@ export const katalog = {
     plandekning: tabell({
       lag: 'solv',
       navn: 'plandekning',
+      datasett: DATASETT.utbyggingsareal,
+      stotte:
+        'Sjekken av om DiBK har kommuneplanen for kommunen. Dekker planen under 15 % av kommunen, finnes ikke datasettet for kommunen.',
       tittel: 'Hvor mye planen dekker',
       om: 'hvor stor del av kommunen kommuneplanen dekker, talt i ruter på 10,6 meter bit for bit, og en rute midt i det planen dekker',
       forklaring:
@@ -737,6 +766,8 @@ export const katalog = {
     planinfo: tabell({
       lag: 'solv',
       navn: 'planinfo',
+      datasett: DATASETT.utbyggingsareal,
+      stotte: 'Om DiBK har kommuneplanen, og opplysningene om den. Brukes til å si hvilken plan tallene gjelder.',
       tittel: 'Kommuneplanen',
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
       forklaring: 'Om DiBK har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.',
@@ -747,6 +778,9 @@ export const katalog = {
     planoversikt: tabell({
       lag: 'solv',
       navn: 'planoversikt',
+      datasett: DATASETT.utbyggingsareal,
+      stotte:
+        'Gjør hentingen raskere: hvor i kommunen planen ligger, så kartbildene bare hentes for blokkene der det er plan.',
       tittel: 'Hvor kommuneplanen ligger',
       om: 'for hver piksel i oversikten over kommuneplanen (85 meter) om noe av planen ligger der. Utbyggingen henter kartbildene fra DiBK bare for blokkene der oversikten har noe, eller rett ved.',
       teknisk: true,
@@ -758,6 +792,7 @@ export const katalog = {
     kommuneplanruter: tabell<Flis, Planruter>({
       lag: 'solv',
       navn: 'kommuneplanruter',
+      datasett: DATASETT.utbyggingsareal,
       tittel: 'Kommuneplanen per rute',
       om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y]. Lagres ikke: blokkene i utbyggingen lagres, og kartbildet i bronse holder for å lage den på nytt.',
       forklaring:
@@ -885,6 +920,9 @@ export const katalog = {
     planIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
       lag: 'solv',
       navn: 'planIPunkt',
+      datasett: DATASETT.utbyggingsareal,
+      stotte:
+        'Oppslag når man trykker i kartet: flatene i punktet med navnet på arealformål og status. Brukes ikke i tallene.',
       tittel: 'Kommuneplanen i et punkt, tolket',
       om: 'flatene i kommuneplanene i et punkt, med feltene og flaten, og navnet på arealformål og status fra kodelisten. Nøkkel: punktet i hele meter.',
       forklaring:
