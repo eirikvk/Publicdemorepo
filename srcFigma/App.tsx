@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
 import { planTall } from '../src/data/motor/plan.ts';
-import { app } from '../src/data/motor/tilstand.ts';
+import { app, bruk, nullstillBruk } from '../src/data/motor/tilstand.ts';
 import { valgt, verdi } from '../src/data/motor/valgt.ts';
 import { useApp } from '../src/ui/komponenter/lager.ts';
 import { kart } from '../src/ui/kart/kart.ts';
@@ -48,6 +48,10 @@ export default function App() {
         valgt,
         verdi,
         planTall,
+        nullstillBruk,
+        get bruk() {
+          return bruk;
+        },
         get kart() {
           return kart;
         }

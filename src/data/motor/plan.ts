@@ -5,6 +5,7 @@ import { se } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import { utenPlan } from './egne.ts';
 import { hentingAvKlasser } from './grunnkart.ts';
+import { app, endret } from './tilstand.ts';
 import { valgt, valgtNr } from './valgt.ts';
 
 /* Kommunen har ingen kommuneplan hos DiBK */
@@ -30,4 +31,20 @@ export function planTall(): 'tom' | 'henter' | 'regner' | 'feil' | 'ok' {
   if (r && r.status === 'ok' && !r.underveis) return 'tom'; /* regnet ut, og ingenting å vise */
   if (hentingAvKlasser()) return 'henter';
   return 'regner';
+}
+
+/* Om det siste kallet mot DiBK feilet (kallene står nyeste først), så planlagt utbygging ikke kunne regnes ut av den grunn */
+export function dibkFeilet() {
+  const k = app.kall.find(x => x.kilde === 'DiBK');
+  return !!k && k.feilet;
+}
+/* Prøver kommuneplanen og utbyggingen for valgt kommune på nytt etter en feil. Det som feilet (som kartbildene fra DiBK), hentes på
+   nytt når tabellen kalles. */
+export function provPlanIgjen() {
+  const nr = valgtNr();
+  if (!nr) return;
+  const ferdig = () => endret();
+  katalog.gull.kommuneplan(nr).catch(() => null);
+  katalog.gull.utbygging(nr).then(ferdig, ferdig);
+  endret();
 }

@@ -17,6 +17,7 @@ import {
   nummer,
   sett,
   verdi,
+  verdier,
   type Glissen
 } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
@@ -55,6 +56,13 @@ export interface Rydding {
   alle: Glissen;
   celler: number[];
   ryddet: Glissen;
+}
+/* Kommuneplanen alene, ryddet for smale striper, og summen: den samme uansett egne områder, så den huskes mellom gangene utbyggingen
+   regnes ut (gull.planAlene), så lenge blokkene med planen er de samme (d, i rekkefølgen i nokler) */
+export interface PlanAlene {
+  d: (Uint8Array | null)[];
+  rydding: Rydding;
+  sum: Ryddetsum;
 }
 /* Natur (rn) og jordbruk (rj) satt av, i ruter vektet med kommunens andel og målestokken */
 export interface Ryddetsum {
@@ -97,25 +105,25 @@ export interface Utbygging extends Plassering {
   rute: number;
   egneTall: EgetTall[];
   rader: Int32Array;
-  radAv: Map<number, number> /* raden hver rute har i rader */;
   egneIder: number[];
   andeler: Map<number, Andel> /* kommunens andel i blokkene langs grensen, etter blokkNokkel */;
   faktorer: Map<number, number> /* målestokken per blokk, etter blokkNokkel */;
+  alene: PlanAlene /* kommuneplanen alene, til neste gang utbyggingen regnes ut */;
 }
 /* Vekten til rute i i utbyggingen R: den delen av ruta som ligger i kommunen, ganger målestokken i biten */
 export function ruteVekt(R: Pick<Utbygging, 'cx0' | 'cy0' | 'w' | 'andeler' | 'faktorer'>, i: number): number {
-  const X = R.cx0 + (i % R.w),
-    Y = R.cy0 + Math.floor(i / R.w),
-    k = blokkNokkel(Math.floor(X / BLOKK), Math.floor(Y / BLOKK)),
+  const y = (i / R.w) | 0,
+    X = R.cx0 + i - y * R.w,
+    Y = R.cy0 + y,
+    k = (X >> 9) * 65536 + (Y >> 9) /* blokkNokkel, med skift fordi BLOKK er 512 */,
     A = R.andeler.get(k),
     f = R.faktorer.get(k);
-  return (A ? andelVed(A, X % BLOKK, Y % BLOKK) / HEL : 1) * (f === undefined ? 1 : f);
+  return (A ? andelVed(A, X & 511, Y & 511) / HEL : 1) * (f === undefined ? 1 : f);
 }
 /* Målestokken i biten rute i i utbyggingen R ligger i */
 export function ruteFaktor(R: Pick<Utbygging, 'cx0' | 'cy0' | 'w' | 'faktorer'>, i: number): number {
-  const X = R.cx0 + (i % R.w),
-    Y = R.cy0 + Math.floor(i / R.w),
-    f = R.faktorer.get(blokkNokkel(Math.floor(X / BLOKK), Math.floor(Y / BLOKK)));
+  const y = (i / R.w) | 0,
+    f = R.faktorer.get(((R.cx0 + i - y * R.w) >> 9) * 65536 + ((R.cy0 + y) >> 9));
   return f === undefined ? 1 : f;
 }
 
@@ -240,7 +248,8 @@ export function byggUtbygging(
   nokler: number[][],
   blokker: Map<string, Blokk>,
   E: Egneruter | null,
-  rute: number
+  rute: number,
+  alene: PlanAlene | null = null
 ): Utbygging {
   const tx0 = Math.min(...nokler.map(t => t[0])),
     ty0 = Math.min(...nokler.map(t => t[1]));
@@ -271,14 +280,18 @@ export function byggUtbygging(
     eget: Glissen | null = null,
     egetType: Glissen | null = null;
   const egneIder = E ? E.ider : [];
+  const planensBlokker = nokler.map(([x, y]) => blokker.get(`${Z}/${x}/${y}`)!.d || null),
+    sammeBlokker =
+      !!alene && alene.d.length === planensBlokker.length && alene.d.every((b, k) => b === planensBlokker[k]),
+    kommuneplanen = sammeBlokker ? alene!.rydding : ryddStriper(d);
   if (E) {
-    basis = ryddStriper(d);
+    basis = kommuneplanen;
     d = kopiAv(d);
     eget = glissent(G);
     egetType = glissent(G);
     leggInnEgne(E, d, kl, eget, egetType);
   }
-  const { celler, ryddet } = ryddStriper(d);
+  const { celler, ryddet } = E ? ryddStriper(d) : kommuneplanen;
   const egneTall: EgetTall[] = egneIder.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0 }));
   if (eget)
     for (const i of finn(eget, e => e !== 0)) {
@@ -293,12 +306,9 @@ export function byggUtbygging(
     }
   /* Radene: rutene med planlagt utbygging nå, og så rutene som bare planen alene har, der egne områder har tatt planen bort, også
      i smale striper */
-  const bareBasis = basis
-    ? basis.celler.filter(i => {
-        const v = verdi(d, i);
-        return v !== 1 && v !== 2;
-      })
-    : [];
+  const iD = basis ? verdier(d, basis.celler) : null,
+    bareBasis = basis ? basis.celler.filter((_, k) => iD![k] !== 1 && iD![k] !== 2) : [],
+    planSum = sammeBlokker ? alene!.sum : tellRyddet(kommuneplanen.ryddet, andeler, faktorer);
   const rader = Int32Array.from([...celler, ...bareBasis]);
   return {
     nr,
@@ -313,15 +323,15 @@ export function byggUtbygging(
     pl,
     antallEgne: egneIder.length,
     basis,
-    sum: tellRyddet(ryddet, andeler, faktorer),
-    basisSum: basis ? tellRyddet(basis.ryddet, andeler, faktorer) : null,
+    sum: E ? tellRyddet(ryddet, andeler, faktorer) : planSum,
+    basisSum: basis ? planSum : null,
+    alene: { d: planensBlokker, rydding: kommuneplanen, sum: planSum },
     iDag: { nat: n.nat, jor: n.jor },
     n,
     fliser: nokler.length,
     rute,
     egneTall,
     rader,
-    radAv: new Map(Array.from(rader, (i, r) => [i, r])),
     egneIder,
     andeler,
     faktorer
@@ -335,7 +345,8 @@ export type Planvalg = 'ny' | 'gammel';
    den planen, også i smale striper (celler), og rutenettene planen er laget av (alle, med smale striper) og det som er beholdt
    (ryddet). omrade er null for hele kommunen, ellers nummeret til et eget område (1 er det første), og da er bare rutene i det
    området med. Alle analysene regnes med de samme funksjonene for begge planene og alle utvalgene, så det eneste som skiller dem, er
-   hvilken plan som ligger i utbyggingen, og hvilke ruter som er med. */
+   hvilken plan som ligger i utbyggingen, og hvilke ruter som er med. For hver rute i celler står også raden den har i utbyggingen
+   (rader, −1 når den ikke har noen), og verdien i alle og ryddet (alleV og ryddetV), slått opp én gang, så analysene slipper. */
 export interface Utvalg {
   R: Utbygging;
   plan: Planvalg;
@@ -343,19 +354,47 @@ export interface Utvalg {
   celler: Int32Array;
   alle: Glissen;
   ryddet: Glissen;
+  rader: Int32Array;
+  alleV: Uint8Array;
+  ryddetV: Uint8Array;
 }
-export function utvalg(R: Utbygging, plan: Planvalg = 'ny', omrade: number | null = null): Utvalg {
+/* Raden i utbyggingen R for hver rute i celler (stigende), eller −1. Radene er to stigende rekker: rutene med planlagt utbygging nå
+   (R.celler), så de som bare planen alene har. Begge gås gjennom sammen med cellene, så det tar ett løp. */
+function raderFor(R: Utbygging, celler: Int32Array): Int32Array {
+  const ut = new Int32Array(celler.length).fill(-1),
+    nC = R.celler.length,
+    nR = R.rader.length;
+  let a = 0,
+    b = nC;
+  for (let k = 0; k < celler.length; k++) {
+    const i = celler[k];
+    while (a < nC && R.rader[a] < i) a++;
+    if (a < nC && R.rader[a] === i) {
+      ut[k] = a;
+      continue;
+    }
+    while (b < nR && R.rader[b] < i) b++;
+    if (b < nR && R.rader[b] === i) ut[k] = b;
+  }
+  return ut;
+}
+export function byggUtvalg(R: Utbygging, plan: Planvalg = 'ny', omrade: number | null = null): Utvalg {
   const B = plan === 'gammel' ? R.basis : null,
     alle = B ? B.alle : R.alle,
     ryddet = B ? B.ryddet : R.ryddet,
-    celler = B ? Int32Array.from(B.celler) : R.celler;
+    alleCeller = B ? Int32Array.from(B.celler) : R.celler,
+    i = omrade !== null && R.eget ? verdier(R.eget, alleCeller) : null,
+    celler = omrade === null ? alleCeller : i ? alleCeller.filter((_, k) => i[k] === omrade) : new Int32Array(0);
   return {
     R,
     plan,
     omrade,
     alle,
     ryddet,
-    celler: omrade === null ? celler : R.eget ? celler.filter(i => verdi(R.eget!, i) === omrade) : new Int32Array(0)
+    celler,
+    rader: raderFor(R, celler),
+    alleV: verdier(alle, celler),
+    ryddetV: verdier(ryddet, celler)
   };
 }
 /* Nøkkelen for et utvalg i tabellene i gull: kommunenummeret for den nye planen i hele kommunen, som sidene ellers spør med, og ellers
@@ -367,11 +406,12 @@ export function lesUtvalg(n: string): { nr: string; plan: Planvalg; omrade: numb
   const [nr, plan, o] = n.split('/');
   return { nr, plan: plan === 'gammel' ? 'gammel' : 'ny', omrade: o ? Number(o) : null };
 }
-/* Utvalget nøkkelen n gir, i utbyggingen for kommunen. null uten utbygging. */
-export async function utvalgFor(n: string): Promise<Utvalg | null> {
+/* Tabellen gull.utvalg: utvalget nøkkelen n gir, i utbyggingen for kommunen (byggUtvalg). Alle analysene for et utvalg bruker det samme,
+   så rutene og verdiene slås opp én gang. null uten utbygging. */
+export async function utvalg(n: string): Promise<Utvalg | null> {
   const u = lesUtvalg(n),
     R = await katalog.gull.utbygging(u.nr);
-  return R ? utvalg(R, u.plan, u.omrade) : null;
+  return R ? byggUtvalg(R, u.plan, u.omrade) : null;
 }
 
 /* Egne områder inn i utbyggingen: innenfor et eget område erstatter det kommuneplanen. E er områdene per rute fra solv.egneruter, d
@@ -437,5 +477,9 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     })
   );
   if (E && E.z !== Z) throw new Error('egne områder er regnet på et annet nivå');
-  return byggUtbygging(nr, Z, under, blokker, E, Math.round(ruteM(Z) * 10) / 10 /* 10,6 meter */);
+  /* kommuneplanen alene fra sist, når blokkene er de samme (se PlanAlene) */
+  const A = katalog.gull.planAlene.straks(nr, () => ({ alene: null as PlanAlene | null })),
+    R = byggUtbygging(nr, Z, under, blokker, E, Math.round(ruteM(Z) * 10) / 10 /* 10,6 meter */, A.alene);
+  A.alene = R.alene;
+  return R;
 }

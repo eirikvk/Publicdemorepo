@@ -85,6 +85,30 @@ test('brukerstyrt: utdatert gis til visningen mens det nye regnes ut, og regnes 
   assert.equal(les(T, '5001')!.verdi, 1); /* det gamle, mens det nye regnes ut */
   assert.equal(await T('5001'), 2);
   assert.equal(await U('5001'), 1); /* bygger ikke på det brukeren gjør */
+  /* kommuneplanen alene i hele kommunen blir ikke utdatert, men utvalgene for egne områder blir det */
+  const forsok = new Map<string, number>(),
+    V = tabell<string, number>({
+      lag: 'gull',
+      navn: 'g',
+      tittel: '',
+      om: '',
+      husk: 6,
+      brukerstyrt: true,
+      gammelFast: true,
+      etl: async n => {
+        forsok.set(n, (forsok.get(n) || 0) + 1);
+        return forsok.get(n)!;
+      }
+    });
+  for (const n of ['5001/gammel', '5001/gammel/1', '5001/ny/1']) assert.equal(await V(n), 1);
+  brukerEndret('5001');
+  assert.equal(await V('5001/gammel'), 1);
+  assert.equal(await V('5001/gammel/1'), 2);
+  assert.equal(await V('5001/ny/1'), 2);
+  /* uten gammelFast blir også kommuneplanen alene utdatert */
+  assert.equal(await T('5001/gammel'), 3);
+  brukerEndret('5001');
+  assert.equal(await T('5001/gammel'), 4);
 });
 
 test('lagret: det lagrede svaret brukes, og ETL-funksjonen kjøres bare der det mangler', async () => {

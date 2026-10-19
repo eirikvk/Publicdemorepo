@@ -21,7 +21,8 @@ import {
   MdIconUpload,
   MdRadioGroup
 } from './md.ts';
-import { iDag, egneMelding, omOpplastet, smalTekst } from '../egnetekster.ts';
+import { iDag, egneMelding, omOpplastet, planFeil, smalTekst } from '../egnetekster.ts';
+import { planTall } from '../../data/motor/plan.ts';
 import { dekar, medFortegn, nf, pst } from '../tekst.ts';
 import './Egne.css';
 
@@ -59,7 +60,7 @@ function EgetOmrade({ g, rader, oko }: { g: Eget; rader: EgneRader | null; oko: 
   const i = rader ? rader.omrader.findIndex(x => x.id === g.id) : -1,
     her = i < 0 ? null : rader!.omrader[i],
     O = her ? her.omrade : null,
-    tekster = O ? iDag(O) : ['Regner …'];
+    tekster = O ? iDag(O) : [planTall() === 'feil' ? planFeil() : 'Regner …'];
   const tabell: ReactNode =
     O && O.kjent ? (
       <EgenTabell

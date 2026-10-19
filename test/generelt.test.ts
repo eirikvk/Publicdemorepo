@@ -19,7 +19,7 @@ import {
 import { summen } from '../src/data/generelt/tall.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
 import { palettPng, pngBit, pngBiter } from '../src/data/generelt/png.ts';
-import { finn, glissent, leggInnDelt, sett, verdi } from '../src/data/generelt/glissen.ts';
+import { finn, glissent, leggInnDelt, sett, verdi, verdier } from '../src/data/generelt/glissen.ts';
 import { deflateSync } from 'node:zlib';
 
 const kvadrat = (x: number, y: number, s: number) => [
@@ -104,6 +104,8 @@ test('glissent rutenett: som et vanlig rutenett, og en delt blokk kopieres før 
     finn(L, v => v === 1 || v === 2),
     [2, 5]
   );
+  /* mange ruter på en gang: det samme som verdi for hver, også over blokkgrensen, og tom utenfor */
+  assert.deepEqual(Array.from(verdier(L, [0, 1, 2, 3, 4, 5, 6, 7, 8, -1])), [0, 0, 2, 3, 0, 1, 3, 3, 3, 3]);
 });
 
 test('punkt i flate: inne, ute og i hullet', () => {

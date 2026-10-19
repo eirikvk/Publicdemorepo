@@ -11,7 +11,8 @@ import { katalog } from '../../src/data/katalog.ts';
 import { lastOppPlan, settType, slettEget } from '../../src/data/motor/egne.ts';
 import { app, type EgetOmrade } from '../../src/data/motor/tilstand.ts';
 import { verdi } from '../../src/data/motor/valgt.ts';
-import { egneMelding, iDag, omOpplastet, smalTekst } from '../../src/ui/egnetekster.ts';
+import { egneMelding, iDag, omOpplastet, planFeil, smalTekst } from '../../src/ui/egnetekster.ts';
+import { planTall } from '../../src/data/motor/plan.ts';
 import { rolig } from '../../src/ui/kart/kart.ts';
 import {
   angrePunkt,
@@ -71,7 +72,12 @@ function tilOmradene() {
    andel gir andelen med kommuneplanen alene i stedet. her gjelder ett område (kommuneplanen her) og ikke hele kommunen. */
 export function Endring({ r, andel, her }: { r: EgenRad | null; andel?: boolean; her?: boolean }) {
   const plan = her ? 'kommuneplanen her' : 'kommuneplanen alene';
-  if (!r) return <span className="tall-under endring henter">Sammenligner med kommuneplanen …</span>;
+  if (!r)
+    return planTall() === 'feil' ? (
+      <span className="tall-under endring">Kunne ikke sammenlignes nå</span>
+    ) : (
+      <span className="tall-under endring henter">Sammenligner med kommuneplanen …</span>
+    );
   if (r.plan === null) return <span className="tall-under endring">Ingen kommuneplan å sammenligne med</span>;
   if (andel)
     return (
@@ -334,12 +340,12 @@ function Omradekort({ g, i }: { g: EgetOmrade; i: number }) {
           {O ? (
             iDag(O, iTekst).map(t => <p key={t}>{t}</p>)
           ) : (
-            <p className="henter">Regner ut hva som ligger i området …</p>
+            <p className="henter">{planTall() === 'feil' ? planFeil() : 'Regner ut hva som ligger i området …'}</p>
           )}
           {smal && <p className="egetkort-smal">{smal}</p>}
         </div>
         <div className="egetkort-resultat">
-          {(!O || O.kjent) && (
+          {(!O || O.kjent) && planTall() !== 'feil' && (
             <dl className="egetkort-tall">
               <Tall navn="Natur satt av" r={rad('pnat')} />
               <Tall navn="Jordbruk satt av" r={rad('pjor')} />

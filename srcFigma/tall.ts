@@ -9,6 +9,7 @@ import type { Sammenligning } from '../src/data/gull/syntetisk.ts';
 import type { TemaIPlan, Temaet } from '../src/data/gull/temaer.ts';
 import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
 import { egneRutenett, mine } from '../src/data/motor/egne.ts';
+import { planTall } from '../src/data/motor/plan.ts';
 import { bildetallet, valgt, verdi } from '../src/data/motor/valgt.ts';
 
 /* Et tall som hentes: henter, feil, ingen (kommunen har ikke noe av det), mangler (ikke regnet ut for kommunen, og hvorfor) eller
@@ -135,7 +136,8 @@ export function temaflis(id: string): Svar<{ km2: number; andel: number | null }
 /* Egne områder i valgt kommune (tegnet eller lastet opp) og sammenligningen med kommuneplanen (gull.egneRader og
    gull.egneOkosystemer). Radene er de samme analysene for kommuneplanen alene (plan) og planen med egne områder (ny), og
    forskjellen (endring). rader er null til utbyggingen er regnet ut med områdene som finnes nå. Fordelingen per økosystemtype (oko)
-   kan komme senere enn resten, fordi grunnkartet med detaljklassene kan måtte hentes fra NIBIO, og venter sier at den regnes ut. */
+   kan komme senere enn resten, fordi grunnkartet med detaljklassene kan måtte hentes fra NIBIO, og venter sier at den regnes ut (ikke
+   når utbyggingen feilet). */
 export function egne() {
   const omrader = mine(),
     R = egneRutenett(),
@@ -145,7 +147,7 @@ export function egne() {
     omrader,
     rader,
     oko: O && O.status === 'ok' ? O.verdi : null,
-    venter: omrader.length > 0 && (!O || O.status === 'henter')
+    venter: omrader.length > 0 && (!O || O.status === 'henter') && planTall() !== 'feil'
   };
 }
 /* Raden i sammenligningen for hele kommunen med fargen farge (pnat for natur, graa2 for grått areal, vern for verneområdene og så

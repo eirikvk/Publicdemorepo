@@ -11,6 +11,9 @@ import { KILDE } from '../../src/data/katalog.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { andelTekst, dekar, iTekst, pst } from '../tekst.ts';
 import { lastOppPlan } from '../../src/data/motor/egne.ts';
+import { planTall, provPlanIgjen } from '../../src/data/motor/plan.ts';
+import { planFeil } from '../../src/ui/egnetekster.ts';
+import { MdButton } from '../md.ts';
 import Kart, { EGNE, KLASSER, PLAN } from '../komponenter/Kart.tsx';
 import { EgneMerke, EgneOmrader, EgneVerktoy, Endring, Tegnelinje, harEgne } from '../komponenter/Egne.tsx';
 import { FLAGG } from '../flagg.ts';
@@ -50,7 +53,9 @@ import type { Tema } from '../temaer.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
 const prosent = (a: number | null) => (a === null ? '–' : pst(a) + ' %');
-const regnes = <span className="henter">Regnes ut …</span>;
+/* Et tall som ikke er regnet ut ennå, eller som ikke kunne regnes ut (feil) */
+const regnes = (feil: boolean) =>
+  feil ? <span className="mangler-tall">Kunne ikke regnes ut</span> : <span className="henter">Regnes ut …</span>;
 
 /* Toppen av siden, som en temaside: tittelen, ingressen og fargen bak illustrasjonen */
 const toppen = (): Tema => ({
@@ -82,6 +87,7 @@ export default function Naturtapet() {
     G = graaIPlan(),
     k = kommunen(),
     E = harEgne() ? egne() : null,
+    feil = !P && planTall() === 'feil',
     temaer = (
       [
         ['Verneområder', 'vern', 'vern'],
@@ -132,7 +138,7 @@ export default function Naturtapet() {
                   {E && <Endring r={egenRad('pnat')} />}
                 </>
               ) : (
-                regnes
+                regnes(feil)
               ),
               ['naturtapet/kort-natur', 'planlagt']
             ],
@@ -144,7 +150,7 @@ export default function Naturtapet() {
                   {E && <Endring r={egenRad('pnat')} andel />}
                 </>
               ) : (
-                regnes
+                regnes(feil)
               ),
               ['naturtapet/kort-andel', 'planlagt']
             ],
@@ -156,12 +162,21 @@ export default function Naturtapet() {
                   {E && <Endring r={egenRad('pjor')} />}
                 </>
               ) : (
-                regnes
+                regnes(feil)
               ),
               ['naturtapet/kort-jordbruk', 'planlagt']
             ]
           ]}
         />
+        {feil && (
+          <Fremhevet varsel>
+            <b>Planlagt utbygging kunne ikke regnes ut.</b>
+            <span>{planFeil()}</span>
+            <MdButton className="prov-igjen" theme="secondary" mode="small" onClick={provPlanIgjen}>
+              Prøv igjen
+            </MdButton>
+          </Fremhevet>
+        )}
         <div className="trekkspill-liste etter-tallkort">
           <Trekkspill tittel="Hvor er tallene hentet fra?">
             <p>
@@ -278,7 +293,11 @@ export default function Naturtapet() {
               data={temaer.map(t => ({ navn: t.navn, km2: t.plan!.planKm2, farge: t.farge }))}
             />
           ) : (
-            <p className="henter">Regnes ut når kartet for kommunen er hentet …</p>
+            <p className={feil ? 'mangler-tall' : 'henter'}>
+              {feil
+                ? 'Kunne ikke regnes ut, fordi planlagt utbygging mangler.'
+                : 'Regnes ut når kartet for kommunen er hentet …'}
+            </p>
           )}
         </Figur>
         {G && G.plan && (

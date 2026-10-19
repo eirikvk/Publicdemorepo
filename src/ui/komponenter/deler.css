@@ -199,3 +199,11 @@
   font-weight: var(--md-typography-weight-medium);
   color: var(--md-color-attention-error-primary);
 }
+
+/* Meldingen når planlagt utbygging ikke kunne regnes ut, med knappen for å prøve igjen under (Framtid.tsx) */
+.planfeil {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--md-spacing-8);
+}

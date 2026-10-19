@@ -4,13 +4,14 @@ import { katalog } from '../../data/katalog.ts';
 import type { Planinfo } from '../../data/solv/kommuneplan.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { hentingAvKlasser } from '../../data/motor/grunnkart.ts';
-import { ingenPlan, planTall } from '../../data/motor/plan.ts';
+import { ingenPlan, planTall, provPlanIgjen } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { valgt, verdi, verdiGammel } from '../../data/motor/valgt.ts';
 import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
 import { antallOrd, henteTekst, iTekst, pst } from '../tekst.ts';
-import { MdAlertMessage } from './md.ts';
+import { MdAlertMessage, MdButton } from './md.ts';
+import { planFeil } from '../egnetekster.ts';
 import { Korttittel } from './Tallforklaring.tsx';
 
 /* Hvilken plan DiBK har, i tekst: plan-id, hvem som har levert den, og når den ble kopiert til DiBK */
@@ -43,11 +44,7 @@ function Planlagt() {
   if (!P) {
     const h = tilstand === 'henter' ? hentingAvKlasser() : null;
     natur = jordbruk = tilstand === 'regner' ? 'regner …' : h ? 'henter kart …' : '';
-    note = h
-      ? `${henteTekst(h)}. Tallene regnes ut når hele kommunen er hentet.`
-      : tilstand === 'feil'
-        ? 'Arealet kunne ikke regnes ut.'
-        : '';
+    note = h ? `${henteTekst(h)}. Tallene regnes ut når hele kommunen er hentet.` : '';
   } else {
     const antall = P.antallEgne;
     egnemerk = !antall
@@ -101,6 +98,20 @@ function Planlagt() {
             </small>
           </li>
         </ul>
+      )}
+      {tilstand === 'feil' && !P && (
+        <div className="planfeil">
+          <MdAlertMessage
+            theme="warning"
+            fullWidth
+            role="status"
+            label="Planlagt utbygging kunne ikke regnes ut"
+            description={planFeil()}
+          />
+          <MdButton theme="secondary" mode="small" onClick={provPlanIgjen}>
+            Prøv igjen
+          </MdButton>
+        </div>
       )}
       {egnemerk && <p role="status">{egnemerk}</p>}
       {note && <p className="hint">{note}</p>}

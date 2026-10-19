@@ -8,7 +8,7 @@ import { areal, utsnitt, type Flerflate } from '../generelt/geometri.ts';
 import { EGET_MIN_M2, arealKm2 } from '../solv/felles.ts';
 import { samletKm2, type Egetinn, type Type } from '../solv/egne.ts';
 import { tilUTM } from '../solv/projeksjoner.ts';
-import { brukerEndret, legg, se } from '../cache.ts';
+import { brukerEndret, gjeldende, legg, se, type Tabell } from '../cache.ts';
 import { katalog } from '../katalog.ts';
 import { finn, velgKommune } from './kommune.ts';
 import { ingenPlan, utbyggingen } from './plan.ts';
@@ -36,8 +36,19 @@ export function oppdaterEgne(nr: string) {
     har = se(katalog.bronse.egne, nr),
     fra = har && har.status === 'ok' ? har.verdi! : [];
   if (har && merke(fra) === merke(ny)) return;
+  if (!fra.length && ny.length) kommuneplanAlene(nr);
   legg(katalog.bronse.egne, nr, ny);
   if (merke(fra) !== merke(ny)) brukerEndret(nr);
+}
+/* Uten egne områder er kommuneplanen alene den samme som planen. Når det første egne området kommer i kommunen nr, legges svarene som
+   alt er regnet ut for planen, inn som svarene for kommuneplanen alene (nøkkelen nr/gammel) i tabellene der den ikke endres av egne
+   områder (gammelFast i katalogen), så de ikke regnes ut på nytt. */
+function kommuneplanAlene(nr: string) {
+  for (const t of Object.values(katalog.gull) as Tabell<string, unknown>[]) {
+    if (!t.gammelFast) continue;
+    const v = gjeldende(t, nr);
+    if (v !== null && !se(t, nr + '/gammel')) legg(t, nr + '/gammel', v);
+  }
 }
 function egneEndret() {
   if (app.valgt) oppdaterEgne(app.valgt.nr);
