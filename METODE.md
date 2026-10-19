@@ -1566,6 +1566,12 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Lenke til tvillingen fra hovedsiden, 19. oktober 2026.** Hovedsiden har fått en smal linje øverst, som tvillingen har, med
+lenke til prototypen med utseendet fra Figma. Lenkene går begge veier til samme kommune og samme tema der det finnes
+(`src/ui/tvilling.ts`), for eksempel fra Verneområder på hovedsiden til Verneområder under «Utforsk naturen» og tilbake. Tallene er
+ikke endret. Kontroll: lenkene ble fulgt begge veier for Trondheim på 1280 og 390 px, uten feil og uten at siden ble for bred.
+Testet i Chromium, ikke på iPhone.
+
 **Egne analyser på Naturtapet i tvillingen, 19. oktober 2026.** Ved kartet på Naturtapet kan man nå tegne et område eller laste
 opp en plan, også ved å slippe filen i kartet, som på hovedsiden. Datamotoren regner det ut på samme måte som der: området
 erstatter kommuneplanen der det ligger, og de samme analysene regnes for kommuneplanen alene og for planen med egne områder

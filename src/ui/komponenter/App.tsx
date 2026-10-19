@@ -10,7 +10,7 @@ import { kart } from '../kart/kart.ts';
 import { startOpp } from '../sider.ts';
 import { ui } from '../tilstand.ts';
 import { useApp } from './lager.ts';
-import Topp from './Topp.tsx';
+import Topp, { Prototyplinje } from './Topp.tsx';
 import Sidevelger from './Sidevelger.tsx';
 import Kartpanel from './Kartpanel.tsx';
 import Innhold from './Innhold.tsx';
@@ -59,13 +59,16 @@ export default function App() {
   /* Kartet har fått plassen sin før dette kjører, så det kan zoome til kommunen med en gang. */
   useEffect(() => startOpp(), []);
   return (
-    <div className="side">
-      <Topp />
-      <Sidevelger />
-      <main className="hoved">
-        <Kartpanel teknisk={teknisk} />
-        <Innhold teknisk={teknisk} settTeknisk={settTeknisk} />
-      </main>
-    </div>
+    <>
+      <Prototyplinje />
+      <div className="side">
+        <Topp />
+        <Sidevelger />
+        <main className="hoved">
+          <Kartpanel teknisk={teknisk} />
+          <Innhold teknisk={teknisk} settTeknisk={settTeknisk} />
+        </main>
+      </div>
+    </>
   );
 }

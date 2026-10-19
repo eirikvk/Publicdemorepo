@@ -1,10 +1,12 @@
 /* Toppen av tvillingen, som i Figma: navnet med kommunen, «Bytt kommune» og «Hjelp og veileder», og menyen med hovedsidene under. På
-   mobil ligger menyen og knappene bak en menyknapp. Over toppen står en smal linje som sier at dette er en prototyp. Logoen fra
-   skissene er ikke med: det står et nøytralt merke i stedet, med den samme loddrette streken mot navnet. Er egne områder med i
-   tallene, står det en linje om det under toppen (EgneStripe). */
+   mobil ligger menyen og knappene bak en menyknapp. Over toppen står en smal linje som sier at dette er en prototyp, med lenke
+   til samme kommune og tema i dagens løsning (src/ui/tvilling.ts). Logoen fra skissene er ikke med: det står et nøytralt merke i
+   stedet, med den samme loddrette streken mot navnet. Er egne områder med i tallene, står det en linje om det under toppen
+   (EgneStripe). */
 import { memo, useEffect, useRef } from 'react';
 import { kommuner, listeFeil } from '../../src/data/motor/kommune.ts';
 import { app, endret } from '../../src/data/motor/tilstand.ts';
+import { tilHovedsiden } from '../../src/ui/tvilling.ts';
 import { MdIconClose, MdIconMenu, MdIconSwapVert, MdPanIcon } from '../md.ts';
 import { MENY, byttKommune, figma } from '../navigasjon.ts';
 import { Lenke } from './deler.tsx';
@@ -83,7 +85,7 @@ export default function Topp() {
     <>
       <p className="prototyp">
         Prototyp: utseendet fra Figma, tallene fra åpne kilder.{' '}
-        <a href={'../' + (k ? '#' + k.nr : '')}>Til dagens løsning</a>
+        <a href={tilHovedsiden(k ? k.nr : '', r.side + (r.tema ? '/' + r.tema : ''))}>Til dagens løsning</a>
       </p>
       <header className="topp">
         <div className="topp-rad">

@@ -46,3 +46,14 @@
     font-size: var(--md-typography-heading-xl);
   }
 }
+/* Linjen om prototypen over hele bredden, som linjen øverst i tvillingen fra Figma */
+.prototyplinje {
+  margin: 0;
+  padding: 6px 16px;
+  background: var(--md-color-beige-4);
+  font-size: var(--md-typography-body-s);
+  text-align: center;
+}
+.prototyplinje .md-link:visited {
+  color: var(--md-color-cta-primary-default);
+}

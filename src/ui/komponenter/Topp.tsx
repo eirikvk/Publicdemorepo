@@ -1,9 +1,24 @@
-/* Toppen av siden: navnet på løsningen, valg av fylke og kommune, og overskriften med kommunen som er valgt. */
+/* Toppen av siden: navnet på løsningen, valg av fylke og kommune, og overskriften med kommunen som er valgt. Over alt står en smal
+   linje med lenke til prototypen med utseendet fra Figma (Prototyplinje), som tvillingen har en tilsvarende linje tilbake hit. */
 import { useMemo } from 'react';
 import { finn, kommuner, listeFeil, velgKommune as velg, velgFylke } from '../../data/motor/kommune.ts';
 import { app } from '../../data/motor/tilstand.ts';
+import { ui } from '../tilstand.ts';
+import { tilTvillingen } from '../tvilling.ts';
 import { MdComboBox, MdSelect } from './md.ts';
 import './Topp.css';
+
+/* Linjen øverst over hele bredden, med lenke til tvillingen fra Figma for samme kommune og tema */
+export function Prototyplinje() {
+  return (
+    <p className="prototyplinje">
+      Ny prototyp med utseendet fra Figma og de samme tallene.{' '}
+      <a className="md-link" href={tilTvillingen(app.valgt ? app.valgt.nr : '', ui.side)}>
+        Til prototypen
+      </a>
+    </p>
+  );
+}
 
 export default function Topp() {
   const valgt = app.valgt ? finn(app.valgt.nr) : null,
