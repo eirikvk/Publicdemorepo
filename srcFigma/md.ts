@@ -2,6 +2,7 @@
    bare disse kommer med i bygget. */
 import type { ReactElement, SVGAttributes } from 'react';
 export * from '../src/ui/komponenter/md.ts';
+export { MdFilterChip } from '@miljodirektoratet/md-react/dist/chips/MdFilterChip';
 export { MdIconAdd } from '@miljodirektoratet/md-react/dist/icons-material/MdIconAdd';
 export { MdIconArrowForward } from '@miljodirektoratet/md-react/dist/icons-material/MdIconArrowForward';
 export { MdIconChevronBackward } from '@miljodirektoratet/md-react/dist/icons-material/MdIconChevronBackward';

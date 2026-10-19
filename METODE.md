@@ -1555,6 +1555,15 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Naturtapet og «Utforsk i kart» i tvillingen, 19. oktober 2026.** De to sidene er ikke tegnet i skissene, og er nå satt sammen
+av delene fra de tegnede sidene, merket som et KI-generert forslag. Naturtapet følger malen for temasidene, med en egen
+illustrasjon, figurene som stolper, grått areal som fremhevet melding, et blått bånd over til regnskapet fra SSB, ofte stilte
+spørsmål og flisene til temaene. «Utforsk i kart» har alle temaene fra «Utforsk naturen», valgt med designsystemets
+filterbrikker, med de samme kartlagene som temasidene (samlet i `srcFigma/temalag.ts`) og planlagt utbygging som valg. Temaet
+står i adressen. Tallene er de samme som før, fra de samme tabellene i gull. Kontroll: alle temaene i kartet ble valgt etter
+hverandre i Trondheim, uten feil, og Tilbake gikk til forrige tema. Røyktesten for tvillingen åpner nå også kartsiden med hvert
+tema, og ga ingen feil. Regresjonstesten for Trondheim ga ingen avvik. Målt i Chromium, ikke på iPhone.
+
 **Spørsmålstegnene i tvillingen, 19. oktober 2026.** Tallkortene og figurene i tvillingen har fått det samme spørsmålstegnet som
 infoknappen på hovedsiden, med det samme panelet: kort fortalt, regnestykket for valgt kommune, stegene fra kilde til tall,
 usikkerheten og lenker til metoden og koden. Knappen og panelet er flyttet til `src/ui/komponenter/Infoknapp.tsx`, som begge sidene

@@ -8,6 +8,7 @@ import '@miljodirektoratet/md-css/src/typography.css';
 import '@miljodirektoratet/md-css/src/utils.css';
 import '@miljodirektoratet/md-css/src/accordionitem/accordionitem.css';
 import '@miljodirektoratet/md-css/src/button/button.css';
+import '@miljodirektoratet/md-css/src/chips/chips.css';
 import '@miljodirektoratet/md-css/src/formElements/checkbox/checkbox.css';
 import '@miljodirektoratet/md-css/src/formElements/radiobutton/radiobutton.css';
 import '@miljodirektoratet/md-css/src/formElements/radiogroup/radiogroup.css';

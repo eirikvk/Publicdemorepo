@@ -351,8 +351,16 @@ med ekte tall, uten å endre hovedsiden.
   Bynaturen er ikke tegnet, så den er som før.
 - Det skissene viser som datamotoren ikke har ennå, står tomt: felt som krever en dataplattform har et tomt merke (–), og figurer
   og felt som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget
-  ned til (som utgår), viser kommuneplanen i stedet. Listene over områdene er beholdt, og «Utforsk i kart» har dagens
-  arealklasser og planlagt utbygging.
+  ned til (som utgår), viser kommuneplanen i stedet. Listene over områdene er beholdt.
+- Naturtapet og «Utforsk i kart» er ikke tegnet i skissene. De er satt sammen av delene fra de tegnede sidene, og merket øverst
+  med at oppsettet og teksten er et KI-generert forslag:
+  - Naturtapet følger malen for temasidene: toppen med ikon, ingress, trekkspill og en egen illustrasjon, tallkortene, kartet med
+    planlagt utbygging, figurene (hva slags natur planen setter av, og hvor mye som ligger i verdifull natur), grått areal som
+    fremhevet melding, et blått bånd som leder over til det som ble bygget ned fra 2017 til 2024, regnskapet fra SSB, en tom figur
+    for målt naturtap, ofte stilte spørsmål, ressurser og flisene til temaene.
+  - «Utforsk i kart» har ett stort kart med temaene fra «Utforsk naturen», valgt med designsystemets filterbrikker over kartet.
+    Hvert tema har de samme kartlagene som temasiden (`srcFigma/temalag.ts`), og planlagt utbygging kan slås på i alle. Under
+    lagene står tallene for temaet og lenken til temasiden. Temaet står i adressen (`#5001/kart/skog`), så et kart kan deles.
 - Bildene fra skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro (Open Sans
   står i stedet). Temaene og de blå båndene har i stedet en enkel illustrasjon hver, laget med KI og merket «KI-generert»
   (`srcFigma/illustrasjoner.tsx`).
@@ -376,7 +384,8 @@ med ekte tall, uten å endre hovedsiden.
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
 | `flagg.ts` | Funksjonsflagg: spørsmålstegnene ved tallene, alle på en gang og hvert for seg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
-| `sider/` | Hovedsidene og temasidene |
+| `temalag.ts` | Kartlagene for hvert tema, som temasidene og «Utforsk i kart» bruker, og fargene for hovedøkosystemene |
+| `sider/` | Hovedsidene, temasidene, Naturtapet og «Utforsk i kart» |
 | `stil.css` | Grunnlaget og delene. Toppen og kartet har egne stilark. |
 
 ## Dokumentasjon

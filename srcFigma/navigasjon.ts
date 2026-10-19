@@ -1,6 +1,6 @@
 /* Navigeringen i tvillingen: hovedsidene i menyen, temasidene under «Utforsk naturen», adressen i nettleseren, og oppstarten. Adressen
-   har kommunen og siden, som i hovedsiden: #5001 (oversikten), #5001/naturtapet, #5001/utforsk, #5001/utforsk/skog, #5001/kart og
-   #5001/hjelp. Hvert valg blir et steg i nettleserens historikk, så Tilbake og Frem går mellom sidene og kommunene. Siden bestemmer
+   har kommunen og siden, som i hovedsiden: #5001 (oversikten), #5001/naturtapet, #5001/utforsk, #5001/utforsk/skog, #5001/kart,
+   #5001/kart/skog (kartsiden med et tema) og #5001/hjelp. Hvert valg blir et steg i nettleserens historikk, så Tilbake og Frem går mellom sidene og kommunene. Siden bestemmer
    også hva kartet viser (ui.side, som kartet fra hovedsiden leser). */
 import { finn, hentKommuner, kommuner, velgKommune } from '../src/data/motor/kommune.ts';
 import { abonner, app, endret } from '../src/data/motor/tilstand.ts';
@@ -8,7 +8,7 @@ import { ui } from '../src/ui/tilstand.ts';
 import { temaet } from './temaer.ts';
 
 export type Hovedside = 'oversikt' | 'naturtapet' | 'utforsk' | 'kart' | 'hjelp';
-/* Siden som vises: en hovedside, eventuelt et tema under «Utforsk naturen», eller ukjent når adressen ikke finnes */
+/* Siden som vises: en hovedside, eventuelt et tema under «Utforsk naturen» eller i kartet, eller ukjent når adressen ikke finnes */
 export interface Rute {
   side: Hovedside | 'ukjent';
   tema?: string;
@@ -21,18 +21,17 @@ export const MENY: [Hovedside, string][] = [
   ['kart', 'Utforsk i kart']
 ];
 
-/* Tilstanden som bare gjelder tvillingen: siden, om menyen (mobil) og kommunevelgeren er åpne, og temaet på kartsiden */
+/* Tilstanden som bare gjelder tvillingen: siden, og om menyen (mobil) og kommunevelgeren er åpne */
 export const figma = {
   rute: { side: 'oversikt' } as Rute,
   meny: false,
-  bytt: false,
-  kartTema: 'oversikt'
+  bytt: false
 };
 
-/* Hva kartet viser for ruten r: temaets lag, det som er valgt på kartsiden, eller bare arealklassene og planen */
+/* Hva kartet viser for ruten r: temaets lag, på temasiden og på kartsiden, eller bare arealklassene og planen */
 const kartside = (r: Rute) => {
   const t = temaet(r.tema);
-  return t ? t.kartside : r.side === 'kart' ? figma.kartTema : 'oversikt';
+  return t ? t.kartside : 'oversikt';
 };
 const settRute = (r: Rute) => {
   figma.rute = r;
@@ -47,7 +46,8 @@ export const adresse = (r: Rute, nr = app.valgt ? app.valgt.nr : '') =>
 function iAdressen(): [nr: string, rute: Rute] {
   const [nr = '', side, tema] = (location.hash || '').replace('#', '').split('/');
   if (!side) return [nr, { side: 'oversikt' }];
-  if (side === 'utforsk' && tema) return [nr, temaet(tema) ? { side: 'utforsk', tema } : { side: 'ukjent' }];
+  if ((side === 'utforsk' || side === 'kart') && tema)
+    return [nr, temaet(tema) ? { side: side as Hovedside, tema } : { side: 'ukjent' }];
   if (!tema && ['naturtapet', 'utforsk', 'kart', 'hjelp'].includes(side)) return [nr, { side: side as Hovedside }];
   return [nr, { side: 'ukjent' }];
 }
@@ -59,10 +59,9 @@ export function gaaTil(r: Rute) {
   endret();
   window.scrollTo(0, 0);
 }
-/* Velger temaet på kartsiden */
-export function velgKartTema(id: string) {
-  figma.kartTema = id;
-  if (figma.rute.side === 'kart') ui.side = id;
+/* Velger temaet på kartsiden (uten tema: arealklassene og planen). Siden blir der den er, og valget blir et steg i historikken. */
+export function velgKartTema(tema?: string) {
+  settRute({ side: 'kart', tema });
   endret();
 }
 /* En lenke til ruten r: adressen (så lenken kan åpnes i ny fane) og klikket, som går dit uten å laste siden på nytt */

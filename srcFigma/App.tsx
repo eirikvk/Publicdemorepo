@@ -12,7 +12,9 @@ import { ui } from '../src/ui/tilstand.ts';
 import Topp from './komponenter/Topp.tsx';
 import { Lenke } from './komponenter/deler.tsx';
 import { figma, startOpp } from './navigasjon.ts';
-import { Hjelp, Naturtapet, Oversikt, Ukjent, Utforsk, Utforskkart } from './sider/Hovedsider.tsx';
+import { Hjelp, Oversikt, Ukjent, Utforsk } from './sider/Hovedsider.tsx';
+import Naturtapet from './sider/Naturtapet.tsx';
+import Utforskkart from './sider/Utforskkart.tsx';
 import Temasider from './sider/Temasider.tsx';
 
 function Side() {

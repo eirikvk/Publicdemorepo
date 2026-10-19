@@ -8,10 +8,10 @@ import { useState, type ReactNode } from 'react';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
-import { NATURTEMA, VERNEFORMGRUPPER } from '../../src/data/solv/temaer.ts';
+import { NATURTEMA } from '../../src/data/solv/temaer.ts';
 import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../tekst.ts';
 import { MdCheckbox } from '../md.ts';
-import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
+import Kart, { type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
 import {
   Brodsmuler,
@@ -52,17 +52,9 @@ import {
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
-import {
-  GRAALAG,
-  SKOGLAG,
-  VATMARKLAG,
-  VERDILAG,
-  VERNEFORMFARGE,
-  VERNLAG,
-  velgNatur,
-  velgVerneformer
-} from '../kartlag.ts';
+import { VERNEFORMFARGE, VERNLAG, velgNatur } from '../kartlag.ts';
 import { naturkart } from '../kart2.ts';
+import { GK, RESTKLASSER, TEMALAG, VERNET_NATUR } from '../temalag.ts';
 import { KILDE } from '../../src/data/katalog.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -126,8 +118,6 @@ function Temaside(p: Temasideinnhold) {
 /* Verditabellen i Miljødirektoratets veileder M-1941 (Konsekvensutredning av klima og miljø), kapittelet om å sette verdi */
 const M1941 =
   'https://www.miljodirektoratet.no/ansvarsomrader/overvaking-arealplanlegging/arealplanlegging/konsekvensutredninger/metode-for-utredning/naturmangfold/1.4-sett-verdi';
-/* Kilden til lagene fra grunnkartet, i lagvelgeren */
-const GK = 'Grunnkart for arealanalyse';
 /* Kilden for tallene fra grunnkartet med detaljklassene */
 const GRUNNKART_KILDE = (
   <p>
@@ -189,28 +179,7 @@ function Skog({ tema }: { tema: Tema }) {
         ['Skog som er vernet', svar(V, v => iTekst(v.skog)), ['skog/kort-vernet', 'vernetNatur']]
       ]}
       kilde={GRUNNKART_KILDE}
-      lag={[
-        { id: 'skog', navn: 'Økosystemtype skog', kilde: GK, farger: [['Skog', 'skog']], ol: SKOGLAG.skog },
-        {
-          id: 'skogtyper',
-          navn: 'Skogtyper',
-          kilde: GK,
-          farger: [
-            ['Blandingsskog', 'skog-bland'],
-            ['Barskog', 'skog-bar'],
-            ['Lauvskog', 'skog-lauv']
-          ],
-          ol: SKOGLAG.skogtyper
-        },
-        { id: 'myr', navn: 'Tresatt myr', kilde: GK, farger: [['Tresatt myr', 'myr-tresatt']], ol: SKOGLAG.myr },
-        {
-          id: 'beite',
-          navn: 'Tresatt innmarksbeite',
-          kilde: GK,
-          farger: [['Tresatt innmarksbeite', 'beite-tresatt']],
-          ol: SKOGLAG.beite
-        }
-      ]}
+      lag={TEMALAG.skog}
       lagEtter={
         <>
           {S.s === 'mangler' && <p className="hint">Lagene fra grunnkartet kunne ikke lages for kommunen.</p>}
@@ -309,22 +278,7 @@ function Vatmark({ tema }: { tema: Tema }) {
         ]
       ]}
       kilde={GRUNNKART_KILDE}
-      lag={[
-        {
-          id: 'vatmark',
-          navn: 'Økosystemtype våtmark (myr)',
-          kilde: GK,
-          farger: [['Åpen myr og annen åpen våtmark', 'myr-apen']],
-          ol: VATMARKLAG.apen
-        },
-        {
-          id: 'tresatt',
-          navn: 'Tresatt myr',
-          kilde: GK,
-          farger: [['Tresatt myr', 'myr-tresatt']],
-          ol: VATMARKLAG.tresatt
-        }
-      ]}
+      lag={TEMALAG.vatmark}
       lagEtter={
         <>
           {W.s === 'mangler' && <p className="hint">Lagene fra grunnkartet kunne ikke lages for kommunen.</p>}
@@ -427,23 +381,6 @@ function vurderesTekst(v: { omrader: { v?: number }[]; klasser: number[] }) {
         : ', som alle vurderes per naturtype';
   return ` I ${kommunen()} gjelder det ${antallOrd(n)} ${n === 1 ? 'lokalitet' : 'lokaliteter'} med til sammen ${iTekst(lok + typ)}${fordeling}. De vises i kartet i egne farger.`;
 }
-/* Hovedøkosystemene i figuren og kartlaget om naturen som er vernet, i rekkefølgen og med navnene i skissene: navnet i dataene,
-   navnet i figuren, navnet i tegnforklaringen og fargen. Restklassene fra grunnkartet er ikke i skissene, og står til slutt når de har
-   areal. */
-const VERNET_NATUR: [data: string, figur: string, kart: string, farge: string][] = [
-  ['Skog', 'Skog', 'Skog', 'oko-skog'],
-  ['Våtmark', 'Våtmark (myr)', 'Våtmark', 'oko-vatmark'],
-  ['Innsjøer og vannmagasiner', 'Innsjø og tjern', 'Innsjø og tjern', 'oko-innsjo'],
-  ['Hei og buskmark', 'Hei og buskmark', 'Hei og buskmark', 'oko-hei'],
-  ['Grasmark', 'Grasmark', 'Grasmark', 'oko-gras'],
-  ['Elver, bekker og kanaler', 'Elver, bekker og kanaler', 'Elver, bekker og kanaler', 'oko-elv'],
-  ['Lite vegetert mark', 'Lite vegetert mark', 'Lite vegetert mark', 'oko-lite'],
-  ['Kyststrender, svaberg og dyner', 'Kyststrender, svaberg og dyner', 'Kyststrender, svaberg og dyner', 'oko-kyst'],
-  ['Dyrket mark', 'Dyrket mark', 'Dyrket mark', 'oko-dyrket'],
-  ['Bebygd og opparbeidet areal', 'Bebygd og opparbeidet areal', 'Bebygd og opparbeidet areal', 'oko-bebygd'],
-  ['Hav', 'Hav (sjøareal)', 'Hav (sjøareal)', 'oko-hav']
-];
-const RESTKLASSER = ['Natur, uspesifisert', 'Jordbruk, uspesifisert'];
 /* Gruppene av verneformer i figuren «Slik er naturen vernet», i rekkefølgen i skissene */
 const VERNEFORMER_I_FIGUREN = ['nasjonalpark', 'naturreservat', 'landskap', 'arts', 'marint', 'annen'];
 
@@ -493,17 +430,7 @@ function Vern({ tema }: { tema: Tema }) {
           én gang.
         </p>
       }
-      lag={[
-        {
-          id: 'verneformer',
-          navn: 'Verneområder per verneform',
-          kilde: 'Naturvernområder',
-          farger: VERNEFORMGRUPPER.map(([id, navn]) => [navn, VERNEFORMFARGE[id]] as [string, string]),
-          ol: VERNLAG.verneformer,
-          velg: velgVerneformer
-        },
-        { id: 'tema', navn: 'Verneområder', kilde: 'Naturvernområder', skjul: true }
-      ]}
+      lag={TEMALAG.verneomrader}
       lagEtter={
         <div className="trekkspill-liste">
           <Trekkspill tittel="Hvordan deles verneområder inn?">
@@ -738,26 +665,7 @@ function Verdi({ tema }: { tema: Tema }) {
           )}
         </>
       }
-      lag={[
-        {
-          id: 'tema',
-          navn: 'Verdsatte naturtyper',
-          kilde: 'Naturtyper – verdsatte',
-          farger: [
-            ...klasser.map(([navn, farge]) => [navn, farge] as [string, string]),
-            ['Vurderes per lokalitet', 'vurderes1'],
-            ['Vurderes per naturtype', 'vurderes2'],
-            ['Annet (ikke gitt verdi)', 'vurderes3']
-          ],
-          med: [VERDILAG.vurderes]
-        },
-        {
-          id: 'dekning',
-          navn: 'Dekningskart for kartlegging',
-          kilde: 'Naturtyper på land (NiN)',
-          farger: [['Kartlagt', 'dekning']]
-        }
-      ]}
+      lag={TEMALAG['verdsatte-naturtyper']}
       lagEtter={
         <div className="trekkspill-liste">
           <Trekkspill tittel="Hva betyr verdiene?">
@@ -977,14 +885,7 @@ function Inon({ tema }: { tema: Tema }) {
           ['inngrepsfri-natur/kort-andel', 'inon']
         ]
       ]}
-      lag={[
-        {
-          id: 'tema',
-          navn: 'Inngrepsfri natur',
-          kilde: 'Inngrepsfri natur i Norge',
-          farger: [2, 1, 0].map(i => [INONSONER[i][4], INONSONER[i][1]] as [string, string])
-        }
-      ]}
+      lag={TEMALAG['inngrepsfri-natur']}
       sporsmal={[
         [
           'Kan inngrepsfri natur krysses med planlagt utbygging?',
@@ -1146,16 +1047,7 @@ function Rein({ tema }: { tema: Tema }) {
           ['villrein/kort-inngrepsfri-og-graa', 'iVillrein']
         ]
       ]}
-      lag={[
-        { id: 'tema', navn: 'Villreinområder', kilde: 'Villreinområder', farger: [['Villreinområde', 'rein']] },
-        {
-          id: 'graa',
-          navn: 'Grått areal',
-          kilde: KILDE.graa.datasett,
-          farger: [['Grått areal', 'graa-rein']],
-          ol: GRAALAG.graa
-        }
-      ]}
+      lag={TEMALAG.villrein}
       sporsmal={[
         [
           'Hvorfor har Norge et særlig ansvar for villreinen?',
@@ -1322,27 +1214,7 @@ function Bynatur({ tema }: { tema: Tema }) {
           {KILDE.graa.datasett}, {KILDE.graa.navn}.
         </p>
       }
-      lag={[
-        {
-          id: 'tema',
-          navn: 'Grått areal',
-          kilde: KILDE.graa.datasett,
-          farger: [
-            ...GRAATRINN.map(([farge, navn]) => [navn, farge] as [string, string]),
-            ['Grønt i bebygd område', 'gront']
-          ]
-        },
-        {
-          id: 'gronne',
-          navn: 'Grønne arealer i bebyggelse',
-          kilde: KILDE.graa.datasett,
-          farger: [['50–100 % vegetasjon', 'gronne-arealer']],
-          ol: GRAALAG.gronne,
-          av: true
-        },
-        KLASSER,
-        PLAN
-      ]}
+      lag={TEMALAG.bynatur}
       sporsmal={[
         [
           'Er utbygging på grått areal bra?',

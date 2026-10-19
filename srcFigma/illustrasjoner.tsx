@@ -1,6 +1,7 @@
 /* Illustrasjonene til temaene, i stedet for bildene i skissene (rettighetene til dem er ikke avklart). Flate landskap i lag, uten
    strek og uten fargeoverganger, i samme stil for alle temaene: himmel, åser bak og mark foran, og ett kjennetegn per tema (gran i
-   skogen, myrull og pytter på myra, verneområdets grense over fjellet, blomstereng, elv uten veier, rein på vidda, park i byen).
+   skogen, myrull og pytter på myra, verneområdets grense over fjellet, blomstereng, elv uten veier, rein på vidda, park i byen, og
+   hogd skog med planlagt utbygging for naturtapet).
    Alt viktig ligger i midten av bildet, mellom y = 90 og 210, så det tåler å bli beskåret bredt (temaflisene på oversikten) og
    smalt (flisene i «Utforsk neste perspektiv»). Tegnet for tvillingen; fargene er valgt for hvert tema og henger sammen med
    kartfargene der temaet har en (vern, villrein, verdsatt natur, vann). Tegningene er laget med KI, så Bilde (komponenter/deler.tsx)
@@ -334,7 +335,74 @@ function Utbygging() {
   );
 }
 
+/* En stubbe: kort stamme med lys snittflate */
+const Stubbe = ({ x, y, s }: { x: number; y: number; s: number }) => (
+  <g>
+    <rect x={x - 4 * s} y={y - 7 * s} width={8 * s} height={7 * s} fill="#8b6c4c" />
+    <ellipse cx={x} cy={y - 7 * s} rx={4 * s} ry={1.6 * s} fill="#d9bf8f" />
+  </g>
+);
+/* En stikke som merker planlagt utbygging: tynn stolpe med oransje topp */
+const Stikke = ({ x, y }: { x: number; y: number }) => (
+  <g>
+    <line x1={x} y1={y} x2={x} y2={y - 22} stroke="#6b5640" strokeWidth="2" />
+    <rect x={x - 2.5} y={y - 26} width="5" height="8" rx="1" fill="#e3a62a" />
+  </g>
+);
+
+/* Naturtapet, til siden om naturtapet: skogen til venstre, og til høyre en flate der skogen er hogd, med stubber og en gravemaskin.
+   En stiplet grense med stikker viser planlagt utbygging, som også går inn i skogen som står igjen. */
+function Naturtap() {
+  const r = tilfeldig(13);
+  return (
+    <>
+      <rect width={B} height={H} fill="#e7eee4" />
+      <path d="M0 126 Q90 92 190 112 T400 100 V300 H0Z" fill="#b4cba0" />
+      {Array.from({ length: 18 }, (_, i) => (
+        <Gran key={'b' + i} x={i * 23 + 6 + r() * 6} y={124 + r() * 10} h={22 + r() * 8} farge="#7a9d68" />
+      ))}
+      <path d="M0 168 Q120 150 240 162 T400 156 V300 H0Z" fill="#8bb576" />
+      <path d="M196 166 L400 154 L400 300 L214 300 Z" fill="#d8cfb6" />
+      <path d="M230 214 L360 206 L372 250 L238 256 Z" fill="#c9bfa3" />
+      {Array.from({ length: 14 }, (_, i) => (
+        <Stubbe
+          key={'s' + i}
+          x={214 + (i % 7) * 26 + r() * 10}
+          y={182 + Math.floor(i / 7) * 42 + r() * 12}
+          s={0.9 + r() * 0.4}
+        />
+      ))}
+      {Array.from({ length: 9 }, (_, i) => (
+        <Gran key={'m' + i} x={8 + i * 23 + r() * 6} y={204 + r() * 8} h={58 + r() * 18} farge="#3f6f34" />
+      ))}
+      <g>
+        <rect x="292" y="222" width="52" height="10" rx="5" fill="#4a4a46" />
+        <rect x="298" y="204" width="40" height="18" rx="2" fill="#e3a62a" />
+        <rect x="320" y="190" width="16" height="16" rx="2" fill="#e3a62a" />
+        <rect x="323" y="193" width="10" height="8" fill="#e9eef1" />
+        <path d="M300 208 L276 186 L262 204" fill="none" stroke="#e3a62a" strokeWidth="5" strokeLinejoin="round" />
+        <path d="M262 204 l-8 6 l12 4 z" fill="#4a4a46" />
+      </g>
+      <path
+        d="M150 182 L392 168 L398 262 L172 272 Z"
+        fill="none"
+        stroke="#2b2b2b"
+        strokeWidth="2.4"
+        strokeDasharray="9 6"
+        strokeLinejoin="round"
+      />
+      <Stikke x={150} y={184} />
+      <Stikke x={392} y={170} />
+      <Stikke x={172} y={274} />
+      <path d="M0 262 Q130 248 250 260 T400 254 V300 H0Z" fill="#6f9c56" />
+      <Gran x={34} y={298} h={104} farge="#2c5226" />
+      <Gran x={86} y={300} h={78} farge="#2c5226" />
+    </>
+  );
+}
+
 const TEGNING: Record<string, () => ReactNode> = {
+  naturtap: Naturtap,
   utbygging: Utbygging,
   skog: Skog,
   vatmark: Vatmark,

@@ -664,9 +664,8 @@ main > .innhold > .figur {
   align-items: center;
 }
 .liggende-navn {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 .liggende-ramme {
   display: flex;
@@ -1259,6 +1258,7 @@ main > .innhold > .oversikt-topp {
   padding-top: 40px;
 }
 .tallmerke {
+  white-space: nowrap;
   background: var(--blaa-merke);
   color: #fff;
   border-radius: 999px;
@@ -1574,4 +1574,107 @@ main > .innhold > .utforsk-del {
   border-radius: 4px;
   background: var(--gul);
   font-size: var(--md-typography-body-s);
+}
+
+/* Sidene som ikke er tegnet i skissene (Naturtapet og Utforsk i kart): merket øverst som sier at oppsettet og teksten er et forslag */
+.forslag-merke {
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--beige-kort);
+  border: 1px solid var(--beige-kant);
+  color: var(--md-color-grey-7);
+  font-size: var(--md-typography-body-s);
+}
+main > .innhold > .forslag-merke {
+  margin-top: 28px;
+}
+main > .innhold > .forslag-merke + .helt {
+  margin-top: 28px;
+}
+.sidetopp .forslag-merke {
+  margin-bottom: 16px;
+}
+
+/* Valget av tema over kartet på «Utforsk i kart»: designsystemets filterbrikker i gruppene fra «Utforsk naturen» */
+main > .innhold > .kartvalg {
+  margin-top: 32px;
+}
+.kartvalg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+}
+.kartvalg-gruppe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kartvalg-gruppe > span {
+  color: var(--md-color-grey-7);
+}
+.kartvalg ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kartvalg .md-chip {
+  white-space: nowrap;
+}
+.kartvalg .md-chip__left-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.kartvalg + .kartbaand,
+.innhold:has(> .kartvalg) + .kartbaand {
+  margin-top: 24px;
+}
+@media (max-width: 720px) {
+  .kartvalg {
+    gap: 14px;
+  }
+  .kartvalg .md-chip {
+    padding: 6px 12px;
+    font-size: 0.9375rem;
+  }
+}
+/* Tallene for temaet under lagene, med symbolet, og lenken til siden om temaet */
+.kartomtale {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--teal-lys);
+}
+.kartomtale-navn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.kartomtale-navn svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--teal-ikon);
+}
+.kartomtale p {
+  margin: 0;
+  line-height: 1.4;
+}
+.kartomtale .pil-lenke {
+  width: fit-content;
+}
+
+/* Tabellene på smale skjermer: litt mindre luft og tekst, så tre kolonner med dekar får plass uten å rulle */
+@media (max-width: 600px) {
+  .tabell table {
+    font-size: 0.875rem;
+  }
+  .tabell th,
+  .tabell td {
+    padding: 10px 6px;
+  }
 }

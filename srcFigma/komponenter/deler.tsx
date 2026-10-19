@@ -85,7 +85,8 @@ export const Bilde = ({ tema, farge, liten }: { tema: string; farge: string; lit
 );
 
 /* Ikonet for et tema i den runde flaten ved tittelen, som i skissene: en gran for skog, en fylt øyenstikker på skrå for våtmark, et
-   reinsdyrhode med gevir for villrein, hus og tre for bynaturen, og en bok for de andre (som skissene) */
+   reinsdyrhode med gevir for villrein, hus og tre for bynaturen, og en bok for de andre (som skissene). Sidene som ikke er tegnet, har
+   egne: en pil som går ned for naturtapet, og lag over hverandre for arealklassene i kartet. */
 const IKON: Record<string, ReactNode> = {
   skog: <path d="M12 3v18M12 6 9 9m3-3 3 3m-3 1-4 4m4-4 4 4m-4 0-5 4m5-4 5 4" />,
   vatmark: (
@@ -102,31 +103,49 @@ const IKON: Record<string, ReactNode> = {
     <path d="M8.5 11h7v3.5c0 2.8-1.6 5.5-3.5 5.5s-3.5-2.7-3.5-5.5zM8.5 12 5.5 10.5M15.5 12l3-1.5M10 11 7.5 4M8.6 7.2 5.5 6M8 5.6l1.3-2.1M14 11l2.5-7M15.4 7.2l3.1-1.2M16 5.6l-1.3-2.1" />
   ),
   bynatur: <path d="M3 21V10h6v11m0 0V5h6v16m3 0v-5m0 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6M2 21h20" />,
-  bok: <path d="M6 3.5h11.5v14H7.5A1.5 1.5 0 0 0 6 19V3.5zm0 15.5a1.5 1.5 0 0 0 1.5 1.5h10v-3M9.5 3.5v14" />
+  bok: <path d="M6 3.5h11.5v14H7.5A1.5 1.5 0 0 0 6 19V3.5zm0 15.5a1.5 1.5 0 0 0 1.5 1.5h10v-3M9.5 3.5v14" />,
+  utbygging: <path d="M3 6.5l6.5 6.5 4-4 7.5 7.5M21 11v5.5h-5.5" />,
+  arealklasser: <path d="M12 3.5 3 8l9 4.5L21 8zM3 12.5 12 17l9-4.5M3 16.5 12 21l9-4.5" />
 };
+/* Symbolet for temaet alene, uten den runde flaten, som i valgene over kartet */
+export const Temasymbol = ({ id }: { id: string }) => (
+  <svg
+    className="temasymbol"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {IKON[id] || IKON.bok}
+  </svg>
+);
 export const TemaIkon = ({ id }: { id: string }) => (
   <span className="temaikon" aria-hidden="true">
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {IKON[id] || IKON.bok}
-    </svg>
+    <Temasymbol id={id} />
   </span>
 );
 
 /* Toppen av en temaside: ikonet og tittelen, ingressen (avsnitt skilt med tom linje), trekkspillene under, og bildet ved siden av
-   (under ingressen på mobil) */
-export function Helt({ tema, children }: { tema: Tema; children?: ReactNode }) {
+   (under ingressen på mobil). ikon og bilde gir et annet ikon og en annen illustrasjon enn temaets, som på naturtapet. */
+export function Helt({
+  tema,
+  ikon = tema.id,
+  bilde = tema.id,
+  children
+}: {
+  tema: Tema;
+  ikon?: string;
+  bilde?: string;
+  children?: ReactNode;
+}) {
   return (
     <section className="helt">
       <div className="helt-tekst">
         <h1 className="md-typography-heading-xl">
-          <TemaIkon id={tema.id} />
+          <TemaIkon id={ikon} />
           {tema.navn}
         </h1>
         {tema.ingress.split('\n\n').map(a => (
@@ -135,8 +154,41 @@ export function Helt({ tema, children }: { tema: Tema; children?: ReactNode }) {
           </p>
         ))}
       </div>
-      <Bilde tema={tema.id} farge={tema.farge} />
+      <Bilde tema={bilde} farge={tema.farge} />
       {children && <div className="trekkspill-liste">{children}</div>}
+    </section>
+  );
+}
+
+/* Merket øverst på sidene som ikke er tegnet i skissene: oppsettet og teksten er et forslag, laget med KI */
+export const Forslag = () => (
+  <p className="forslag-merke">Ikke tegnet i skissene. Oppsettet og teksten er et KI-generert forslag.</p>
+);
+
+/* Et tall merket i en setning, som i de blå båndene */
+export const Merket = ({ children }: { children: ReactNode }) => <span className="tallmerke">{children}</span>;
+/* Hvor de syntetiske tallene kommer fra */
+export const SYNTETISK_TEKST =
+  'Tallene er syntetiske, til SSBs tabeller for naturregnskapet kommer 25. november 2026. De er laget av SSBs arealstatistikk for 2017 og 2024, som ikke måler endring direkte, og hvor mye som er bygget ned, er anslått med en fast regel. De skal bare ha riktig størrelsesorden.';
+/* Merket som sier at tallene er syntetiske */
+export const Syntetisk = () => <p className="syntetisk-merke">Syntetiske tall</p>;
+
+/* Et blått bånd med en setning med merkede tall, og illustrasjonen ved siden av (til høyre når speilet), til vanlig utbyggingen */
+export function Baand({
+  children,
+  speilet,
+  bilde = 'utbygging'
+}: {
+  children: ReactNode;
+  speilet?: boolean;
+  bilde?: string;
+}) {
+  return (
+    <section className={'baand' + (speilet ? ' speilet' : '')}>
+      <div className="innhold baand-rute">
+        <Bilde tema={bilde} farge="beb" />
+        <div className="baand-innhold">{children}</div>
+      </div>
     </section>
   );
 }
@@ -203,6 +255,7 @@ export const Tallkort = ({ kort }: { kort: [etikett: string, tall: ReactNode, fo
 
 /* Kilden under en figur, med lenke til datasettet */
 export function Kilde({ kilder }: { kilder: (keyof typeof KILDE)[] }) {
+  if (!kilder.length) return null;
   return (
     <div className="kilde">
       <b>Kilde:</b>

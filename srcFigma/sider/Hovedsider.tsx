@@ -1,49 +1,32 @@
-/* Hovedsidene i tvillingen: Oversikt, Naturtapet, Utforsk naturen, Utforsk i kart, Hjelp og veileder, og siden for en adresse som
-   ikke finnes. Oversikten følger skissene fra 17. oktober så nær som mulig, med tallene fra datamotoren. Det skissene viser som krever
-   en dataplattform, står tomt, og det blå feltet om hva naturen ble bygget ned til (som utgår) viser kommuneplanen i stedet.
-   Naturtapet, Utforsk naturen og Utforsk i kart er tomme i skissene, så de er satt sammen av de samme delene. */
-import { useState, type ReactNode } from 'react';
+/* Hovedsidene i tvillingen: Oversikt, Utforsk naturen, Hjelp og veileder, og siden for en adresse som ikke finnes. Naturtapet og
+   Utforsk i kart har egne filer. Oversikten følger skissene fra 17. oktober så nær som mulig, med tallene fra datamotoren. Det skissene
+   viser som krever en dataplattform, står tomt, og det blå feltet om hva naturen ble bygget ned til (som utgår) viser kommuneplanen i
+   stedet. Utforsk naturen er tom i skissene, så den er satt sammen av de samme delene. */
+import { useState } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
-import { GRAATRINN } from '../../src/data/solv/graa.ts';
-import { INONSONER } from '../../src/data/solv/inon.ts';
-import { NATURTEMA } from '../../src/data/solv/temaer.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
 import type { Okosystemregnskap, Plassering } from '../../src/data/gull/syntetisk.ts';
 import { HOVEDOKOSYSTEMER } from '../../src/data/solv/klasser.ts';
-import { andelTekst, dekar, iTekst, nf, pst } from '../tekst.ts';
-import { MdIconAdd, MdIconClose, MdRadioGroup } from '../md.ts';
+import { andelTekst, dekar, iTekst, pst } from '../tekst.ts';
+import { MdIconAdd, MdIconClose } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import { KLASSELAG } from '../kartlag.ts';
-import Tabell from '../komponenter/Tabell.tsx';
 import {
-  Bilde,
+  Baand,
   Endringsmerke,
-  Figur,
   Fremhevet,
   Kilde,
   Lenke,
-  Liggende,
-  Mangler,
   MedSporsmal,
-  Ressurser,
-  Tallkort,
+  Merket,
+  SYNTETISK_TEKST,
+  Syntetisk,
   Temagrupper,
   Trekkspill,
   useSporsmal,
   svar
 } from '../komponenter/deler.tsx';
-import { figma, velgKartTema } from '../navigasjon.ts';
-import {
-  graaIPlan,
-  naturtema,
-  nedbygging,
-  okosystemregnskap,
-  oversiktKort,
-  planPerOkosystem,
-  planlagt,
-  plansum,
-  sammenligning
-} from '../tall.ts';
+import { nedbygging, okosystemregnskap, oversiktKort, plansum, sammenligning } from '../tall.ts';
 import { TEMAER } from '../temaer.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
@@ -53,13 +36,7 @@ const kommunens = () => {
   return /[sxz]$/i.test(k) ? k + "'" : k + 's';
 };
 const prosent = (a: number | null) => (a === null ? '–' : pst(a) + ' %');
-const Merket = ({ children }: { children: ReactNode }) => <span className="tallmerke">{children}</span>;
 
-/* Hvor de syntetiske tallene kommer fra */
-const SYNTETISK_TEKST =
-  'Tallene er syntetiske, til SSBs tabeller for naturregnskapet kommer 25. november 2026. De er laget av SSBs arealstatistikk for 2017 og 2024, som ikke måler endring direkte, og hvor mye som er bygget ned, er anslått med en fast regel. De skal bare ha riktig størrelsesorden.';
-/* Merket som sier at tallene er syntetiske */
-const Syntetisk = () => <p className="syntetisk-merke">Syntetiske tall</p>;
 /* En liten andel, som i sammenligningen med Norge: én desimal, som ellers, og «< 0,1 %» når den er mindre */
 const pst2 = (a: number | null) => (a === null ? '–' : andelTekst(a));
 
@@ -177,18 +154,6 @@ function Endringer({ r }: { r: Okosystemregnskap }) {
         })}
       </ul>
     </div>
-  );
-}
-
-/* Et blått bånd med en setning med merkede tall, og illustrasjonen ved siden av (til høyre når speilet) */
-function Baand({ children, speilet }: { children: ReactNode; speilet?: boolean }) {
-  return (
-    <section className={'baand' + (speilet ? ' speilet' : '')}>
-      <div className="innhold baand-rute">
-        <Bilde tema="utbygging" farge="beb" />
-        <div className="baand-innhold">{children}</div>
-      </div>
-    </section>
   );
 }
 
@@ -476,176 +441,6 @@ export function Oversikt() {
   );
 }
 
-export function Naturtapet() {
-  const P = planlagt(),
-    PD = planPerOkosystem(),
-    R = okosystemregnskap(),
-    G = graaIPlan(),
-    temaer = (
-      [
-        ['Verneområder', 'vern'],
-        ['Villreinområder', 'rein'],
-        ['Verdsatt natur', 'verdi']
-      ] as const
-    ).map(([navn, id]) => ({ navn, id, plan: naturtema(id).plan }));
-  return (
-    <>
-      <div className="innhold">
-        <section className="sidetopp">
-          <h1 className="md-typography-heading-xl">Naturtapet i {kommunen()}</h1>
-          <p className="ingress">
-            Her ser du hvor mye natur og jordbruk kommuneplanen setter av til utbygging, hvor mye av det som ligger i
-            verdifull natur, og hva SSB-tallene sier om arealet siden 2017.
-          </p>
-        </section>
-        <Tallkort
-          kort={[
-            [
-              'Natur satt av til utbygging',
-              P ? iTekst(P.natur.km2) : <span className="henter">Regnes ut …</span>,
-              ['naturtapet/kort-natur', 'planlagt']
-            ],
-            [
-              'Andel av naturen i kommunen',
-              P ? prosent(P.natur.andel) : <span className="henter">Regnes ut …</span>,
-              ['naturtapet/kort-andel', 'planlagt']
-            ],
-            [
-              'Jordbruk satt av til utbygging',
-              P ? iTekst(P.jordbruk.km2) : <span className="henter">Regnes ut …</span>,
-              ['naturtapet/kort-jordbruk', 'planlagt']
-            ]
-          ]}
-        />
-        <div className="trekkspill-liste">
-          <Trekkspill tittel="Hvor er tallene hentet fra?">
-            <p>
-              Planlagt utbygging er arealformål for utbygging i kommuneplanen hos DiBK, som ennå ikke er bygd, krysset
-              med dagens arealklasser fra NIBIO. Smale striper er ikke med i tallene.
-            </p>
-          </Trekkspill>
-        </div>
-      </div>
-      <Kart lag={[PLAN, KLASSER]} />
-      <div className="innhold">
-        <Figur
-          tittel="Planlagt utbygging i verdifull natur"
-          forklaring={['naturtapet/figur-verdifull-natur', 'planIVerdifull']}
-          tekst={
-            <p>Hvor mye av den planlagte utbyggingen som ligger i verneområder, villreinområder og verdsatt natur.</p>
-          }
-          kilder={['dibk', 'vern', 'villrein', 'verdsatt']}
-        >
-          {temaer.every(t => t.plan) ? (
-            <Liggende
-              hva="Planlagt utbygging per tema"
-              data={temaer.map(t => ({
-                navn: t.navn,
-                km2: t.plan!.planKm2,
-                farge: t.id === 'verdi' ? 'verdi2' : t.id
-              }))}
-            />
-          ) : (
-            <p className="henter">Regnes ut når kartet for kommunen er hentet …</p>
-          )}
-          {G && G.plan && (
-            <p>
-              Ca. {iTekst(G.plan.graa)} ({prosent(G.plan.andelGraa)}) av all planlagt utbygging ligger på grått areal,
-              som alt er tatt i bruk.
-            </p>
-          )}
-        </Figur>
-        <Figur
-          tittel="Hva slags natur kommuneplanen setter av til utbygging"
-          forklaring={['naturtapet/figur-okosystemtype', 'planPerOkosystem']}
-          tekst={
-            <p>
-              Natur og jordbruk som kommuneplanen setter av til utbygging, per økosystemtype i grunnkartet, og hvor stor
-              del av typen i kommunen det er. Myr og beite med trær er med i skogen. Smale striper er ikke med.
-            </p>
-          }
-          kilder={['grunnkart', 'dibk']}
-        >
-          {svar(
-            PD,
-            p =>
-              p.rader.some(r => r.km2 > 0) ? (
-                <Tabell
-                  hva="Satt av til utbygging per økosystemtype"
-                  kolonner={[
-                    { navn: 'Økosystemtype' },
-                    { navn: 'Satt av', tall: true },
-                    { navn: 'Andel av typen', tall: true }
-                  ]}
-                  rader={p.rader.map(r => [
-                    r.navn,
-                    r.km2 > 0 ? dekar(r.km2) : '0 daa',
-                    r.andel !== null ? andelTekst(r.andel) : '–'
-                  ])}
-                />
-              ) : (
-                <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
-              ),
-            'Kommunen har ingen kommuneplan med utbygging hos DiBK.'
-          )}
-        </Figur>
-        <Figur
-          tittel="Regnskapet fra SSB"
-          forklaring={['naturtapet/figur-regnskap', 'naturregnskap']}
-          tekst={
-            <>
-              <p>
-                Arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd, og arealet i 2024
-                (utgående).
-              </p>
-              <p className="hint">{SYNTETISK_TEKST}</p>
-            </>
-          }
-          kilder={['ssb']}
-        >
-          {svar(R, r =>
-            r.endret ? (
-              <p>Kommunegrensen er flyttet, så årene kan ikke sammenlignes.</p>
-            ) : (
-              <>
-                <Tabell
-                  hva="Regnskapet per hovedøkosystem"
-                  kolonner={[
-                    { navn: 'Økosystemtype' },
-                    { navn: r.fra, tall: true, ikkeMobil: true },
-                    { navn: 'Endring', tall: true },
-                    { navn: r.til, tall: true }
-                  ]}
-                  rader={r.rader
-                    .filter(x => x.utgaende > 0 || x.endring !== 0)
-                    .map(x => [
-                      x.navn,
-                      dekar(x.inngaende),
-                      (x.endring < 0 ? '−' : x.endring > 0 ? '+' : '') + dekar(Math.abs(x.endring)),
-                      dekar(x.utgaende)
-                    ])}
-                />
-                {r.syntetisk && <Syntetisk />}
-              </>
-            )
-          )}
-        </Figur>
-        <Mangler
-          tittel="Målt naturtap over tid"
-          trenger="kart over arealklassene for flere år, så endringen kan måles i stedet for å trekke årgangene fra hverandre."
-        />
-        <Ressurser
-          lenker={[
-            ['Kommuneplaner hos DiBK', KILDE.dibk.adresse],
-            ['SSB, tabell 09594', KILDE.ssb.adresse],
-            ['Utvikling fremover i dagens løsning', `../#${app.valgt ? app.valgt.nr : ''}/framtid`]
-          ]}
-        />
-      </div>
-    </>
-  );
-}
-
 export function Utforsk() {
   return (
     <div className="innhold">
@@ -658,54 +453,6 @@ export function Utforsk() {
       </section>
       <Temagrupper />
     </div>
-  );
-}
-
-/* Temaene som kan vises i kartet på kartsiden: siden i hovedsiden som viser temaet, og navnet */
-const KARTTEMA: [side: string, navn: string, kilde: string, farger?: [string, string][]][] = [
-  ['oversikt', 'Ingen tema', ''],
-  ['vern', 'Verneområder', KILDE.vern.datasett, [['Verneområde', 'vern']]],
-  ['rein', 'Villreinområder', KILDE.villrein.datasett, [['Villreinområde', 'rein']]],
-  [
-    'verdi',
-    'Verdsatte naturtyper',
-    KILDE.verdsatt.datasett,
-    NATURTEMA.find(t => t.id === 'verdi')!.klasser!.map(([navn, farge]) => [navn, farge] as [string, string])
-  ],
-  ['inon', 'Inngrepsfri natur', KILDE.inon.datasett, [2, 1, 0].map(i => [INONSONER[i][4], INONSONER[i][1]])],
-  ['graa', 'Grått areal', KILDE.graa.datasett, GRAATRINN.map(([farge, navn]) => [navn, farge])]
-];
-export function Utforskkart() {
-  const valgt = KARTTEMA.find(t => t[0] === figma.kartTema) || KARTTEMA[0];
-  const lag: Kartlag[] = [
-    ...(valgt[0] !== 'oversikt' ? [{ id: 'tema' as const, navn: valgt[1], kilde: valgt[2], farger: valgt[3] }] : []),
-    KLASSER,
-    PLAN
-  ];
-  return (
-    <>
-      <div className="innhold">
-        <section className="sidetopp">
-          <h1 className="md-typography-heading-xl">Utforsk {kommunen()} i kart</h1>
-          <p className="ingress">
-            Velg et tema, og trykk i kartet for å se hva som er der. Trykker du utenfor kommunen, kan du bytte til
-            kommunen der.
-          </p>
-        </section>
-      </div>
-      <Kart
-        stor
-        lag={lag}
-        etter={
-          <MdRadioGroup
-            label="Tema i kartet"
-            options={KARTTEMA.map(([v, text]) => ({ value: v, text }))}
-            value={valgt[0]}
-            onChange={e => velgKartTema(e.target.value)}
-          />
-        }
-      />
-    </>
   );
 }
 
@@ -724,6 +471,10 @@ export function Hjelp() {
         Alle tall på sidene er ekte og gjelder kommunen du har valgt. Der skissene viser noe datamotoren ikke har ennå,
         står det en ramme merket «Ikke laget ennå», med det som trengs. Bildene fra skissene er ikke med, fordi
         rettighetene ikke er avklart. Temaene har i stedet en enkel illustrasjon som er laget med KI, og merket med det.
+      </p>
+      <p>
+        Naturtapet og Utforsk i kart er ikke tegnet i skissene. Der er oppsettet og teksten et forslag laget med KI,
+        satt sammen av de samme delene som de tegnede sidene, og merket øverst på siden.
       </p>
       <h2 className="md-typography-heading-m">Kildene</h2>
       <ul className="kildeliste">
