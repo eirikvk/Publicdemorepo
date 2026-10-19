@@ -19,18 +19,20 @@ test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () 
   assert.ok(kilder('egne').includes('bronse.egne: solv.egne + solv.egneruter'));
 });
 
-test('datasettene i sølv: bare bronse og sølv, minst én tabell med data, og støttedata bare i et datasett', async () => {
+test('datasettene i sølv: bare bronse og sølv, data i hvert, støttetabeller bare i et datasett, og innholdet beskrevet', async () => {
   const { katalog, DATASETT } = await import('../src/data/katalog.ts');
   const alle = Object.values(katalog).flatMap(l => Object.values(l)) as {
     lag: string;
     navn: string;
     datasett?: unknown;
-    stotte?: string;
+    stotte?: boolean;
+    innhold?: string;
   }[];
   for (const t of alle) {
     if (t.datasett)
       assert.ok(t.lag === 'bronse' || t.lag === 'solv', `${t.lag}.${t.navn} kan ikke høre til et datasett`);
-    if (t.stotte) assert.ok(t.datasett, `${t.lag}.${t.navn} er støttedata uten datasett`);
+    if (t.stotte) assert.ok(t.datasett, `${t.lag}.${t.navn} er støttetabell uten datasett`);
+    if (t.datasett) assert.ok(t.innhold, `${t.lag}.${t.navn} i et datasett mangler innholdet`);
   }
   for (const d of Object.values(DATASETT)) {
     const I = alle.filter(t => t.datasett === d);
@@ -39,7 +41,8 @@ test('datasettene i sølv: bare bronse og sølv, minst én tabell med data, og s
       `${d.navn} har ingen data`
     );
   }
-  /* kommuneplanen: kartbildene er dataene, sjekken og oversikten er støttedata */
+  /* kommuneplanen: kartbildene er dataene, sjekken og oversikten er støttetabeller, og hva de er til for, står på datasettet */
+  assert.ok(DATASETT.utbyggingsareal.stotte);
   const ds = (n: string) => alle.find(t => `${t.lag}.${t.navn}` === n)!;
   assert.equal(ds('bronse.planflis').datasett, DATASETT.utbyggingsareal);
   assert.ok(!ds('bronse.planflis').stotte && !ds('solv.kommuneplanruter').stotte);

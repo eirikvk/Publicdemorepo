@@ -2,19 +2,20 @@
 .katalog .talltabell tbody th {
   min-width: 0;
 }
-/* Et datasett i sølv: navnet og hva det er øverst, og så dataene og støttedataene hver for seg, med hva støttedataene brukes til under
-   tittelen */
+/* Et datasett i sølv: raden med dataene, med navnet og hva datasettet er, og under den støttetabellene, med hva de er til for under
+   overskriften og innholdet under tittelen på hver */
 .katalog .talltabell th small {
   display: block;
   margin-top: var(--md-spacing-4);
   font-weight: var(--md-typography-weight-regular, 400);
   color: var(--dempet);
 }
+.katalog tr.datasettrad > th {
+  padding-top: var(--md-spacing-16);
+}
 .katalog tr.undergruppe th {
   padding-top: var(--md-spacing-12);
   padding-bottom: var(--md-spacing-4);
-  font-size: 0.875rem;
-  color: var(--dempet);
 }
 /* Det som ikke er ferdig (henter, feilet, utdatert), kan deles over linjer, så kolonnen holder seg smal */
 .katalog td small.uferdig {

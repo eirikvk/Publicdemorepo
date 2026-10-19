@@ -1581,12 +1581,14 @@ under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for g
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
 **Datasett i sølv i katalogen, 20. oktober 2026.** Katalogen har fått begrepet *datasett i sølv*: ett sett data fra virkeligheten,
-gjort om til vår standard. Tabellene i bronse og sølv som henter og lager det, er delt i data, som innholdet lages av, og støttedata,
-som trengs for å hente og forstå dataene. Det første datasettet er kommuneplanen. Det vi har i sølv, er ikke hele kommuneplanen, men
+gjort om til vår standard. Tabellene i bronse og sølv som henter og lager det, er delt i dataene, som er selve datasettet, og
+støttetabeller, som trengs for å hente og forstå dataene. Hver tabell beskriver innholdet i sine egne data, og hva støttetabellene er
+til for, står én gang, på datasettet. Det første datasettet er kommuneplanen. Det vi har i sølv, er ikke hele kommuneplanen, men
 *areal satt av til framtidig utbygging i kommuneplanen*: for hver rute på 10,6 meter om den ligger i en flate med status framtidig og
 formålet bebyggelse og anlegg, eller samferdsel. Andre arealformål og nåværende byggeområder er valgt bort allerede i spørringen til
-DiBK. Dataene er kartbildene. Sjekken av om DiBK har planen, opplysningene om planen, oversikten som gjør hentingen raskere og
-oppslaget når man trykker i kartet, er støttedata. Katalogvisningen under Tekniske valg samler tabellene under datasettet. Tallene og
+DiBK. Dataene er kartbildene. Dekningen, som avgjør om DiBK har planen, opplysningene om planen, oversikten som gjør hentingen
+raskere og oppslaget når man trykker i kartet, er støttetabeller. Katalogvisningen under Tekniske valg viser datasettet som én rad,
+og støttetabellene under. Tallene og
 infoboksene er ikke endret. Kontroll: regresjonstesten for Trondheim ga ingen avvik, og katalogvisningen ble sett på 390 og 1280 px
 uten feil. Testet i Chromium, ikke på iPhone.
 

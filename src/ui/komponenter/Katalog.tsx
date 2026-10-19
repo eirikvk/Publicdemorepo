@@ -1,6 +1,6 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
-   etter datasettet i sølv de hører til (DATASETT i katalogen), delt i data og støttedata, og ellers etter ETL-filen, med tittelen og
-   hvor mye cachen har lagret i hver. «Info» viser hva tabellen er, det tekniske navnet og hvor
+   etter datasettet i sølv de hører til (DATASETT i katalogen), og ellers etter ETL-filen, med tittelen og hvor mye cachen har lagret
+   i hver. Et datasett står som én rad, som er dataene, og under den støttetabellene, med hva de er til for først. «Info» viser hva tabellen er, det tekniske navnet og hvor
    ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
@@ -211,12 +211,15 @@ function Sporring({ d }: { d: Tabellen }) {
 function Info({ d }: { d: Tabellen }) {
   return (
     <>
-      <p>{stor(d.om)}</p>
       {d.datasett && (
         <p>
-          {d.stotte ? 'Støttedata' : 'Data'} i datasettet «{d.datasett.navn}».{d.stotte ? ' ' + stor(d.stotte) : ''}
+          {d.stotte
+            ? `Støttetabell i datasettet «${d.datasett.navn}».`
+            : `Dataene i datasettet «${d.datasett.navn}», i tabellen «${d.tittel}».`}
+          {d.innholdet ? ' ' + stor(d.innholdet) : ''}
         </p>
       )}
+      <p>{stor(d.om)}</p>
       <p>
         Kalles som <code>katalog.{d.navn}(nøkkel)</code>.{' '}
         {d.etl ? (
@@ -303,11 +306,15 @@ function KartetsMinne({ M }: { M: Minne }) {
 function Tabellrad({
   d,
   apen,
-  veksle
+  veksle,
+  tittel = d.tittel,
+  under = d.innholdet
 }: {
   d: Tabellen;
   apen: Apen;
   veksle: (navn: string, hva: 'info' | 'data') => void;
+  tittel?: string;
+  under?: string;
 }) {
   const r = d.rader,
     uferdige = r.filter(x => x.status !== 'ok' || x.utdatert),
@@ -315,10 +322,10 @@ function Tabellrad({
     id = 'katalog-' + d.navn.replace('.', '-');
   return (
     <>
-      <tr>
+      <tr className={d.datasett && !d.stotte ? 'datasettrad' : undefined}>
         <th scope="row">
-          {d.tittel}
-          {d.stotte && <small>{d.stotte}</small>}
+          {tittel}
+          {under && <small>{under}</small>}
         </th>
         <td className="tall">
           {d.husk ? `${nf(r.length, 0)} av ${d.husk === Infinity ? 'alle' : nf(d.husk, 0)}` : 'lagres ikke'}
@@ -334,7 +341,7 @@ function Tabellrad({
               mode="small"
               aria-expanded={her === 'info'}
               aria-controls={her === 'info' ? id : undefined}
-              aria-label={`Info om ${d.tittel} (${d.navn})`}
+              aria-label={`Info om ${tittel} (${d.navn})`}
               onClick={() => veksle(d.navn, 'info')}
             >
               Info
@@ -344,7 +351,7 @@ function Tabellrad({
               mode="small"
               aria-expanded={her === 'data'}
               aria-controls={her === 'data' ? id : undefined}
-              aria-label={`Data i ${d.tittel} (${d.navn})`}
+              aria-label={`Data i ${tittel} (${d.navn})`}
               onClick={() => veksle(d.navn, 'data')}
             >
               Data
@@ -388,8 +395,8 @@ export default function Katalog() {
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
         Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. I bronse og sølv er tabellene samlet i
-        datasett der det er gjort. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Under
-        datasettet står dataene, som innholdet lages av, og støttedataene, som trengs for å hente og forstå dem.
+        datasett der det er gjort. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Datasettet
+        står som én rad, som er dataene, og under den støttetabellene, som trengs for å hente og forstå dataene.
         Foreløpig gjelder det kommuneplanen. De andre tabellene står etter filen de lages i. «Info» sier hva tabellen er
         og hvor ETL-funksjonen ligger. «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i
         stedet, også fra kildene, men ikke etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes:
@@ -432,27 +439,31 @@ export default function Katalog() {
                     </tr>
                   </thead>
                   {sett.map(ds => {
-                    const I = T.filter(d => d.datasett && d.datasett.navn === ds.navn);
+                    const I = T.filter(d => d.datasett && d.datasett.navn === ds.navn),
+                      S = I.filter(d => d.stotte);
                     return (
                       <tbody key={ds.navn} className="datasett">
-                        <tr className="gruppe">
-                          <th colSpan={3} scope="colgroup">
-                            Datasett: {ds.navn}
-                            <small>{ds.om}</small>
-                          </th>
-                        </tr>
-                        <tr className="undergruppe">
-                          <th colSpan={3} scope="colgroup">
-                            Data
-                          </th>
-                        </tr>
-                        {I.filter(d => !d.stotte).map(rad)}
-                        <tr className="undergruppe">
-                          <th colSpan={3} scope="colgroup">
-                            Støttedata
-                          </th>
-                        </tr>
-                        {I.filter(d => d.stotte).map(rad)}
+                        {I.filter(d => !d.stotte).map(d => (
+                          <Tabellrad
+                            key={d.navn}
+                            d={d}
+                            apen={apen}
+                            veksle={veksle}
+                            tittel={`Datasett: ${ds.navn}`}
+                            under={ds.om}
+                          />
+                        ))}
+                        {S.length > 0 && (
+                          <>
+                            <tr className="undergruppe">
+                              <th colSpan={3} scope="colgroup">
+                                Støttetabeller
+                                {ds.stotte && <small>{ds.stotte}</small>}
+                              </th>
+                            </tr>
+                            {S.map(rad)}
+                          </>
+                        )}
                       </tbody>
                     );
                   })}
