@@ -277,7 +277,8 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Innhold.tsx` | Den valgte siden. Alle sidene ligger i siden, men bare den valgte vises. |
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
 | `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
-| `Tallforklaring.tsx` | Overskriften på et kort med infoknappen, og panelet under: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall (hver kilde med det den justeres til), usikkerheten og lenker til metoden og koden |
+| `Tallforklaring.tsx` | Overskriften på et kort med infoknappen, og panelet under |
+| `Infoknapp.tsx` | Infoknappen og panelet den åpner: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall (hver kilde med det den justeres til), usikkerheten og lenker til metoden og koden. Brukes også av tvillingen. |
 | `Temaside.tsx` | Toppen og rammen som alle temasidene har: navnet, arealet i kommunen, andelen av landarealet og kilden |
 | `Naturtema.tsx` | Sidene for verneområder, villrein og verdsatt natur, med lister over områdene, og ordene sidene bruker om hvert tema |
 | `Inon.tsx` | Siden for inngrepsfri natur |
@@ -302,8 +303,8 @@ med ekte tall, uten å endre hovedsiden.
 - Kildekoden ligger i `srcFigma/`, og bygges for seg med `vite.figma.config.ts` til `dist/figma/`. Arbeidsflyten bygger den etter
   hovedsiden, så hovedsidens bygg er det samme som uten den.
 - `srcFigma/` kan bruke kode fra `src/`, men `src/` bruker aldri `srcFigma/`. Fra `src/` bruker den datamotoren (`src/data`), kartet
-  (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet og kroken som tegner siden på nytt). Hovedsidens sider og
-  adresse (`src/ui/sider.ts`) bruker den ikke.
+  (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet, kroken som tegner siden på nytt, og infoknappen med
+  kortene den forklarer). Hovedsidens sider og adresse (`src/ui/sider.ts`) bruker den ikke.
 - Tvillingen er bare brukergrensesnitt. All data og all metode ligger i datamotoren, som én sannhet for begge sidene: tallene leses
   ferdige fra gull gjennom katalogen, og `srcFigma/tall.ts` slår dem bare opp. Hva som regnes som skog, våtmark og land i
   grunnkartet, står i `src/data/solv/klasser.ts`. `verktoy/sjekk-lag.ts` passer på at tvillingen
@@ -355,6 +356,11 @@ med ekte tall, uten å endre hovedsiden.
 - Bildene fra skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro (Open Sans
   står i stedet). Temaene og de blå båndene har i stedet en enkel illustrasjon hver, laget med KI og merket «KI-generert»
   (`srcFigma/illustrasjoner.tsx`).
+- Tallkortene og figurene har et spørsmålstegn med forklaringen bak tallene, den samme infoknappen og det samme panelet som
+  hovedsiden (`src/ui/komponenter/Infoknapp.tsx`). Der tvillingen viser de samme tallene som hovedsiden, viser den kortet derfra.
+  Tallene bare tvillingen har, har egne kort i `src/ui/forklaringer.ts` (gruppen `tvilling`), med eget kapittel i METODE.md. Et
+  steg et annet kort forklarer, lenker til kapitlet i METODE.md. Hvert spørsmålstegn kan skrus av og på i `srcFigma/flagg.ts`, og
+  alle på en gang med `sporsmalstegn`.
 - `npm run roykt-figma` åpner hver side i en mobilnettleser og sjekker overskrift, bredde, feil og Tilbake (`verktoy/figma-roykt.ts`).
 
 | Fil i `srcFigma/` | Innhold |
@@ -368,6 +374,7 @@ med ekte tall, uten å endre hovedsiden.
 | `farger.ts`, `tekst.ts` | Fargene fra skissene, byttet i tvillingens kopi av fargetabellen før noe tegnes, og tallene som tekst med hele dekar |
 | `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse. Lagene av grunnkartet og grått areal bruker den samme datamotoren og tegnemotoren som hovedsiden (`kartverdier.ts` og `verdilag.ts`), og bestemmer bare fargene. |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
+| `flagg.ts` | Funksjonsflagg: spørsmålstegnene ved tallene, alle på en gang og hvert for seg |
 | `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
 | `sider/` | Hovedsidene og temasidene |
 | `stil.css` | Grunnlaget og delene. Toppen og kartet har egne stilark. |

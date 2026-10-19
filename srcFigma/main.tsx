@@ -11,6 +11,7 @@ import '@miljodirektoratet/md-css/src/button/button.css';
 import '@miljodirektoratet/md-css/src/formElements/checkbox/checkbox.css';
 import '@miljodirektoratet/md-css/src/formElements/radiobutton/radiobutton.css';
 import '@miljodirektoratet/md-css/src/formElements/radiogroup/radiogroup.css';
+import '@miljodirektoratet/md-css/src/help/help.css';
 import '@miljodirektoratet/md-css/src/iconButton/iconButton.css';
 import '@miljodirektoratet/md-css/src/link/link.css';
 import '@miljodirektoratet/md-css/src/loadingSpinner/loadingSpinner.css';

@@ -1,6 +1,7 @@
 /* Delene sidene i tvillingen er bygd av, etter Figma-skissene: brødsmuler, toppen av en temaside, tallkort, trekkspill, figurer med
    tekst og kilde, stolper, flisene for temaene, ressurser, og en ramme for det som ikke er laget ennå. Bildene fra skissene er ikke med
-   (rettighetene er ikke avklart), så hvert tema har en KI-generert illustrasjon i stedet, merket med det. */
+   (rettighetene er ikke avklart), så hvert tema har en KI-generert illustrasjon i stedet, merket med det. Tallkortene og figurene kan
+   ha et spørsmålstegn med forklaringen bak tallene, som infoknappen på hovedsiden, slått av og på i flagg.ts. */
 import { useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { MdAccordionItem, MdIconArrowForward, MdIconChevronForward, MdIconOpenInNew } from '../md.ts';
@@ -9,6 +10,9 @@ import { lenke, type Rute } from '../navigasjon.ts';
 import { Illustrasjon } from '../illustrasjoner.tsx';
 import { GRUPPER, TEMAER, type Tema } from '../temaer.ts';
 import { sammenligning, temaflis, type Svar } from '../tall.ts';
+import { useInfoknapp, type Se } from '../../src/ui/komponenter/Infoknapp.tsx';
+import { ankerFor, REPO } from '../../src/ui/forklaringer.ts';
+import { vises, type Sted } from '../flagg.ts';
 
 /* En lenke til en side i tvillingen */
 export function Lenke({
@@ -149,14 +153,50 @@ export const Trekkspill = ({ tittel, children, merke }: { tittel: string; childr
   </MdAccordionItem>
 );
 
-/* Tallkortene øverst: [etikett, tallet] */
-export const Tallkort = ({ kort }: { kort: [etikett: string, tall: ReactNode][] }) => (
-  <dl className="tallkort">
-    {kort.map(([etikett, tall]) => (
-      <div key={etikett}>
-        <dt>{etikett}</dt>
-        <dd>{tall}</dd>
+/* Et spørsmålstegn med forklaringen bak tallene: stedet (flagget i flagg.ts) og id-en til kortet i src/ui/forklaringer.ts */
+export type Forklaring = [sted: Sted, kort: string];
+/* Et steg et annet kort forklarer, lenker til kapitlet i METODE.md, fordi sidene på hovedsiden ikke finnes her */
+const tilMetoden: Se = k => (
+  <a href={REPO + 'METODE.md#' + ankerFor(k)} target="_blank" rel="noopener">
+    {k.tittel}
+  </a>
+);
+/* Spørsmålstegnet og panelet for forklaringen f, eller ingenting når stedet er slått av */
+export const useSporsmal = (f?: Forklaring) => useInfoknapp(f && vises(f[0]) ? f[1] : null, tilMetoden);
+/* En overskrift med spørsmålstegnet ved siden av, og panelet med forklaringen rett under når det er trykket */
+export function MedSporsmal({ forklaring, children }: { forklaring?: Forklaring; children: ReactNode }) {
+  const { knapp, panel } = useSporsmal(forklaring);
+  if (!knapp) return children;
+  return (
+    <>
+      <div className="korttittel">
+        {children}
+        {knapp}
       </div>
+      {panel}
+    </>
+  );
+}
+
+/* Ett tallkort: etiketten med spørsmålstegnet, panelet med forklaringen under etiketten når det er åpent, og tallet */
+function Tall({ etikett, tall, forklaring }: { etikett: string; tall: ReactNode; forklaring?: Forklaring }) {
+  const { knapp, panel } = useSporsmal(forklaring);
+  return (
+    <div className={panel ? 'apen' : undefined}>
+      <dt className={knapp ? 'korttittel' : undefined}>
+        {knapp ? <span>{etikett}</span> : etikett}
+        {knapp}
+      </dt>
+      {panel && <dd className="tallkort-forklaring">{panel}</dd>}
+      <dd>{tall}</dd>
+    </div>
+  );
+}
+/* Tallkortene øverst: [etikett, tallet, spørsmålstegnet] */
+export const Tallkort = ({ kort }: { kort: [etikett: string, tall: ReactNode, forklaring?: Forklaring][] }) => (
+  <dl className="tallkort">
+    {kort.map(([etikett, tall, forklaring]) => (
+      <Tall key={etikett} etikett={etikett} tall={tall} forklaring={forklaring} />
     ))}
   </dl>
 );
@@ -176,7 +216,7 @@ export function Kilde({ kilder }: { kilder: (keyof typeof KILDE)[] }) {
 }
 
 /* En figur: tittel, tekst og kilde til venstre, figuren til høyre i en lys flate (under på mobil), og trekkspill under (etter). Er
-   figuren ikke laget ennå (tom), står flaten tom med et merke og hva som trengs. */
+   figuren ikke laget ennå (tom), står flaten tom med et merke og hva som trengs. Spørsmålstegnet (forklaring) står ved tittelen. */
 export function Figur({
   tittel,
   tekst,
@@ -184,7 +224,8 @@ export function Figur({
   children,
   etter,
   tom,
-  merke
+  merke,
+  forklaring
 }: {
   tittel: string;
   tekst: ReactNode;
@@ -193,11 +234,14 @@ export function Figur({
   etter?: ReactNode;
   tom?: string;
   merke?: string;
+  forklaring?: Forklaring;
 }) {
   return (
     <section className="figur">
       <div className="figur-tekst">
-        <h2 className="figur-tittel md-typography-heading-s">{tittel}</h2>
+        <MedSporsmal forklaring={forklaring}>
+          <h2 className="figur-tittel md-typography-heading-s">{tittel}</h2>
+        </MedSporsmal>
         <div className="figur-forklaring">{tekst}</div>
         <Kilde kilder={kilder} />
       </div>

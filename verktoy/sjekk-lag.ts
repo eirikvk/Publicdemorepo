@@ -171,7 +171,9 @@ const FIGMA_LOV = [
     'ui/tekst.ts',
     'ui/farger.ts',
     'ui/komponenter/md.ts',
-    'ui/komponenter/lager.ts'
+    'ui/komponenter/lager.ts',
+    'ui/forklaringer.ts',
+    'ui/komponenter/Infoknapp.tsx'
   ],
   FIGMA_IKKE = ['data/bronse/', 'data/generelt/'],
   FIGMA_BARE_TYPER = ['data/gull/'];

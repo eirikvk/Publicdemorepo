@@ -128,7 +128,7 @@ const { GRUPPER, KORT, ankerFor, infostegFor, stegFor, tabellen, tekniskeFor, us
   await import('../src/ui/forklaringer.ts');
 type Steg = ReturnType<typeof stegFor>[number];
 /* Forklaringen på et steg. En kilde i bronse sier hvor den hentes fra: endepunktet, eller bare «Hentes» når den har eier uten
-   endepunkt. Som i infoknappen (Tallforklaring.tsx). */
+   endepunkt. Som i infoknappen (Infoknapp.tsx). */
 const hentes = (t: Steg['tabell']) =>
   (t.endepunkt ? `Hentes fra \`${t.endepunkt}\`: ` : t.kilde ? 'Hentes: ' : '') + (t.forklaring || '');
 const kildeTekst = (t: Steg['tabell']) =>

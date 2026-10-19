@@ -393,6 +393,14 @@ main > .innhold > .tallkort {
 main > .innhold > .etter-tallkort {
   margin-top: 16px;
 }
+/* Spørsmålstegnet ved etiketten på et tallkort, og panelet med forklaringen rett under etiketten. Panelet har vanlig tekst, ikke
+   tallets størrelse. */
+.tallkort dd.tallkort-forklaring {
+  margin-top: -2px;
+  font-size: inherit;
+  font-weight: 400;
+  line-height: inherit;
+}
 @media (max-width: 720px) {
   .tallkort {
     grid-template-columns: 1fr 1fr;
@@ -403,6 +411,10 @@ main > .innhold > .etter-tallkort {
   }
   .tallkort dd {
     font-size: 1.5rem;
+  }
+  /* Et tallkort med forklaringen åpen tar hele bredden, så panelet ikke blir smalt */
+  .tallkort > div.apen {
+    grid-column: 1 / -1;
   }
 }
 
@@ -457,6 +469,34 @@ main > .innhold > .figur {
   flex-direction: column;
   gap: 16px;
   padding: 36px 40px 0 16px;
+}
+/* Spørsmålstegnet står rett etter siste ord i overskriften eller etiketten, også når den brytes over flere linjer. Linjen brytes
+   ikke mellom ordet og spørsmålstegnet, så det står aldri alene på en linje. */
+.tvilling .korttittel {
+  display: block;
+  white-space: nowrap;
+}
+.tvilling .korttittel > h2,
+.tvilling .korttittel > span {
+  display: inline;
+  white-space: normal;
+}
+.tvilling .korttittel > .md-helpbutton {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+/* Panelet med forklaringen står tett under tittelen, der pilen på spørsmålstegnet peker */
+.figur-tekst > .tallforklaring {
+  margin-top: -12px;
+}
+/* Panelet blir ikke bredere enn en vanlig tekstlinje, også der det står over hele bredden */
+.tvilling .tallforklaring {
+  max-width: 40rem;
+}
+.seksjonstopp + .tallforklaring,
+.sammenligning > .tallforklaring {
+  margin-top: 4px;
 }
 .figur-forklaring {
   font-size: 0.9375rem;

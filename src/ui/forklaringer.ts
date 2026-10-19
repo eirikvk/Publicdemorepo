@@ -1,5 +1,5 @@
 /* Forklaringene bak tallene: hvert kort på sidene som viser tall, med spørsmålet det svarer på, en kort forklaring, tabellene i gull
-   det viser, og regnestykket for valgt kommune. Infoknappen på kortet (komponenter/Tallforklaring.tsx) og kapitlene i METODE.md
+   det viser, og regnestykket for valgt kommune. Infoknappen på kortet (komponenter/Infoknapp.tsx) og kapitlene i METODE.md
    (verktoy/forklaringer.ts) lages av det samme: kortet her, og forklaringen, usikkerheten og kilden på tabellene i katalogen.
    Hvilke tabeller hver tabell bygger på, er lest ut av koden (data/avhengigheter.ts).
    Filen bruker verken React eller kartet, så verktøyet kan lese den i Node. Regnestykket lager ingen nye tall: det setter tallene
@@ -40,7 +40,8 @@ export const GRUPPER: Record<string, string> = {
   egne: 'Egne områder og opplastet plan',
   natur: 'Naturtemaene',
   inon: 'Inngrepsfri natur',
-  graa: 'Grått areal'
+  graa: 'Grått areal',
+  tvilling: 'Tallene i tvillingen fra Figma'
 };
 
 /* Tall i hele dekar, med fortegn for endringer, antall, og arealet av en rute i m² */
@@ -84,6 +85,20 @@ const avLand = (hent: Hent, andel: number | null) => {
 
 const NATUR = 'src/ui/komponenter/Naturtema.tsx',
   [VERN, REIN, VERDI] = NATURTEMA;
+/* Sidene i tvillingen fra Figma, der kortene i gruppen tvilling står */
+const TEMASIDER = 'srcFigma/sider/Temasider.tsx',
+  HOVEDSIDER = 'srcFigma/sider/Hovedsider.tsx';
+/* De største i en liste over arealer ved navn, med arealet i parentes, og resten samlet */
+function storst(R: { navn: string; km2: number }[], flertall: string, n = 3) {
+  const o = [...R].sort((a, b) => b.km2 - a.km2),
+    rest = o.slice(n);
+  return ramse([
+    ...o.slice(0, n).map(x => `${x.navn.toLowerCase()} (${daa(x.km2)})`),
+    rest.length > 0 && `${ant(rest.length)} ${flertall} til med ${daa(rest.reduce((s, x) => s + x.km2, 0))}`
+  ]);
+}
+/* Inngrepsfri natur per sone, som «villmarkspreget natur 10, sone 1 20 og sone 2 30» */
+const perSone = (soner: number[]) => ramse(INONSONER.map((s, i) => `${s[4].toLowerCase()} ${hele(soner[i])}`));
 
 export const KORT: Kort[] = [
   {
@@ -345,6 +360,265 @@ export const KORT: Kort[] = [
           `Av ${daa(P.km2)} planlagt utbygging på land ligger ${daa(P.graa)} på grått areal, altså ${prosent(P.andelGraa)}. Av dette har ${daa(P.gron)} minst halvparten vegetasjon.`
         );
       return linjer;
+    }
+  },
+  /* Kortene bak spørsmålstegnene i tvillingen fra Figma, for tallene hovedsiden ikke har. Der tvillingen viser de samme tallene som
+     et kort over, bruker den det kortet. */
+  {
+    id: 'skog',
+    tittel: 'Skog i grunnkartet',
+    gruppe: 'tvilling',
+    side: 'utforsk/skog',
+    komponent: TEMASIDER,
+    sporsmal:
+      'Hvor mye skog har kommunen, hvilke treslag dominerer, og hvor mye av skogen står på myr eller innmarksbeite?',
+    kortFortalt:
+      'Skogen er økosystemtypen skog i grunnkartet for arealanalyse fra NIBIO, klippet til kommunen. Tresatt myr og tresatt innmarksbeite er med, fordi de er skog i grunnkartet. Andelen er av landarealet i grunnkartet, det vil si alt unntatt hav, innsjøer og elver. Treslaget og underlaget (fastmark, myr eller innmarksbeite) er detaljklasser i det samme kartet.',
+    tabeller: ['gull.skog'],
+    regnestykke: hent => {
+      const S = hent(katalog.gull.skog);
+      if (!S) return null;
+      return [
+        `Skog i grunnkartet: ${daa(S.km2)}, ${prosent(S.andel)} av landarealet i grunnkartet.`,
+        `Etter treslag: ${ramse(S.treslag.map(t => `${t.navn.toLowerCase()} ${hele(t.km2)}`))} dekar.`,
+        `Etter underlag: ${ramse(S.underlag.map(u => `${u.navn.toLowerCase()} ${hele(u.km2)}`))} dekar.`
+      ];
+    }
+  },
+  {
+    id: 'vatmark',
+    tittel: 'Våtmark i grunnkartet',
+    gruppe: 'tvilling',
+    side: 'utforsk/vatmark',
+    komponent: TEMASIDER,
+    sporsmal: 'Hvor mye våtmark har kommunen, og hvor mye av den er myr med trær?',
+    kortFortalt:
+      'Våtmarken er økosystemtypen våtmark i grunnkartet fra NIBIO (åpen myr og annen åpen våtmark) og tresatt myr, klippet til kommunen. Tresatt myr er skog i grunnkartet, men skissene regner den med i våtmarken, så den står både i skogen og i våtmarken. Andelen er av landarealet i grunnkartet.',
+    tabeller: ['gull.vatmark'],
+    regnestykke: hent => {
+      const W = hent(katalog.gull.vatmark);
+      if (!W) return null;
+      return [
+        `Åpen våtmark ${hele(W.apen)} og tresatt myr ${hele(W.tresatt)} dekar. Til sammen ${daa(W.km2)}, ${prosent(W.andel)} av landarealet i grunnkartet.`
+      ];
+    }
+  },
+  {
+    id: 'vernetNatur',
+    tittel: 'Naturen i verneområdene',
+    gruppe: 'tvilling',
+    side: 'utforsk/verneomrader',
+    komponent: TEMASIDER,
+    sporsmal: 'Hva slags natur er vernet i kommunen, og hvor stor del av landarealet er vernet?',
+    kortFortalt:
+      'Grunnkartet fra NIBIO klippes til verneområdene fra Miljødirektoratet i kommunen, og arealet summeres per økosystemtype og til land, hav og ferskvann. Andelen vernet er bare det vernede på land, av landarealet i grunnkartet. Skogen som er vernet, er skog i grunnkartet, også tresatt myr og tresatt innmarksbeite.',
+    tabeller: ['gull.vernetNatur'],
+    usikkerhet: [
+      'Hovedsiden regner andelen av alt som er vernet, også i sjø, av landarealet hos SSB. Derfor er andelen der høyere i kommuner med vern i sjø.'
+    ],
+    regnestykke: hent => {
+      const V = hent(katalog.gull.vernetNatur);
+      if (!V) return null;
+      if (!(V.sum > 0)) return ['Kommunen har ingen verneområder.'];
+      return [
+        `Vernet areal i grunnkartet: land ${hele(V.land)}, hav ${hele(V.hav)} og ferskvann ${hele(V.ferskvann)} dekar. Til sammen ${daa(V.sum)}.`,
+        `Vernet land er ${prosent(V.andelLand)} av landarealet i grunnkartet.`,
+        `Mest vernet: ${storst(V.perOkosystem, 'typer')}.`,
+        `Skogen som er vernet: ${daa(V.skog)}.`
+      ];
+    }
+  },
+  {
+    id: 'verdsattPerNaturtype',
+    tittel: 'Verdsatte naturtyper i kommunen',
+    gruppe: 'tvilling',
+    side: 'utforsk/verdsatte-naturtyper',
+    komponent: TEMASIDER,
+    sporsmal: 'Hvilke verdsatte naturtyper er funnet i kommunen, og hvor mye er det av hver?',
+    kortFortalt:
+      'Lokalitetene med verdi fra Miljødirektoratet grupperes etter naturtype, med arealet, antall lokaliteter og den høyeste verdien. Arealet er summen av hele lokalitetene, også delene som ligger utenfor kommunen, og der lokaliteter overlapper, telles det flere ganger. Listen gjelder bare det som er kartlagt.',
+    tabeller: ['gull.verdsattPerNaturtype'],
+    regnestykke: hent => {
+      const N = hent(katalog.gull.verdsattPerNaturtype);
+      if (!N) return null;
+      if (!N.alle.length) return ['Kommunen har ingen lokaliteter med verdi.'];
+      return [
+        `${ant(N.alle.reduce((s, t) => s + t.antall, 0))} lokaliteter i ${ant(N.alle.length)} naturtyper. Størst: ${storst(N.alle, 'naturtyper')}.`,
+        `${ant(N.hoy.length)} av naturtypene har lokaliteter med stor eller svært stor verdi.`
+      ];
+    }
+  },
+  {
+    id: 'villreinPerOmrade',
+    tittel: 'Villreinområdene i kommunen',
+    gruppe: 'tvilling',
+    side: 'utforsk/villrein',
+    komponent: TEMASIDER,
+    sporsmal: 'Hvilke villreinområder ligger i kommunen, og hvor mye av hvert?',
+    kortFortalt:
+      'Hvert villreinområde fra Miljødirektoratet klippes mot kommunegrensen. Arealet er delen av området som ligger i kommunen, og andelen er av landarealet hos SSB. Kommunene området ligger i, står i dataene for området.',
+    tabeller: ['gull.villreinPerOmrade'],
+    regnestykke: hent => {
+      const R = hent(katalog.gull.villreinPerOmrade);
+      if (!R) return null;
+      if (!R.length) return ['Kommunen har ingen villreinområder.'];
+      const L = land(hent);
+      return [
+        ...R.map(o => `${o.navn}: ${daa(o.km2)} i kommunen, ${prosent(o.andel)} av landarealet.`),
+        ...(L ? [`Landarealet hos SSB er ${daa(L)}.`] : [])
+      ];
+    }
+  },
+  {
+    id: 'iVillrein',
+    tittel: 'Inngrepsfri natur og grått areal i villreinområdene',
+    gruppe: 'tvilling',
+    side: 'utforsk/villrein',
+    komponent: TEMASIDER,
+    sporsmal:
+      'Hvor mye av villreinområdene i kommunen er inngrepsfri natur eller grått areal, og hvordan har den inngrepsfrie naturen der endret seg siden 1988?',
+    kortFortalt:
+      'Villreinområdene legges over kartene over inngrepsfri natur og grått areal, i de samme rutene på 10,6 meter. Hver rute teller med den delen av den som ligger i villreinområdene og i kommunen, og der områder overlapper, telles ruta én gang. Andelene er av villreinområdene i kommunen. Utviklingen er telt på samme måte for hvert år, innenfor dagens villreinområder.',
+    tabeller: ['gull.inonIVillrein', 'gull.inonIVillreinUtvikling', 'gull.graaIVillrein'],
+    regnestykke: hent => {
+      const T = hent(katalog.gull.villrein);
+      if (T && !T.antall) return ['Kommunen har ingen villreinområder.'];
+      const I = hent(katalog.gull.inonIVillrein);
+      if (!I) return null;
+      const G = hent(katalog.gull.graaIVillrein),
+        U = hent(katalog.gull.inonIVillreinUtvikling);
+      return [
+        `Villreinområdene i kommunen: ${daa(I.villrein)}.`,
+        `Inngrepsfri natur i dem: ${perSone(I.soner)} dekar. Til sammen ${daa(I.sum)}, ${prosent(I.andel)} av villreinområdene.`,
+        ...(G ? [`Grått areal i dem: ${daa(G.sum)}, ${prosent(G.andel)} av villreinområdene.`] : []),
+        ...(U ? [`Inngrepsfri natur i dem per år: ${ramse(U.aar.map((a, i) => `${a} ${hele(U.sum[i])}`))} dekar.`] : [])
+      ];
+    }
+  },
+  {
+    id: 'gronneArealer',
+    tittel: 'Grønne arealer i bebyggelse',
+    gruppe: 'tvilling',
+    side: 'utforsk/bynatur',
+    komponent: TEMASIDER,
+    sporsmal: 'Hvor mye av det grå arealet har minst halvparten vegetasjon, som hager og parker?',
+    kortFortalt:
+      'Grønne arealer i bebyggelse er grått areal der minst halvparten av flaten er vegetasjon: de to øverste trinnene i kartet over grå arealer. Andelene er av det grå arealet og av landarealet hos SSB.',
+    tabeller: ['gull.gronneArealer'],
+    regnestykke: hent => {
+      const A = hent(katalog.gull.gronneArealer),
+        G = hent(katalog.gull.graa);
+      if (!A || !G || G.tilstand !== 'ok') return null;
+      return [
+        `${stor(GRAATRINN[3][1])} ${hele(G.trinn[4])} og ${GRAATRINN[4][1]} ${hele(G.trinn[5])} dekar, hvert avrundet til nærmeste 10 dekar. Til sammen ${daa(A.km2)}.`,
+        `Det er ${prosent(A.andelAvGraa)} av det grå arealet på ${daa(G.sum)}, og ${prosent(A.andelLand)} av landarealet.`
+      ];
+    }
+  },
+  {
+    id: 'planPerOkosystem',
+    tittel: 'Planlagt utbygging per økosystemtype',
+    gruppe: 'tvilling',
+    side: 'naturtapet',
+    komponent: HOVEDSIDER,
+    sporsmal:
+      'Hva slags natur og jordbruk setter kommuneplanen av til utbygging, og hvor stor del av hver type i kommunen er det?',
+    kortFortalt:
+      'Planlagt utbygging fra kommuneplanen krysses med detaljklassene i grunnkartet fra NIBIO, i stedet for dagens arealklasser som på hovedsiden, og summeres per økosystemtype. Andelen er arealet satt av delt på arealet av typen i kommunen. Myr og beite med trær er med i skogen. Smale striper er ikke med.',
+    tabeller: ['gull.planPerOkosystem'],
+    regnestykke: hent => {
+      const P = hent(katalog.gull.planPerOkosystem);
+      if (!P) return null;
+      if (P.ingenPlan) return ['Kommunen har ingen kommuneplan med utbygging hos DiBK.'];
+      const R = P.rader.filter(r => r.km2 > 0);
+      if (!R.length) return ['Kommuneplanen setter ikke av natur eller jordbruk til utbygging.'];
+      return [
+        ...R.map(r => `${r.navn}: ${daa(r.km2)} satt av, ${prosent(r.andel)} av typen i kommunen.`),
+        ...(P.vatmark.km2 > 0
+          ? [
+              `Våtmark satt av: åpen våtmark ${hele(P.vatmark.apen)} og tresatt myr ${hele(P.vatmark.tresatt)} dekar, til sammen ${daa(P.vatmark.km2)}.`
+            ]
+          : [])
+      ];
+    }
+  },
+  {
+    id: 'planIVerdifull',
+    tittel: 'Planlagt utbygging i verdifull natur',
+    gruppe: 'tvilling',
+    side: 'naturtapet',
+    komponent: HOVEDSIDER,
+    sporsmal:
+      'Hvor mye av den planlagte utbyggingen ligger i verneområder, villreinområder og verdsatt natur, og hvor mye ligger på grått areal?',
+    kortFortalt:
+      'Rutene med planlagt utbygging krysses med hvert tema, som på hovedsiden: en rute teller med den delen av den som ligger i temaet og i kommunen. Delen på grått areal er utbygging på areal som alt er tatt i bruk.',
+    tabeller: ['gull.verneomraderIPlan', 'gull.villreinIPlan', 'gull.verdsattNaturIPlan', 'gull.graaIPlan'],
+    regnestykke: hent => {
+      const I = hent(katalog.gull.graaIPlan),
+        P = I && I.plan,
+        linjer = [
+          ...iPlanen(hent(katalog.gull.verneomraderIPlan), 'verneområdene'),
+          ...iPlanen(hent(katalog.gull.villreinIPlan), 'villreinområdene'),
+          ...iPlanen(hent(katalog.gull.verdsattNaturIPlan), 'verdsatt natur', 'lokaliteter'),
+          ...(P
+            ? [
+                `Av ${daa(P.km2)} planlagt utbygging på land ligger ${daa(P.graa)} på grått areal, altså ${prosent(P.andelGraa)}.`
+              ]
+            : [])
+        ];
+      return linjer.length ? linjer : null;
+    }
+  },
+  {
+    id: 'naturregnskap',
+    tittel: 'Naturregnskapet per hovedøkosystem',
+    gruppe: 'tvilling',
+    side: 'oversikt',
+    komponent: HOVEDSIDER,
+    sporsmal:
+      'Hvor mye natur, jordbruk og bebygd areal har kommunen, og hvor mye natur og jordbruk ble bygget ned fra 2017 til 2024?',
+    kortFortalt:
+      'Tallene er syntetiske: de står i stedet for SSBs tabeller over hovedøkosystemer til de publiseres 25. november 2026. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel, og økningen i bebygd tas først fra jordbruket og så fra naturen. Natur, jordbruk og bebygd er hovedøkosystemene summert, og andelen er av landarealet.',
+    tabeller: ['gull.oversiktKort', 'gull.nedbygging', 'gull.okosystemregnskap'],
+    regnestykke: hent => {
+      const O = hent(katalog.gull.oversiktKort);
+      if (!O) return null;
+      const N = hent(katalog.gull.nedbygging);
+      return [
+        `${stor(ramse(O.klasser.map(k => `${k.navn.toLowerCase()} ${hele(k.km2)} dekar (${prosent(k.andel)})`)))} av landarealet.`,
+        ...(N && !N.endret
+          ? [
+              `Fra ${N.fra} til ${N.til} ble ${daa(N.natur.nedbygd)} natur og ${daa(N.jordbruk.nedbygd)} jordbruk bygget ned, ${prosent(N.natur.andel)} og ${prosent(N.jordbruk.andel)} av arealet i ${N.fra}.`
+            ]
+          : N
+            ? [`Kommunegrensen er flyttet siden ${N.fra}, så nedbyggingen kan ikke regnes ut.`]
+            : [])
+      ];
+    }
+  },
+  {
+    id: 'sammenligning',
+    tittel: 'Kommunen sammenlignet med Norge',
+    gruppe: 'tvilling',
+    side: 'oversikt',
+    komponent: HOVEDSIDER,
+    sporsmal:
+      'Hvor stor del av naturen som er bygget ned i Norge, ligger i kommunen, og hvor mye jordbruk og våtmark bygger kommunen ned sammenlignet med de andre?',
+    kortFortalt:
+      'Den samme syntetiske oversettelsen av SSBs arealklasser gjøres for alle kommunene i Norge med ett kall til SSB, og summeres for Norge. Kommunen sammenlignes med summen. Plassen er blant kommunene som kan sammenlignes med 2017, der 1 bygget ned mest.',
+    tabeller: ['gull.sammenligning'],
+    regnestykke: hent => {
+      const S = hent(katalog.gull.sammenligning);
+      if (!S) return null;
+      if (S.endret) return [`Kommunegrensen er flyttet siden ${S.fra}, så kommunen kan ikke sammenlignes.`];
+      const plass = (navn: string, P: typeof S.jordbruk) =>
+        `${navn} bygget ned: ${daa(P.km2)}${P.plass ? `, plass ${ant(P.plass)} av ${ant(P.av)} etter areal` : ''}${P.plassAndel ? ` og plass ${ant(P.plassAndel)} etter andel` : ''}.`;
+      return [
+        `Natur bygget ned fra ${S.fra} til ${S.til}: ${daa(S.naturtap.km2)}, ${prosent(S.naturtap.andelAvNorge)} av all natur bygget ned i Norge. Snittet for en kommune er ${prosent(S.naturtap.snitt)}.`,
+        `Andelen av naturen som ble bygget ned: ${prosent(S.natur.kommune)} i kommunen og ${prosent(S.natur.norge)} i Norge.`,
+        plass('Jordbruk', S.jordbruk),
+        plass('Våtmark', S.vatmark)
+      ];
     }
   }
 ];

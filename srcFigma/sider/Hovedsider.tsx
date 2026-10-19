@@ -24,10 +24,12 @@ import {
   Lenke,
   Liggende,
   Mangler,
+  MedSporsmal,
   Ressurser,
   Tallkort,
   Temagrupper,
   Trekkspill,
+  useSporsmal,
   svar
 } from '../komponenter/deler.tsx';
 import { figma, velgKartTema } from '../navigasjon.ts';
@@ -234,7 +236,8 @@ export function Oversikt() {
     R = okosystemregnskap(),
     k = kommunen(),
     jord = S.s === 'ok' && !S.v.endret ? plassering(S.v.jordbruk) : null,
-    vat = S.s === 'ok' && !S.v.endret ? plassering(S.v.vatmark) : null;
+    vat = S.s === 'ok' && !S.v.endret ? plassering(S.v.vatmark) : null,
+    nedbygd = useSporsmal(['oversikt/nedbygd', 'naturregnskap']);
   return (
     <>
       <div className="innhold">
@@ -312,11 +315,15 @@ export function Oversikt() {
       <div className="innhold">
         <section className="nedbygd">
           <div className="seksjonstopp">
-            <h2 className="md-typography-heading-l">Hva slags natur ble bygget ned?</h2>
+            <div className="korttittel">
+              <h2 className="md-typography-heading-l">Hva slags natur ble bygget ned?</h2>
+              {nedbygd.knapp}
+            </div>
             <Lenke til={{ side: 'naturtapet' }} className="pil-lenke md-link">
               Mer om naturtapet →
             </Lenke>
           </div>
+          {nedbygd.panel}
           {N.s === 'ok' && N.v.endret && (
             <p className="seksjonsingress">
               Kommunegrensen er flyttet siden {N.v.fra}, så hvor mye natur som er bygget ned, kan ikke regnes ut.
@@ -380,7 +387,9 @@ export function Oversikt() {
       </Baand>
       <div className="innhold">
         <section className="sammenligning">
-          <h2 className="md-typography-heading-l">{k} sammenlignet med resten av Norge</h2>
+          <MedSporsmal forklaring={['oversikt/sammenligning', 'sammenligning']}>
+            <h2 className="md-typography-heading-l">{k} sammenlignet med resten av Norge</h2>
+          </MedSporsmal>
           <p className="seksjonsingress">
             Vi har sammenlignet kart og naturdata for alle Norges kommuner og trekker frem tre høydepunkt og tre
             forbedringsområder.
@@ -491,9 +500,21 @@ export function Naturtapet() {
         </section>
         <Tallkort
           kort={[
-            ['Natur satt av til utbygging', P ? iTekst(P.natur.km2) : <span className="henter">Regnes ut …</span>],
-            ['Andel av naturen i kommunen', P ? prosent(P.natur.andel) : <span className="henter">Regnes ut …</span>],
-            ['Jordbruk satt av til utbygging', P ? iTekst(P.jordbruk.km2) : <span className="henter">Regnes ut …</span>]
+            [
+              'Natur satt av til utbygging',
+              P ? iTekst(P.natur.km2) : <span className="henter">Regnes ut …</span>,
+              ['naturtapet/kort-natur', 'planlagt']
+            ],
+            [
+              'Andel av naturen i kommunen',
+              P ? prosent(P.natur.andel) : <span className="henter">Regnes ut …</span>,
+              ['naturtapet/kort-andel', 'planlagt']
+            ],
+            [
+              'Jordbruk satt av til utbygging',
+              P ? iTekst(P.jordbruk.km2) : <span className="henter">Regnes ut …</span>,
+              ['naturtapet/kort-jordbruk', 'planlagt']
+            ]
           ]}
         />
         <div className="trekkspill-liste">
@@ -509,6 +530,7 @@ export function Naturtapet() {
       <div className="innhold">
         <Figur
           tittel="Planlagt utbygging i verdifull natur"
+          forklaring={['naturtapet/figur-verdifull-natur', 'planIVerdifull']}
           tekst={
             <p>Hvor mye av den planlagte utbyggingen som ligger i verneområder, villreinområder og verdsatt natur.</p>
           }
@@ -535,6 +557,7 @@ export function Naturtapet() {
         </Figur>
         <Figur
           tittel="Hva slags natur kommuneplanen setter av til utbygging"
+          forklaring={['naturtapet/figur-okosystemtype', 'planPerOkosystem']}
           tekst={
             <p>
               Natur og jordbruk som kommuneplanen setter av til utbygging, per økosystemtype i grunnkartet, og hvor stor
@@ -568,6 +591,7 @@ export function Naturtapet() {
         </Figur>
         <Figur
           tittel="Regnskapet fra SSB"
+          forklaring={['naturtapet/figur-regnskap', 'naturregnskap']}
           tekst={
             <>
               <p>

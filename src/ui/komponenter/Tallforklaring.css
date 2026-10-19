@@ -1,4 +1,4 @@
-/* Overskriften med infoknappen, og panelet med forklaringen bak tallene (Tallforklaring.tsx). Panelet har fargene til hjelpeteksten
+/* Overskriften med infoknappen, og panelet med forklaringen bak tallene (Tallforklaring.tsx og Infoknapp.tsx). Panelet har fargene til hjelpeteksten
    i designsystemet, så lenker, kode og detaljer får lys tekst her. */
 .korttittel {
   display: flex;

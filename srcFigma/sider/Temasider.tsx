@@ -28,7 +28,8 @@ import {
   Stolper,
   Tallkort,
   Trekkspill,
-  svar
+  svar,
+  type Forklaring
 } from '../komponenter/deler.tsx';
 import {
   graaIVillrein,
@@ -73,7 +74,7 @@ const MANGLER_KILDE = 'Mangler kilde';
 interface Temasideinnhold {
   tema: Tema;
   trekkspill?: ReactNode;
-  kort: [string, ReactNode][];
+  kort: [string, ReactNode, Forklaring?][];
   kilde?: ReactNode;
   fremhevet?: ReactNode;
   lag: Kartlag[];
@@ -183,9 +184,9 @@ function Skog({ tema }: { tema: Tema }) {
         </>
       }
       kort={[
-        ['Skog i kommunen', svar(S, s => iTekst(s.km2))],
-        ['Andel av kommunens landareal som er skog', svar(S, s => prosent(s.andel))],
-        ['Skog som er vernet', svar(V, v => iTekst(v.skog))]
+        ['Skog i kommunen', svar(S, s => iTekst(s.km2)), ['skog/kort-areal', 'skog']],
+        ['Andel av kommunens landareal som er skog', svar(S, s => prosent(s.andel)), ['skog/kort-andel', 'skog']],
+        ['Skog som er vernet', svar(V, v => iTekst(v.skog)), ['skog/kort-vernet', 'vernetNatur']]
       ]}
       kilde={GRUNNKART_KILDE}
       lag={[
@@ -229,6 +230,7 @@ function Skog({ tema }: { tema: Tema }) {
     >
       <Figur
         tittel={`Typer skog i ${kommunen()}`}
+        forklaring={['skog/figur-treslag', 'skog']}
         tekst={
           <p>
             Skogen i kommunen deles inn etter hvilke typer treslag som dominerer. Det er vanlig å skille mellom barskog
@@ -251,6 +253,7 @@ function Skog({ tema }: { tema: Tema }) {
       </Figur>
       <Figur
         tittel={`Dette dekker skogen i ${kommunen()}`}
+        forklaring={['skog/figur-underlag', 'skog']}
         tekst={
           <p>
             Figuren viser hva skogarealet i {kommunen()} står på: fastmark, myr eller innmarksbeite. Jo større en sektor
@@ -298,8 +301,12 @@ function Vatmark({ tema }: { tema: Tema }) {
         </>
       }
       kort={[
-        ['Våtmark i kommunen', svar(W, w => iTekst(w.km2))],
-        ['Andel av kommunens landareal som er våtmark', svar(W, w => prosent(w.andel))]
+        ['Våtmark i kommunen', svar(W, w => iTekst(w.km2)), ['vatmark/kort-areal', 'vatmark']],
+        [
+          'Andel av kommunens landareal som er våtmark',
+          svar(W, w => prosent(w.andel)),
+          ['vatmark/kort-andel', 'vatmark']
+        ]
       ]}
       kilde={GRUNNKART_KILDE}
       lag={[
@@ -374,6 +381,7 @@ function Vatmark({ tema }: { tema: Tema }) {
     >
       <Figur
         tittel={`Dette dekker våtmarken i ${kommunen()}`}
+        forklaring={['vatmark/figur-underlag', 'vatmark']}
         tekst={
           <p>
             Figuren viser hva som dekker våtmarksarealet i kommunen. Mye av våtmarka har trær, enten som skog eller som
@@ -467,8 +475,16 @@ function Vern({ tema }: { tema: Tema }) {
         </>
       }
       kort={[
-        ['Vernet natur i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av kommunens landareal som er vernet', svar(V, x => prosent(x.andelLand))]
+        [
+          'Vernet natur i kommunen',
+          svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen')),
+          ['verneomrader/kort-areal', 'vern']
+        ],
+        [
+          'Andel av kommunens landareal som er vernet',
+          svar(V, x => prosent(x.andelLand)),
+          ['verneomrader/kort-andel', 'vernetNatur']
+        ]
       ]}
       kilde={
         <p>
@@ -556,6 +572,7 @@ function Vern({ tema }: { tema: Tema }) {
       {v && v.antall > 0 && (
         <Figur
           tittel={`Slik er naturen vernet i ${kommunen()}`}
+          forklaring={['verneomrader/figur-verneform', 'vern']}
           tekst={
             <p>
               Figuren viser hvor mye areal som er vernet i {kommunen()}, fordelt på verneform. Det kan være nyttig å se
@@ -585,6 +602,7 @@ function Vern({ tema }: { tema: Tema }) {
       )}
       <Figur
         tittel={`Naturen som er vernet i ${kommunen()}`}
+        forklaring={['verneomrader/figur-natur', 'vernetNatur']}
         tekst={
           <p>
             Figuren viser hva slags natur som er vernet i {kommunen()}, og hvor mye det er av hver type. Prosenten viser
@@ -623,6 +641,7 @@ function Vern({ tema }: { tema: Tema }) {
       {v && v.antall > 0 && (
         <Figur
           tittel={`Verneområdene i ${kommunen()}`}
+          forklaring={['verneomrader/figur-omradene', 'vern']}
           tekst={<p>Alle verneområdene som ligger helt eller delvis i kommunen, med det største først.</p>}
           kilder={['vern']}
         >
@@ -686,8 +705,16 @@ function Verdi({ tema }: { tema: Tema }) {
         </>
       }
       kort={[
-        ['Andel av kommunen kartlagt', svar(K, x => (x && x.kartlagt ? prosent(x.kartlagt.andelLand) : '–'))],
-        ['Kartlagte verdsatte naturtyper', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))]
+        [
+          'Andel av kommunen kartlagt',
+          svar(K, x => (x && x.kartlagt ? prosent(x.kartlagt.andelLand) : '–')),
+          ['verdsatte-naturtyper/kort-kartlagt', 'verdi']
+        ],
+        [
+          'Kartlagte verdsatte naturtyper',
+          svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen')),
+          ['verdsatte-naturtyper/kort-areal', 'verdi']
+        ]
       ]}
       kilde={
         <p>
@@ -787,6 +814,7 @@ function Verdi({ tema }: { tema: Tema }) {
       {v && v.perKlasse && (
         <Figur
           tittel="Fordeling av verdiene"
+          forklaring={['verdsatte-naturtyper/figur-verdiene', 'verdi']}
           tekst={
             <p>
               Verdien settes etter{' '}
@@ -829,6 +857,7 @@ function Verdi({ tema }: { tema: Tema }) {
       {v && v.antall > 0 && (
         <Figur
           tittel={`Verdsatte naturtyper funnet i ${kommunen()}`}
+          forklaring={['verdsatte-naturtyper/figur-naturtyper', 'verdsattPerNaturtype']}
           tekst={
             <>
               <p>
@@ -937,8 +966,16 @@ function Inon({ tema }: { tema: Tema }) {
         </>
       }
       kort={[
-        ['Inngrepsfri natur i kommunen', svar(I, x => iTekst(x.sum), 'Ingen')],
-        ['Andel av kommunens landareal som er inngrepsfri natur', svar(I, x => prosent(x.andelLand), '0 %')]
+        [
+          'Inngrepsfri natur i kommunen',
+          svar(I, x => iTekst(x.sum), 'Ingen'),
+          ['inngrepsfri-natur/kort-areal', 'inon']
+        ],
+        [
+          'Andel av kommunens landareal som er inngrepsfri natur',
+          svar(I, x => prosent(x.andelLand), '0 %'),
+          ['inngrepsfri-natur/kort-andel', 'inon']
+        ]
       ]}
       lag={[
         {
@@ -962,6 +999,7 @@ function Inon({ tema }: { tema: Tema }) {
       {I.s === 'ok' && (
         <Figur
           tittel={`Den inngrepsfrie naturen i ${kommunen()} fordelt i soner`}
+          forklaring={['inngrepsfri-natur/figur-soner', 'inon']}
           tekst={
             <p>
               Figuren viser hvor mye inngrepsfri natur det er i {kommunen()}, delt inn etter avstand til nærmeste
@@ -985,6 +1023,7 @@ function Inon({ tema }: { tema: Tema }) {
       )}
       <Figur
         tittel={`Slik har den inngrepsfrie naturen endret seg i ${kommunen()}`}
+        forklaring={['inngrepsfri-natur/figur-utvikling', 'inon']}
         tekst={
           <>
             <p>
@@ -1009,6 +1048,7 @@ function Inon({ tema }: { tema: Tema }) {
       </Figur>
       <Figur
         tittel="Endringer per sone"
+        forklaring={['inngrepsfri-natur/figur-endringer', 'inon']}
         tekst={
           <>
             <p>
@@ -1081,8 +1121,16 @@ function Rein({ tema }: { tema: Tema }) {
         </>
       }
       kort={[
-        ['Villreinområder i kommunen', svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen'))],
-        ['Andel av kommunens landareal som er villreinområde', svar(T, x => (x.antall ? prosent(x.andelLand) : '0 %'))],
+        [
+          'Villreinområder i kommunen',
+          svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen')),
+          ['villrein/kort-areal', 'rein']
+        ],
+        [
+          'Andel av kommunens landareal som er villreinområde',
+          svar(T, x => (x.antall ? prosent(x.andelLand) : '0 %')),
+          ['villrein/kort-andel', 'rein']
+        ],
         [
           'Andel villreinområde som er inngrepsfri natur',
           /* Uten villreinområder er andelen av dem verken et tall eller null: én strek, som for andre tall som ikke finnes */
@@ -1094,7 +1142,8 @@ function Rein({ tema }: { tema: Tema }) {
               <span className="tallkort-etikett">Andel villreinområde som er grå arealer</span>
               <b>{svar(GV, x => (x!.andel === null ? '–' : andelTekst(x!.andel)), '–')}</b>
             </span>
-          )
+          ),
+          ['villrein/kort-inngrepsfri-og-graa', 'iVillrein']
         ]
       ]}
       lag={[
@@ -1149,6 +1198,7 @@ function Rein({ tema }: { tema: Tema }) {
       {v && v.antall > 0 && (
         <Figur
           tittel={`${kommunen()}s villreinområder`}
+          forklaring={['villrein/figur-omradene', 'villreinPerOmrade']}
           tekst={
             <p>
               Tabellen viser villreinområdene som ligger helt eller delvis i {kommunen()}. Et villreinområde strekker
@@ -1190,6 +1240,7 @@ function Rein({ tema }: { tema: Tema }) {
       {IV.s === 'ok' && IV.v ? (
         <Figur
           tittel="Inngrepsfri natur i villreinområdene"
+          forklaring={['villrein/figur-inngrepsfri', 'iVillrein']}
           tekst={
             <>
               <p>{VILLREIN_SKY}</p>
@@ -1221,6 +1272,7 @@ function Rein({ tema }: { tema: Tema }) {
       ) : (
         <Figur
           tittel="Inngrepsfri natur i villreinområdene"
+          forklaring={['villrein/figur-inngrepsfri', 'iVillrein']}
           tekst={
             <>
               <p>{VILLREIN_SKY}</p>
@@ -1253,9 +1305,17 @@ function Bynatur({ tema }: { tema: Tema }) {
         </Trekkspill>
       }
       kort={[
-        ['Grått areal i kommunen', svar(G, x => iTekst(x.sum))],
-        ['Andel av kommunens landareal som er grått areal', svar(G, x => prosent(x.andelLand))],
-        ['Planlagt utbygging på grått areal', p ? prosent(p.andelGraa) : <span className="henter">Regnes ut …</span>]
+        ['Grått areal i kommunen', svar(G, x => iTekst(x.sum)), ['bynatur/kort-areal', 'graa']],
+        [
+          'Andel av kommunens landareal som er grått areal',
+          svar(G, x => prosent(x.andelLand)),
+          ['bynatur/kort-andel', 'graa']
+        ],
+        [
+          'Planlagt utbygging på grått areal',
+          p ? prosent(p.andelGraa) : <span className="henter">Regnes ut …</span>,
+          ['bynatur/kort-planlagt', 'graa']
+        ]
       ]}
       kilde={
         <p>
@@ -1300,6 +1360,7 @@ function Bynatur({ tema }: { tema: Tema }) {
       {G.s === 'ok' && (
         <Figur
           tittel="Grått areal etter andel vegetasjon"
+          forklaring={['bynatur/figur-vegetasjon', 'graa']}
           tekst={<p>Figuren viser det grå arealet i kommunen etter hvor stor del av hver flate som er vegetasjon.</p>}
           kilder={['graa']}
         >
@@ -1324,6 +1385,7 @@ function Bynatur({ tema }: { tema: Tema }) {
       )}
       <Figur
         tittel="Grønne arealer i bebyggelse"
+        forklaring={['bynatur/figur-gronne', 'gronneArealer']}
         tekst={
           <p>
             Grønne arealer i bebyggelse er den delen av det grå arealet der minst halvparten av flaten er vegetasjon,
