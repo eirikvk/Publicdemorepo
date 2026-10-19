@@ -111,6 +111,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'gull.kommuneplan': ['solv.planinfo'],
   'gull.utbygging': [
     'gull.dagensKlasser',
+    'gull.planAlene',
     'gull.utbyggingsblokker',
     'solv.blokker',
     'solv.egneruter',
@@ -120,8 +121,10 @@ export const AVHENGIGHETER: Record<string, string[]> = {
     'solv.planinfo',
     'solv.planoversikt'
   ],
-  'gull.planlagt': ['gull.utbygging'],
-  'gull.planlagtPerDetaljklasse': ['gull.utbygging', 'solv.detaljblokker', 'solv.detaljklasser'],
+  'gull.radorden': ['gull.utbygging'],
+  'gull.utvalg': ['gull.utbygging'],
+  'gull.planlagt': ['gull.utvalg'],
+  'gull.planlagtPerDetaljklasse': ['gull.utvalg', 'solv.detaljblokker', 'solv.detaljklasser'],
   'gull.plansum': ['gull.utbygging'],
   'gull.inon': ['solv.arealtall', 'solv.inon'],
   'gull.inonIVillrein': ['solv.inonbit', 'solv.villreinAndel'],
@@ -134,22 +137,26 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'gull.graaIPlan': ['gull.graakryss'],
   'gull.verneomrader': ['solv.arealtall', 'solv.vernAndel', 'solv.verneomrader'],
   'gull.utbyggingIVerneomrader': [
+    'gull.radorden',
+    'gull.temaminne',
     'gull.utbygging',
     'gull.verneomrader',
     'solv.grense',
     'solv.naturoppslag',
     'solv.vernAndel'
   ],
-  'gull.verneomraderIPlan': ['gull.utbyggingIVerneomrader'],
+  'gull.verneomraderIPlan': ['gull.utbyggingIVerneomrader', 'gull.utvalg'],
   'gull.villrein': ['solv.arealtall', 'solv.villrein', 'solv.villreinAndel'],
   'gull.utbyggingIVillrein': [
+    'gull.radorden',
+    'gull.temaminne',
     'gull.utbygging',
     'gull.villrein',
     'solv.grense',
     'solv.naturoppslag',
     'solv.villreinAndel'
   ],
-  'gull.villreinIPlan': ['gull.utbyggingIVillrein'],
+  'gull.villreinIPlan': ['gull.utbyggingIVillrein', 'gull.utvalg'],
   'gull.verdsattNatur': ['solv.arealtall', 'solv.verdsattAndel', 'solv.verdsattNatur'],
   'gull.verdsattNaturIKartlagt': ['solv.kartlagtAndel', 'solv.verdsattIKartlagtAndel'],
   'gull.verdsattNaturKartlagt': [
@@ -159,14 +166,16 @@ export const AVHENGIGHETER: Record<string, string[]> = {
     'solv.kartlagt'
   ],
   'gull.utbyggingIVerdsattNatur': [
+    'gull.radorden',
+    'gull.temaminne',
     'gull.utbygging',
     'gull.verdsattNatur',
     'solv.grense',
     'solv.naturoppslag',
     'solv.verdsattAndel'
   ],
-  'gull.verdsattNaturIPlan': ['gull.utbyggingIVerdsattNatur'],
-  'gull.utbyggingUtenforKartlagt': ['gull.utbygging', 'solv.kartlagt', 'solv.kartlagtAndel'],
+  'gull.verdsattNaturIPlan': ['gull.utbyggingIVerdsattNatur', 'gull.utvalg'],
+  'gull.utbyggingUtenforKartlagt': ['gull.utvalg', 'solv.kartlagt', 'solv.kartlagtAndel'],
   'gull.egneRader': [
     'gull.graakryss',
     'gull.planlagt',

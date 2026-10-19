@@ -1,7 +1,7 @@
 /* Tester for cachen: les-gjennom, grensen for hvor mye som huskes, feil, utgaver, brukerstyrte tabeller og lagrede svar. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { brukerEndret, les, se, tabell, utgave } from '../src/data/cache.ts';
+import { brukerEndret, glemFeilede, les, se, tabell, utgave } from '../src/data/cache.ts';
 
 test('les-gjennom: ETL-funksjonen kjøres én gang, også når to spør samtidig', async () => {
   let kjort = 0;
@@ -125,4 +125,28 @@ test('lagret: det lagrede svaret brukes, og ETL-funksjonen kjøres bare der det 
   assert.equal(await T('x'), 'lagret');
   assert.equal(await T('y'), 'y!');
   assert.equal(kjort, 1);
+});
+
+test('et nytt forsøk: det som feilet, glemmes og hentes på nytt også fra visningen', async () => {
+  let nede = true;
+  const T = tabell<string, string>({
+    lag: 'gull',
+    navn: 'provIgjen',
+    tittel: '',
+    om: '',
+    husk: 5,
+    etl: async n => {
+      if (nede) throw new Error('nede');
+      return n + '!';
+    }
+  });
+  await T('x').catch(() => null);
+  assert.equal(les(T, 'x')!.status, 'feil');
+  nede = false;
+  assert.equal(les(T, 'x')!.status, 'feil'); /* visningen prøver ikke igjen av seg selv */
+  glemFeilede();
+  assert.equal(se(T, 'x'), null);
+  les(T, 'x');
+  assert.equal(await T('x'), 'x!');
+  assert.equal(les(T, 'x')!.status, 'ok');
 });

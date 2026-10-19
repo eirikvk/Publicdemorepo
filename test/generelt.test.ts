@@ -1,4 +1,4 @@
-/* Tester for src/data/generelt: geometri, tall, farger, PNG og glisne rutenett. Kjør: npm test */
+/* Tester for src/data/generelt: geometri, tall, farger, PNG, glisne rutenett og egne kopier. Kjør: npm test */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -17,6 +17,7 @@ import {
   punkterI
 } from '../src/data/generelt/geometri.ts';
 import { summen } from '../src/data/generelt/tall.ts';
+import { egenKopi } from '../src/data/generelt/kopi.ts';
 import { naermesteFarge } from '../src/data/generelt/farge.ts';
 import { palettPng, pngBit, pngBiter } from '../src/data/generelt/png.ts';
 import { finn, glissent, leggInnDelt, sett, verdi, verdier } from '../src/data/generelt/glissen.ts';
@@ -67,6 +68,22 @@ test('summen og nærmeste farge', () => {
     ]),
     0
   ); /* likt: den første vinner */
+});
+
+test('egen kopi: de samme tallene, men egne objekter og tallrekker', () => {
+  const svar = {
+      natur: { km2: 0.714, andel: 5.0, medStriper: null },
+      klasser: new Float64Array([1.5, 2.5]),
+      rader: [{ km2: 3.25 }]
+    },
+    k = egenKopi(svar);
+  assert.deepEqual(k, svar);
+  assert.notEqual(k.natur, svar.natur);
+  assert.notEqual(k.klasser, svar.klasser);
+  svar.natur.km2 = 14.265;
+  svar.klasser[0] = 9;
+  assert.equal(k.natur.km2, 0.714);
+  assert.equal(k.klasser[0], 1.5);
 });
 
 test('PNG: biter med kontrollsum, og bilde med fargetabell', () => {

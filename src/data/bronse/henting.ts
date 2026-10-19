@@ -23,13 +23,22 @@ export interface Runde {
   feil: number;
 }
 /* Status for hentingen. kall er de siste kallene, nyeste først. siste er siste runde med kartbilder fra én kilde. laster sier om det
-   hentes kartbilder nå. startet og feilet teller kartbilder som er bedt om og som har feilet, til kartet. */
-export const henteStatus: { kall: Kall[]; siste: Runde | null; laster: boolean; startet: number; feilet: number } = {
+   hentes kartbilder nå. startet og feilet teller kartbilder som er bedt om og som har feilet, til kartet. feiletSist sier per kilde om
+   det siste kallet dit feilet, også når det har gått ut av kall. */
+export const henteStatus: {
+  kall: Kall[];
+  siste: Runde | null;
+  laster: boolean;
+  startet: number;
+  feilet: number;
+  feiletSist: Record<string, boolean>;
+} = {
   kall: [],
   siste: null,
   laster: false,
   startet: 0,
-  feilet: 0
+  feilet: 0,
+  feiletSist: {}
 };
 let melding = () => {};
 export const nårHentingEndres = (f: () => void) => {
@@ -39,6 +48,7 @@ export const nårHentingEndres = (f: () => void) => {
 /* Kall-logg: hvert kall mot en åpen kilde måles i nettleseren. */
 function logg(kilde: string, hva: string, ms: number, bytes: number, feil?: boolean) {
   henteStatus.kall = [{ kilde, hva, ms, bytes, feilet: !!feil }, ...henteStatus.kall].slice(0, 8);
+  henteStatus.feiletSist[kilde] = !!feil;
   melding();
 }
 /* Mappen med sidens egne filer (kommuner.json, klasser.json og klasser/), relativt til siden. En side i en undermappe, som tvillingen
@@ -80,6 +90,8 @@ export async function hent(
     const r = await fetch(url, kropp ? { method: 'POST', body: kropp } : undefined);
     if (!r.ok) throw new Error(String(r.status));
     const b = await r.blob();
+    /* en kartjeneste som feiler, kan svare med en feilmelding i XML i stedet for bildet, med status 200 */
+    if (bytes && /xml/.test(b.type)) throw new Error('feilmelding fra tjenesten, ikke et bilde');
     logg(kilde, hva, performance.now() - t0, b.size);
     return bytes ? await b.arrayBuffer() : JSON.parse(await b.text());
   } catch (e) {
@@ -152,6 +164,7 @@ export function lagHenter(
     } catch (e) {
       runde.feil++;
       if (!bareVisning) henteStatus.feilet++;
+      henteStatus.feiletSist[kilde] = true; /* med en gang, før den som venter på bildet, sier fra om feilen */
       throw e;
     } finally {
       aktive--;

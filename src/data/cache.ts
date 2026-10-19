@@ -319,6 +319,19 @@ export const utgave = <N, V>(t: Tabelldef<N, V>, n: N) => {
   const r = se(t, n);
   return r ? r.utgave : 0;
 };
+/* Glemmer alle svar som feilet, i alle tabellene, så de hentes eller regnes ut på nytt neste gang noen spør, også fra visningen (les
+   prøver ikke igjen det som feilet). Brukes når brukeren ber om et nytt forsøk. */
+export function glemFeilede() {
+  for (const t of ALLE) {
+    const m = rom(t);
+    for (const [k, r] of [...m])
+      if (r.status === 'feil') {
+        m.delete(k);
+        tattUt(t, k, r);
+      }
+  }
+  kroker.endret();
+}
 /* Glemmer nøklene i tabellen der hvis(nøkkel) er sann */
 export function glem<N, V>(t: Tabelldef<N, V>, hvis: (nokkel: string) => boolean) {
   const m = rom(t);

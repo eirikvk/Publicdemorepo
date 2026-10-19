@@ -4,6 +4,7 @@
    gamle, i hele kommunen eller i ett eget område, med den samme funksjonen. Nøkkelen er utvalget, som 5001 eller 5001/gammel. */
 import { HEL, andelVed } from '../generelt/dekning.ts';
 import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
+import { egenKopi } from '../generelt/kopi.ts';
 import { katalog } from '../katalog.ts';
 import { bitAv, flisnavn, ruteKm2, ruteX, ruteY, type Flis } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
@@ -149,13 +150,15 @@ export async function graakryss(n: string): Promise<Graakryss | null> {
     B = new Map<string, Graatrinn>();
   for (const b of biterIUtbygging(R, u.omrade, !!G)) B.set(flisnavn(b), await katalog.solv.graabit(b));
   const K = kryssGraa({ R, plan: u.plan, omrade: u.omrade }, n => B.get(n), !!G);
-  return G ? { ...K, bebygd: G.bebygd, gront: G.gront } : K;
+  return egenKopi(
+    G ? { ...K, bebygd: G.bebygd, gront: G.gront } : K
+  ); /* mot feilen i JavaScript-motoren (generelt/kopi.ts) */
 }
 /* Tabellen gull.graaIPlan: det temasiden viser fra kryssingen for utvalget n, se byggGraaIPlan. null uten utbygging. */
 export type GraaIPlan = ReturnType<typeof byggGraaIPlan>;
 export async function graaIPlan(n: string): Promise<GraaIPlan | null> {
   const K = await katalog.gull.graakryss(n);
-  return K ? byggGraaIPlan(K) : null;
+  return K ? egenKopi(byggGraaIPlan(K)) : null;
 }
 /* Tabellen gull.graa: det temasiden, oversikten og kartet viser for kommunen nr: ok med tallene, eller ingen når kartet over grå
    arealer ikke har noe i kommunen. Arealet samlet (sum) og per trinn (trinn) står med uansett. */

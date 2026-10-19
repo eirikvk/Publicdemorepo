@@ -2,6 +2,7 @@
    (gull/utbygging.ts). Arealer er i km², andeler i prosent. Nederst det samme per detaljklasse i grunnkartet
    (gull.planlagtPerDetaljklasse). Tallene regnes for et utvalg av utbyggingen (Utvalg i gull/utbygging.ts): den nye planen eller den
    gamle, i hele kommunen eller i ett eget område, med de samme funksjonene. Nøkkelen er utvalget, som 5001 eller 5001/gammel. */
+import { egenKopi } from '../generelt/kopi.ts';
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, OPPLOSNINGER, ruteKm2 } from '../solv/felles.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
@@ -60,7 +61,7 @@ export async function kommuneplan(nr: string): Promise<Planinfo> {
 export type Planlagt = ReturnType<typeof byggPlanlagt>;
 export async function planlagt(n: string): Promise<Planlagt | null> {
   const U = await katalog.gull.utvalg(n);
-  return U ? byggPlanlagt(U) : null;
+  return U ? egenKopi(byggPlanlagt(U)) : null; /* egen kopi mot feilen i JavaScript-motoren (generelt/kopi.ts) */
 }
 export async function plansum(nr: string): Promise<PlanSum | null> {
   const R = await katalog.gull.utbygging(nr);
@@ -132,5 +133,5 @@ export async function planlagtPerDetaljklasse(n: string): Promise<PlanlagtDetalj
     }
   }
   const km2 = ruteKm2(R.z);
-  return { km2: antall.slice(1).map(v => v * km2), ukjent: antall[0] * km2, rute: R.rute };
+  return egenKopi({ km2: antall.slice(1).map(v => v * km2), ukjent: antall[0] * km2, rute: R.rute });
 }

@@ -12,6 +12,7 @@
    km², kryssinger i ruter rettet for målestokken. */
 import { andelVed, dekningIRute, HEL } from '../generelt/dekning.ts';
 import { punkterI, punktnett, type Flatesok } from '../generelt/geometri.ts';
+import { egenKopi } from '../generelt/kopi.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { BERORT, BIT, ruteKm2, ruteM, ruteX, ruteY } from '../solv/felles.ts';
@@ -479,7 +480,8 @@ async function temaIPlan(tema: Naturtema, n: string, kolonner: Promise<Temakolon
   /* utvalget må være fra den samme utbyggingen som kolonnene, så radene stemmer */
   const u = lesUtvalg(n),
     K = kryssTema(U && U.R === C.R ? U : byggUtvalg(C.R, u.plan, u.omrade), C, C.T.omrader.length);
-  return { omrader: C.T.omrader, K, N: byggTemaIPlan(C.T, K, tema.klasser) };
+  /* tallene får en egen kopi mot feilen i JavaScript-motoren (generelt/kopi.ts), områdene deles */
+  return { omrader: C.T.omrader, ...egenKopi({ K, N: byggTemaIPlan(C.T, K, tema.klasser) }) };
 }
 export async function verneomraderIPlan(n: string): Promise<TemaIPlan | null> {
   return temaIPlan(VERN, n, katalog.gull.utbyggingIVerneomrader(lesUtvalg(n).nr));
@@ -506,7 +508,7 @@ export async function utbyggingUtenforKartlagt(n: string): Promise<UtenforKartla
   if (!U || !E || !K) return null;
   const G = kryssKartlagt(U, K.biter[0]);
   const r = ruteKm2(U.R.z);
-  return { ...G, natKm2: G.nat * r, ukjentKm2: G.ukjent * r, andel: andel(G.ukjent, G.nat) };
+  return egenKopi({ ...G, natKm2: G.nat * r, ukjentKm2: G.ukjent * r, andel: andel(G.ukjent, G.nat) });
 }
 
 /* Tabellen gull.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte i kommunen nr, fra dekningsandelen

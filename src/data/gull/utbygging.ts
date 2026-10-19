@@ -7,6 +7,7 @@
    sammen: dagens klasser klippes til kommunen, et eget område erstatter kommuneplanen der det ligger, og planen legges oppå dagens
    klasser. Én rute er ruteKm2(z) km² (felles.ts). */
 import { HEL, andelVed, hverRute, type Andel } from '../generelt/dekning.ts';
+import { egenKopi } from '../generelt/kopi.ts';
 import {
   BLOKK,
   blokkNokkel,
@@ -232,7 +233,7 @@ export function tellRyddet(L: Glissen, andeler: Map<number, Andel>, faktorer: Ma
       else rj += w;
     }
   }
-  return { rn, rj };
+  return egenKopi({ rn, rj }); /* summen for planen alene brukes igjen neste gang, se generelt/kopi.ts */
 }
 
 /* Setter flisene sammen til ett rutenett for kommunen, legger inn egne områder og rydder bort smale striper. nr er kommunen,
