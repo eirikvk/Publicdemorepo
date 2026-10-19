@@ -1068,7 +1068,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'detaljareal',
       tittel: 'Areal per detaljklasse',
-      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter, der en rute langs grensen telles med den delen av den som ligger i kommunen. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter, der en rute langs grensen telles med den delen av den som ligger i kommunen. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes av tvillingen fra Figma og i sammenligningen for egne områder.',
       forklaring:
         'Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
       usikkerhet: [
@@ -1140,11 +1140,11 @@ export const katalog = {
       lag: 'gull',
       navn: 'planPerOkosystem',
       tittel: 'Planlagt utbygging per økosystemtype',
-      om: 'natur og jordbruk satt av til utbygging per økosystemtype i grunnkartet, med andelen av typen i kommunen, og våtmarken som er satt av. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'natur og jordbruk satt av til utbygging per økosystemtype i grunnkartet, med andelen av typen i kommunen, og våtmarken som er satt av. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes av tvillingen fra Figma og i sammenligningen for egne områder. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Planlagt utbygging per detaljklasse, summert til økosystemtypene på nivå 1. Andelen er arealet satt av delt på arealet av typen i kommunen.',
       etterBehov: true,
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullOkosystemer.planPerOkosystem
     }),
@@ -1339,7 +1339,7 @@ export const katalog = {
       tittel: 'Utbyggingen',
       om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 10,6 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
       forklaring:
-        'For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene, ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem.',
+        'For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene, ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem, så analysene av planlagt utbygging kan regnes for begge planene: den nye, med egne områder, og den gamle, kommuneplanen alene, i hele kommunen eller i ett eget område, med de samme funksjonene.',
       usikkerhet: [
         'Rutenettet overser bebygde flater som er smalere enn en rute, særlig veier. Regelen om smale striper tar bort det meste av dette, men også noe som er reelt: smale felt og nye veier.'
       ],
@@ -1362,10 +1362,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'planlagt',
       tittel: 'Planlagt utbygging',
-      om: 'natur og jordbruk som planen setter av, med andeler',
+      om: 'natur og jordbruk som planen setter av, med andeler Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.',
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullPlan.planlagt
     }),
@@ -1373,11 +1373,11 @@ export const katalog = {
       lag: 'gull',
       navn: 'planlagtPerDetaljklasse',
       tittel: 'Planlagt utbygging per detaljklasse',
-      om: 'natur og jordbruk satt av til utbygging, fordelt på detaljklassene i grunnkartet: hver rute får den detaljklassen av riktig slag det er mest av i ruta. Summen er den samme som i gull.plansum. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'natur og jordbruk satt av til utbygging, fordelt på detaljklassene i grunnkartet: hver rute får den detaljklassen av riktig slag det er mest av i ruta. Summen er den samme som i gull.plansum. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes av tvillingen fra Figma og i sammenligningen for egne områder. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Planlagt utbygging per økosystemtype i grunnkartet: hvor mye av naturen som settes av, er skog, våtmark, tresatt myr og så videre. Hver rute med planlagt utbygging får den typen det er mest av i ruta, så summen er den samme som natur og jordbruk satt av. Er detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.',
       etterBehov: true,
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullPlan.planlagtPerDetaljklasse
     }),
@@ -1470,13 +1470,13 @@ export const katalog = {
       lag: 'gull',
       navn: 'graakryss',
       tittel: 'Grått areal krysset med utbyggingen',
-      om: 'utbyggingen krysset med grått areal: planlagt utbygging på land, også der det alt er bebygd, og grønt i bebygd område',
+      om: 'utbyggingen krysset med grått areal: planlagt utbygging på land, også der det alt er bebygd, og grønt i bebygd område Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Midtpunktet i hver rute med planlagt utbygging på land slås opp i bildet av grått areal. Her er alle ruter med, også der det alt er bebygd og i smale striper. Grønt i bebygd område er ruter som er bebygd i grunnkartet, men ikke grå.',
       usikkerhet: [
         'Totalen for planlagt utbygging på land er større enn tallet for planlagt utbygging på natur og jordbruk, fordi den også tar med ruter som alt er bebygd, og smale striper.'
       ],
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullGraa.graakryss
     }),
@@ -1495,10 +1495,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'graaIPlan',
       tittel: 'Grått areal i planen',
-      om: 'planlagt utbygging på grått areal, og grønt i bebygd område',
+      om: 'planlagt utbygging på grått areal, og grønt i bebygd område Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon (trinnene fra 50 % og opp), og på grønt i bebygd område.',
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullGraa.graaIPlan
     }),
@@ -1530,10 +1530,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'verneomraderIPlan',
       tittel: 'Verneområder i planen',
-      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnene',
+      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnene Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullTemaer.verneomraderIPlan
     }),
@@ -1562,10 +1562,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'villreinIPlan',
       tittel: 'Villreinområder i planen',
-      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnene',
+      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnene Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullTemaer.villreinIPlan
     }),
@@ -1617,10 +1617,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'verdsattNaturIPlan',
       tittel: 'Verdsatt natur i planen',
-      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnene',
+      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnene Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullTemaer.verdsattNaturIPlan
     }),
@@ -1628,10 +1628,10 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbyggingUtenforKartlagt',
       tittel: 'Utbygging utenfor det kartlagte',
-      om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper',
+      om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte (solv.kartlagtAndel), er ikke kartlagt.',
-      husk: 6,
+      husk: 40,
       brukerstyrt: true,
       etl: gullTemaer.utbyggingUtenforKartlagt
     }),
@@ -1639,15 +1639,27 @@ export const katalog = {
       lag: 'gull',
       navn: 'egneRader',
       tittel: 'Egne områder mot kommuneplanen',
-      om: 'sammenligningen mellom kommuneplanen og egne områder, for hele kommunen og hvert område',
+      om: 'sammenligningen mellom den gamle planen (kommuneplanen alene) og den nye (med egne områder), for hele kommunen og hvert område',
       forklaring:
-        'For hvert område telles hva som ligger der i dag, hva planen alene tar, og hva som tas med egne områder. Radene viser kommuneplanen alene, tallet med egne områder og forskjellen, for natur, jordbruk, grått areal, verneområder, villreinområder, verdsatt natur per verdi og natur som ikke er kartlagt.',
+        'De samme analysene som for kommuneplanen regnes for den gamle og den nye planen, i hele kommunen og i hvert eget område: natur og jordbruk satt av, grått areal, verneområder, villreinområder, verdsatt natur per verdi, natur som ikke er kartlagt, og hvor mange områder som berøres. Radene viser den gamle planen, den nye og forskjellen. For hvert område telles også hva som ligger der i dag.',
       usikkerhet: [
         'Lastes kommuneplanen selv opp, kan tabellen vise små forskjeller som bare kommer av at flatene legges i rutenettet på en annen måte enn bildene fra DiBK.'
       ],
       husk: 6,
       brukerstyrt: true,
       etl: gullEgne.egneRader
+    }),
+    egneOkosystemer: tabell({
+      lag: 'gull',
+      navn: 'egneOkosystemer',
+      tittel: 'Egne områder mot kommuneplanen, per økosystemtype',
+      om: 'planlagt utbygging per økosystemtype i grunnkartet i den gamle og den nye planen, for hele kommunen og hvert eget område. For seg, fordi grunnkartet med detaljklassene kan ta tid å hente.',
+      forklaring:
+        'Planlagt utbygging per økosystemtype, regnet på samme måte for den gamle og den nye planen, i hele kommunen og i hvert eget område. Radene viser den gamle planen, den nye og forskjellen.',
+      etterBehov: true,
+      husk: 6,
+      brukerstyrt: true,
+      etl: gullEgne.egneOkosystemer
     })
   }
 };

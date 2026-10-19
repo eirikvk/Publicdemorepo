@@ -138,8 +138,8 @@ export function klasserIFlis(K: Piksler): Uint8Array {
 
 /* Detaljklassene: de samme klassene, men med skogen delt etter treslag (barskog, lauvskog og blandingsskog) og underlag (tresatt
    myr og tresatt innmarksbeite for seg), jordbruket delt i dyrket mark og grasmark, og naturen ellers etter økosystemtype. Til
-   sammen 19 klasser, i ett kartbilde per flis. Foreløpig bare til tvillingen fra Figma. Dagens klasser over, som hovedsiden bruker,
-   er ikke endret.
+   sammen 19 klasser, i ett kartbilde per flis. Brukes av tvillingen fra Figma, og på hovedsiden bare til planlagt utbygging per
+   økosystemtype for egne områder. Dagens klasser over, som resten av hovedsiden bruker, er ikke endret.
    NIBIO tegner hver klasse i en egen farge (DETALJFARGE), i bilder med 24 bit farge. Hver farge leses som blandingen av de to
    klassene den ligger nærmest, som for dagens klasser. Sammenlignet med en tegning uten blanding (SVG) gir det samme areal for de
    seks klassene, og innenfor ±3 % for de store detaljklassene (se METODE.md). */

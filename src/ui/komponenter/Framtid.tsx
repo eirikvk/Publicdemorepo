@@ -6,7 +6,7 @@ import { utenPlan } from '../../data/motor/egne.ts';
 import { hentingAvKlasser } from '../../data/motor/grunnkart.ts';
 import { ingenPlan, planTall } from '../../data/motor/plan.ts';
 import { app } from '../../data/motor/tilstand.ts';
-import { valgt, verdi } from '../../data/motor/valgt.ts';
+import { valgt, verdi, verdiGammel } from '../../data/motor/valgt.ts';
 import Egne from './Egne.tsx';
 import { Rute } from './deler.tsx';
 import { antallOrd, henteTekst, iTekst, pst } from '../tekst.ts';
@@ -34,7 +34,8 @@ function Planlagt() {
           ? `Direktoratet for byggkvalitet (DiBK) har ingen kommuneplan for ${navn}, så planlagt utbygging kan ikke vises eller regnes ut.`
           : `Kommuneplan hentet fra Direktoratet for byggkvalitet (DiBK)${i.verdi!.plan ? ': ' + planKilde(i.verdi!.plan) : ''}.${i.verdi!.dekning < 0.6 ? ` Planen dekker ca. ${Math.round(i.verdi!.dekning * 100)} % av kommunens flate, sjø medregnet.` : ''}`;
   const tilstand = planTall(),
-    P = tilstand === 'ok' ? verdi(katalog.gull.planlagt) : null;
+    P = tilstand === 'ok' ? verdi(katalog.gull.planlagt) : null,
+    G = P && P.antallEgne ? verdiGammel(katalog.gull.planlagt) : null;
   let natur = '',
     jordbruk = '',
     note = '',
@@ -51,7 +52,7 @@ function Planlagt() {
     const antall = P.antallEgne;
     egnemerk = !antall
       ? ''
-      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !P.basis!.tom ? `Kommuneplanen alene setter av ca. ${iTekst(P.basis!.natur)} natur og ca. ${iTekst(P.basis!.jordbruk)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging.'}`;
+      : `Tallene over inkluderer ${antall === 1 ? 'ett eget område' : antallOrd(antall) + ' egne områder'}. ${ingen ? 'Kommunen har ingen kommuneplan hos DiBK.' : !G ? '' : G.natur.km2 + G.jordbruk.km2 ? `Kommuneplanen alene setter av ca. ${iTekst(G.natur.km2)} natur og ca. ${iTekst(G.jordbruk.km2)} jordbruk.` : 'Kommuneplanen alene setter ikke av natur eller jordbruk til utbygging.'}`;
     natur = `ca. ${iTekst(P.natur.km2)}, ${pst(P.natur.andel)} % av naturen${antall ? '' : ` (${iTekst(P.natur.medStriper)} med smale striper)`}`;
     jordbruk = `ca. ${iTekst(P.jordbruk.km2)}, ${pst(P.jordbruk.andel)} % av jordbruket${antall ? '' : ` (${iTekst(P.jordbruk.medStriper)} med smale striper)`}`;
     const felles =

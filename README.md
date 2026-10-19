@@ -208,12 +208,12 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet, og tilstanden for temaene som hentes i biter |
 | `grunnkart.ts` | Dagens klasser for hele kommunen: alle blokkene lest, lagret eller hentet fra NIBIO når kommunen velges, og arealet per detaljklasse |
 | `planflis.ts` | Planlagt utbygging per piksel i kartet, én sannhet per nivå: rutene i utbyggingen på nivå 10, finere nivåer i eller inntil feltene der, og zoomet ut innenfor dagens klasse i pikselen |
-| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. |
+| `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging i den nye eller den gamle planen. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. Utvalgene (`Utvalg`) sier hvilke ruter en analyse regnes over: den nye planen eller den gamle (kommuneplanen alene), i hele kommunen eller i ett eget område. Nøkkelen er utvalget, som `5001`, `5001/gammel` eller `5001/ny/1`. |
 | `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
 | `syntetisk.ts` | Syntetiske tabeller til SSBs tabeller for naturregnskapet kommer, av SSBs arealstatistikk alene: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, for kommunen og for alle kommunene i Norge, og summene, regnskapet og sammenligningen med Norge som tvillingen viser. Merket syntetisk. |
-| `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Foreløpig bare til tvillingen. |
-| `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, og kortversjonen til oversikten |
-| `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner med kommuneplanen |
+| `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Brukes av tvillingen og i sammenligningen for egne områder. |
+| `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, for et utvalg, kortversjonen til oversikten, og planlagt utbygging per detaljklasse |
+| `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner den gamle planen med den nye, for hele kommunen og hvert område. Analysene er de samme som for kommuneplanen, regnet for hvert utvalg; her settes bare radene og forskjellen sammen. |
 | `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte |
 | `inon.ts` | Tallene på siden |
 | `graa.ts` | Arealet per trinn, og kryssingen med utbyggingen |
@@ -284,7 +284,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Inon.tsx` | Siden for inngrepsfri natur |
 | `Graa.tsx` | Siden for grått areal |
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder |
-| `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner med kommuneplanen |
+| `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner den gamle planen med den nye: natur og jordbruk, grått areal, temaene, verdsatt natur, områder som berøres og økosystemtypene |
 | `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
 | `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter ETL-filen, med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `Datavisning.tsx` | Innholdet i en rad i cachen, etter formen det har: bilder fra kildene slik de kom, rutenett som bilde med én farge per verdi, lister som tabell, flater som omriss, og de enkle feltene. Formen finnes ut fra dataene, uten oppsett per tabell. |
@@ -706,6 +706,9 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `kommuneareal.ts` lager `public/kommuneareal.json`: flaten til hver kommune med land, ferskvann og hav, regnet av Kartverkets
   grenser én gang. De syntetiske tabellene bruker den til havet i alle kommunene. Den må lages på nytt når kommunene endres.
 - `figma-roykt.ts` er røyktesten for tvillingen fra Figma, se over.
+- `egne-ytelse.ts` måler hvor lang tid sammenligningen for egne områder tar: laster opp testplanen og syntetiske planer med så mange
+  flater som oppgis, og viser tiden til tabellene står og tiden med økosystemtypene, og stegene som tok tiden. Krever bygget i
+  `dist/`. For eksempel `node verktoy/egne-ytelse.ts --kommune 5001 --flater 300,1500`.
 - `testdata/testplan-bygg.geojson` er tolv planflater fra Trondheim, hentet fra DiBK, til test av opplasting.
 
 `npm run formater` formaterer koden etter `.prettierrc.json`.

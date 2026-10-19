@@ -11,7 +11,8 @@
 
    Det meste kommer fra kildene og endres ikke mens siden er åpen. Noe bygger på det brukeren gjør: egne områder. Tabellene som gjør
    det, er merket brukerstyrt. Når datamotoren sier fra om at brukeren har endret noe i en kommune
-   (brukerEndret), er de utdatert for den kommunen. Siden får det gamle svaret til det nye er regnet ut, så tallene ikke blinker. En
+   (brukerEndret), er de utdatert for den kommunen. Nøkkelen i en brukerstyrt tabell begynner med kommunenummeret: 5001, eller 5001/gammel
+   for et utvalg av utbyggingen (gull/utbygging.ts). Siden får det gamle svaret til det nye er regnet ut, så tallene ikke blinker. En
    ETL-funksjon som kaller en brukerstyrt tabell, venter på det nye.
 
    Verdiene lagres som de er, uten å kopieres eller gjøres om til tekst. Det som ligger i cachen, endres derfor ikke etterpå: et nytt
@@ -90,6 +91,8 @@ export type Tabell<N, V> = Tabelldef<N, V> & {
 const ALLE: Tabell<any, any>[] = [];
 const innholdet = new Map<Tabelldef<any, any>, Map<string, Rad<any>>>();
 const brukerUtgave = new Map<string, number>(); /* hvor mange ganger brukeren har endret noe, per kommune */
+/* Hvor mange ganger brukeren har endret noe i kommunen nøkkelen k hører til: det som står før den første skråstreken */
+const brukerI = (k: string) => brukerUtgave.get(k.split('/')[0]) || 0;
 const gjennom = new Map<
   Tabelldef<any, any>,
   Map<string, Promise<any>>
@@ -126,7 +129,7 @@ const lagSvar = <N, V>(t: Tabelldef<N, V>, n: N): Promise<V> =>
         .then(v => (v === null ? t.etl!(n) : v))
     : t.etl!(n);
 const gyldig = <V>(t: Tabelldef<any, V>, k: string, r: Rad<V>) =>
-  r.status === 'ok' && (!t.brukerstyrt || r.bruker === (brukerUtgave.get(k) || 0));
+  r.status === 'ok' && (!t.brukerstyrt || r.bruker === brukerI(k));
 
 /* Lager en tabell og tar den med i cachen */
 export function tabell<N, V>(d: Tabelldef<N, V>): Tabell<N, V> {
@@ -191,7 +194,7 @@ export function hent<N, V>(t: Tabelldef<N, V>, n: N): Promise<V> {
     brukt(m, k, har);
     return Promise.resolve(har.verdi as V);
   }
-  const bruker = brukerUtgave.get(k) || 0;
+  const bruker = brukerI(k);
   /* Et kall som er underveis, deles, så sant brukeren ikke har endret noe siden det startet */
   if (har && har.underveis && (!t.brukerstyrt || har.underveisBruker === bruker)) return har.underveis;
   if (!t.etl)
@@ -279,7 +282,7 @@ export const se = <N, V>(t: Tabelldef<N, V>, n: N): Rad<V> | null => rom(t).get(
 export function legg<N, V>(t: Tabelldef<N, V>, n: N, v: V) {
   const m = rom(t),
     k = nokkelAv(t, n);
-  settInn(t, k, m.get(k) || ny<V>(), v, brukerUtgave.get(k) || 0);
+  settInn(t, k, m.get(k) || ny<V>(), v, brukerI(k));
 }
 /* Synkron les-gjennom for verdier som lages med en gang: gir verdien for n, eller lager den med lag og legger den inn. Sier ikke fra
    om endringen, for den som spør, bruker verdien med en gang. */

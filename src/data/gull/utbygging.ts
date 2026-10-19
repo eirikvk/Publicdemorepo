@@ -48,9 +48,11 @@ export interface Blokk {
   andel: Andel | null;
   faktor: number;
 }
-/* Utbyggingen med smale striper tatt bort: rutene med planlagt utbygging på natur eller jordbruk (celler), og det som er beholdt
-   per rute (ryddet: 1 natur, 2 jordbruk). Hvor mye det er, telles av rutenettet med tellRyddet. */
+/* Utbyggingen med smale striper tatt bort: rutenettet den er laget av (alle, 1 natur og 2 jordbruk med smale striper), rutene med
+   planlagt utbygging på natur eller jordbruk (celler), og det som er beholdt per rute (ryddet: 1 natur, 2 jordbruk). Hvor mye det er,
+   telles av rutenettet med tellRyddet. */
 export interface Rydding {
+  alle: Glissen;
   celler: number[];
   ryddet: Glissen;
 }
@@ -59,22 +61,19 @@ export interface Ryddetsum {
   rn: number;
   rj: number;
 }
-/* Hva som ligger i et eget område i dag, og hva planen alene (fnat, fjor) og planen med egne områder (nnat, njor) tar, i ruter */
+/* Hva som ligger i et eget område i dag, i ruter: natur, jordbruk, bebygd, vann, og ukjent (utenfor kommunen eller uten klasse) */
 export interface EgetTall {
   nat: number;
   jor: number;
   beb: number;
   vann: number;
   ukjent: number;
-  fnat: number;
-  fjor: number;
-  nnat: number;
-  njor: number;
 }
 /* Tabellen gull.utbygging: utbyggingen i kommunen, se byggUtbygging. Radene (rader) er rutene med planlagt utbygging på natur
    eller jordbruk: først de med planen og egne områder (celler, med smale striper), så de som bare planen alene har, der egne
-   områder har tatt planen bort. Kolonnene for temaene (gull/temaer.ts) står i samme rekkefølge. egneIder er de egne områdene
-   utbyggingen er regnet med, i rekkefølge.
+   områder har tatt planen bort, også i smale striper. Kolonnene for temaene (gull/temaer.ts) står i samme rekkefølge. egneIder er de
+   egne områdene utbyggingen er regnet med, i rekkefølge. En analyse av planlagt utbygging regnes over et utvalg av utbyggingen
+   (Utvalg under): den nye planen eller den gamle, i hele kommunen eller i ett eget område.
    Rutenettene er glisne (generelt/glissen.ts): bare blokkene som har noe, finnes, og de leses med verdi(L, i). Dagens klasser (kl)
    har alle blokkene i kommunen. Planen (alle, ryddet, pl) og egne områder har bare blokkene der det er planlagt utbygging eller egne
    områder. */
@@ -98,6 +97,7 @@ export interface Utbygging extends Plassering {
   rute: number;
   egneTall: EgetTall[];
   rader: Int32Array;
+  radAv: Map<number, number> /* raden hver rute har i rader */;
   egneIder: number[];
   andeler: Map<number, Andel> /* kommunens andel i blokkene langs grensen, etter blokkNokkel */;
   faktorer: Map<number, number> /* målestokken per blokk, etter blokkNokkel */;
@@ -195,7 +195,7 @@ export function ryddStriper(d: Glissen): Rydding {
       }
     front = ny;
   }
-  return { celler, ryddet };
+  return { alle: d, celler, ryddet };
 }
 /* Natur (1) og jordbruk (2) i det ryddede rutenettet L, blokk for blokk: hver rute vektet med kommunens andel i blokken (andeler,
    ingen når hele blokken er i kommunen) og målestokken (faktorer). Tallene regnes alltid av rutenettet de beskriver, når det er
@@ -232,8 +232,8 @@ export function tellRyddet(L: Glissen, andeler: Map<number, Andel>, faktorer: Ma
    de egne områdene per rute fra solv.egneruter (null uten), og rute er rutestørrelsen i meter slik den skal oppgis.
    Rutenettet er glissent: blokkene fra kombinerBlokk deles, og bare blokkene med planlagt utbygging eller egne områder er med i
    planen. Rutene har samme nummer som i ett stort rutenett over alle flisene.
-   Med egne områder regnes også kommuneplanen alene (basis), så forskjellen kan vises. For hvert eget område telles hva som ligger
-   der i dag, hva planen alene tar (fnat, fjor) og hva som går med nå (nnat, njor). */
+   Med egne områder regnes også kommuneplanen alene (basis), så de samme analysene kan regnes for begge planene (Utvalg under). For
+   hvert eget område telles hva som ligger der i dag. */
 export function byggUtbygging(
   nr: string,
   Z: number,
@@ -279,41 +279,27 @@ export function byggUtbygging(
     leggInnEgne(E, d, kl, eget, egetType);
   }
   const { celler, ryddet } = ryddStriper(d);
-  const egneTall: EgetTall[] = egneIder.map(() => ({
-    nat: 0,
-    jor: 0,
-    beb: 0,
-    vann: 0,
-    ukjent: 0,
-    fnat: 0,
-    fjor: 0,
-    nnat: 0,
-    njor: 0
-  }));
-  if (eget && basis)
+  const egneTall: EgetTall[] = egneIder.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0 }));
+  if (eget)
     for (const i of finn(eget, e => e !== 0)) {
       const T = egneTall[verdi(eget, i)! - 1],
         c = verdi(kl, i)!,
-        b = verdi(basis.ryddet, i),
-        ny = verdi(ryddet, i),
         v = c ? vekt(i) : 1; /* utenfor kommunen er ruta ukjent, og telles helt */
       if (c === 3) T.nat += v;
       else if (c === 2) T.jor += v;
       else if (c === 1) T.beb += v;
       else if (c >= 4) T.vann += v;
       else T.ukjent += v;
-      if (b === 1) T.fnat += v;
-      else if (b === 2) T.fjor += v;
-      if (ny === 1) T.nnat += v;
-      else if (ny === 2) T.njor += v;
     }
-  /* Radene: rutene med planlagt utbygging nå, og så rutene som bare planen alene har, der egne områder har tatt planen bort */
+  /* Radene: rutene med planlagt utbygging nå, og så rutene som bare planen alene har, der egne områder har tatt planen bort, også
+     i smale striper */
   const bareBasis = basis
     ? basis.celler.filter(i => {
         const v = verdi(d, i);
-        return verdi(basis!.ryddet, i) && v !== 1 && v !== 2;
+        return v !== 1 && v !== 2;
       })
     : [];
+  const rader = Int32Array.from([...celler, ...bareBasis]);
   return {
     nr,
     z: Z,
@@ -334,11 +320,58 @@ export function byggUtbygging(
     fliser: nokler.length,
     rute,
     egneTall,
-    rader: Int32Array.from([...celler, ...bareBasis]),
+    rader,
+    radAv: new Map(Array.from(rader, (i, r) => [i, r])),
     egneIder,
     andeler,
     faktorer
   };
+}
+
+/* Planen en analyse av planlagt utbygging regnes for: den nye, med egne områder (ny), eller den gamle, kommuneplanen alene (gammel).
+   Uten egne områder er de den samme. */
+export type Planvalg = 'ny' | 'gammel';
+/* Det en analyse av planlagt utbygging regnes over: utbyggingen (R), planen, rutene med planlagt utbygging på natur eller jordbruk i
+   den planen, også i smale striper (celler), og rutenettene planen er laget av (alle, med smale striper) og det som er beholdt
+   (ryddet). omrade er null for hele kommunen, ellers nummeret til et eget område (1 er det første), og da er bare rutene i det
+   området med. Alle analysene regnes med de samme funksjonene for begge planene og alle utvalgene, så det eneste som skiller dem, er
+   hvilken plan som ligger i utbyggingen, og hvilke ruter som er med. */
+export interface Utvalg {
+  R: Utbygging;
+  plan: Planvalg;
+  omrade: number | null;
+  celler: Int32Array;
+  alle: Glissen;
+  ryddet: Glissen;
+}
+export function utvalg(R: Utbygging, plan: Planvalg = 'ny', omrade: number | null = null): Utvalg {
+  const B = plan === 'gammel' ? R.basis : null,
+    alle = B ? B.alle : R.alle,
+    ryddet = B ? B.ryddet : R.ryddet,
+    celler = B ? Int32Array.from(B.celler) : R.celler;
+  return {
+    R,
+    plan,
+    omrade,
+    alle,
+    ryddet,
+    celler: omrade === null ? celler : R.eget ? celler.filter(i => verdi(R.eget!, i) === omrade) : new Int32Array(0)
+  };
+}
+/* Nøkkelen for et utvalg i tabellene i gull: kommunenummeret for den nye planen i hele kommunen, som sidene ellers spør med, og ellers
+   med planen og området etter, som 5001/gammel, 5001/ny/2 og 5001/gammel/2 */
+export const utvalgsnokkel = (nr: string, plan: Planvalg, omrade: number | null = null) =>
+  nr + (plan === 'ny' && omrade === null ? '' : '/' + plan + (omrade === null ? '' : '/' + omrade));
+/* Kommunen, planen og området i en nøkkel fra utvalgsnokkel */
+export function lesUtvalg(n: string): { nr: string; plan: Planvalg; omrade: number | null } {
+  const [nr, plan, o] = n.split('/');
+  return { nr, plan: plan === 'gammel' ? 'gammel' : 'ny', omrade: o ? Number(o) : null };
+}
+/* Utvalget nøkkelen n gir, i utbyggingen for kommunen. null uten utbygging. */
+export async function utvalgFor(n: string): Promise<Utvalg | null> {
+  const u = lesUtvalg(n),
+    R = await katalog.gull.utbygging(u.nr);
+  return R ? utvalg(R, u.plan, u.omrade) : null;
 }
 
 /* Egne områder inn i utbyggingen: innenfor et eget område erstatter det kommuneplanen. E er områdene per rute fra solv.egneruter, d

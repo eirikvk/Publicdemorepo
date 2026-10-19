@@ -169,11 +169,13 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'gull.utbyggingUtenforKartlagt': ['gull.utbygging', 'solv.kartlagt', 'solv.kartlagtAndel'],
   'gull.egneRader': [
     'gull.graakryss',
+    'gull.planlagt',
     'gull.utbygging',
     'gull.utbyggingUtenforKartlagt',
     'gull.verdsattNaturIPlan',
     'gull.verneomraderIPlan',
     'gull.villreinIPlan',
     'solv.planinfo'
-  ]
+  ],
+  'gull.egneOkosystemer': ['gull.planPerOkosystem', 'gull.utbygging', 'solv.planinfo']
 };

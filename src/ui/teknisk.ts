@@ -22,6 +22,8 @@ export interface Motor {
   planTall: typeof planTall;
   utbyggingen: typeof utbyggingen;
   innhold: typeof innhold;
+  nullstillBruk: () => void;
+  readonly bruk: Record<string, { sum: number; n: number; maks: number }>;
   readonly kart: OlMap | null;
 }
 declare global {

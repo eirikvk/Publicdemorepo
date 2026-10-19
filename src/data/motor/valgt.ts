@@ -2,6 +2,7 @@
    nummeret til valgt kommune, så ingenting fra en annen kommune kan vises. Mangler noe, hentes det gjennom katalogen. */
 import { les, type Rad, type Tabell } from '../cache.ts';
 import type { Bildetall } from '../gull/felles.ts';
+import { utvalgsnokkel } from '../gull/utbygging.ts';
 import { app } from './tilstand.ts';
 
 /* Nummeret til valgt kommune, eller null */
@@ -15,6 +16,13 @@ export function valgt<V>(t: Tabell<string, V>): Rad<V> | null {
 /* Verdien i tabellen t for valgt kommune når den er ferdig, ellers null */
 export function verdi<V>(t: Tabell<string, V>): V | null {
   const r = valgt(t);
+  return r && r.status === 'ok' ? (r.verdi as V) : null;
+}
+/* Det samme for den gamle planen (kommuneplanen alene) i valgt kommune, i en tabell som regnes per utvalg av utbyggingen
+   (gull/utbygging.ts) */
+export function verdiGammel<V>(t: Tabell<string, V>): V | null {
+  const nr = valgtNr(),
+    r = nr ? les(t, utvalgsnokkel(nr, 'gammel')) : null;
   return r && r.status === 'ok' ? (r.verdi as V) : null;
 }
 /* Det en temaside viser fra en rad i gull: henter eller feil fra raden, ellers svaret (ok eller ingen) */

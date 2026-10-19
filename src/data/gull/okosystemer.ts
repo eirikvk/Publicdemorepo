@@ -20,6 +20,7 @@ import {
   type Underlag
 } from '../solv/klasser.ts';
 import { andel } from './felles.ts';
+import { lesUtvalg } from './utbygging.ts';
 
 /* Arealet av detaljklassene som passer, fra km² per detaljklasse */
 export const arealAv = (km2: number[], passer: (k: Detaljklasse) => boolean) =>
@@ -114,13 +115,14 @@ export interface PlanPerOkosystem {
   vatmark: { km2: number; apen: number; tresatt: number };
   ingenPlan: boolean;
 }
-/* Tabellen gull.planPerOkosystem: planlagt utbygging i kommunen nr per økosystemtype, av gull.planlagtPerDetaljklasse og
-   gull.detaljareal. Radene er alle typene natur og jordbruk, også de uten planlagt utbygging, i samme rekkefølge som tabellen over
-   hva som er bygget ned. Planlagt utbygging der ingen detaljklasse passer, står som en egen rad. */
-export async function planPerOkosystem(nr: string): Promise<PlanPerOkosystem | null> {
-  const D = await katalog.gull.detaljareal(nr);
+/* Tabellen gull.planPerOkosystem: planlagt utbygging i utvalget n (som 5001 eller 5001/gammel, se gull/utbygging.ts) per
+   økosystemtype, av gull.planlagtPerDetaljklasse og gull.detaljareal. Radene er alle typene natur og jordbruk, også de uten planlagt
+   utbygging, i samme rekkefølge som tabellen over hva som er bygget ned, og andelen er av typen i hele kommunen. Planlagt utbygging der
+   ingen detaljklasse passer, står som en egen rad. */
+export async function planPerOkosystem(n: string): Promise<PlanPerOkosystem | null> {
+  const D = await katalog.gull.detaljareal(lesUtvalg(n).nr);
   if (!D) return null;
-  const P = await katalog.gull.planlagtPerDetaljklasse(nr);
+  const P = await katalog.gull.planlagtPerDetaljklasse(n);
   if (!P) return { rader: [], vatmark: { km2: 0, apen: 0, tresatt: 0 }, ingenPlan: true };
   const plan = perOkosystem(P.km2),
     iDag = perOkosystem(D.km2),

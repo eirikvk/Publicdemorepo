@@ -500,7 +500,9 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
    jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene,
    ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt
-   som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem.
+   som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem, så
+   analysene av planlagt utbygging kan regnes for begge planene: den nye, med egne områder, og den gamle, kommuneplanen alene, i
+   hele kommunen eller i ett eget område, med de samme funksjonene.
 10. **Planlagt utbygging** (`gull.planlagt`). De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er
     andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.
 
@@ -605,10 +607,12 @@ Skriptene som ble brukt, ligger ikke i repoet, så kontrollen kan ikke kjøres p
 sammenlignet med kommuneplanen?
 
 **Kort fortalt.** Et område du tegner eller laster opp, erstatter kommuneplanen innenfor flatene: som utbygging tar det all natur
-og alt jordbruk i ruta, og som ikke utbygging fjerner det planen setter av der. Utbyggingen regnes både med og uten egne områder,
-og tabellen viser forskjellen.
+og alt jordbruk i ruta, og som ikke utbygging fjerner det planen setter av der. De samme analysene som for kommuneplanen regnes
+for den gamle planen (kommuneplanen alene) og den nye (med egne områder), i hele kommunen og i hvert område, og tabellen viser
+begge og forskjellen.
 
-**Tabeller.** Kortet viser `gull.egneRader`, og forklarer også `solv.egneruter`. Det står i `src/ui/komponenter/Egne.tsx`.
+**Tabeller.** Kortet viser `gull.egneRader` og `gull.egneOkosystemer`, og forklarer også `solv.egneruter`. Det står i
+`src/ui/komponenter/Egne.tsx`.
 
 ### Fra kilde til tall
 
@@ -620,14 +624,21 @@ og tabellen viser forskjellen.
    samme område, vinner utbygging. Overlapper områder, gjelder det siste.
 2. **Kommuneplanen** (`solv.planinfo`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
 3. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Forklart under [Grått areal](#grått-areal).
-4. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-5. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Forklart under [Verdsatt natur](#verdsatt-natur).
-6. **Verdsatt natur i planen** (`gull.verdsattNaturIPlan`). Forklart under [Verdsatt natur](#verdsatt-natur).
-7. **Verneområder i planen** (`gull.verneomraderIPlan`). Forklart under [Verneområder](#verneområder).
-8. **Villreinområder i planen** (`gull.villreinIPlan`). Forklart under [Villrein](#villrein).
-9. **Egne områder mot kommuneplanen** (`gull.egneRader`). For hvert område telles hva som ligger der i dag, hva planen alene tar,
-   og hva som tas med egne områder. Radene viser kommuneplanen alene, tallet med egne områder og forskjellen, for natur, jordbruk,
-   grått areal, verneområder, villreinområder, verdsatt natur per verdi og natur som ikke er kartlagt.
+4. **Planlagt utbygging** (`gull.planlagt`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+5. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+6. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Forklart under [Verdsatt natur](#verdsatt-natur).
+7. **Verdsatt natur i planen** (`gull.verdsattNaturIPlan`). Forklart under [Verdsatt natur](#verdsatt-natur).
+8. **Verneområder i planen** (`gull.verneomraderIPlan`). Forklart under [Verneområder](#verneområder).
+9. **Villreinområder i planen** (`gull.villreinIPlan`). Forklart under [Villrein](#villrein).
+10. **Egne områder mot kommuneplanen** (`gull.egneRader`). De samme analysene som for kommuneplanen regnes for den gamle og den
+    nye planen, i hele kommunen og i hvert eget område: natur og jordbruk satt av, grått areal, verneområder, villreinområder,
+    verdsatt natur per verdi, natur som ikke er kartlagt, og hvor mange områder som berøres. Radene viser den gamle planen, den
+    nye og forskjellen. For hvert område telles også hva som ligger der i dag.
+11. **Planlagt utbygging per økosystemtype** (`gull.planPerOkosystem`). Forklart under [Planlagt utbygging per
+    økosystemtype](#planlagt-utbygging-per-økosystemtype).
+12. **Egne områder mot kommuneplanen, per økosystemtype** (`gull.egneOkosystemer`). Planlagt utbygging per økosystemtype, regnet
+    på samme måte for den gamle og den nye planen, i hele kommunen og i hvert eget område. Radene viser den gamle planen, den nye
+    og forskjellen.
 
 ### Usikkerhet
 
@@ -1554,6 +1565,32 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Egne områder med de samme analysene som kommuneplanen, 19. oktober 2026.** Sammenligningen for egne områder og opplastet plan
+hadde sin egen telling i utbyggingen. Nå regnes den gamle planen (kommuneplanen alene) og den nye med de samme funksjonene, for hele
+kommunen og for hvert eget område. Utbyggingen har fått utvalg (`Utvalg` i `gull/utbygging.ts`): hvilke ruter en analyse regnes
+over, med nøkler som `5001`, `5001/gammel` og `5001/ny/1`. Planlagt utbygging, grått areal, verneområder, villrein, verdsatt natur,
+det som ikke er kartlagt og økosystemtypene (`gull.planlagt`, `gull.graakryss`, `gull.verneomraderIPlan` og de andre) tar nå et
+utvalg, og `gull.egneRader` og `gull.egneOkosystemer` setter bare radene og forskjellen sammen. Det som er nytt i sammenligningen:
+andelen av natur og jordbruk i dag også per område, grønt i bebygd, verdsatt natur per verdikategori, hvor mange områder i hvert
+tema som berøres, og planlagt utbygging per økosystemtype. Inngrepsfri natur er fortsatt ikke med, fordi den måles i hele kommunen.
+Ruter som bare den gamle planen har, ligger nå i utbyggingen også når de er smale striper, så de to planene telles likt.
+
+Ytelsen ble målt med et nytt verktøy, `verktoy/egne-ytelse.ts`, som laster opp testplanen og syntetiske planer med mange flater.
+Tidene er fra opplastingen til tabellene står, og til økosystemtypene også står:
+
+| Plan i Trondheim | Før, hele sammenligningen | Nå, tabellene | Nå, med økosystemtypene |
+|---|---|---|---|
+| Testplanen, 12 flater | 0,6 s | 1,8–2,5 s | 3,0 s |
+| 300 flater | 0,7 s | 1,0 s | 2,0 s |
+| 1 500 flater | 1,2 s | 1,7 s | 2,7 s |
+
+Testplanen varierer mest, fordi temaene fra Miljødirektoratet hentes mens den lastes opp. I Bergen med 300 flater står tabellene
+etter 1,8 sekunder, men økosystemtypene først etter 14 sekunder, fordi detaljklassene hentes fra NIBIO der de ikke er lagret. Derfor
+er økosystemtypene en egen tabell som vises når den er klar. Tabellen for hele kommunen har nå 26 rader, mot 13 før. Kontroll:
+regresjonstesten for Trondheim ga de samme tallene i datamotoren for kommuneplanen og for hvert eget område (kryssingen med temaene,
+det som ikke er kartlagt og grått areal), og like kartbilder. Avvikene var bare de nye radene under egne områder, og at tellingen
+per eget område ikke lenger har de fire feltene for planlagt utbygging, som nå regnes i analysene. Målt i Chromium, ikke på iPhone.
 
 **Naturtapet og «Utforsk i kart» i tvillingen, 19. oktober 2026.** De to sidene er ikke tegnet i skissene, og er nå satt sammen
 av delene fra de tegnede sidene, merket som et KI-generert forslag. Naturtapet følger malen for temasidene, med en egen

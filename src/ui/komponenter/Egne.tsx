@@ -1,11 +1,13 @@
 /* Egne områder: tegning i kartet, opplasting av plan, og sammenligningen med kommuneplanen. Tallene kommer ferdig regnet ut fra
-   gull: tabellen katalog.gull.egneRader, med hva som ligger i hvert område og radene i tabellene. */
+   gull: tabellen katalog.gull.egneRader, med hva som ligger i hvert område og radene i tabellene, og katalog.gull.egneOkosystemer,
+   med radene per økosystemtype, som kan komme senere. Radene er de samme analysene for den gamle planen (kommuneplanen alene) og den
+   nye, og forskjellen. */
 import { useRef, type ReactNode } from 'react';
 import { katalog } from '../../data/katalog.ts';
-import type { EgenRad, EgneRader } from '../../data/gull/egne.ts';
+import type { EgenRad, EgneOkosystemer, EgneRader } from '../../data/gull/egne.ts';
 import type { Type } from '../../data/solv/egne.ts';
 import { egneRutenett, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
-import { verdi } from '../../data/motor/valgt.ts';
+import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { app, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
 import { Talltabell, type Tabellrad } from './deler.tsx';
@@ -45,16 +47,21 @@ const STATUS: Record<EgneStatus['hva'], (s: EgneStatus) => Melding> = {
 /* Antall flater i tekst, med tall til og med tolv i ord */
 const flater = (n: number) => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
 
-/* Tabellen som sammenligner planen alene med egne områder. Radene kommer fra byggEgneRader: { navn, farge, gruppe, plan, ny,
-   endring, andelPlan, andelNy }, med arealer i km² og andeler i prosent (null der andelen ikke regnes ut). plan er null uten
-   kommuneplan. */
+/* Tabellen som sammenligner den gamle planen med den nye. Radene kommer fra gull/egne.ts: { navn, farge, gruppe, enhet, plan, ny,
+   endring, andelPlan, andelNy }, med arealer i km², antall områder og andeler i prosent (null der analysen ikke gir en andel). plan er
+   null uten kommuneplan. Gruppen med antall får det i overskriften. */
 function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: string; navnNy: string }) {
-  const tall = (km2: number) => (km2 ? dekar(km2).replace(' daa', '') : '0'),
+  const km2 = (v: number) => (v ? dekar(v).replace(' daa', '') : '0'),
+    antall = (v: number) => nf(v, 0),
     andel = (a: number | null) => (a !== null ? pst(a) + ' %' : '');
   const ut: Tabellrad[] = [];
   let gruppe = '';
   for (const r of rader) {
-    if (r.gruppe !== gruppe) ut.push({ gruppe: (gruppe = r.gruppe) });
+    const tall = r.enhet === 'antall' ? antall : km2;
+    if (r.gruppe !== gruppe) {
+      gruppe = r.gruppe;
+      ut.push({ gruppe: r.enhet === 'antall' ? `${gruppe}, antall` : gruppe });
+    }
     ut.push({
       navn: r.navn,
       farge: r.farge,
@@ -67,6 +74,8 @@ function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: s
   }
   return <Talltabell tittel="Planlagt utbygging, daa" kolonner={['På', navnPlan, navnNy, 'Endring']} rader={ut} />;
 }
+/* Radene som vises for et område: natur og jordbruk alltid, og de andre når de har noe i en av planene */
+const synlig = (r: EgenRad, i: number) => i < 2 || !!r.plan || !!r.ny;
 
 /* Hvor mange av flatene i et eget område som regnes som utbygging, fra solv.egne. null til området er tolket. */
 function antallBygg(id: number) {
@@ -75,9 +84,10 @@ function antallBygg(id: number) {
   return i < 0 ? null : E!.flater[i].deler.filter(d => d.type === 'bygg').length;
 }
 
-function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
+function EgetOmrade({ g, rader, oko }: { g: Eget; rader: EgneRader | null; oko: EgneOkosystemer | null }) {
   const bygg = g.kilde === 'fil' ? antallBygg(g.id) : null,
-    her = rader && rader.omrader.find(x => x.id === g.id),
+    i = rader ? rader.omrader.findIndex(x => x.id === g.id) : -1,
+    her = i < 0 ? null : rader!.omrader[i],
     O = her ? her.omrade : null,
     tekster: string[] = [];
   let tabell: ReactNode = null;
@@ -102,7 +112,11 @@ function EgetOmrade({ g, rader }: { g: Eget; rader: EgneRader | null }) {
     if (O.kjent)
       tabell = (
         <EgenTabell
-          rader={her!.rader.filter((r, i) => i < 2 || r.plan || r.ny || r.navn === 'Grått areal')}
+          rader={[
+            ...her!.rader,
+            /* andelen av typen i hele kommunen sier lite for ett område */
+            ...(oko && oko.omrader[i] ? oko.omrader[i] : []).map(r => ({ ...r, andelPlan: null, andelNy: null }))
+          ].filter(synlig)}
           navnPlan="Planen her"
           navnNy={g.kilde === 'fil' ? 'Opplastet' : 'Tegningen'}
         />
@@ -171,6 +185,10 @@ export default function Egne() {
     E = mine(),
     R = egneRutenett(),
     rader = R ? verdi(katalog.gull.egneRader) : null,
+    /* fordelingen per økosystemtype kan komme senere, eller mangle når grunnkartet med detaljklassene ikke kan hentes */
+    O = R ? valgt(katalog.gull.egneOkosystemer) : null,
+    oko = O && O.status === 'ok' ? O.verdi! : null,
+    okoVenter = !O || O.status === 'henter',
     t = tegner(),
     m = app.egneStatus && STATUS[app.egneStatus.hva](app.egneStatus),
     s = m && { tekst: m[0], type: m[1] };
@@ -237,7 +255,7 @@ export default function Egne() {
       {E.length > 0 && (
         <ul className="egneliste">
           {E.map(g => (
-            <EgetOmrade key={g.id} g={g} rader={rader} />
+            <EgetOmrade key={g.id} g={g} rader={rader} oko={oko} />
           ))}
         </ul>
       )}
@@ -245,15 +263,17 @@ export default function Egne() {
         <div className="kort samlet">
           <h3 className="md-typography-heading-xs">Samlet for kommunen</h3>
           <EgenTabell
-            rader={rader.kommune}
+            rader={[...rader.kommune, ...(oko ? oko.kommune : [])]}
             navnPlan="Planen"
             navnNy={E.length === 1 && E[0].kilde === 'fil' ? 'Med opplastet' : 'Med egne'}
           />
+          {okoVenter && <p className="hint">Regner ut planlagt utbygging per økosystemtype …</p>}
           <p className="hint">
-            Planen er kommuneplanen fra DiBK alene. Prosenten under tallene er andelen av dagens natur eller jordbruk i
-            kommunen. Endring er forskjellen fra planen. Grått areal er planlagt utbygging på areal som alt er tatt i
-            bruk. Smale striper er ikke med for natur og jordbruk. Inngrepsfri natur er ikke med, fordi et inngrep
-            virker på avstand.
+            Planen er kommuneplanen fra DiBK alene, og de samme analysene er regnet for planen med egne områder.
+            Prosenten under natur og jordbruk er andelen av naturen eller jordbruket i dag, i kommunen eller i området,
+            og under økosystemtypene andelen av typen i kommunen. Endring er forskjellen fra planen. Grått areal er
+            planlagt utbygging på areal som alt er tatt i bruk. Smale striper er ikke med for natur og jordbruk.
+            Inngrepsfri natur er ikke med, fordi et inngrep virker på avstand.
           </p>
         </div>
       )}

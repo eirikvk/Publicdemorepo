@@ -4,7 +4,7 @@ import { innhold } from '../../data/cache.ts';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
 import { planTall, utbyggingen } from '../../data/motor/plan.ts';
-import { app } from '../../data/motor/tilstand.ts';
+import { app, bruk, nullstillBruk } from '../../data/motor/tilstand.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { kart } from '../kart/kart.ts';
 import { startOpp } from '../sider.ts';
@@ -47,6 +47,10 @@ export default function App() {
         planTall,
         utbyggingen,
         innhold,
+        nullstillBruk,
+        get bruk() {
+          return bruk;
+        },
         get kart() {
           return kart;
         }

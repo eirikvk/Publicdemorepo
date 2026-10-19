@@ -5,6 +5,8 @@
      (gull.utbyggingIVerneomrader og de andre)
    - summene over kolonnen: planlagt utbygging i temaet, samlet og per område (gull.verneomraderIPlan og de andre)
    - planlagt utbygging på natur utenfor det kartlagte (gull.utbyggingUtenforKartlagt)
+   Summene regnes for et utvalg av utbyggingen (Utvalg i gull/utbygging.ts): den nye planen eller den gamle, i hele kommunen eller i ett
+   eget område, med de samme funksjonene. Nøkkelen er utvalget, som 5001 eller 5001/gammel.
    Delene er delt der det kommer inn en ny kilde: det kartlagte og utbyggingen kommer senere enn områdene, og siden viser områdene med
    en gang. Bygger på områdene, dekningsandelen og oppslagene i sølv (solv/temaer.ts) og utbyggingen (gull/utbygging.ts). Arealer er i
    km², kryssinger i ruter rettet for målestokken. */
@@ -27,30 +29,19 @@ import {
   type Temaomrader
 } from '../solv/temaer.ts';
 import { andel, landareal } from './felles.ts';
-import { ruteFaktor, ruteVekt, type Utbygging } from './utbygging.ts';
+import { lesUtvalg, ruteFaktor, ruteVekt, utvalg, utvalgFor, type Utbygging, type Utvalg } from './utbygging.ts';
 
-/* Ruter med planlagt utbygging per verdikategori, for hele kommunen (alt) og per eget område (eg). En rute teller med den delen av
-   den som ligger i temaet og i kommunen, rettet for målestokken. */
-export interface Kryss {
-  alt: Float64Array;
-  eg: Float64Array[];
-}
-/* Ruter med planlagt utbygging på natur (nat), og hvor mange av dem som ligger utenfor det kartlagte (ukjent) */
+/* Ruter med planlagt utbygging på natur i utvalget (nat), og hvor mange av dem som ligger utenfor det kartlagte (ukjent) */
 export interface Ukjent {
   nat: number;
   ukjent: number;
 }
-/* Det samme for hele kommunen og per eget område, for planen med egne områder og for planen alene (plan) */
-export interface Gap extends Ukjent {
-  eg: Ukjent[];
-  plan: (Ukjent & { eg: Ukjent[] }) | null;
-}
-/* Kryssingen av et tema med utbyggingen: per verdikategori for planen med egne områder (S) og planen alene (P), samlet for planen
-   med egne områder (samlet) og i smale striper (samletSmal), og per område (plan og smal). S, P og samlet er unionen av områdene, så
-   overlapp telles én gang. Per område teller hvert område med sin egen del av ruta, så summen over områdene kan bli større enn samlet
-   der områder overlapper. */
+/* Kryssingen av et tema med planlagt utbygging i et utvalg: ruter per verdikategori (klasser), samlet (samlet) og i smale striper
+   (samletSmal), og per område (plan og smal). Per kategori og samlet er unionen av områdene, så overlapp telles én gang. Per område
+   teller hvert område med sin egen del av ruta, så summen over områdene kan bli større enn samlet der områder overlapper. En rute
+   teller med den delen av den som ligger i temaet og i kommunen, rettet for målestokken. */
 export interface Kryssing {
-  kryss: { S: Kryss; P: Kryss | null };
+  klasser: Float64Array;
   samlet: number;
   samletSmal: number;
   plan: Float64Array;
@@ -136,43 +127,31 @@ export function temaKolonne(
   return { nK, union, omr, rad: Int32Array.from(rad), d: Float32Array.from(d) };
 }
 
-/* Summene for et tema over radene i utbyggingen R, med kolonnene C fra temaKolonne og antall områder. Gir ruter per verdikategori for
-   planen med egne områder (S) og planen alene (P), for hele kommunen og per eget område, samlet og i smale striper, og per område
-   (plan, og smal for ruter i smale striper). */
-export function kryssNatur(R: Utbygging, C: Andelskolonne, antall: number): Kryssing {
-  const B = R.basis || null,
-    nE = R.eget ? R.antallEgne : 0,
-    nC = R.celler.length /* radene etter disse har bare planen alene */,
-    nK = C.nK;
-  const tom = (): Kryss => ({ alt: new Float64Array(nK), eg: Array.from({ length: nE }, () => new Float64Array(nK)) }),
-    S = tom(),
-    P = tom();
+/* Summene for et tema over rutene i utvalget U, med kolonnene C fra temaKolonne og antall områder: ruter per verdikategori, samlet og i
+   smale striper, og per område. Hver rute i utvalget slås opp i kolonnene med raden den har i utbyggingen. */
+export function kryssTema(U: Utvalg, C: Andelskolonne, antall: number): Kryssing {
+  const R = U.R,
+    nK = C.nK,
+    rad = R.radAv,
+    med = new Uint8Array(R.rader.length) /* radene i utvalget */,
+    klasser = new Float64Array(nK);
   let samlet = 0,
     samletSmal = 0;
-  for (let r = 0; r < R.rader.length; r++) {
-    const i = R.rader[r];
+  for (const i of U.celler) {
+    const r = rad.get(i);
+    if (r === undefined) continue;
+    med[r] = 1;
+    const beholdt = !!verdi(U.ryddet, i);
     let f = -1;
     for (let v = 0; v < nK; v++) {
       const d = C.union[r * nK + v];
       if (!d) continue;
       if (f < 0) f = ruteFaktor(R, i);
       const w = d * f;
-      if (r < nC) {
-        const e = nE ? verdi(R.eget!, i) : 0;
-        if (verdi(R.ryddet, i)) {
-          samlet += w;
-          S.alt[v] += w;
-          if (e) S.eg[e - 1][v] += w;
-        } else samletSmal += w;
-        if (B && verdi(B.ryddet, i)) {
-          P.alt[v] += w;
-          if (e) P.eg[e - 1][v] += w;
-        }
-      } else {
-        const e = verdi(R.eget!, i);
-        P.alt[v] += w;
-        if (e) P.eg[e - 1][v] += w;
-      }
+      if (beholdt) {
+        samlet += w;
+        klasser[v] += w;
+      } else samletSmal += w;
     }
   }
   const plan = new Float64Array(antall),
@@ -180,53 +159,30 @@ export function kryssNatur(R: Utbygging, C: Andelskolonne, antall: number): Krys
   for (let a = 0; a < antall; a++)
     for (let p = C.omr[a]; p < C.omr[a + 1]; p++) {
       const r = C.rad[p];
-      if (r >= nC) continue;
+      if (!med[r]) continue;
       const i = R.rader[r],
         w = C.d[p] * ruteFaktor(R, i);
-      if (verdi(R.ryddet, i)) plan[a] += w;
+      if (verdi(U.ryddet, i)) plan[a] += w;
       else smal[a] += w;
     }
-  return { kryss: { S, P: B ? P : null }, samlet, samletSmal, plan, smal, ruteKm2: ruteKm2(R.z) };
+  return { klasser, samlet, samletSmal, plan, smal, ruteKm2: ruteKm2(R.z) };
 }
 
-/* Planlagt utbygging på natur i utbyggingen R, uten smale striper, delt på kartlagt og ikke kartlagt. K er bitene med det kartlagte i
+/* Planlagt utbygging på natur i utvalget U, uten smale striper, delt på kartlagt og ikke kartlagt. K er bitene med det kartlagte i
    kommunen (solv.kartlagtAndel), tom når ingenting er kartlagt. Den delen av ruta som ligger i kommunen, men ikke i det kartlagte, er
-   ukjent. For planen med egne områder og planen alene, for hele kommunen og per eget område. */
-export function kryssKartlagt(R: Utbygging, K: Andelsbit[]): Gap {
-  const B = R.basis || null,
-    nE = R.eget ? R.antallEgne : 0,
-    nC = R.celler.length,
+   ukjent. */
+export function kryssKartlagt(U: Utvalg, K: Andelsbit[]): Ukjent {
+  const R = U.R,
     M = bitkart(K);
-  const ny = (): Ukjent & { eg: Ukjent[] } => ({
-      nat: 0,
-      ukjent: 0,
-      eg: Array.from({ length: nE }, () => ({ nat: 0, ukjent: 0 }))
-    }),
-    G = ny(),
-    GP = ny();
-  const tell = (T: Ukjent & { eg: Ukjent[] }, i: number, uk: number) => {
-    const e = nE ? verdi(R.eget!, i) : 0,
-      w = ruteVekt(R, i);
-    T.nat += w;
-    T.ukjent += uk;
-    if (e) {
-      T.eg[e - 1].nat += w;
-      T.eg[e - 1].ukjent += uk;
-    }
-  };
-  const ukjent = (i: number) => Math.max(0, ruteVekt(R, i) - andelIRute(R, M, i) * ruteFaktor(R, i));
-  for (let r = 0; r < R.rader.length; r++) {
-    const i = R.rader[r];
-    if (r < nC) {
-      const s = verdi(R.ryddet, i) === 1,
-        b = !!B && verdi(B.ryddet, i) === 1;
-      if (!s && !b) continue;
-      const uk = ukjent(i);
-      if (s) tell(G, i, uk);
-      if (b) tell(GP, i, uk);
-    } else if (verdi(B!.ryddet, i) === 1) tell(GP, i, ukjent(i));
+  let nat = 0,
+    ukjent = 0;
+  for (const i of U.celler) {
+    if (verdi(U.ryddet, i) !== 1) continue;
+    const w = ruteVekt(R, i);
+    nat += w;
+    ukjent += Math.max(0, w - andelIRute(R, M, i) * ruteFaktor(R, i));
   }
-  return { nat: G.nat, ukjent: G.ukjent, eg: G.eg, plan: B ? GP : null };
+  return { nat, ukjent };
 }
 
 /* Et naturtema i kommunen: områdene, arealet samlet og per verdikategori (verdsatt natur), andelen av landarealet, antall områder,
@@ -317,7 +273,7 @@ export function byggTemaIPlan(T: Temaet, K: Kryssing, klasser: [navn: string, fa
   return {
     klasser:
       klasser && T.klasser && o.length
-        ? klasser.map((_, v) => ({ plan: K.kryss.S.alt[v], planKm2: K.kryss.S.alt[v] * K.ruteKm2 }))
+        ? klasser.map((_, v) => ({ plan: K.klasser[v], planKm2: K.klasser[v] * K.ruteKm2 }))
         : null,
     plan,
     planKm2: plan * K.ruteKm2,
@@ -407,37 +363,39 @@ export async function utbyggingIVerdsattNatur(nr: string): Promise<Temakolonne |
   return kolonne(VERDI, nr, await katalog.gull.verdsattNatur(nr), katalog.solv.verdsattAndel(nr));
 }
 
-/* Tabellene gull.verneomraderIPlan, gull.villreinIPlan og gull.verdsattNaturIPlan: planlagt utbygging i temaet, summert over
-   kolonnene for temaet. null uten utbygging. */
-function temaIPlan(tema: Naturtema, C: Temakolonne | null): TemaIPlan | null {
+/* Tabellene gull.verneomraderIPlan, gull.villreinIPlan og gull.verdsattNaturIPlan: planlagt utbygging i temaet for utvalget n (som
+   5001 eller 5001/gammel), summert over kolonnene for temaet. null uten utbygging. */
+function temaIPlan(tema: Naturtema, n: string, C: Temakolonne | null): TemaIPlan | null {
   if (!C) return null;
-  const K = kryssNatur(C.R, C, C.T.omrader.length);
+  const u = lesUtvalg(n),
+    K = kryssTema(utvalg(C.R, u.plan, u.omrade), C, C.T.omrader.length);
   return { omrader: C.T.omrader, K, N: byggTemaIPlan(C.T, K, tema.klasser) };
 }
-export async function verneomraderIPlan(nr: string): Promise<TemaIPlan | null> {
-  return temaIPlan(VERN, await katalog.gull.utbyggingIVerneomrader(nr));
+export async function verneomraderIPlan(n: string): Promise<TemaIPlan | null> {
+  return temaIPlan(VERN, n, await katalog.gull.utbyggingIVerneomrader(lesUtvalg(n).nr));
 }
-export async function villreinIPlan(nr: string): Promise<TemaIPlan | null> {
-  return temaIPlan(REIN, await katalog.gull.utbyggingIVillrein(nr));
+export async function villreinIPlan(n: string): Promise<TemaIPlan | null> {
+  return temaIPlan(REIN, n, await katalog.gull.utbyggingIVillrein(lesUtvalg(n).nr));
 }
-export async function verdsattNaturIPlan(nr: string): Promise<TemaIPlan | null> {
-  return temaIPlan(VERDI, await katalog.gull.utbyggingIVerdsattNatur(nr));
+export async function verdsattNaturIPlan(n: string): Promise<TemaIPlan | null> {
+  return temaIPlan(VERDI, n, await katalog.gull.utbyggingIVerdsattNatur(lesUtvalg(n).nr));
 }
 
-/* Tabellen gull.utbyggingUtenforKartlagt: planlagt utbygging på natur i kommunen nr, og hvor mye av den som ligger utenfor det som
-   er kartlagt for naturtyper etter Miljødirektoratets instruks. Der vet vi ikke om det finnes verdifull natur. Det kartlagte er
-   dekningsandelen per rute (solv.kartlagtAndel), så en rute kan være delvis kartlagt. null uten utbygging, eller når det kartlagte ikke
-   kan hentes. */
-export type UtenforKartlagt = Gap & { natKm2: number; ukjentKm2: number; andel: number | null };
-export async function utbyggingUtenforKartlagt(nr: string): Promise<UtenforKartlagt | null> {
-  const [R, E, K] = await Promise.all([
-    katalog.gull.utbygging(nr),
-    katalog.solv.kartlagt(nr).catch(ikke),
-    katalog.solv.kartlagtAndel(nr).catch(ikke)
-  ]);
-  if (!R || !E || !K) return null;
-  const G = kryssKartlagt(R, K.biter[0]);
-  const r = ruteKm2(R.z);
+/* Tabellen gull.utbyggingUtenforKartlagt: planlagt utbygging på natur i utvalget n (som 5001 eller 5001/gammel), og hvor mye av den
+   som ligger utenfor det som er kartlagt for naturtyper etter Miljødirektoratets instruks. Der vet vi ikke om det finnes verdifull
+   natur. Det kartlagte er dekningsandelen per rute (solv.kartlagtAndel), så en rute kan være delvis kartlagt. null uten utbygging,
+   eller når det kartlagte ikke kan hentes. */
+export type UtenforKartlagt = Ukjent & { natKm2: number; ukjentKm2: number; andel: number | null };
+export async function utbyggingUtenforKartlagt(n: string): Promise<UtenforKartlagt | null> {
+  const nr = lesUtvalg(n).nr,
+    [U, E, K] = await Promise.all([
+      utvalgFor(n),
+      katalog.solv.kartlagt(nr).catch(ikke),
+      katalog.solv.kartlagtAndel(nr).catch(ikke)
+    ]);
+  if (!U || !E || !K) return null;
+  const G = kryssKartlagt(U, K.biter[0]);
+  const r = ruteKm2(U.R.z);
   return { ...G, natKm2: G.nat * r, ukjentKm2: G.ukjent * r, andel: andel(G.ukjent, G.nat) };
 }
 

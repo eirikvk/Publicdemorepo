@@ -213,8 +213,8 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hva skjer med natur og jordbruk om et område bygges ut, eller tas ut av planen? Og hva tar en opplastet plan sammenlignet med kommuneplanen?',
     kortFortalt:
-      'Et område du tegner eller laster opp, erstatter kommuneplanen innenfor flatene: som utbygging tar det all natur og alt jordbruk i ruta, og som ikke utbygging fjerner det planen setter av der. Utbyggingen regnes både med og uten egne områder, og tabellen viser forskjellen.',
-    tabeller: ['gull.egneRader'],
+      'Et område du tegner eller laster opp, erstatter kommuneplanen innenfor flatene: som utbygging tar det all natur og alt jordbruk i ruta, og som ikke utbygging fjerner det planen setter av der. De samme analysene som for kommuneplanen regnes for den gamle planen (kommuneplanen alene) og den nye (med egne områder), i hele kommunen og i hvert område, og tabellen viser begge og forskjellen.',
+    tabeller: ['gull.egneRader', 'gull.egneOkosystemer'],
     forklarer: ['solv.egneruter'],
     usikkerhet: [
       'Områder smalere enn rundt 20 meter faller for regelen om smale striper og gir ikke utslag. Funksjonen passer derfor for kommuneplannivå, ikke for reguleringsplaner.'

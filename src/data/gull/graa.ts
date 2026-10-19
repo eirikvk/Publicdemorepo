@@ -1,6 +1,7 @@
 /* Gull for grått areal: arealet per trinn i kommunen (gull.graa), og kryssingen med utbyggingen (gull.graakryss og gull.graaIPlan).
    Grått areal krysses med utbyggingen for seg, ikke som en kolonne, fordi det også teller planlagt utbygging der det alt er bebygd,
-   og grønt i bebygd område. */
+   og grønt i bebygd område. Kryssingen regnes for et utvalg av utbyggingen (Utvalg i gull/utbygging.ts): den nye planen eller den
+   gamle, i hele kommunen eller i ett eget område, med den samme funksjonen. Nøkkelen er utvalget, som 5001 eller 5001/gammel. */
 import { HEL, hverRute } from '../generelt/dekning.ts';
 import { BLOKK, blokkAv, nummer } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
@@ -8,7 +9,7 @@ import { bitAv, flisnavn, ruteKm2, ruteX, ruteY, type Flis } from '../solv/felle
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
 import { BITRES, tellIBitene } from '../solv/kommune.ts';
 import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Kommunebilde } from './felles.ts';
-import type { Utbygging } from './utbygging.ts';
+import { lesUtvalg, utvalg, type Utbygging, type Utvalg } from './utbygging.ts';
 
 /* Grått areal for kommunen: når det er hentet, areal per trinn (plass 1–6) i km² */
 export type Graa = Kommunebilde<{ trinn: number[] }>;
@@ -20,11 +21,10 @@ export interface Graatall {
   gron: number;
   gront: number;
 }
-/* Kryssingen for planen med egne områder (S) og planen alene (P), for hele kommunen og per eget område (eg) */
+/* Kryssingen for et utvalg (tall), og for hele kommunen det som er bebygd (bebygd) og grønt i bebygd område (gront), uansett plan */
 export interface Graakryss {
   nr: string;
-  S: Graatall & { eg: Graatall[] };
-  P: Graatall & { eg: Graatall[] };
+  tall: Graatall;
   bebygd: number;
   gront: number;
   antallEgne: number;
@@ -32,38 +32,33 @@ export interface Graakryss {
 }
 
 /* Planlagt utbygging krysset med grått areal: hvor mye av all planlagt utbygging på land som ligger på areal som alt er grått, altså
-   gjenbruk, og hvor mye av det som er minst halvparten vegetasjon (trinn 4 og 5). Regnes for planen med egne områder (S) og planen
-   alene (P), for hele kommunen og per eget område. Her er alle ruter med planlagt utbygging på land med, også der det er bebygd i
-   dag, og uten regelen om smale striper. Midtpunktet i hver rute slås opp i bitene av grått areal.
-   gront er ruter som er bebygd i grunnkartet, men ikke grå: grønne arealer som parker og idrettsanlegg. R er utbyggingen, og bit
-   biten av grått areal med navnet (z/x/y). */
-export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undefined): Graakryss {
-  const nE = R.egetType ? R.antallEgne : 0,
-    tom = (): Graatall => ({ tot: 0, graa: 0, gron: 0, gront: 0 }),
-    ny = () => ({ ...tom(), eg: Array.from({ length: nE }, tom) }),
-    S = ny(),
-    P = ny();
-  const en = (x: Graatall, k: number, c: number, w: number) => {
-      x.tot += w;
-      if (k) x.graa += w;
-      else if (c === 1) x.gront += w;
-      if (k === 4 || k === 5) x.gron += w;
-    },
-    legg = (T: Graatall & { eg: Graatall[] }, e: number, k: number, c: number, w: number) => {
-      en(T, k, c, w);
-      if (e) en(T.eg[e - 1], k, c, w);
-    };
+   gjenbruk, og hvor mye av det som er minst halvparten vegetasjon (trinn 4 og 5). Regnes for planen og rutene i utvalget U. Her er
+   alle ruter med planlagt utbygging på land med, også der det er bebygd i dag, og uten regelen om smale striper: i den gamle planen
+   kommuneplanen (pl), og i den nye det samme med egne områder oppå (et område som utbygging tar all land i ruta, og som ikke
+   utbygging ingen). Midtpunktet i hver rute slås opp i bitene av grått areal.
+   For hele kommunen telles også det som er bebygd i grunnkartet, og gront: ruter som er bebygd, men ikke grå, altså grønne arealer som
+   parker og idrettsanlegg. R er utbyggingen, og bit biten av grått areal med navnet (z/x/y). */
+export function kryssGraa(U: Utvalg, bit: (navn: string) => Graatrinn | undefined): Graakryss {
+  const R = U.R,
+    nE = R.egetType ? R.antallEgne : 0,
+    ny = U.plan === 'ny',
+    o = U.omrade,
+    tall: Graatall = { tot: 0, graa: 0, gron: 0, gront: 0 };
   let bebygd = 0,
     gront = 0;
-  /* Blokk for blokk: dagens klasser har alle blokkene, planen og egne områder bare dem de har noe i */
+  /* Blokk for blokk: dagens klasser har alle blokkene, planen og egne områder bare dem de har noe i. For et eget område trengs bare
+     blokkene området har ruter i. */
   for (const [nokkel, KL] of R.kl.blokker) {
+    const EG = nE ? R.eget!.blokker.get(nokkel) : undefined;
+    if (o !== null && !EG) continue;
     const [bx, by] = blokkAv(nokkel),
       PL = R.pl.blokker.get(nokkel),
-      ET = nE ? R.egetType!.blokker.get(nokkel) : undefined,
-      EG = nE ? R.eget!.blokker.get(nokkel) : undefined,
+      ET = nE && ny ? R.egetType!.blokker.get(nokkel) : undefined,
       D = bit(flisnavn(blokkensBit(R, bx, by))),
       A = R.andeler.get(nokkel),
-      f = R.faktorer.get(nokkel) ?? 1;
+      f = R.faktorer.get(nokkel) ?? 1,
+      helKommune = o === null;
+    if (!PL && !ET && !helKommune) continue;
     /* vekten per rute: kommunens andel i blokker langs grensen, og målestokken */
     let vekt: Float32Array | null = null;
     if (A) {
@@ -73,23 +68,26 @@ export function kryssGraa(R: Utbygging, bit: (navn: string) => Graatrinn | undef
     for (let q = 0; q < KL.length; q++) {
       const c = KL[q];
       if (c < 1 || c > 3) continue;
+      if (o !== null && EG![q] !== o) continue;
       const b = PL ? PL[q] : 0,
         ty = ET ? ET[q] : 0,
         s = ty === 1 ? 1 : ty === 2 ? 0 : b;
-      if (c !== 1 && !b && !s) continue;
+      if (!s && !(helKommune && c === 1)) continue;
       const i = nummer(R.kl, bx * BLOKK + (q % BLOKK), by * BLOKK + Math.floor(q / BLOKK)),
         k = D ? graaVed(D, ruteX(R, i), ruteY(R, i)) : 0,
-        e = EG ? EG[q] : 0,
         w = (vekt ? vekt[q] : 1) * f;
-      if (c === 1) {
+      if (helKommune && c === 1) {
         bebygd += w;
         if (!k) gront += w;
       }
-      if (s) legg(S, e, k, c, w);
-      if (b) legg(P, e, k, c, w);
+      if (!s) continue;
+      tall.tot += w;
+      if (k) tall.graa += w;
+      else if (c === 1) tall.gront += w;
+      if (k === 4 || k === 5) tall.gron += w;
     }
   }
-  return { nr: R.nr, S, P, bebygd, gront, antallEgne: nE, ruteKm2: ruteKm2(R.z) };
+  return { nr: R.nr, tall, bebygd, gront, antallEgne: nE, ruteKm2: ruteKm2(R.z) };
 }
 
 /* Biten blokken (bx, by) i utbyggingen R ligger i. En blokk i utbyggingen er en flis på nivå 10 og ligger i én bit. */
@@ -117,33 +115,36 @@ export function byggGraa(D: Graa | null, land: number) {
 }
 /* Det temasiden viser fra kryssingen K med utbyggingen: grønt i bebygd område, og planlagt utbygging på grått areal */
 export function byggGraaIPlan(K: Graakryss) {
+  const T = K.tall;
   return {
     gront: { km2: K.gront * K.ruteKm2 },
-    plan: K.S.tot
+    plan: T.tot
       ? {
-          km2: K.S.tot * K.ruteKm2,
-          graa: K.S.graa * K.ruteKm2,
-          gron: K.S.gron * K.ruteKm2,
-          gront: K.S.gront * K.ruteKm2,
-          andelGraa: andel(K.S.graa, K.S.tot),
+          km2: T.tot * K.ruteKm2,
+          graa: T.graa * K.ruteKm2,
+          gron: T.gron * K.ruteKm2,
+          gront: T.gront * K.ruteKm2,
+          andelGraa: andel(T.graa, T.tot),
           antallEgne: K.antallEgne
         }
       : null
   };
 }
 
-/* Tabellen gull.graakryss: planlagt utbygging krysset med grått areal i kommunen nr. null uten utbygging. */
-export async function graakryss(nr: string): Promise<Graakryss | null> {
-  const R = await katalog.gull.utbygging(nr);
+/* Tabellen gull.graakryss: planlagt utbygging krysset med grått areal i utvalget n (som 5001 eller 5001/gammel). null uten
+   utbygging. */
+export async function graakryss(n: string): Promise<Graakryss | null> {
+  const u = lesUtvalg(n),
+    R = await katalog.gull.utbygging(u.nr);
   if (!R) return null;
   const B = new Map<string, Graatrinn>();
   for (const b of biterIUtbygging(R)) B.set(flisnavn(b), await katalog.solv.graabit(b));
-  return kryssGraa(R, n => B.get(n));
+  return kryssGraa(utvalg(R, u.plan, u.omrade), n => B.get(n));
 }
-/* Tabellen gull.graaIPlan: det temasiden viser fra kryssingen, se byggGraaIPlan. null uten utbygging. */
+/* Tabellen gull.graaIPlan: det temasiden viser fra kryssingen for utvalget n, se byggGraaIPlan. null uten utbygging. */
 export type GraaIPlan = ReturnType<typeof byggGraaIPlan>;
-export async function graaIPlan(nr: string): Promise<GraaIPlan | null> {
-  const K = await katalog.gull.graakryss(nr);
+export async function graaIPlan(n: string): Promise<GraaIPlan | null> {
+  const K = await katalog.gull.graakryss(n);
   return K ? byggGraaIPlan(K) : null;
 }
 /* Tabellen gull.graa: det temasiden, oversikten og kartet viser for kommunen nr: ok med tallene, eller ingen når kartet over grå
