@@ -173,6 +173,7 @@ const FIGMA_LOV = [
     'ui/komponenter/md.ts',
     'ui/komponenter/lager.ts',
     'ui/forklaringer.ts',
+    'ui/egnetekster.ts',
     'ui/komponenter/Infoknapp.tsx'
   ],
   FIGMA_IKKE = ['data/bronse/', 'data/generelt/'],

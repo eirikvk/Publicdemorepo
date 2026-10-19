@@ -240,6 +240,7 @@ Felles, i `src/ui/`:
 | `sider.ts` | Sidene, valg av side, adressen (`#kommune/side`), og oppstarten. Hvert nytt valg av side eller kommune legges i nettleserens historikk, så Tilbake og Frem virker, og en adresse som skrives inn eller lenkes til, velger kommunen og siden. |
 | `farger.ts` | Fargene i kartet og i tegnforklaringene |
 | `tekst.ts` | Hvordan tall og tekst skrives: dekar, prosent, endring med fortegn, tall med bokstaver og oppramsing |
+| `egnetekster.ts` | Tekstene om egne områder, som hovedsiden og tvillingen viser likt: meldingen om tegning og opplasting, hva en opplastet plan inneholder, hva som ligger i et område i dag, og når et område er for smalt |
 | `forklaringer.ts` | Forklaringene bak tallene: hvert kort med spørsmålet, kort fortalt, tabellene i gull det viser (og andre det forklarer) og regnestykket for valgt kommune, og stegene fra kilde til tall. Et steg et annet kort forklarer, blir en henvisning dit. I infoknappene står hver kilde i bronse sammen med sølvtabellene som justerer den (`infostegFor`): «hentes … justeres …». Brukes av infoknappene og av `verktoy/forklaringer.ts`. |
 | `teknisk.ts` | Formen på `window.motor`: det siden gjør tilgjengelig med `?teknisk`, til feilsøking og regresjonstesten |
 
@@ -303,8 +304,9 @@ med ekte tall, uten å endre hovedsiden.
 - Kildekoden ligger i `srcFigma/`, og bygges for seg med `vite.figma.config.ts` til `dist/figma/`. Arbeidsflyten bygger den etter
   hovedsiden, så hovedsidens bygg er det samme som uten den.
 - `srcFigma/` kan bruke kode fra `src/`, men `src/` bruker aldri `srcFigma/`. Fra `src/` bruker den datamotoren (`src/data`), kartet
-  (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet, kroken som tegner siden på nytt, og infoknappen med
-  kortene den forklarer). Hovedsidens sider og adresse (`src/ui/sider.ts`) bruker den ikke.
+  (`src/ui/kart`) og noen små fellesfiler (tekst, farger, designsystemet, kroken som tegner siden på nytt, infoknappen med
+  kortene den forklarer, og tekstene om egne områder i `src/ui/egnetekster.ts`). Hovedsidens sider og adresse
+  (`src/ui/sider.ts`) bruker den ikke.
 - Tvillingen er bare brukergrensesnitt. All data og all metode ligger i datamotoren, som én sannhet for begge sidene: tallene leses
   ferdige fra gull gjennom katalogen, og `srcFigma/tall.ts` slår dem bare opp. Hva som regnes som skog, våtmark og land i
   grunnkartet, står i `src/data/solv/klasser.ts`. `verktoy/sjekk-lag.ts` passer på at tvillingen
@@ -319,7 +321,8 @@ med ekte tall, uten å endre hovedsiden.
     verneområdene (`gull.vernetNatur`) og planlagt utbygging per økosystemtype (`gull.planPerOkosystem`). De bygger på arealet
     per detaljklasse (`gull.detaljareal`, `gull.detaljerIVerneomrader` og `gull.planlagtPerDetaljklasse`). Detaljklassene er lagret
     for Trondheim, Kautokeino, Malvik, Røros, Stavanger, Sandnes og Bodø, og hentes fra NIBIO for de andre kommunene. Tabellene regnes etter
-    behov (`etterBehov`), så hovedsiden henter dem ikke (se METODE.md, Arealklassene).
+    behov (`etterBehov`), så hovedsiden henter dem bare til sammenligningen for egne områder (`gull.egneOkosystemer`), se
+    METODE.md, Arealklassene.
   - De syntetiske tabellene til SSBs naturregnskap kommer (`gull/syntetisk.ts`): arealet per hovedøkosystem i 2024
     (`gull.okosystemfordeling`) og endringen mellom bebygd og landklassene 2017–2024 (`gull.bebygdEndring`), og det tvillingen
     summerer av dem: kortene på oversikten (`gull.oversiktKort`), nedbyggingen per landklasse (`gull.nedbygging`) og regnskapet per
@@ -361,6 +364,13 @@ med ekte tall, uten å endre hovedsiden.
   - «Utforsk i kart» har ett stort kart med temaene fra «Utforsk naturen», valgt med designsystemets filterbrikker over kartet.
     Hvert tema har de samme kartlagene som temasiden (`srcFigma/temalag.ts`), og planlagt utbygging kan slås på i alle. Under
     lagene står tallene for temaet og lenken til temasiden. Temaet står i adressen (`#5001/kart/skog`), så et kart kan deles.
+  - Egne analyser på Naturtapet (`srcFigma/komponenter/Egne.tsx`, lagt til etter ønske 19. oktober 2026, også det et forslag):
+    ved kartet kan man tegne et område eller laste opp en plan, også ved å slippe filen i kartet. Da er tallene på siden regnet
+    med området i stedet for kommuneplanen der det ligger, med de samme analysene som for kommuneplanen (`gull.egneRader` og
+    `gull.egneOkosystemer`), og siden viser begge: endringen under tallkortene, hule og fylte stolper i figurene, grått areal i
+    begge, et kort per område med de viktigste tallene og alle tallene i en tabell, og alle tallene for kommunen. Områdene har
+    nummer, som i kartet. De andre sidene har en linje under toppen når egne områder er med i tallene. Tekstene er de samme som
+    på hovedsiden. Egne analyser kan skrus av i `srcFigma/flagg.ts`.
 - Bildene fra skissene er ikke med, fordi rettighetene ikke er avklart, og heller ikke logoen eller skriften Sofia Pro (Open Sans
   står i stedet). Temaene og de blå båndene har i stedet en enkel illustrasjon hver, laget med KI og merket «KI-generert»
   (`srcFigma/illustrasjoner.tsx`).
@@ -369,7 +379,8 @@ med ekte tall, uten å endre hovedsiden.
   Tallene bare tvillingen har, har egne kort i `src/ui/forklaringer.ts` (gruppen `tvilling`), med eget kapittel i METODE.md. Et
   steg et annet kort forklarer, lenker til kapitlet i METODE.md. Hvert spørsmålstegn kan skrus av og på i `srcFigma/flagg.ts`, og
   alle på en gang med `sporsmalstegn`.
-- `npm run roykt-figma` åpner hver side i en mobilnettleser og sjekker overskrift, bredde, feil og Tilbake (`verktoy/figma-roykt.ts`).
+- `npm run roykt-figma` åpner hver side i en mobilnettleser og sjekker overskrift, bredde, feil og Tilbake, og laster opp
+  testplanen på Naturtapet og sletter den igjen (`verktoy/figma-roykt.ts`).
 
 | Fil i `srcFigma/` | Innhold |
 |---|---|
@@ -382,8 +393,8 @@ med ekte tall, uten å endre hovedsiden.
 | `farger.ts`, `tekst.ts` | Fargene fra skissene, byttet i tvillingens kopi av fargetabellen før noe tegnes, og tallene som tekst med hele dekar |
 | `kartlag.ts` | Kartlag bare tvillingen har: skogtyper, tresatt myr og tresatt innmarksbeite fra detaljklassene, verneområdene per verneform, naturen i verneområdene, verdsatt natur som vurderes, og grått areal og grønne arealer i bebyggelse. Lagene av grunnkartet og grått areal bruker den samme datamotoren og tegnemotoren som hovedsiden (`kartverdier.ts` og `verdilag.ts`), og bestemmer bare fargene. |
 | `md.ts` | Designsystemets komponenter, og ikonene tvillingen trenger i tillegg |
-| `flagg.ts` | Funksjonsflagg: spørsmålstegnene ved tallene, alle på en gang og hvert for seg |
-| `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, og delene sidene er bygd av (også stolpene, kakediagrammet og ikonene for temaene) |
+| `flagg.ts` | Funksjonsflagg: egne analyser på Naturtapet, og spørsmålstegnene ved tallene, alle på en gang og hvert for seg |
+| `komponenter/` | Toppen med meny og kommunevelger, kartet med lagvelger, tabellen med sider, egne analyser (`Egne.tsx`), og delene sidene er bygd av (også stolpene, stolpene i par for to planer, kakediagrammet og ikonene for temaene) |
 | `temalag.ts` | Kartlagene for hvert tema, som temasidene og «Utforsk i kart» bruker, og fargene for hovedøkosystemene |
 | `sider/` | Hovedsidene, temasidene, Naturtapet og «Utforsk i kart» |
 | `stil.css` | Grunnlaget og delene. Toppen og kartet har egne stilark. |

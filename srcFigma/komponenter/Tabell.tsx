@@ -1,5 +1,6 @@
 /* En tabell med sider, som listene i Figma: ti rader per side og designsystemets sidevelger under. Kolonner merket tall står til
-   høyre, og kolonner merket ikkeMobil vises ikke på smale skjermer, så tabellen får plass uten å rulle. */
+   høyre, og kolonner merket ikkeMobil vises ikke på smale skjermer, så tabellen får plass uten å rulle. En rad kan også være en
+   overskrift for radene under ({ gruppe }), over hele bredden. */
 import { useState, type ReactNode } from 'react';
 import { MdPagination } from '../md.ts';
 
@@ -8,6 +9,7 @@ export interface Kolonne {
   tall?: boolean;
   ikkeMobil?: boolean;
 }
+export type Tabellrad = ReactNode[] | { gruppe: string };
 const klasse = (k: Kolonne) => [k.tall && 'tall', k.ikkeMobil && 'ikke-mobil'].filter(Boolean).join(' ') || undefined;
 export default function Tabell({
   kolonner,
@@ -16,7 +18,7 @@ export default function Tabell({
   perSide = 10
 }: {
   kolonner: Kolonne[];
-  rader: ReactNode[][];
+  rader: Tabellrad[];
   hva: string;
   perSide?: number;
 }) {
@@ -39,15 +41,23 @@ export default function Tabell({
             </tr>
           </thead>
           <tbody>
-            {vis.map((r, i) => (
-              <tr key={s * perSide + i}>
-                {r.map((c, j) => (
-                  <td key={j} className={klasse(kolonner[j])}>
-                    {c}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {vis.map((r, i) =>
+              'gruppe' in r ? (
+                <tr key={s * perSide + i} className="tabell-gruppe">
+                  <th scope="colgroup" colSpan={kolonner.length}>
+                    {r.gruppe}
+                  </th>
+                </tr>
+              ) : (
+                <tr key={s * perSide + i}>
+                  {r.map((c, j) => (
+                    <td key={j} className={klasse(kolonner[j])}>
+                      {c}
+                    </td>
+                  ))}
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </div>

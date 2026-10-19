@@ -18,12 +18,13 @@
   grid-template-areas: 'lag kart';
   gap: 8px;
 }
+/* Kartet er minst så høyt som i skissene, og like høyt som lagvelgeren når den er høyere (som med verktøyene for egne områder) */
 .kartbaand .kartscene {
   grid-area: kart;
-  height: 745px;
+  min-height: 745px;
 }
 .kartbaand.stor .kartscene {
-  height: min(80vh, 745px);
+  min-height: min(80vh, 745px);
 }
 /* Lagvelgeren som i skissene: en beige flate med ett lag per rad, fargen til venstre og valget til høyre, og trekkspillene nederst */
 .lagvelger {
@@ -158,6 +159,7 @@
     gap: 12px;
   }
   .kartbaand .kartscene {
+    min-height: 0;
     height: 420px;
   }
 }

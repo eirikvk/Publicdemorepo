@@ -8,7 +8,7 @@ import type { EgenRad, EgneOkosystemer, EgneRader } from '../../data/gull/egne.t
 import type { Type } from '../../data/solv/egne.ts';
 import { egneRutenett, lastOppPlan, mine, settType, slettEget } from '../../data/motor/egne.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
-import { app, type EgetOmrade as Eget, type EgneStatus } from '../../data/motor/tilstand.ts';
+import { app, type EgetOmrade as Eget } from '../../data/motor/tilstand.ts';
 import { angrePunkt, ferdigTegning, sluttTegning, startTegning, tegner, visEgetIKartet } from '../kart/egne.ts';
 import { Talltabell, type Tabellrad } from './deler.tsx';
 import { Korttittel } from './Tallforklaring.tsx';
@@ -21,31 +21,9 @@ import {
   MdIconUpload,
   MdRadioGroup
 } from './md.ts';
-import { antallOrd, dekar, iTekst, medFortegn, nf, pst, ramse } from '../tekst.ts';
+import { iDag, egneMelding, omOpplastet, smalTekst } from '../egnetekster.ts';
+import { dekar, medFortegn, nf, pst } from '../tekst.ts';
 import './Egne.css';
-
-/* Meldingen om siste tegning eller opplasting, etter hva datamotoren melder (app.egneStatus): [tekst, type], der type er typen
-   melding i designsystemet. */
-type Melding = [tekst: string, type: 'info' | 'success' | 'warning' | 'error'];
-const STATUS: Record<EgneStatus['hva'], (s: EgneStatus) => Melding> = {
-  forLite: () => ['Området ble for lite til å regnes ut. Tegn et større område.', 'warning'],
-  forStor: () => ['Filen er for stor til å leses i nettleseren (over 120 MB).', 'error'],
-  leser: s => [`Leser ${s.fil} …`, 'info'],
-  lest: s => [
-    `${s.fil}: ${nf(s.antall!, 0)} flater lest${s.byttetTil ? `, og kommunen er byttet til ${s.byttetTil}` : ''}.`,
-    'success'
-  ],
-  ingenFlater: () => [
-    'Fant ingen flater i filen. Den må være GeoJSON med polygoner, som filen fra DiBKs nedlasting av plandata.',
-    'error'
-  ],
-  ingenKommune: () => ['Velg en kommune først.', 'error'],
-  ulesbareFlater: () => ['Flatene i filen kunne ikke leses.', 'error'],
-  ikkeGeoJSON: () => ['Filen kunne ikke leses som GeoJSON.', 'error']
-};
-
-/* Antall flater i tekst, med tall til og med tolv i ord */
-const flater = (n: number) => (n === 1 ? 'én flate' : `${antallOrd(n)} flater`);
 
 /* Tabellen som sammenligner den gamle planen med den nye. Radene kommer fra gull/egne.ts: { navn, farge, gruppe, enhet, plan, ny,
    endring, andelPlan, andelNy }, med arealer i km², antall områder og andeler i prosent (null der analysen ikke gir en andel). plan er
@@ -77,55 +55,24 @@ function EgenTabell({ rader, navnPlan, navnNy }: { rader: EgenRad[]; navnPlan: s
 /* Radene som vises for et område: natur og jordbruk alltid, og de andre når de har noe i en av planene */
 const synlig = (r: EgenRad, i: number) => i < 2 || !!r.plan || !!r.ny;
 
-/* Hvor mange av flatene i et eget område som regnes som utbygging, fra solv.egne. null til området er tolket. */
-function antallBygg(id: number) {
-  const E = verdi(katalog.solv.egne),
-    i = E ? E.ider.indexOf(id) : -1;
-  return i < 0 ? null : E!.flater[i].deler.filter(d => d.type === 'bygg').length;
-}
-
 function EgetOmrade({ g, rader, oko }: { g: Eget; rader: EgneRader | null; oko: EgneOkosystemer | null }) {
-  const bygg = g.kilde === 'fil' ? antallBygg(g.id) : null,
-    i = rader ? rader.omrader.findIndex(x => x.id === g.id) : -1,
+  const i = rader ? rader.omrader.findIndex(x => x.id === g.id) : -1,
     her = i < 0 ? null : rader!.omrader[i],
     O = her ? her.omrade : null,
-    tekster: string[] = [];
-  let tabell: ReactNode = null;
-  if (!O) tekster.push('Regner …');
-  else {
-    tekster.push(
-      O.kjent
-        ? `I dag ligger det ${ramse(
-            (
-              [
-                [O.natur, 'natur'],
-                [O.jordbruk, 'jordbruk'],
-                [O.bebygd, 'bebygd'],
-                [O.vann, 'vann']
-              ] satisfies [km2: number, hva: string][]
-            ).map(([v, hva]) => (v ? iTekst(v) + ' ' + hva : ''))
-          )} her.`
-        : 'Området ligger utenfor kommunen, eller grunnkartet har ingen klasse der.'
-    );
-    if (O.ukjent && O.kjent)
-      tekster.push(`Ca. ${iTekst(O.ukjent)} ligger utenfor kommunen, eller grunnkartet har ingen klasse der.`);
-    if (O.kjent)
-      tabell = (
-        <EgenTabell
-          rader={[
-            ...her!.rader,
-            /* andelen av typen i hele kommunen sier lite for ett område */
-            ...(oko && oko.omrader[i] ? oko.omrader[i] : []).map(r => ({ ...r, andelPlan: null, andelNy: null }))
-          ].filter(synlig)}
-          navnPlan="Planen her"
-          navnNy={g.kilde === 'fil' ? 'Opplastet' : 'Tegningen'}
-        />
-      );
-  }
-  const smal =
-    O && g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && O.smal
-      ? 'Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.'
-      : '';
+    tekster = O ? iDag(O) : ['Regner …'];
+  const tabell: ReactNode =
+    O && O.kjent ? (
+      <EgenTabell
+        rader={[
+          ...her!.rader,
+          /* andelen av typen i hele kommunen sier lite for ett område */
+          ...(oko && oko.omrader[i] ? oko.omrader[i] : []).map(r => ({ ...r, andelPlan: null, andelNy: null }))
+        ].filter(synlig)}
+        navnPlan="Planen her"
+        navnNy={g.kilde === 'fil' ? 'Opplastet' : 'Tegningen'}
+      />
+    ) : null;
+  const smal = smalTekst(g, O);
   return (
     <li className="kort prosa">
       <h3 className="md-typography-heading-xs">
@@ -144,15 +91,7 @@ function EgetOmrade({ g, rader, oko }: { g: Eget; rader: EgneRader | null; oko: 
           onChange={e => settType(g, e.target.value as Type)}
         />
       ) : (
-        <p>
-          {!g.harFormal
-            ? `Opplastet fil med ${flater(g.deler.length)}. Filen har ingen arealformål, så ${g.deler.length === 1 ? 'flaten' : 'alle flatene'} regnes som utbygging.`
-            : `Opplastet plan${g.planid ? ' ' + g.planid : ''} med ${flater(g.deler.length)}` +
-              (bygg === null
-                ? '.'
-                : `: ${bygg ? antallOrd(bygg) : 'ingen'} regnes som utbygging (framtidig bebyggelse, anlegg og samferdsel) og ${g.deler.length - bygg ? antallOrd(g.deler.length - bygg) : 'ingen'} som ikke utbygging.`) +
-              ' Innenfor flatene erstatter filen kommuneplanen.'}
-        </p>
+        <p>{omOpplastet(g)}</p>
       )}
       {tekster.map(t => (
         <p key={t}>{t}</p>
@@ -190,7 +129,7 @@ export default function Egne() {
     oko = O && O.status === 'ok' ? O.verdi! : null,
     okoVenter = !O || O.status === 'henter',
     t = tegner(),
-    m = app.egneStatus && STATUS[app.egneStatus.hva](app.egneStatus),
+    m = app.egneStatus && egneMelding(app.egneStatus),
     s = m && { tekst: m[0], type: m[1] };
   return (
     <section className="egne" aria-labelledby="egne-tittel">

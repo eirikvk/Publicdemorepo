@@ -694,6 +694,71 @@ main > .innhold > .figur {
   }
 }
 
+/* Liggende stolper i par (Parstolper): hul stolpe for den første planen og fylt for den andre, med tallene etter, og navnet over på
+   smale skjermer, som de liggende stolpene */
+.parstolper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 0.9375rem;
+}
+.parstolper .figur-tegn {
+  margin-bottom: 0;
+}
+.figur-tegn i.par-hul,
+.figur-tegn i.par-fylt {
+  border: 1px solid #222;
+}
+.figur-tegn i.par-fylt {
+  background: #8c8c8c;
+}
+.par-rad {
+  display: grid;
+  grid-template-columns: minmax(6em, 130px) minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+}
+.par-navn {
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+.par-stolper {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.par-linje {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 14px;
+}
+.par-fyll {
+  display: block;
+  flex: none;
+  height: 100%;
+  min-width: 2px;
+  border: 1px solid #222;
+  border-radius: 2px;
+}
+.par-hul {
+  background: #fff;
+}
+.par-tall {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.par-endring {
+  margin-left: 8px;
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  .par-rad {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Linjen over tid og stolpene for endringen: tynne merker, lyse streker og tekst i tekstfargen, som i designsystemets figurer */
 .linje svg,
 .endringsstolper svg {
@@ -858,6 +923,15 @@ main > .innhold > .figur {
 }
 .tabell tbody tr:nth-child(even) {
   background: var(--beige-flate);
+}
+/* En overskrift for radene under, over hele bredden */
+.tabell tbody tr.tabell-gruppe {
+  background: var(--beige-kort);
+}
+.tabell-gruppe th {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 0.875rem;
 }
 .tom-celle {
   color: var(--dempet);

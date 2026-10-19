@@ -4,8 +4,18 @@
    laget flere farger, står de under når laget er slått på, og en pil til venstre lukker og åpner dem. Lag som bare tvillingen har
    (kartlag.ts), legges inn under planen når kartet vises, og tas ut igjen etterpå. Hovedkartet finnes én gang, så bare én side om
    gangen har det. Siden om verneområder har i tillegg et eget kart lenger ned, som skissene (kart2.ts). «Åpne kart i fullskjerm»
-   legger kartet over hele vinduet. Zoomknappene har designsystemets ikoner for pluss og minus. */
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+   legger kartet over hele vinduet. Zoomknappene har designsystemets ikoner for pluss og minus. Omrisset av egne områder er et av
+   kartets lag (ui/kart/egne.ts), og på naturtapet kan det slås av og på (EGNE), med verktøyene for å tegne over kartet og en fil
+   som kan slippes i kartet. */
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type ReactNode
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import type OlMap from 'ol/Map.js';
 import type TileLayer from 'ol/layer/Tile.js';
@@ -19,6 +29,7 @@ import { graaLag } from '../../src/ui/kart/graa.ts';
 import { tema as klasseLag } from '../../src/ui/kart/grunnkart.ts';
 import { inonLag } from '../../src/ui/kart/inon.ts';
 import { kart as kartet, lagKart } from '../../src/ui/kart/kart.ts';
+import { egneLag } from '../../src/ui/kart/egne.ts';
 import { dekLag, flateLag } from '../../src/ui/kart/naturtema.ts';
 import { ol } from '../../src/ui/kart/ol.ts';
 import { planLag } from '../../src/ui/kart/plan.ts';
@@ -58,26 +69,31 @@ const MED_BUNN: Record<string, { prikk: string; kant?: string }> = {
   rein: { prikk: 'rein-prikk', kant: 'rein' },
   dekning: { prikk: 'dekning' }
 };
+/* Egne områder er omriss i kartet: hel strek for utbygging og stiplet for ikke utbygging */
+const OMRISS: Record<string, string> = { 'egne-bygg': 'solid', 'egne-fri': 'dashed' };
 const fargeStil = (f: string): CSSProperties =>
-  MED_BUNN[f]
-    ? {
-        backgroundColor: `var(--${f}-flate)`,
-        backgroundImage: `radial-gradient(var(--${MED_BUNN[f].prikk}) 1.1px, transparent 1.6px)`,
-        backgroundSize: '5px 5px',
-        boxShadow: MED_BUNN[f].kant ? `inset 0 0 0 1.5px var(--${MED_BUNN[f].kant})` : undefined
-      }
-    : PRIKKET.has(f)
+  OMRISS[f]
+    ? { background: '#fff', border: `2.5px ${OMRISS[f]} var(--egne)` }
+    : MED_BUNN[f]
       ? {
-          backgroundColor: `var(--${f})`,
-          backgroundImage: 'radial-gradient(rgb(0 0 0 / 0.32) 1.1px, transparent 1.6px)',
-          backgroundSize: '5px 5px'
+          backgroundColor: `var(--${f}-flate)`,
+          backgroundImage: `radial-gradient(var(--${MED_BUNN[f].prikk}) 1.1px, transparent 1.6px)`,
+          backgroundSize: '5px 5px',
+          boxShadow: MED_BUNN[f].kant ? `inset 0 0 0 1.5px var(--${MED_BUNN[f].kant})` : undefined
         }
-      : { background: `var(--${f})` };
+      : PRIKKET.has(f)
+        ? {
+            backgroundColor: `var(--${f})`,
+            backgroundImage: 'radial-gradient(rgb(0 0 0 / 0.32) 1.1px, transparent 1.6px)',
+            backgroundSize: '5px 5px'
+          }
+        : { background: `var(--${f})` };
 const OL_LAG: Record<string, () => { setOpacity(o: number): void }[]> = {
   klasser: () => [klasseLag],
   plan: () => [planLag],
   tema: () => [...flateLag, inonLag, graaLag],
-  dekning: () => [dekLag]
+  dekning: () => [dekLag],
+  egne: () => [egneLag]
 };
 export const KLASSER: Kartlag = {
   id: 'klasser',
@@ -96,6 +112,17 @@ export const PLAN: Kartlag = {
   farger: [
     ['På natur', 'pnat'],
     ['På jordbruk', 'pjor']
+  ]
+};
+
+/* Egne områder tegnet i kartet. En opplastet plan har ikke omriss, men vises i planlagt utbygging. */
+export const EGNE: Kartlag = {
+  id: 'egne',
+  navn: 'Egne områder',
+  kilde: 'Tegnet av deg',
+  farger: [
+    ['Utbygging', 'egne-bygg'],
+    ['Ikke utbygging', 'egne-fri']
   ]
 };
 
@@ -200,7 +227,8 @@ function Bytt() {
    variabel i stilen, til vanlig natur). Lag med farger som er slått på, får hver sin merkelapp under, så alt kartet viser, er
    forklart. hint gir teksten «Trykk i kartet …» under lagvelgeren før man har trykket; temasidene har den ikke, som skissene.
    eget gir et eget kart i stedet for hovedkartet, som kartet over naturen i verneområdene (kart2.ts): det får bare lagene i lag,
-   settes inn først når det er rullet fram, og har ikke trykk i kartet. */
+   settes inn først når det er rullet fram, og har ikke trykk i kartet. verktoy står oppå kartet (som tegningen av egne områder),
+   underLag rett under lagene i lagvelgeren, og slipp tar imot en fil som slippes i kartet. */
 export default function Kart({
   lag,
   etter,
@@ -208,7 +236,10 @@ export default function Kart({
   enkel,
   enkelFarge = 'nat',
   hint = true,
-  eget
+  eget,
+  verktoy,
+  underLag,
+  slipp
 }: {
   lag: Kartlag[];
   etter?: ReactNode;
@@ -217,12 +248,16 @@ export default function Kart({
   enkelFarge?: string;
   hint?: boolean;
   eget?: () => OlMap;
+  verktoy?: ReactNode;
+  underLag?: ReactNode;
+  slipp?: (f: File) => void;
 }) {
   const startSkjult = () => Object.fromEntries(lag.filter(l => l.av || l.skjul).map(l => [l.id, true]));
   const [skjult, settSkjult] = useState<Record<string, boolean>>(startSkjult),
     [lukket, settLukket] = useState<Record<string, boolean>>({}),
     [fargeAv, settFargeAv] = useState<Record<string, string[]>>({}),
     [full, settFull] = useState(false),
+    [drar, settDrar] = useState(false),
     henting = hentingAvKlasser(),
     p = ui.probe,
     avPaa = lag.map(l => l.id + (l.av ? ':av' : '') + (l.skjul ? ':skjul' : '')).join();
@@ -278,8 +313,27 @@ export default function Kart({
         .filter(l => l.farger && !skjult[l.id] && !l.skjul)
         .flatMap(l => l.farger!.map(([navn, farge]) => [`${l.navn} ${navn.toLowerCase()}`, farge] as const))
     : [];
+  /* En fil som dras over kartet, kan slippes der */
+  const slippes = slipp
+    ? {
+        onDragOver: (e: DragEvent) => {
+          if (!e.dataTransfer.types.includes('Files')) return;
+          e.preventDefault();
+          settDrar(true);
+        },
+        onDragLeave: (e: DragEvent) => {
+          if (!(e.currentTarget as Node).contains(e.relatedTarget as Node | null)) settDrar(false);
+        },
+        onDrop: (e: DragEvent) => {
+          e.preventDefault();
+          settDrar(false);
+          const f = e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f) slipp(f);
+        }
+      }
+    : {};
   const scene = (
-    <div className={'kartscene' + (full ? ' full' : '') + (enkel ? ' enkel' : '')}>
+    <div className={'kartscene' + (full ? ' full' : '') + (enkel ? ' enkel' : '')} {...slippes}>
       {eget ? <Kartflate hent={eget} senere /> : <Kartflate />}
       <MdButton
         className="fullskjerm"
@@ -296,6 +350,12 @@ export default function Kart({
         </div>
       )}
       {!eget && <Bytt />}
+      {verktoy}
+      {drar && (
+        <div className="slippflate" aria-hidden="true">
+          <span>Slipp filen for å laste opp planen</span>
+        </div>
+      )}
       {enkel && (
         <ul className="enkel-merker">
           <li className="kartmerke enkel-merke" style={{ '--merke': `var(--${enkelFarge})` } as CSSProperties}>
@@ -390,6 +450,7 @@ export default function Kart({
                 );
               })}
           </ul>
+          {underLag}
           {!eget && (p || hint) && (
             <p className="probe">
               {!p ? 'Trykk i kartet for å se hva som er der.' : p.punkt ? <b>{p.punkt}</b> : p.tekst}

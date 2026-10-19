@@ -95,8 +95,9 @@ function rader<A>(defs: Raddef<A>[], gammel: A | null, ny: A): EgenRad[] {
   });
 }
 
-/* Radene fra analysene, i rekkefølgen de vises: natur og jordbruk, grått areal, temaene, det som ikke er kartlagt, verdsatt natur per
-   verdikategori, og hvor mange områder som berøres. RADNAVN er navnet på temaet i tabellen, der områdene står, ikke temaet. */
+/* Radene fra analysene, i rekkefølgen de vises: natur og jordbruk, grått areal, temaene (verdsatt natur samlet), det som ikke er
+   kartlagt, verdsatt natur per verdikategori, og hvor mange områder som berøres. RADNAVN er navnet på temaet i tabellen, der
+   områdene står, ikke temaet. */
 const RADNAVN: Record<string, string> = { rein: 'Villreinområder' };
 const graa = (A: Analysene, f: (G: Graakryss) => number) => (A.G ? { v: f(A.G) * A.G.ruteKm2 } : null);
 const tema = (t: number, f: (T: TemaIPlan) => number) => (A: Analysene) => {
@@ -109,11 +110,12 @@ const DEFS: Raddef<Analysene>[] = [
   { navn: 'Grått areal', farge: 'graa2', gruppe: '', les: A => graa(A, G => G.tall.graa) },
   { navn: '– minst halvt grønt', farge: '', gruppe: '', les: A => graa(A, G => G.tall.gron) },
   { navn: 'Grønt i bebygd', farge: 'gront', gruppe: '', les: A => graa(A, G => G.tall.gront) },
-  ...NATURTEMA.flatMap((t, i): Raddef<Analysene>[] =>
-    t.klasser
-      ? []
-      : [{ navn: RADNAVN[t.id] || t.navn, farge: t.id, gruppe: 'Av dette i', les: tema(i, T => T.N.planKm2) }]
-  ),
+  ...NATURTEMA.map((t, i): Raddef<Analysene> => ({
+    navn: RADNAVN[t.id] || t.navn,
+    farge: t.id,
+    gruppe: 'Av dette i',
+    les: tema(i, T => T.N.planKm2)
+  })),
   { navn: 'Ikke kartlagt natur', farge: '', gruppe: 'Av dette i', les: A => A.K && { v: A.K.ukjentKm2 } },
   ...NATURTEMA.flatMap((t, i) =>
     (t.klasser || []).map(([navn, farge], v): Raddef<Analysene> => ({

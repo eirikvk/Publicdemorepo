@@ -632,8 +632,8 @@ begge og forskjellen.
 9. **Villreinområder i planen** (`gull.villreinIPlan`). Forklart under [Villrein](#villrein).
 10. **Egne områder mot kommuneplanen** (`gull.egneRader`). De samme analysene som for kommuneplanen regnes for den gamle og den
     nye planen, i hele kommunen og i hvert eget område: natur og jordbruk satt av, grått areal, verneområder, villreinområder,
-    verdsatt natur per verdi, natur som ikke er kartlagt, og hvor mange områder som berøres. Radene viser den gamle planen, den
-    nye og forskjellen. For hvert område telles også hva som ligger der i dag.
+    verdsatt natur samlet og per verdi, natur som ikke er kartlagt, og hvor mange områder som berøres. Radene viser den gamle
+    planen, den nye og forskjellen. For hvert område telles også hva som ligger der i dag.
 11. **Planlagt utbygging per økosystemtype** (`gull.planPerOkosystem`). Forklart under [Planlagt utbygging per
     økosystemtype](#planlagt-utbygging-per-økosystemtype).
 12. **Egne områder mot kommuneplanen, per økosystemtype** (`gull.egneOkosystemer`). Planlagt utbygging per økosystemtype, regnet
@@ -1565,6 +1565,20 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Egne analyser på Naturtapet i tvillingen, 19. oktober 2026.** Ved kartet på Naturtapet kan man nå tegne et område eller laste
+opp en plan, også ved å slippe filen i kartet, som på hovedsiden. Datamotoren regner det ut på samme måte som der: området
+erstatter kommuneplanen der det ligger, og de samme analysene regnes for kommuneplanen alene og for planen med egne områder
+(`gull.egneRader` og `gull.egneOkosystemer`). Tvillingen viser bare tallene: endringen fra kommuneplanen alene under tallkortene,
+hule og fylte stolper for de to planene i figurene om økosystemtypene og den verdifulle naturen, grått areal i begge planene, et
+kort per område med de viktigste tallene og alle tallene i en tabell, og alle tallene for kommunen. Områdene har det samme
+nummeret som i kartet. På de andre sidene står det en linje under toppen når egne områder er med i tallene for planlagt utbygging.
+Tekstene om områdene er flyttet til `src/ui/egnetekster.ts`, så begge sidene viser de samme. Sammenligningen har fått en rad for
+verdsatt natur samlet, ved siden av verneområdene og villreinområdene, også på hovedsiden. Siden er ikke tegnet i skissene, så
+oppsettet er et KI-generert forslag, og egne analyser kan skrus av i `srcFigma/flagg.ts`. Kontroll: i Trondheim ble et område tegnet,
+byttet til ikke utbygging, og testplanen ble sluppet i kartet og slettet igjen, på 1280 og 390 px, uten feil og uten at siden ble
+for bred. Røyktesten for tvillingen laster nå også opp testplanen på Naturtapet, og ga ingen feil. Regresjonstesten for Trondheim
+ga bare den nye raden for verdsatt natur under egne områder. Målt i Chromium, ikke på iPhone.
 
 **Egne områder med de samme analysene som kommuneplanen, 19. oktober 2026.** Sammenligningen for egne områder og opplastet plan
 hadde sin egen telling i utbyggingen. Nå regnes den gamle planen (kommuneplanen alene) og den nye med de samme funksjonene, for hele

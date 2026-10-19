@@ -1641,7 +1641,7 @@ export const katalog = {
       tittel: 'Egne områder mot kommuneplanen',
       om: 'sammenligningen mellom den gamle planen (kommuneplanen alene) og den nye (med egne områder), for hele kommunen og hvert område',
       forklaring:
-        'De samme analysene som for kommuneplanen regnes for den gamle og den nye planen, i hele kommunen og i hvert eget område: natur og jordbruk satt av, grått areal, verneområder, villreinområder, verdsatt natur per verdi, natur som ikke er kartlagt, og hvor mange områder som berøres. Radene viser den gamle planen, den nye og forskjellen. For hvert område telles også hva som ligger der i dag.',
+        'De samme analysene som for kommuneplanen regnes for den gamle og den nye planen, i hele kommunen og i hvert eget område: natur og jordbruk satt av, grått areal, verneområder, villreinområder, verdsatt natur samlet og per verdi, natur som ikke er kartlagt, og hvor mange områder som berøres. Radene viser den gamle planen, den nye og forskjellen. For hvert område telles også hva som ligger der i dag.',
       usikkerhet: [
         'Lastes kommuneplanen selv opp, kan tabellen vise små forskjeller som bare kommer av at flatene legges i rutenettet på en annen måte enn bildene fra DiBK.'
       ],

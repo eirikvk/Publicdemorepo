@@ -28,6 +28,7 @@ import {
 } from '../komponenter/deler.tsx';
 import { nedbygging, okosystemregnskap, oversiktKort, plansum, sammenligning } from '../tall.ts';
 import { TEMAER } from '../temaer.ts';
+import { FLAGG } from '../flagg.ts';
 
 const kommunen = () => (app.valgt ? app.valgt.navn : 'kommunen');
 /* Kommunens navn i genitiv: Trondheims, Røros' */
@@ -476,6 +477,14 @@ export function Hjelp() {
         Naturtapet og Utforsk i kart er ikke tegnet i skissene. Der er oppsettet og teksten et forslag laget med KI,
         satt sammen av de samme delene som de tegnede sidene, og merket øverst på siden.
       </p>
+      {FLAGG.egneAnalyser && (
+        <p>
+          På Naturtapet kan du lage egne analyser: tegne et område i kartet eller laste opp en plan som GeoJSON. Tallene
+          for planlagt utbygging regnes da med området i stedet for kommuneplanen der det ligger, med de samme analysene
+          som for kommuneplanen, og Naturtapet viser forskjellen. Ingenting lagres eller sendes fra nettleseren, og
+          områdene forsvinner når siden lukkes.
+        </p>
+      )}
       <h2 className="md-typography-heading-m">Kildene</h2>
       <ul className="kildeliste">
         {Object.values(KILDE).map(k => (

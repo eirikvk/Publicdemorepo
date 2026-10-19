@@ -2,11 +2,13 @@
    opp, med tilstanden (henter, feil, ingen, mangler eller ok), og ingenting hentes eller regnes ut. Arealer er i km², andeler i
    prosent, som i datamotoren. Svarene fra grunnkartet med detaljklassene finnes bare for kommunene der detaljklassene er lagret. */
 import type { Rad, Tabell } from '../src/data/cache.ts';
+import type { EgenRad } from '../src/data/gull/egne.ts';
 import type { Bildetall } from '../src/data/gull/felles.ts';
 import type { PlanPerOkosystem } from '../src/data/gull/okosystemer.ts';
 import type { Sammenligning } from '../src/data/gull/syntetisk.ts';
 import type { TemaIPlan, Temaet } from '../src/data/gull/temaer.ts';
 import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
+import { egneRutenett, mine } from '../src/data/motor/egne.ts';
 import { bildetallet, valgt, verdi } from '../src/data/motor/valgt.ts';
 
 /* Et tall som hentes: henter, feil, ingen (kommunen har ikke noe av det), mangler (ikke regnet ut for kommunen, og hvorfor) eller
@@ -129,3 +131,26 @@ export function temaflis(id: string): Svar<{ km2: number; andel: number | null }
   }
   return { s: 'ingen' };
 }
+
+/* Egne områder i valgt kommune (tegnet eller lastet opp) og sammenligningen med kommuneplanen (gull.egneRader og
+   gull.egneOkosystemer). Radene er de samme analysene for kommuneplanen alene (plan) og planen med egne områder (ny), og
+   forskjellen (endring). rader er null til utbyggingen er regnet ut med områdene som finnes nå. Fordelingen per økosystemtype (oko)
+   kan komme senere enn resten, fordi grunnkartet med detaljklassene kan måtte hentes fra NIBIO, og venter sier at den regnes ut. */
+export function egne() {
+  const omrader = mine(),
+    R = egneRutenett(),
+    rader = R ? verdi(katalog.gull.egneRader) : null,
+    O = R ? valgt(katalog.gull.egneOkosystemer) : null;
+  return {
+    omrader,
+    rader,
+    oko: O && O.status === 'ok' ? O.verdi : null,
+    venter: omrader.length > 0 && (!O || O.status === 'henter')
+  };
+}
+/* Raden i sammenligningen for hele kommunen med fargen farge (pnat for natur, graa2 for grått areal, vern for verneområdene og så
+   videre), når den er regnet ut */
+export const egenRad = (farge: string): EgenRad | null => {
+  const R = egne().rader;
+  return (R && R.kommune.find(r => r.farge === farge)) || null;
+};

@@ -4,6 +4,9 @@
    av og på på en gang, og hvert sted har sitt eget flagg. Navnet er siden og stedet på siden: kort er et tallkort, figur en figur.
    Kortet hvert spørsmålstegn viser, står ved stedet på siden. Kortene står i src/ui/forklaringer.ts. */
 export const FLAGG = {
+  /* Egne analyser på naturtapet: tegne et område eller laste opp en plan, og se tallene på siden sammenlignet med kommuneplanen
+     (komponenter/Egne.tsx). Av: siden er som før, uten verktøyene, laget i kartet og områdene. */
+  egneAnalyser: true,
   sporsmalstegn: true,
   steder: {
     'oversikt/nedbygd': true,
@@ -14,6 +17,7 @@ export const FLAGG = {
     'naturtapet/figur-verdifull-natur': true,
     'naturtapet/figur-okosystemtype': true,
     'naturtapet/figur-regnskap': true,
+    'naturtapet/egne': true,
     'skog/kort-areal': true,
     'skog/kort-andel': true,
     'skog/kort-vernet': true,

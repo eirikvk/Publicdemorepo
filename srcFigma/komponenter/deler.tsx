@@ -491,6 +491,79 @@ export function Liggende({ data, hva, tekst }: { data: Stolpe[]; hva: string; te
   );
 }
 
+/* Liggende stolper i par, til å sammenligne to planer: for hver rad en hul stolpe for den første (for, til vanlig kommuneplanen alene)
+   og en fylt stolpe i radens farge for den andre (etter, med egne områder), med tallet etter hver og forskjellen etter den andre.
+   Forskjellen i fyll, ikke i farge, skiller planene, så den kan leses uten fargesyn og på utskrift. for er null når det ikke er noe
+   å sammenligne med (kommunen har ingen kommuneplan), og da står bare den fylte. Tallene står også i en tabell som kan åpnes. */
+export interface Par {
+  navn: string;
+  farge: string;
+  for: number | null;
+  etter: number;
+  endring: number;
+}
+const endringDaa = (km2: number) =>
+  Math.abs(km2) * 1000 < 0.5 ? '0' : (km2 > 0 ? '+' : '−') + nf(Math.abs(km2) * 1000, 0);
+export function Parstolper({
+  data,
+  hva,
+  navnFor = 'Kommuneplanen alene',
+  navnEtter = 'Med egne områder'
+}: {
+  data: Par[];
+  hva: string;
+  navnFor?: string;
+  navnEtter?: string;
+}) {
+  const maks = Math.max(...data.flatMap(d => [d.for || 0, d.etter]), 1e-9),
+    bredde = (km2: number) => `calc((100% - 10em) * ${Math.max(0.004, km2 / maks)})`;
+  return (
+    <figure className="parstolper" aria-label={hva}>
+      <ul className="figur-tegn">
+        <li>
+          <i className="par-hul" />
+          {navnFor}
+        </li>
+        <li>
+          <i className="par-fylt" />
+          {navnEtter}
+        </li>
+      </ul>
+      {data.map(d => (
+        <div className="par-rad" key={d.navn}>
+          <span className="par-navn">{d.navn}</span>
+          <span className="par-stolper">
+            {d.for !== null && (
+              <span className="par-linje">
+                <span className="par-fyll par-hul" style={{ width: bredde(d.for) }} />
+                <span className="par-tall">{iTekst(d.for)}</span>
+              </span>
+            )}
+            <span className="par-linje">
+              <span className="par-fyll" style={{ width: bredde(d.etter), background: `var(--${d.farge})` }} />
+              <span className="par-tall">
+                {iTekst(d.etter)}
+                {d.for !== null && Math.abs(d.endring) * 1000 >= 0.5 && (
+                  <b className="par-endring">{endringDaa(d.endring)}</b>
+                )}
+              </span>
+            </span>
+          </span>
+        </div>
+      ))}
+      <Talltabell
+        hode={['Planlagt utbygging på, daa', navnFor, navnEtter, 'Endring']}
+        rader={data.map(d => [
+          d.navn,
+          d.for === null ? '–' : daa(d.for),
+          daa(d.etter),
+          d.for === null ? '–' : endringDaa(d.endring)
+        ])}
+      />
+    </figure>
+  );
+}
+
 /* Rene tall for aksene: steget mellom strekene (1, 2 eller 5 ganger en tierpotens) som gir omtrent n streker opp til maks */
 function steg(maks: number, n = 4) {
   const r = maks / n,

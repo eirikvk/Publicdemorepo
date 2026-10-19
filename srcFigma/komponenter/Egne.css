@@ -1,0 +1,347 @@
+/* Egne analyser i tvillingen (Egne.tsx). Blå mørk (--egne, som omrisset i kartet og tallene i de blå båndene) merker alt som gjelder
+   egne områder: nummeret, merket øverst og pilen ved endringen. Ellers er delene de samme som på resten av siden: beige som
+   lagvelgeren, de lyse grønne flatene fra tallkortene, og tabellen og trekkspillene. */
+
+/* Verktøyene under lagene ved kartet */
+.egne-verktoy {
+  background: var(--beige-kort);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.9375rem;
+}
+.egne-verktoy h2 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.egne-verktoy .knapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.egne-tegner {
+  border-left: 3px solid var(--egne);
+  padding-left: 10px;
+}
+.egne-melding.ok {
+  border-left: 3px solid var(--md-color-success-100, #2a7d2e);
+  padding-left: 10px;
+}
+
+/* Knappene oppå kartet mens et område tegnes: et hvitt kort nederst, over zoomknappene */
+.tegnelinje {
+  position: absolute;
+  z-index: 3;
+  left: 12px;
+  right: 12px;
+  bottom: 72px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  border-top: 3px solid var(--egne);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  font-size: 0.9375rem;
+}
+.tegnelinje .knapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* En fil som dras over kartet */
+.slippflate {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgb(0 114 206 / 0.12);
+  outline: 3px dashed var(--egne);
+  outline-offset: -12px;
+  pointer-events: none;
+}
+.slippflate span {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}
+
+/* Nummeret for et eget område, som merket i kartet: hvitt på blått, med en hvit kant mot det som er under */
+.egetmerke {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 3px;
+  background: var(--egne);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.egetmerke svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Merket øverst på siden: tallene er regnet med egne områder */
+main > .innhold > .egne-merke {
+  margin-top: 56px;
+}
+main > .innhold > .egne-merke + .tallkort {
+  margin-top: 16px;
+}
+.egne-merke {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 6px;
+  background: var(--blaa);
+}
+.egne-merker {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: max-content;
+  max-width: 124px;
+  padding-top: 1px;
+}
+.egne-merke > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.egne-merke .md-button {
+  margin-left: -12px;
+}
+
+/* Endringen fra kommuneplanen under et tall: pilen i blått foran teksten, som brytes under pilen, og teksten i tekstfargen */
+.endring {
+  display: block;
+}
+.tallkort dd .tall-under.endring {
+  margin-top: 6px;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--tekst);
+}
+.endring .trend {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  vertical-align: -5px;
+  color: var(--egne);
+}
+.endring.henter {
+  color: var(--dempet) !important;
+}
+
+/* Linjen under toppen på de andre sidene */
+.egne-stripe {
+  padding: 8px var(--luft);
+  background: var(--blaa);
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+/* Kortene for områdene */
+main > .innhold > .egne-omrader:first-child {
+  margin-top: 64px;
+}
+.egne-omrader {
+  scroll-margin-top: 16px;
+}
+.egne-omrader:focus {
+  outline: none;
+}
+.egne-hode {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 50em;
+}
+.egnekort {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.egetkort {
+  container: egetkort / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px;
+  border: 1px solid var(--beige-kant);
+  border-radius: 6px;
+  background: var(--beige-flate);
+  font-size: 0.9375rem;
+}
+.egetkort-topp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.egetkort-topp h3 {
+  overflow-wrap: anywhere;
+}
+.egetkort-areal {
+  color: var(--dempet);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.egetkort .md-radiogroup {
+  font-size: 0.9375rem;
+}
+/* Innholdet: om området og tallene under hverandre, eller side om side når kortet er bredt (ett område over hele bredden) */
+.egetkort-kropp,
+.egetkort-om,
+.egetkort-resultat {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+@container egetkort (min-width: 760px) {
+  .egetkort-kropp {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 32px;
+    align-items: start;
+  }
+}
+/* De viktigste tallene for området, i de samme lyse grønne flatene som tallkortene øverst */
+.egetkort-tall {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px;
+}
+.egetkort-tall > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--teal-lys);
+}
+.egetkort-tall dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.egetkort-tall dd {
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.egetkort-tall .endring {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+.egetkort-tall .endring .trend {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: -3px;
+}
+.egetkort-smal {
+  border-left: 3px solid #e8a35e;
+  padding-left: 10px;
+}
+.egetkort > .knapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: -12px;
+}
+main > .innhold > .egne-omrader .egne-alle {
+  margin-top: 24px;
+}
+.egne-alle .trekkspill-innhold {
+  max-width: 56em;
+}
+/* Tabellene i trekkspillene bruker hele bredden */
+.egne-omrader .md-accordion-item__content {
+  padding: 8px 0 16px;
+}
+.egne-omrader .tabell th.tall {
+  white-space: normal;
+}
+.egne-alle .trekkspill-innhold > * + *,
+.egetkort .trekkspill-innhold > * + * {
+  margin-top: 12px;
+}
+
+/* Tabellen med alle tallene: fargen ved navnet og andelen under tallet */
+.radnavn i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 2px;
+  border: 1px solid rgb(0 0 0 / 0.3);
+  vertical-align: -1px;
+}
+.tabell small.andel {
+  display: block;
+  color: var(--dempet);
+  font-size: 0.8125rem;
+}
+@media (max-width: 900px) {
+  /* Verktøyene rett under kartet, over lagene */
+  .lagvelger .egne-verktoy {
+    order: -1;
+  }
+}
+@media (max-width: 600px) {
+  .tallkort dd .tall-under.endring {
+    font-size: 0.875rem;
+  }
+  .egne-omrader .tabell table {
+    font-size: 0.875rem;
+  }
+  .egne-omrader .tabell th,
+  .egne-omrader .tabell td {
+    padding: 8px 5px;
+  }
+  .egne-omrader .radnavn i {
+    margin-right: 5px;
+  }
+  .egetkort {
+    padding: 16px 12px;
+  }
+  .egne-merke {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .egne-merker {
+    max-width: none;
+  }
+  .tegnelinje {
+    left: 8px;
+    right: 8px;
+    bottom: 68px;
+    padding: 10px 12px;
+  }
+}

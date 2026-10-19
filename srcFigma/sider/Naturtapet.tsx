@@ -2,11 +2,18 @@
    ble bygget ned fra 2017 til 2024. Siden er tom i skissene, så den følger malen for temasidene: toppen med ikon, ingress, trekkspill
    og illustrasjon, tallkortene, kartet, figurene med tekst og kilde, ofte stilte spørsmål, ressurser og flisene til temaene. Fremover
    (kommuneplanen) står først, og et blått bånd, som på oversikten, leder over til det som alt er bygget ned (SSB). Tallene kommer fra
-   datamotoren (tall.ts), og teksten er et KI-generert forslag, merket øverst. */
+   datamotoren (tall.ts), og teksten er et KI-generert forslag, merket øverst.
+
+   Egne analyser (komponenter/Egne.tsx): ved kartet kan man tegne et område eller laste opp en plan. Da er tallene på siden regnet
+   med området i stedet for kommuneplanen der det ligger, og hvert tall viser også kommuneplanen alene: endringen under tallkortene,
+   hule og fylte stolper i figurene, og grått areal i begge. Kortene for områdene står rett under kartet. */
 import { KILDE } from '../../src/data/katalog.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { andelTekst, dekar, iTekst, pst } from '../tekst.ts';
-import Kart, { KLASSER, PLAN } from '../komponenter/Kart.tsx';
+import { lastOppPlan } from '../../src/data/motor/egne.ts';
+import Kart, { EGNE, KLASSER, PLAN } from '../komponenter/Kart.tsx';
+import { EgneMerke, EgneOmrader, EgneVerktoy, Endring, Tegnelinje, harEgne } from '../komponenter/Egne.tsx';
+import { FLAGG } from '../flagg.ts';
 import Tabell from '../komponenter/Tabell.tsx';
 import {
   Baand,
@@ -18,6 +25,8 @@ import {
   Liggende,
   Merket,
   NestePerspektiv,
+  Parstolper,
+  type Par,
   Ressurser,
   SYNTETISK_TEKST,
   Sporsmal,
@@ -26,7 +35,16 @@ import {
   Trekkspill,
   svar
 } from '../komponenter/deler.tsx';
-import { graaIPlan, naturtema, nedbygging, okosystemregnskap, planPerOkosystem, planlagt } from '../tall.ts';
+import {
+  egenRad,
+  egne,
+  graaIPlan,
+  naturtema,
+  nedbygging,
+  okosystemregnskap,
+  planPerOkosystem,
+  planlagt
+} from '../tall.ts';
 import { RESTKLASSER, okosystemfarge } from '../temalag.ts';
 import type { Tema } from '../temaer.ts';
 
@@ -45,6 +63,17 @@ const toppen = (): Tema => ({
     'Naturtap er natur som blir bygget ned, eller endret så mye at den ikke lenger er natur. Arealendringer er den største trusselen mot naturmangfoldet, og det meste skjer bit for bit, gjennom mange små inngrep.\n\nHer ser du hvor mye natur og jordbruk kommuneplanen setter av til utbygging, hvor mye av det som ligger i verdifull natur, og hvor mye som ble bygget ned fra 2017 til 2024.'
 });
 
+/* Planlagt utbygging per økosystemtype med kommuneplanen alene og med egne områder, fra gull.egneOkosystemer. Restklassene står
+   bare med når de har noe. */
+function okosystemPar(): Par[] | null {
+  const O = egne().oko;
+  return O
+    ? O.kommune
+        .filter(r => r.ny > 0 || !!r.plan || !RESTKLASSER.includes(r.navn))
+        .map(r => ({ navn: r.navn, farge: okosystemfarge(r.navn), for: r.plan, etter: r.ny, endring: r.endring }))
+    : null;
+}
+
 export default function Naturtapet() {
   const P = planlagt(),
     PD = planPerOkosystem(),
@@ -52,13 +81,27 @@ export default function Naturtapet() {
     N = nedbygging(),
     G = graaIPlan(),
     k = kommunen(),
+    E = harEgne() ? egne() : null,
     temaer = (
       [
         ['Verneområder', 'vern', 'vern'],
         ['Villreinområder', 'rein', 'rein'],
         ['Verdsatt natur', 'verdi', 'verdi2']
       ] as const
-    ).map(([navn, id, farge]) => ({ navn, farge, plan: naturtema(id).plan }));
+    ).map(([navn, id, farge]) => ({ navn, id, farge, plan: naturtema(id).plan })),
+    /* Med egne områder: temaene fra sammenligningen. Et tema kommunen ikke har, står med null. */
+    harPlan = !!E && !!E.rader && E.rader.kommune.some(r => r.plan !== null),
+    temaPar: Par[] | null =
+      E && E.rader
+        ? temaer.map(t => {
+            const r = egenRad(t.id);
+            return r
+              ? { navn: t.navn, farge: t.farge, for: r.plan, etter: r.ny, endring: r.endring }
+              : { navn: t.navn, farge: t.farge, for: harPlan ? 0 : null, etter: 0, endring: 0 };
+          })
+        : null,
+    oko = E ? okosystemPar() : null,
+    graaRad = E ? egenRad('graa2') : null;
   return (
     <>
       <div className="innhold">
@@ -78,13 +121,43 @@ export default function Naturtapet() {
             </p>
           </Trekkspill>
         </Helt>
+        <EgneMerke />
         <Tallkort
           kort={[
-            ['Natur satt av til utbygging', P ? iTekst(P.natur.km2) : regnes, ['naturtapet/kort-natur', 'planlagt']],
-            ['Andel av naturen i kommunen', P ? prosent(P.natur.andel) : regnes, ['naturtapet/kort-andel', 'planlagt']],
+            [
+              'Natur satt av til utbygging',
+              P ? (
+                <>
+                  {iTekst(P.natur.km2)}
+                  {E && <Endring r={egenRad('pnat')} />}
+                </>
+              ) : (
+                regnes
+              ),
+              ['naturtapet/kort-natur', 'planlagt']
+            ],
+            [
+              'Andel av naturen i kommunen',
+              P ? (
+                <>
+                  {prosent(P.natur.andel)}
+                  {E && <Endring r={egenRad('pnat')} andel />}
+                </>
+              ) : (
+                regnes
+              ),
+              ['naturtapet/kort-andel', 'planlagt']
+            ],
             [
               'Jordbruk satt av til utbygging',
-              P ? iTekst(P.jordbruk.km2) : regnes,
+              P ? (
+                <>
+                  {iTekst(P.jordbruk.km2)}
+                  {E && <Endring r={egenRad('pjor')} />}
+                </>
+              ) : (
+                regnes
+              ),
               ['naturtapet/kort-jordbruk', 'planlagt']
             ]
           ]}
@@ -100,7 +173,10 @@ export default function Naturtapet() {
         </div>
       </div>
       <Kart
-        lag={[PLAN, KLASSER]}
+        lag={FLAGG.egneAnalyser ? [EGNE, PLAN, KLASSER] : [PLAN, KLASSER]}
+        underLag={FLAGG.egneAnalyser && <EgneVerktoy />}
+        verktoy={FLAGG.egneAnalyser && <Tegnelinje />}
+        slipp={FLAGG.egneAnalyser ? lastOppPlan : undefined}
         etter={
           <div className="trekkspill-liste">
             <Trekkspill tittel="Hva viser kartet?">
@@ -112,41 +188,70 @@ export default function Naturtapet() {
                 </Lenke>{' '}
                 kan du se planlagt utbygging sammen med hvert av temaene, som verneområder og verdsatte naturtyper.
               </p>
+              {FLAGG.egneAnalyser && (
+                <p>
+                  Egne områder har blått omriss med nummer: helt for utbygging og stiplet for ikke utbygging. En
+                  opplastet plan har ikke omriss, men vises i planlagt utbygging.
+                </p>
+              )}
             </Trekkspill>
           </div>
         }
       />
       <div className="innhold">
+        <EgneOmrader />
         <Figur
-          tittel="Hva slags natur kommuneplanen setter av til utbygging"
+          tittel={
+            E ? 'Hva slags natur som settes av til utbygging' : 'Hva slags natur kommuneplanen setter av til utbygging'
+          }
           forklaring={['naturtapet/figur-okosystemtype', 'planPerOkosystem']}
           tekst={
-            <p>
-              Natur og jordbruk som kommuneplanen setter av til utbygging, per økosystemtype i grunnkartet, og hvor stor
-              del av typen i kommunen det er. Myr og beite med trær er med i skogen. Smale striper er ikke med.
-            </p>
+            E ? (
+              <p>
+                Natur og jordbruk som settes av til utbygging, per økosystemtype i grunnkartet: med kommuneplanen alene
+                (hul stolpe) og med egne områder (fylt stolpe), og forskjellen. Myr og beite med trær er med i skogen.
+                Smale striper er ikke med.
+              </p>
+            ) : (
+              <p>
+                Natur og jordbruk som kommuneplanen setter av til utbygging, per økosystemtype i grunnkartet, og hvor
+                stor del av typen i kommunen det er. Myr og beite med trær er med i skogen. Smale striper er ikke med.
+              </p>
+            )
           }
           kilder={['grunnkart', 'dibk']}
         >
-          {svar(
-            PD,
-            p => {
-              const rader = p.rader.filter(r => r.km2 > 0 || !RESTKLASSER.includes(r.navn)),
-                andel = new Map(rader.map(r => [r.navn, r.andel]));
-              return rader.some(r => r.km2 > 0) ? (
-                <Liggende
-                  hva="Satt av til utbygging per økosystemtype"
-                  data={rader.map(r => ({ navn: r.navn, km2: r.km2, farge: okosystemfarge(r.navn) }))}
-                  tekst={x => {
-                    const a = andel.get(x.navn);
-                    return `${iTekst(x.km2)}${a !== null && a !== undefined ? ` (${andelTekst(a)} av typen)` : ''}`;
-                  }}
-                />
-              ) : (
-                <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
-              );
-            },
-            'Kommunen har ingen kommuneplan med utbygging hos DiBK.'
+          {E ? (
+            oko && oko.some(r => r.etter > 0 || !!r.for) ? (
+              <Parstolper hva="Satt av til utbygging per økosystemtype, med og uten egne områder" data={oko} />
+            ) : oko ? (
+              <p>Verken kommuneplanen eller egne områder setter av natur eller jordbruk til utbygging.</p>
+            ) : E.venter ? (
+              <p className="henter">Regner ut planlagt utbygging per økosystemtype …</p>
+            ) : (
+              <p className="mangler-tall">Kunne ikke regnes ut for kommunen</p>
+            )
+          ) : (
+            svar(
+              PD,
+              p => {
+                const rader = p.rader.filter(r => r.km2 > 0 || !RESTKLASSER.includes(r.navn)),
+                  andel = new Map(rader.map(r => [r.navn, r.andel]));
+                return rader.some(r => r.km2 > 0) ? (
+                  <Liggende
+                    hva="Satt av til utbygging per økosystemtype"
+                    data={rader.map(r => ({ navn: r.navn, km2: r.km2, farge: okosystemfarge(r.navn) }))}
+                    tekst={x => {
+                      const a = andel.get(x.navn);
+                      return `${iTekst(x.km2)}${a !== null && a !== undefined ? ` (${andelTekst(a)} av typen)` : ''}`;
+                    }}
+                  />
+                ) : (
+                  <p>Kommuneplanen setter ikke av natur eller jordbruk til utbygging.</p>
+                );
+              },
+              'Kommunen har ingen kommuneplan med utbygging hos DiBK.'
+            )
           )}
         </Figur>
         <Figur
@@ -154,13 +259,20 @@ export default function Naturtapet() {
           forklaring={['naturtapet/figur-verdifull-natur', 'planIVerdifull']}
           tekst={
             <p>
-              Hvor mye av den planlagte utbyggingen som ligger i verneområder, villreinområder og verdsatt natur. Der
-              temaene overlapper, telles utbyggingen i hvert av dem.
+              Hvor mye av den planlagte utbyggingen som ligger i verneområder, villreinområder og verdsatt natur
+              {E ? ', med kommuneplanen alene (hul stolpe) og med egne områder (fylt stolpe)' : ''}. Der temaene
+              overlapper, telles utbyggingen i hvert av dem.
             </p>
           }
           kilder={['dibk', 'vern', 'villrein', 'verdsatt']}
         >
-          {temaer.every(t => t.plan) ? (
+          {E ? (
+            temaPar ? (
+              <Parstolper hva="Planlagt utbygging per tema, med og uten egne områder" data={temaPar} />
+            ) : (
+              <p className="henter">Regnes ut …</p>
+            )
+          ) : temaer.every(t => t.plan) ? (
             <Liggende
               hva="Planlagt utbygging per tema"
               data={temaer.map(t => ({ navn: t.navn, km2: t.plan!.planKm2, farge: t.farge }))}
@@ -175,6 +287,15 @@ export default function Naturtapet() {
               Av ca. {iTekst(G.plan.km2)} planlagt utbygging på land ligger ca. {iTekst(G.plan.graa)} (
               {prosent(G.plan.andelGraa)}) på grått areal, som alt er tatt i bruk.
             </b>
+            {graaRad && graaRad.plan !== null && (
+              <span>
+                Med kommuneplanen alene er det ca. {iTekst(graaRad.plan)}
+                {Math.abs(graaRad.endring) * 1000 < 0.5
+                  ? ', det samme'
+                  : `, altså ${iTekst(Math.abs(graaRad.endring))} ${graaRad.endring > 0 ? 'mindre' : 'mer'}`}
+                .
+              </span>
+            )}
             <span>Her er all planlagt utbygging med, også på bebygd areal og i smale striper.</span>
           </Fremhevet>
         )}
