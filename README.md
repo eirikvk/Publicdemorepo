@@ -423,13 +423,13 @@ svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som 
 
 **Cachen kan starte utfylt.** En tabell kan ha ferdige svar som ligger lagret sammen med siden (`lagret` i katalogen). Finnes
 svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Dagens klasser per blokk (`solv.klasser`) er
-slik: for 42 kommuner er svaret laget på forhånd av den samme ETL-funksjonen (`verktoy/klasser.ts`) og lagret som små bilder i
-`public/klasser/`, på 10,6 meter (nivå 10), 3 020 filer og 21 MB. Siden slipper da kallene mot NIBIO, og nettleseren henter
-bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for Trondheim, Kautokeino, Malvik,
-Røros, Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 850 filer og 11 MB), lest innenfor de
-lagrede dagens klassene. For de andre kommunene lages de av kartbildene fra NIBIO, med den samme funksjonen. For de 45 kommunene
+slik: for 57 kommuner (alle i Trøndelag og Finnmark, og Bergen) er svaret laget på forhånd av den samme ETL-funksjonen
+(`verktoy/klasser.ts`) og lagret som små bilder i `public/klasser/`, på 10,6 meter (nivå 10), 4 971 filer og 20 MB. Siden slipper da kallene mot NIBIO, og nettleseren henter
+bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for 59 kommuner, alle i Trøndelag og
+Finnmark, og Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 5 254 filer og 59 MB), lest
+innenfor de lagrede dagens klassene. For de andre kommunene lages de av kartbildene fra NIBIO, med den samme funksjonen. For de 60 kommunene
 med lagrede klasser eller detaljklasser er også kommunegrensen (`solv.grense`) og kommunens andel per rute i bitene
-(`solv.kommunebiter`) lagret (`verktoy/kommunegrenser.ts`, i `public/kommunegrenser/`, 3,0 MB grenser og 4,7 MB andeler pakket med
+(`solv.kommunebiter`) lagret (`verktoy/kommunegrenser.ts`, i `public/kommunegrenser/`, 3,5 MB grenser og 6,9 MB andeler pakket med
 gzip). Da hentes ingenting fra Kartverket, og andelen regnes ikke ut, når kommunen velges.
 
 Svarene huskes i cachen (`src/data/cache.ts`), som ETL-koden ikke vet noe om:

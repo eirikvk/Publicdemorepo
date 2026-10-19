@@ -627,7 +627,7 @@ export const katalog = {
       tittel: 'Dagens klasser per flis',
       om: 'dagens klasse per rute i en flis, kalt med flisen [z, x, y] fra nivå 10: ett kartbilde fra NIBIO. På nivå 10 er ruta 10,6 meter, og det er blokkene tallene regnes av; for noen kommuner ligger de lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Finere nivåer er den felles sannheten for kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
       forklaring:
-        'Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 42 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.',
+        'Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.',
       husk: 32,
       nokkel: flisnavn,
       etl: solvGrunnkart.klasser,

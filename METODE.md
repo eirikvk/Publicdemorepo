@@ -247,7 +247,7 @@ blokk. Og arealet per detaljklasse i kommunen.
 - Kartet og SSBs tall bygger på to ulike inndelinger. Kartet følger grunnkartets økosystemtyper, tallene følger SSBs
   arealklasser. Tallene på siden blander derfor offisielle tall fra SSB med tall regnet ut fra grunnkartet.
 - Grønne områder og idrettsområder er bebygd i begge inndelingene.
-- NIBIO tegner grunnkartet først fra 1:50 000. For 42 kommuner i Trøndelag, Bergen, Alta, Karasjok og Kautokeino ligger klassene
+- NIBIO tegner grunnkartet først fra 1:50 000. For 57 kommuner, alle i Trøndelag og Finnmark og Bergen, ligger klassene
   per blokk på 10,6 meter lagret sammen med siden (`public/klasser/`, laget med `verktoy/klasser.ts`). De er laget av den samme
   funksjonen som siden bruker (`solv.klasser`), så svaret er det samme som om siden hadde hentet kartbildene selv. For andre
   kommuner henter nettleseren kartbildene fra NIBIO for hele kommunen når den velges, ett per blokk, og lager blokkene med den
@@ -482,7 +482,7 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
    2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
    Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
-   nivå 10 (10,6 meter), og for 42 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
+   nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
    viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
 5. **Kartbilder av kommuneplanen** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis:
@@ -719,7 +719,7 @@ vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
    2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
    Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
-   nivå 10 (10,6 meter), og for 42 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
+   nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
    viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
 6. **Villreinområder** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/villrein/MapServer/1/query`: Leveområdene for villrein i kommunen som
@@ -1213,6 +1213,22 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Lagrede kart for Trøndelag og Finnmark, 19. oktober 2026.** Dagens klasser, detaljklassene, kommunegrensen og andelen per rute
+er nå lagret sammen med siden for alle kommunene i Trøndelag og Finnmark, som en prøve før resten av landet. De er laget med de samme
+verktøyene som før (`verktoy/klasser.ts`, med og uten `--detalj`, og `verktoy/kommunegrenser.ts`), altså av de samme funksjonene
+som siden bruker når ingenting er lagret. Tid og størrelse:
+
+| Del | Nye blokker eller kommuner | Tid | Størrelse |
+|---|---|---|---|
+| Detaljklasser, Trøndelag | 2 073 blokker | 16 min | 29 MB |
+| Dagens klasser, Finnmark | 1 951 blokker | 7 min | 5,8 MB |
+| Detaljklasser, Finnmark | 2 331 blokker | 9 min | 19 MB |
+| Grenser og andeler, Finnmark | 15 kommuner | under 1 min | 2,7 MB |
+
+Kontroll: med alle kall til NIBIO stoppet regnet tvillingen ut skogen for Oppdal (391 860 dekar), Sør-Varanger (1 536 820 dekar) og
+Kautokeino (3 610 490 dekar) fra de lagrede blokkene. Regresjonstesten for Trondheim ga ingen avvik, og røyktesten for tvillingen
+ingen feil. Grunnkartet er lisensiert «Norge digitalt begrenset», som før, se AVHENGIGHETER.md.
 
 **«Ikke gitt verdi» i verdsatt natur, 19. oktober 2026.** Skissene har en femte stolpe, «Annet», i figuren over verdiene. Vi antar
 at den er lokalitetene med verdikategorien «Ikke gitt verdi» i Miljødirektoratets tjeneste for naturtyper med KU-verdi, som er et
