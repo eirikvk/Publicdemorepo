@@ -2,20 +2,20 @@
 .katalog .talltabell tbody th {
   min-width: 0;
 }
-/* Et datasett i sølv: raden med dataene, med navnet og hva datasettet er, og under den støttetabellene, med hva de er til for under
-   overskriften og innholdet under tittelen på hver */
+/* Støttetabellene under dataene de støtter: hva de er til for først, og så tabellene med innholdet under tittelen, rykket inn */
 .katalog .talltabell th small {
   display: block;
   margin-top: var(--md-spacing-4);
   font-weight: var(--md-typography-weight-regular, 400);
   color: var(--dempet);
 }
-.katalog tr.datasettrad > th {
-  padding-top: var(--md-spacing-16);
+.katalog tr.stotteforklaring > td,
+.katalog tr.stotterad > th {
+  padding-left: var(--md-spacing-12);
+  border-left: 2px solid var(--linje);
 }
-.katalog tr.undergruppe th {
-  padding-top: var(--md-spacing-12);
-  padding-bottom: var(--md-spacing-4);
+.katalog tr.stotteforklaring > td {
+  color: var(--dempet);
 }
 /* Det som ikke er ferdig (henter, feilet, utdatert), kan deles over linjer, så kolonnen holder seg smal */
 .katalog td small.uferdig {
@@ -25,11 +25,14 @@
   padding-top: var(--md-spacing-4);
   padding-bottom: var(--md-spacing-4);
 }
-/* Knappene står ved siden av hverandre, helt til høyre */
+/* Knappene står ved siden av hverandre, helt til høyre. «Støtte» står på linjen under Info og Data, så kolonnen ikke blir bredere. */
 .katalog td.handling .knapper {
   justify-content: flex-end;
   flex-wrap: nowrap;
   gap: var(--md-spacing-4);
+}
+.katalog td.handling .knapper + .knapper {
+  margin-top: var(--md-spacing-4);
 }
 .katalog tr.detalj > td {
   padding-left: var(--md-spacing-12);

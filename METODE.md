@@ -1587,8 +1587,8 @@ til for, står én gang, på datasettet. Det første datasettet er kommuneplanen
 *areal satt av til framtidig utbygging i kommuneplanen*: for hver rute på 10,6 meter om den ligger i en flate med status framtidig og
 formålet bebyggelse og anlegg, eller samferdsel. Andre arealformål og nåværende byggeområder er valgt bort allerede i spørringen til
 DiBK. Dataene er kartbildene. Dekningen, som avgjør om DiBK har planen, opplysningene om planen, oversikten som gjør hentingen
-raskere og oppslaget når man trykker i kartet, er støttetabeller. Katalogvisningen under Tekniske valg viser datasettet som én rad,
-og støttetabellene under. Tallene og
+raskere og oppslaget når man trykker i kartet, er støttetabeller. I katalogvisningen under Tekniske valg står dataene som én vanlig
+rad med navnet på datasettet, og støttetabellene ligger bak knappen «Støtte» på raden. Tallene og
 infoboksene er ikke endret. Kontroll: regresjonstesten for Trondheim ga ingen avvik, og katalogvisningen ble sett på 390 og 1280 px
 uten feil. Testet i Chromium, ikke på iPhone.
 

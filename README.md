@@ -289,7 +289,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Framtid.tsx` | Utvikling fremover: planlagt utbygging og egne områder. Kan planlagt utbygging ikke regnes ut, sier en melding hvorfor (DiBK eller kartene), med knappen «Prøv igjen». |
 | `Egne.tsx` | Egne områder og opplastet plan, med tabellene som sammenligner den gamle planen med den nye: natur og jordbruk, grått areal, temaene, verdsatt natur, områder som berøres og økosystemtypene |
 | `Om.tsx` | Om og metode: kall-loggen og katalogen, hvordan klassene er satt sammen, om siden og tekniske valg |
-| `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter datasettet de hører til (datasettet som én rad, som er dataene, og støttetabellene under), og ellers etter ETL-filen, med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
+| `Katalog.tsx` | Katalogen i teknisk visning: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert etter ETL-filen, der dataene i et datasett står som én rad med navnet på datasettet og støttetabellene bak knappen «Støtte», med tittelen og «Info» (hva tabellen er, det tekniske navnet og hvor ETL-funksjonen ligger) og «Data» (radene i cachen, som kan åpnes for å se verdien) |
 | `Datavisning.tsx` | Innholdet i en rad i cachen, etter formen det har: bilder fra kildene slik de kom, rutenett som bilde med én farge per verdi, lister som tabell, flater som omriss, og de enkle feltene. Formen finnes ut fra dataene, uten oppsett per tabell. |
 | `deler.tsx` | Det designsystemet ikke har: fargeruter, stolper, tegnforklaringer, linjer i en liste med tall, lenker mellom sidene og tabeller med tall |
 | `illustrasjoner.tsx` | Tegningene til temaene og de blå båndene, i stedet for bildene i skissene: flate landskap i samme stil, laget med KI og merket med det |
@@ -451,8 +451,9 @@ og lager det, hører til datasettet på én av to måter. *Dataene* er selve dat
 gjort om. *Støttetabellene* trengs for å hente og forstå dataene: en sjekk av om dataene finnes, en oversikt som gjør hentingen
 raskere, opplysninger om dataene, eller oppslag når man trykker i kartet. Støttetabeller kan favne bredere enn dataene, men tallene
 regnes ikke av dem. Hver tabell beskriver innholdet i sine egne data (`innhold`), og hva støttetabellene er til for, står én gang, på
-datasettet. Datasettene står i `DATASETT` i katalogen. Katalogvisningen viser datasettet som én rad, som er dataene, og
-støttetabellene under. Foreløpig er bare kommuneplanen delt inn slik: datasettet er *Areal satt av til framtidig utbygging i
+datasettet. Datasettene står i `DATASETT` i katalogen. I katalogvisningen er dataene datasettet: de står som én vanlig rad med navnet
+på datasettet, i gruppen for filen de lages i, og støttetabellene ligger bak knappen «Støtte» på raden. Det som ikke er ferdig i en
+støttetabell, står også på raden. Foreløpig er bare kommuneplanen delt inn slik: datasettet er *Areal satt av til framtidig utbygging i
 kommuneplanen*, ikke hele kommuneplanen. Dataene er kartbildene (`bronse.planflis` og `solv.kommuneplanruter`). Støttetabellene er
 dekningen (`planbit`, `plandekning`), opplysningene om planen (`planopplysninger`, `planinfo`), oversikten (`planoversikt`) og
 oppslaget i et punkt (`planIPunkt`).

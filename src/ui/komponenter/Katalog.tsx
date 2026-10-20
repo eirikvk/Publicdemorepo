@@ -1,6 +1,6 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
-   etter datasettet i sølv de hører til (DATASETT i katalogen), og ellers etter ETL-filen, med tittelen og hvor mye cachen har lagret
-   i hver. Et datasett står som én rad, som er dataene, og under den støttetabellene, med hva de er til for først. «Info» viser hva tabellen er, det tekniske navnet og hvor
+   etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Dataene i et datasett i sølv (DATASETT i katalogen) står som én
+   vanlig rad med navnet på datasettet. Støttetabellene ligger bak knappen «Støtte» på raden, med hva de er til for først. «Info» viser hva tabellen er, det tekniske navnet og hvor
    ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
@@ -206,16 +206,15 @@ function Sporring({ d }: { d: Tabellen }) {
   );
 }
 
-/* Det «Info» viser: hva tabellen er, hvilket datasett den hører til, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som
-   huskes */
+/* Det «Info» viser: for dataene i et datasett hva datasettet er og tabellen dataene ligger i, for en støttetabell hvilke data den
+   støtter, og innholdet. Så hva tabellen er, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som huskes. */
 function Info({ d }: { d: Tabellen }) {
   return (
     <>
+      {d.datasett && !d.stotte && <p>{stor(d.datasett.om)}</p>}
       {d.datasett && (
         <p>
-          {d.stotte
-            ? `Støttetabell i datasettet «${d.datasett.navn}».`
-            : `Dataene i datasettet «${d.datasett.navn}», i tabellen «${d.tittel}».`}
+          {d.stotte ? `Støttetabell for «${d.datasett.navn}».` : `Dataene ligger i tabellen «${d.tittel}».`}
           {d.innholdet ? ' ' + stor(d.innholdet) : ''}
         </p>
       )}
@@ -302,36 +301,47 @@ function KartetsMinne({ M }: { M: Minne }) {
   );
 }
 
-/* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under */
+/* Det som ikke er ferdig i tabellen: nøklene som henter, har feilet eller er utdatert */
+const uferdigeI = (d: Tabellen) => d.rader.filter(x => x.status !== 'ok' || x.utdatert);
+/* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under. Dataene i et datasett står
+   med navnet på datasettet, og har i tillegg knappen «Støtte», som viser hva støttetabellene er til for og støttetabellene under
+   raden. Det som ikke er ferdig i støttetabellene, står også på raden, så det ikke skjules. En støttetabell har innholdet under
+   tittelen. */
 function Tabellrad({
   d,
   apen,
   veksle,
-  tittel = d.tittel,
-  under = d.innholdet
+  stotte = []
 }: {
   d: Tabellen;
   apen: Apen;
   veksle: (navn: string, hva: 'info' | 'data') => void;
-  tittel?: string;
-  under?: string;
+  stotte?: Tabellen[];
 }) {
-  const r = d.rader,
-    uferdige = r.filter(x => x.status !== 'ok' || x.utdatert),
+  const [visStotte, settVisStotte] = useState(false),
+    r = d.rader,
+    uferdige = uferdigeI(d),
+    uferdigStotte = stotte.filter(s => uferdigeI(s).length),
     her = apen && apen.navn === d.navn ? apen.hva : null,
-    id = 'katalog-' + d.navn.replace('.', '-');
+    id = 'katalog-' + d.navn.replace('.', '-'),
+    tittel = d.datasett && !d.stotte ? d.datasett.navn : d.tittel;
   return (
     <>
-      <tr className={d.datasett && !d.stotte ? 'datasettrad' : undefined}>
+      <tr className={d.stotte ? 'stotterad' : undefined}>
         <th scope="row">
           {tittel}
-          {under && <small>{under}</small>}
+          {d.stotte && d.innholdet && <small>{d.innholdet}</small>}
         </th>
         <td className="tall">
           {d.husk ? `${nf(r.length, 0)} av ${d.husk === Infinity ? 'alle' : nf(d.husk, 0)}` : 'lagres ikke'}
           {r.length > 0 && <small>{kb(sum(d))}</small>}
           {uferdige.length > 0 && (
             <small className="uferdig">{uferdige.map(x => `${nokkelen(x.nokkel)} ${statusen(x)}`).join(', ')}</small>
+          )}
+          {uferdigStotte.length > 0 && (
+            <small className="uferdig">
+              Støtte: {uferdigStotte.map(s => `${s.tittel} ${uferdigeI(s).map(statusen).join(', ')}`).join('; ')}
+            </small>
           )}
         </td>
         <td className="handling">
@@ -357,6 +367,20 @@ function Tabellrad({
               Data
             </MdButton>
           </div>
+          {stotte.length > 0 && (
+            <div className="knapper">
+              <MdButton
+                theme="tertiary"
+                mode="small"
+                aria-expanded={visStotte}
+                aria-controls={visStotte ? id + '-stotte' : undefined}
+                aria-label={`${stotte.length} støttetabeller for ${tittel}`}
+                onClick={() => settVisStotte(!visStotte)}
+              >
+                Støtte ({stotte.length})
+              </MdButton>
+            </div>
+          )}
         </td>
       </tr>
       {her && (
@@ -380,6 +404,18 @@ function Tabellrad({
           </td>
         </tr>
       )}
+      {visStotte && (
+        <>
+          <tr className="stotteforklaring" id={id + '-stotte'}>
+            <td colSpan={3}>
+              <b>Støttetabeller.</b> {d.datasett && d.datasett.stotte}
+            </td>
+          </tr>
+          {stotte.map(s => (
+            <Tabellrad key={s.navn} d={s} apen={apen} veksle={veksle} />
+          ))}
+        </>
+      )}
     </>
   );
 }
@@ -394,14 +430,13 @@ export default function Katalog() {
     <section className="prosa katalog">
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
-        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. I bronse og sølv er tabellene samlet i
-        datasett der det er gjort. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Datasettet
-        står som én rad, som er dataene, og under den støttetabellene, som trengs for å hente og forstå dataene.
-        Foreløpig gjelder det kommuneplanen. De andre tabellene står etter filen de lages i. «Info» sier hva tabellen er
-        og hvor ETL-funksjonen ligger. «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i
-        stedet, også fra kildene, men ikke etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes:
-        siden lagrer ingenting selv i nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra
-        tjenestene, slik tjenestene selv bestemmer.
+        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå, etter filen de lages i. Data med
+        støttetabeller, som trengs for å hente og forstå dataene, står som én rad med knappen «Støtte», som viser
+        støttetabellene. Foreløpig gjelder det kommuneplanen. «Info» sier hva tabellen er og hvor ETL-funksjonen ligger.
+        «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i stedet, også fra kildene, men ikke
+        etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i
+        nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv
+        bestemmer.
       </p>
       <MdButton
         theme="secondary"
@@ -416,9 +451,10 @@ export default function Katalog() {
       {K &&
         (['bronse', 'solv', 'gull'] as const).map(lag => {
           const T = K.filter(d => d.lag === lag),
-            sett = [...new Map(T.flatMap(d => (d.datasett ? [[d.datasett.navn, d.datasett] as const] : []))).values()],
-            filer = [...new Set(T.filter(d => !d.datasett).map(d => d.fil))],
-            rad = (d: Tabellen) => <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} />;
+            vises = T.filter(d => !d.stotte) /* støttetabellene står under dataene de støtter */,
+            filer = [...new Set(vises.map(d => d.fil))],
+            stotteFor = (d: Tabellen) =>
+              d.datasett ? T.filter(s => s.stotte && s.datasett && s.datasett.navn === d.datasett!.navn) : [];
           return (
             <MdAccordionItem
               key={lag}
@@ -438,35 +474,6 @@ export default function Katalog() {
                       <td />
                     </tr>
                   </thead>
-                  {sett.map(ds => {
-                    const I = T.filter(d => d.datasett && d.datasett.navn === ds.navn),
-                      S = I.filter(d => d.stotte);
-                    return (
-                      <tbody key={ds.navn} className="datasett">
-                        {I.filter(d => !d.stotte).map(d => (
-                          <Tabellrad
-                            key={d.navn}
-                            d={d}
-                            apen={apen}
-                            veksle={veksle}
-                            tittel={`Datasett: ${ds.navn}`}
-                            under={ds.om}
-                          />
-                        ))}
-                        {S.length > 0 && (
-                          <>
-                            <tr className="undergruppe">
-                              <th colSpan={3} scope="colgroup">
-                                Støttetabeller
-                                {ds.stotte && <small>{ds.stotte}</small>}
-                              </th>
-                            </tr>
-                            {S.map(rad)}
-                          </>
-                        )}
-                      </tbody>
-                    );
-                  })}
                   {filer.map(fil => (
                     <tbody key={fil}>
                       <tr className="gruppe">
@@ -474,7 +481,11 @@ export default function Katalog() {
                           <code>{fil.startsWith(lag + '/') ? fil.slice(lag.length + 1) : fil}</code>
                         </th>
                       </tr>
-                      {T.filter(d => !d.datasett && d.fil === fil).map(rad)}
+                      {vises
+                        .filter(d => d.fil === fil)
+                        .map(d => (
+                          <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} stotte={stotteFor(d)} />
+                        ))}
                     </tbody>
                   ))}
                 </table>
