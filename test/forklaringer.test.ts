@@ -23,7 +23,7 @@ test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () 
   assert.ok(kilder('egne').includes('bronse.egne: solv.egne + solv.egneruter'));
 });
 
-test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata bare i et datasett, og innholdet beskrevet', async () => {
+test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et datasett eller som andre støttedata, og innholdet beskrevet', async () => {
   const { katalog, DATASETT } = await import('../src/data/katalog.ts');
   const alle = Object.values(katalog).flatMap(l => Object.values(l)) as {
     lag: string;
@@ -35,8 +35,9 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata bare 
   for (const t of alle) {
     if (t.datasett)
       assert.ok(t.lag === 'bronse' || t.lag === 'solv', `${t.lag}.${t.navn} kan ikke høre til et datasett`);
-    if (t.stotte) assert.ok(t.datasett, `${t.lag}.${t.navn} er støttedata uten datasett`);
-    if (t.datasett) assert.ok(t.innhold, `${t.lag}.${t.navn} i et datasett mangler innholdet`);
+    /* støttedata uten datasett er andre støttedata, som bakgrunnskartet: bare i bronse og sølv */
+    if (t.stotte) assert.ok(t.lag === 'bronse' || t.lag === 'solv', `${t.lag}.${t.navn} kan ikke være støttedata`);
+    if (t.datasett || t.stotte) assert.ok(t.innhold, `${t.lag}.${t.navn} mangler innholdet`);
   }
   for (const d of Object.values(DATASETT)) {
     const I = alle.filter(t => t.datasett === d);

@@ -451,15 +451,17 @@ Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.
 **Datasett i sølv.** Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Tabellene i bronse og sølv som henter
 og lager det, hører til datasettet på én av to måter. *Dataene* er selve datasettet: i bronse slik det hentes, og i sølv slik det er
 gjort om. *Støttedata* trengs for å hente, forstå og regne med dataene: en sjekk av om dataene finnes, en oversikt som gjør hentingen raskere,
-opplysninger om dataene, oppslag når man trykker i kartet, eller dataene i en annen form, som zoomet ut eller lagt på rutene.
-Støttedata er opplysninger om dataene eller dataene i en annen form, ikke nye data, så det samme ligger ikke to ganger i sølv.
+opplysninger om dataene, oppslag når man trykker i kartet, dataene i en annen form, som zoomet ut eller lagt på rutene, eller en
+mellomregning. Støttedata er opplysninger om dataene, dataene i en annen form eller mellomregninger, ikke nye data, så det samme
+ligger ikke to ganger i sølv. Støttedata som ikke hører til ett datasett, står for seg som *Andre støttedata*: bakgrunnskartet og
+alle feltene for et område i naturtemaene.
 Støttedata kan favne bredere enn dataene, og tallene kan regnes av støttedata som er dataene i en annen form, som arealet av
 verneområdene. Hver tabell beskriver innholdet i sine egne data (`innhold`), og hva hver støttedata er til for, står én gang, på datasettet.
 En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes etter komma, som «Dekningen av kommuneplanen,
 kartbilder». Datasettene står i `DATASETT` i katalogen. I katalogvisningen står dataene som én vanlig rad, i gruppen for filen de
 lages i, og støttedataene ligger bak knappen «Støttedata» på raden. Bare én av knappene Info, Data og Støttedata på en rad er åpen om
 gangen. Det som ikke er ferdig i støttedataene, står også på raden. Elleve datasett er delt inn slik: arealklassene fra grunnkartet,
-grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen, egne planer, de fire naturtemaene (verneområdene, villreinområdene,
+grått areal, inngrepsfri natur, kommunene, kommuneplanen, egne planer, de fire naturtemaene (verneområdene, villreinområdene,
 verdsatt natur og det kartlagte for naturtyper) og naturregnskapet fra SSB. Egne planer følger mønsteret fra kommuneplanen:
 *Areal satt av til framtidig utbygging i egne planer*, med hver plan per rute som dataene, én rad per plan (`solv.egneruter`), og
 «ikke utbygging» i tillegg til utbygging, fordi en egen plan erstatter kommuneplanen der den ligger. Flatene og opplysningene om
@@ -467,7 +469,9 @@ planene er støttedata. Sammenslåingen, der den siste planen gjelder der planer
 gull (`leggInnEgne` i `gull/utbygging.ts`). Arealklassene fra grunnkartet er ett datasett med to kolonner,
 klassen og detaljklassen, i én tabell i sølv (`solv.klasser`). Støttedataene er de lagrede klassene og detaljklassene, blokkene i
 kommunen, klassene zoomet ut og grunnkartet i et punkt. For grått areal og inngrepsfri natur er støttedataene kartet zoomet inn og ut
-(og sonen i et punkt), og for kommunegrensen de lagrede grensene. Kommuneplanen er *Areal satt av til framtidig utbygging i
+(og sonen i et punkt). Kommunene er ett datasett med listen over fylker og kommuner og grensen til hver kommune som dataene, og som
+støttedata de lagrede grensene, kommunen i bitene (en mellomregning alle arealtellingene bruker), flaten til alle kommunene og
+kommunen i et punkt. Kommuneplanen er *Areal satt av til framtidig utbygging i
 kommuneplanen*, ikke hele kommuneplanen. Dataene er kartbildene (`bronse.planflis` og
 `solv.kommuneplanruter`). Støttedataene er dekningen av kommuneplanen (`planbit`, `plandekning`), opplysningene om den
 (`planopplysninger`, `planinfo`), oversikten over arealet satt av (`planoversikt`) og kommuneplanen i et punkt (`planIPunkt`).
@@ -478,8 +482,9 @@ Villreinområdene, verdsatt natur og det kartlagte er delt inn på samme måte, 
 (`gull.vernAreal`, `gull.villreinAreal`, `gull.verdsattAreal`, `gull.vurderesAreal` og `gull.kartlagtAreal`). Verdsatt natur er ett
 datasett med én henting: lokalitetene med og uten fast verdi, klippet mot kommunen, i én tabell i sølv. Kryssingen av verdsatt
 natur og det kartlagte regnes i gull (`gull.verdsattNaturIKartlagt`), og oppslagene for kryssingen med utbyggingen er en
-hjelpetabell i gull (`gull.naturoppslag`). Alle feltene for et område i naturtemaene er felles støttedata og står foreløpig utenfor
-datasettene.
+hjelpetabell i gull (`gull.naturoppslag`). Arealet av hvert område i naturtemaene står i sølv: arealet av én flate i kommunen er
+en egenskap ved flaten, som utsnittet, og mange geodataformater har det som et eget felt. Arealet av et tema i kommunen, der
+områdene er slått sammen så overlapp telles én gang, er en utregning over mange flater eller ruter, og står i gull.
 
 **Syntetiske data lages i sølv.** Naturregnskapet fra SSB er et bevisst avvik fra regelen om at sølv bare tolker kildene. SSBs to
 tabeller (arealet per økosystemtype i 2024, og endringen mellom bebygd og de andre økosystemtypene 2017–2024) publiseres 25. november

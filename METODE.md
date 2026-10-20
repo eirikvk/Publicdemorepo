@@ -326,9 +326,9 @@ Hav er det som blir igjen når de trekkes fra kommunens flate, som er arealet in
    for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd
    klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter
    arealet i 2017. Vann og hav er ikke med.
-2. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
-   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
-   [Kartverket, Administrative enheter, kommuner
+2. **Flaten til kommunene, lagret fil** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten
+   innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av
+   verktoy/kommuneareal.ts. Kilde: [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Flaten til hver kommune fra den lagrede filen.
 3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
@@ -550,9 +550,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
-- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
-  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
-  kommunen velges.
+- **Kommunen i bitene, lagrede filer** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor
+  del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må
+  regnes ut når kommunen velges.
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
@@ -753,9 +753,9 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
    økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
    tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
    Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
-2. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
-   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
-   [Kartverket, Administrative enheter, kommuner
+2. **Flaten til kommunene, lagret fil** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten
+   innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av
+   verktoy/kommuneareal.ts. Kilde: [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Flaten til hver kommune fra den lagrede filen.
 3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
@@ -885,9 +885,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
-- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
-  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
-  kommunen velges.
+- **Kommunen i bitene, lagrede filer** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor
+  del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må
+  regnes ut når kommunen velges.
 - **Lagrede detaljklasser, register** (`bronse.detaljregister`). Hentes fra `detaljklasser.json`: Kommunene som har detaljklassene
   lagret sammen med siden, og blokkene for hver.
 - **Lagrede detaljklasser, filer** (`bronse.detaljfil`). Hentes fra `detaljklasser/{z}/{x}/{y}.png`: Detaljklassene i en blokk
@@ -976,9 +976,9 @@ samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses
    økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
    tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
    Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
-4. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
-   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
-   [Kartverket, Administrative enheter, kommuner
+4. **Flaten til kommunene, lagret fil** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten
+   innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av
+   verktoy/kommuneareal.ts. Kilde: [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Flaten til hver kommune fra den lagrede filen.
 5. **Areal av inngrepsfri natur** (`gull.inonAreal`). Rutene i kommunen telles per sone, bit for bit, for året. En rute langs
@@ -997,9 +997,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
-- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
-  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
-  kommunen velges.
+- **Kommunen i bitene, lagrede filer** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor
+  del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må
+  regnes ut når kommunen velges.
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
@@ -1073,9 +1073,9 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
    økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
    tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
    Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
-4. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
-   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
-   [Kartverket, Administrative enheter, kommuner
+4. **Flaten til kommunene, lagret fil** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten
+   innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av
+   verktoy/kommuneareal.ts. Kilde: [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Flaten til hver kommune fra den lagrede filen.
 5. **Areal av grått areal** (`gull.graaAreal`). Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med
@@ -1096,9 +1096,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
-- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
-  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
-  kommunen velges.
+- **Kommunen i bitene, lagrede filer** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor
+  del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må
+  regnes ut når kommunen velges.
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
@@ -1293,9 +1293,9 @@ ned mest.
    for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd
    klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter
    arealet i 2017. Vann og hav er ikke med.
-6. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
-   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
-   [Kartverket, Administrative enheter, kommuner
+6. **Flaten til kommunene, lagret fil** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten
+   innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av
+   verktoy/kommuneareal.ts. Kilde: [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Flaten til hver kommune fra den lagrede filen.
 7. **Villreinområder, GeoJSON** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
@@ -1413,9 +1413,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
   lagret sammen med siden, og blokkene for hver.
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
-- **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
-  rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
-  kommunen velges.
+- **Kommunen i bitene, lagrede filer** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor
+  del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må
+  regnes ut når kommunen velges.
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
@@ -1660,6 +1660,14 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Kommunene som ett datasett, og andre støttedata, 20. oktober 2026.** Kommunegrensen ble datasettet «Kommunene»: listen over fylker
+og kommuner og grensen til hver kommune er dataene, og de lagrede grensene, kommunen i bitene, flaten til alle kommunene og kommunen
+i et punkt er støttedata. Kommunen i bitene er en mellomregning alle arealtellingene bruker, og beskrivelsen av støttedata sier nå at
+støttedata også kan være mellomregninger. Bakgrunnskartet og alle feltene for et område i naturtemaene hører ikke til ett datasett,
+og står for seg i katalogen som «Andre støttedata». Arealet av hvert område i naturtemaene blir stående i sølv: det er en egenskap
+ved den klippede flaten, som utsnittet, mens arealet av et tema i kommunen, der overlapp telles én gang, er en utregning i gull.
+Ingen tall er endret.
 
 **Egne planer som datasett etter mønsteret fra kommuneplanen, 20. oktober 2026.** Egne områder sto utenfor datasettene. Nå er de
 datasettet «Areal satt av til framtidig utbygging i egne planer», med navn som for kommuneplanen. Dataene er hver plan per rute,

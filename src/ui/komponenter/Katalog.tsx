@@ -1,6 +1,7 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
    etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Dataene i et datasett i sølv (DATASETT i katalogen) står som én
-   vanlig rad, og støttedataene ligger bak knappen «Støttedata» på raden, med hva hver av dem er til for først. «Info» viser hva tabellen er, det tekniske navnet og hvor
+   vanlig rad, og støttedataene ligger bak knappen «Støttedata» på raden, med hva hver av dem er til for først. Støttedata som ikke
+   hører til ett datasett, står for seg sist i laget, som «Andre støttedata». «Info» viser hva tabellen er, det tekniske navnet og hvor
    ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
@@ -212,9 +213,13 @@ function Info({ d }: { d: Tabellen }) {
   return (
     <>
       {d.datasett && !d.stotte && <p>{stor(d.datasett.om)}</p>}
-      {d.datasett && (
+      {(d.datasett || d.stotte) && (
         <p>
-          {d.stotte ? `Støttedata for «${d.datasett.navn}».` : `Dataene ligger i tabellen «${d.tittel}».`}
+          {!d.datasett
+            ? 'Støttedata som ikke hører til ett datasett.'
+            : d.stotte
+              ? `Støttedata for «${d.datasett.navn}».`
+              : `Dataene ligger i tabellen «${d.tittel}».`}
           {d.innholdet ? ' ' + stor(d.innholdet) : ''}
         </p>
       )}
@@ -417,8 +422,8 @@ function Tabellrad({
         <>
           <tr className="stotteforklaring" id={id + '-stotte'}>
             <td colSpan={3}>
-              <b>Støttedata</b> trengs for å hente, forstå og regne med dataene. De er opplysninger om dataene eller
-              dataene i en annen form, ikke nye data.
+              <b>Støttedata</b> trengs for å hente, forstå og regne med dataene. De er opplysninger om dataene, dataene
+              i en annen form eller mellomregninger, ikke nye data.
               {d.datasett && d.datasett.stotte && (
                 <ul>
                   {d.datasett.stotte
@@ -451,13 +456,13 @@ export default function Katalog() {
     <section className="prosa katalog">
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
-        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå, etter filen de lages i. Data med
-        støttedata, som trengs for å hente og forstå dataene, står som én rad med knappen «Støttedata», som viser
-        støttedataene. Foreløpig gjelder det kommuneplanen. «Info» sier hva tabellen er og hvor ETL-funksjonen ligger.
-        «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i stedet, også fra kildene, men ikke
-        etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i
-        nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv
-        bestemmer.
+        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå, etter filen de lages i. I bronse og sølv
+        står hvert datasett som én rad med dataene, og støttedataene, som trengs for å hente, forstå og regne med
+        dataene, ligger bak knappen «Støttedata». Støttedata som ikke hører til ett datasett, står sist i laget som
+        «Andre støttedata». «Info» sier hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser det som ligger i
+        cachen. Tabeller som ikke lagrer, kan spørres i stedet, også fra kildene, men ikke etter noe som ikke finnes.
+        Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i nettleseren. Nettleserens
+        vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv bestemmer.
       </p>
       <MdButton
         theme="secondary"
@@ -473,6 +478,7 @@ export default function Katalog() {
         (['bronse', 'solv', 'gull'] as const).map(lag => {
           const T = K.filter(d => d.lag === lag),
             vises = T.filter(d => !d.stotte) /* støttedataene står under dataene de støtter */,
+            andre = T.filter(d => d.stotte && !d.datasett) /* støttedata som ikke hører til ett datasett */,
             filer = [...new Set(vises.map(d => d.fil))],
             /* støttedataene står under den siste tabellen med data i datasettet i laget, så dataene står samlet over dem */
             stotteFor = (d: Tabellen) =>
@@ -512,6 +518,18 @@ export default function Katalog() {
                         ))}
                     </tbody>
                   ))}
+                  {andre.length > 0 && (
+                    <tbody>
+                      <tr className="gruppe">
+                        <th colSpan={3} scope="colgroup">
+                          Andre støttedata
+                        </th>
+                      </tr>
+                      {andre.map(d => (
+                        <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} />
+                      ))}
+                    </tbody>
+                  )}
                 </table>
               </div>
             </MdAccordionItem>

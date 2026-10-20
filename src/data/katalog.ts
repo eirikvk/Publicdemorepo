@@ -135,15 +135,16 @@ export const KILDE = {
    og lager det, hører til datasettet (datasett på tabellen) på én av to måter:
    - dataene: selve datasettet, i bronse slik det hentes og i sølv slik det er gjort om
    - støttedata (stotte på tabellen): det som trengs for å hente, forstå og regne med dataene, som en sjekk av om dataene finnes, en
-     oversikt som gjør hentingen raskere, opplysninger om dataene, oppslag når man trykker i kartet, eller dataene i en annen form,
-     som zoomet ut eller lagt på rutene. Støttedata er opplysninger om dataene eller dataene i en annen form, ikke nye data, så det
-     samme ligger ikke to ganger i sølv.
+     oversikt som gjør hentingen raskere, opplysninger om dataene, oppslag når man trykker i kartet, dataene i en annen form, som
+     zoomet ut eller lagt på rutene, eller en mellomregning. Støttedata er opplysninger om dataene, dataene i en annen form eller
+     mellomregninger, ikke nye data, så det samme ligger ikke to ganger i sølv.
+   Støttedata som ikke hører til ett datasett (stotte uten datasett), som bakgrunnskartet og alle feltene for et område i
+   naturtemaene, står for seg som «Andre støttedata».
    Hver tabell beskriver innholdet i sine egne data (innhold på tabellen). Hva hver støttedata er til for, står én gang, på datasettet
    (stotte, med navnet og hva den er til for). En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes
    etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen. Tallene kan regnes av støttedata som er
    dataene i en annen form, som arealet av verneområdene av verneområdene per rute. Foreløpig er grunnkartet, grått areal,
-   inngrepsfri natur, kommunegrensen, kommuneplanen og de fire naturtemaene delt inn slik. Oppslaget av alle feltene for et område i
-   naturtemaene er felles for dem og står foreløpig utenfor datasettene. */
+   inngrepsfri natur, kommunene, kommuneplanen, egne planer, de fire naturtemaene og naturregnskapet fra SSB delt inn slik. */
 export const DATASETT = {
   grunnkart: {
     navn: 'Arealklasser fra grunnkartet',
@@ -179,14 +180,23 @@ export const DATASETT = {
       ['Inngrepsfri natur i et punkt', 'sonen der man trykker i kartet.']
     ]
   },
-  grense: {
-    navn: 'Kommunegrensen',
-    om: 'Kommunens grense som flate i UTM 33, med utsnittet rundt den og arealet i km². Fra Kartverket.',
+  kommuner: {
+    navn: 'Kommunene',
+    om: 'Kommunene i Norge fra Kartverket: listen over fylker og kommuner med nummer og navn, og for hver kommune grensen som flate i UTM 33, med utsnittet rundt den og arealet i km².',
     stotte: [
       [
         'Lagrede kommunegrenser',
-        'for 60 kommuner ligger grensen ferdig sammen med siden, så den ikke hentes fra Kartverket.'
-      ]
+        'for 60 kommuner ligger grensen og kommunen i bitene ferdig sammen med siden, så de ikke hentes fra Kartverket eller regnes ut.'
+      ],
+      [
+        'Kommunen i bitene',
+        'grensen lagt på rutene på 10,6 meter, med hvor stor del av hver kantrute som ligger i kommunen, så alt som telles i kommunen, teller ruta én gang. En mellomregning.'
+      ],
+      [
+        'Flaten til kommunene',
+        'arealet innenfor grensen for alle kommunene, regnet én gang av grensene, til havet i de syntetiske tallene for naturregnskapet.'
+      ],
+      ['Kommune i et punkt', 'hvilken kommune et punkt i kartet ligger i, når man trykker utenfor valgt kommune.']
     ]
   },
   vern: {
@@ -272,6 +282,8 @@ export const katalog = {
     kommuner: tabell<void, Fylke[]>({
       lag: 'bronse',
       navn: 'kommuner',
+      datasett: DATASETT.kommuner,
+      innhold: 'Fylkene med nummer og navn, og kommunene i hvert fylke med nummer og navn, sortert etter navn.',
       endepunkt: 'kommuner.json',
       tittel: 'Fylker og kommuner',
       om: 'fylkene og kommunene, sortert etter navn',
@@ -285,7 +297,7 @@ export const katalog = {
     kommunegrense: tabell({
       lag: 'bronse',
       navn: 'kommunegrense',
-      datasett: DATASETT.grense,
+      datasett: DATASETT.kommuner,
       innhold: 'Kommunens grense som GeoJSON fra Kartverkets kommuneinfo.',
       endepunkt: `${E.KOMMUNEINFO}/kommuner/{kommunenummer}/omrade`,
       tittel: 'Kommunegrensen, GeoJSON',
@@ -298,6 +310,9 @@ export const katalog = {
     bakgrunnsflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'bakgrunnsflis',
+      stotte: true,
+      innhold:
+        'Ett kartbilde per flis av Kartverkets topografiske kart i gråtoner, til bakgrunnen i kartet. Gir ingen tall.',
       endepunkt: `${E.BAKGRUNN}/{z}/{y}/{x}.png`,
       tittel: 'Bakgrunnskartet',
       om: 'fliser av Kartverkets topografiske kart i gråtoner, kalt med flisen [z, x, y]. Lagres ikke: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigbuffer.',
@@ -310,8 +325,11 @@ export const katalog = {
     kommuneIPunkt: tabell<number[], { kommunenummer: string }>({
       lag: 'bronse',
       navn: 'kommuneIPunkt',
+      datasett: DATASETT.kommuner,
+      stotte: true,
+      innhold: 'Kommunenummeret for kommunen et punkt ligger i.',
       endepunkt: `${E.KOMMUNEINFO}/punkt`,
-      tittel: 'Kommune i et punkt',
+      tittel: 'Kommune i et punkt, oppslag',
       om: 'hvilken kommune et punkt i kartet ligger i, fra Kartverket, når man trykker utenfor valgt kommune. Nøkkel: punktet i hele meter.',
       kilde: KILDE.kartverket,
       husk: 20,
@@ -369,9 +387,12 @@ export const katalog = {
     temaegenskaper: tabell<[string, number], unknown>({
       lag: 'bronse',
       navn: 'temaegenskaper',
+      stotte: true,
+      innhold:
+        'Alle feltene for ett område i et av naturtemaene, slik Miljødirektoratet gir dem, med feltbeskrivelsene.',
       endepunkt: `${E.MILJO}{tjeneste}/MapServer/{lag}/query`,
       tittel: 'Alle feltene for et område',
-      om: 'alle feltene for ett område i et naturtema fra Miljødirektoratet, kalt med [tema, OBJECTID]. Til detaljene ved trykk i kartet. Felles støttedata for naturtemaene, foreløpig utenfor datasettene. Lagres ikke. Nøkkel: «tema/OBJECTID».',
+      om: 'alle feltene for ett område i et naturtema fra Miljødirektoratet, kalt med [tema, OBJECTID]. Til detaljene ved trykk i kartet. Felles for naturtemaene. Lagres ikke. Nøkkel: «tema/OBJECTID».',
       forklaring: 'Alle feltene for området man har trykket på, slått opp med OBJECTID i karttjenesten.',
       husk: 0,
       nokkel: ([t, id]) => `${t}/${id}`,
@@ -395,9 +416,9 @@ export const katalog = {
     grenseregister: tabell<void, kartverket.Grenseregister | null>({
       lag: 'bronse',
       navn: 'grenseregister',
-      datasett: DATASETT.grense,
+      datasett: DATASETT.kommuner,
       stotte: true,
-      innhold: 'Kommunene som har grensen og andelen per rute lagret sammen med siden, og når de er hentet.',
+      innhold: 'Kommunene som har grensen og kommunen i bitene lagret sammen med siden, og når de er hentet.',
       endepunkt: 'kommunegrenser.json',
       tittel: 'Lagrede kommunegrenser, register',
       om: 'kommunene som har kommunegrensen og andelen per rute i bitene lagret sammen med siden, og når de er hentet',
@@ -409,7 +430,7 @@ export const katalog = {
     grensefil: tabell<string, kartverket.LagretGrense | null>({
       lag: 'bronse',
       navn: 'grensefil',
-      datasett: DATASETT.grense,
+      datasett: DATASETT.kommuner,
       stotte: true,
       innhold: 'Grensen for én kommune slik den er lagret, i samme form som i sølv.',
       endepunkt: 'kommunegrenser/{kommunenummer}.json',
@@ -424,8 +445,11 @@ export const katalog = {
     andelfil: tabell<string, ArrayBuffer | null>({
       lag: 'bronse',
       navn: 'andelfil',
+      datasett: DATASETT.kommuner,
+      stotte: true,
+      innhold: 'Kommunen i bitene for én kommune slik den er lagret: andelen per rute som bytes, pakket med gzip.',
       endepunkt: 'kommunegrenser/{kommunenummer}-andel.bin.gz',
-      tittel: 'Lagret andel per rute',
+      tittel: 'Kommunen i bitene, lagrede filer',
       om: 'kommunens andel per rute i bitene slik den er lagret sammen med siden: svaret fra solv.kommunebiter som bytes, pakket med gzip. null når kommunen ikke er lagret.',
       teknisk: true,
       forklaring:
@@ -436,9 +460,12 @@ export const katalog = {
     kommuneareal: tabell<void, kartverket.Kommuneareal>({
       lag: 'bronse',
       navn: 'kommuneareal',
+      datasett: DATASETT.kommuner,
+      stotte: true,
+      innhold: 'Flaten innenfor grensen til hver kommune i km², etter kommunenummer, og når den ble regnet.',
       endepunkt: 'kommuneareal.json',
-      tittel: 'Flaten til kommunene',
-      om: 'flaten til hver kommune i km², med land, ferskvann og hav, regnet av Kartverkets kommunegrenser én gang og lagret sammen med siden (kommuneareal.json). Brukes foreløpig bare av tvillingen fra Figma.',
+      tittel: 'Flaten til kommunene, lagret fil',
+      om: 'flaten til hver kommune i km², med land, ferskvann og hav, regnet av Kartverkets kommunegrenser én gang og lagret sammen med siden (kommuneareal.json). Til havet i de syntetiske tallene for naturregnskapet.',
       forklaring:
         'Flaten innenfor hver kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts.',
       kilde: KILDE.kartverket,
@@ -736,7 +763,7 @@ export const katalog = {
     grense: tabell({
       lag: 'solv',
       navn: 'grense',
-      datasett: DATASETT.grense,
+      datasett: DATASETT.kommuner,
       innhold: 'Grensen som flerflate i UTM 33, utsnittet rundt den og flaten i km².',
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen som flerflate i UTM33, med utsnitt og flate i km²',
@@ -781,8 +808,11 @@ export const katalog = {
     kommuneareal: tabell<void, Record<string, number>>({
       lag: 'solv',
       navn: 'kommuneareal',
+      datasett: DATASETT.kommuner,
+      stotte: true,
+      innhold: 'Flaten innenfor grensen til hver kommune i km² (land, ferskvann og hav), etter kommunenummer.',
       tittel: 'Flaten til kommunene',
-      om: 'flaten til hver kommune i km² (land, ferskvann og hav), etter kommunenummer. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'flaten til hver kommune i km² (land, ferskvann og hav), etter kommunenummer. Til havet i de syntetiske tallene for naturregnskapet (solv.okosystemareal).',
       forklaring: 'Flaten til hver kommune fra den lagrede filen.',
       husk: 1,
       etl: solvKommune.kommuneareal
@@ -935,6 +965,10 @@ export const katalog = {
     kommunebiter: tabell<string, solvKommune.Kommunebit[]>({
       lag: 'solv',
       navn: 'kommunebiter',
+      datasett: DATASETT.kommuner,
+      stotte: true,
+      innhold:
+        'Bitene på 2048 × 2048 ruter kommunen dekker noe av, med hvor stor del av hver rute som ligger i kommunen, eller at hele biten er i kommunen, og målestokken i biten.',
       tittel: 'Kommunen i bitene',
       om: 'bitene kommunen dekker noe av (2048 x 2048 ruter à 10,6 meter), med dekningsandelen per rute som spenn (generelt/dekning.ts), eller hel når hele biten er i kommunen, og målestokken i biten',
       teknisk: true,
@@ -1078,6 +1112,8 @@ export const katalog = {
     temaegenskaper: tabell<[string, number], solvPunkt.Punktflate[]>({
       lag: 'solv',
       navn: 'temaegenskaper',
+      stotte: true,
+      innhold: 'Alle feltene for ett område i et av naturtemaene, med datoene som datoer.',
       tittel: 'Alle feltene for et område, tolket',
       om: 'alle feltene for ett område i et naturtema, med datoene som datoer. Nøkkel: «tema/OBJECTID».',
       forklaring: 'Feltene slik Miljødirektoratet gir dem, med datoene som datoer.',
