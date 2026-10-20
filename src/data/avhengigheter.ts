@@ -55,7 +55,6 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'solv.inonsoner': ['solv.inonbit'],
   'solv.inonsonerUt': ['solv.inonbit', 'solv.kommunebiter'],
   'solv.graabit': ['bronse.graabit'],
-  'solv.graa': ['solv.graabit', 'solv.kommunebiter'],
   'solv.graatrinn': ['bronse.graaflis', 'solv.graabit'],
   'solv.graatrinnUt': ['solv.graabit', 'solv.kommunebiter'],
   'solv.planIPunkt': ['bronse.planIPunkt'],
@@ -129,7 +128,8 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'gull.graaIVillrein': ['solv.graabit', 'solv.villreinAndel'],
   'gull.gronneArealer': ['gull.graa', 'solv.arealtall'],
   'gull.graakryss': ['gull.utbygging', 'solv.graabit'],
-  'gull.graa': ['solv.arealtall', 'solv.graa'],
+  'gull.graaAreal': ['solv.graabit', 'solv.kommunebiter'],
+  'gull.graa': ['gull.graaAreal', 'solv.arealtall'],
   'gull.graaIPlan': ['gull.graakryss'],
   'gull.verneomrader': ['solv.arealtall', 'solv.vernAndel', 'solv.verneomrader'],
   'gull.utbyggingIVerneomrader': [

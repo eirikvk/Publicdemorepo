@@ -318,7 +318,7 @@ tema der det finnes (`src/ui/tvilling.ts`): Utvikling fremover og Naturtapet, te
   - bare bruker typer fra gull, ikke funksjonene,
   - og fra bronse i katalogen bare kartbildene (tabeller som slutter på «flis»), slik kartet i hovedsiden gjør.
 - Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`). Lagene bare tvillingen
-  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.blokker`, detaljklassene i `solv.klasser` og `solv.graa`), flatene i gull
+  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.blokker`, detaljklassene i `solv.klasser` og `solv.graabit`), flatene i gull
   (`gull.verneformer` og `gull.verdsattVurderes`) og kartbildene fra bronse.
 - Noen tabeller bruker foreløpig bare tvillingen, og hovedsiden henter dem ikke:
   - Grunnkartet med detaljklassene (`gull/okosystemer.ts`): skog (`gull.skog`), våtmark (`gull.vatmark`), naturen i

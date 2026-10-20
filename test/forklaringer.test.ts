@@ -13,8 +13,8 @@ test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () 
   assert.ok(kilder('vern').includes('bronse.verneomrader: solv.verneomrader + solv.vernAndel + solv.verneformAndel'));
   /* en sølvtabell uten egen kilde hører til kilden for tabellen den bygger på */
   assert.ok(kilder('verdi').includes('bronse.verdsattNatur: solv.verdsattNatur + solv.verdsattAndel'));
-  /* én kilde kan justeres til to sølvtabeller */
-  assert.ok(kilder('graa').includes('bronse.graabit: solv.graabit + solv.graa'));
+  /* arealet av grått areal regnes i gull, så sølv har bare trinnet per rute */
+  assert.ok(kilder('graa').includes('bronse.graabit: solv.graabit'));
   /* egne områder i ruter hører til egne områder, ikke til rutestørrelsen */
   assert.ok(kilder('egne').includes('bronse.egne: solv.egne + solv.egneruter'));
 });

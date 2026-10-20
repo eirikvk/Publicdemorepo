@@ -986,39 +986,38 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
 
 ### Fra kilde til tall
 
-1. **Arealtall fra SSB** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealet i km² per arealklasse i nyeste år. Svarer ikke API-et, spørres
-   det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
-   natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Grått areal, kartbilder** (`bronse.graabit` → `solv.graabit` → `solv.graa`). Hentes fra
-   `https://wms.nibio.no/cgi-bin/graastruktur`: To bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått
-   areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs
-   kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [NIBIO, Miljødirektoratet,
-   Kartverket og SSB, Kart over grå arealer, testversjon 1
-   (2025)](https://kartkatalog.geonorge.no/metadata/uuid/c5f09d79-1546-495c-8b36-91efd4008bd7), Norge digitalt-lisensen. Justeres:
-   En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått
-   uten oppgitt andel, som veier, for seg. Justeres: Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles
-   med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
-3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+1. **Grått areal, kartbilder** (`bronse.graabit` → `solv.graabit`). Hentes fra `https://wms.nibio.no/cgi-bin/graastruktur`: To
+   bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått areal, og flatene med andel vegetasjon, der
+   trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene. En bit er 21,7 km på hver side, og
+   kommunen hentes i så mange biter som trengs. Kilde: [NIBIO, Miljødirektoratet, Kartverket og SSB, Kart over grå arealer,
+   testversjon 1 (2025)](https://kartkatalog.geonorge.no/metadata/uuid/c5f09d79-1546-495c-8b36-91efd4008bd7), Norge
+   digitalt-lisensen. Justeres: En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50,
+   50–75 eller 75–100 %, og grått uten oppgitt andel, som veier, for seg.
+2. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-4. **Grått areal** (`gull.graa`). Antall ruter per trinn regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall, og
-   andelen av landarealet regnes ut.
-5. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-6. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Midtpunktet i hver rute med planlagt utbygging på land slås opp i
+3. **Arealtall fra SSB** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
+   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealet i km² per arealklasse i nyeste år. Svarer ikke API-et, spørres
+   det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
+   natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
+4. **Areal av grått areal** (`gull.graaAreal`). Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med
+   den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten. Antall ruter ganger
+   arealet av en rute (10,6 × 10,6 meter) er arealet, rundet til 10 dekar per trinn.
+5. **Grått areal** (`gull.graa`). Arealet per trinn og samlet, avrundet til nærmeste 10 dekar som SSBs tall, og andelen av
+   landarealet.
+6. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+7. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Midtpunktet i hver rute med planlagt utbygging på land slås opp i
    bildet av grått areal. Her er alle ruter med, også der det alt er bebygd og i smale striper. Grønt i bebygd område er ruter som
    er bebygd i grunnkartet, men ikke grå.
-7. **Grått areal i planen** (`gull.graaIPlan`). Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon
+8. **Grått areal i planen** (`gull.graaIPlan`). Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon
    (trinnene fra 50 % og opp), og på grønt i bebygd område.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
-- **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
-  ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
@@ -1027,6 +1026,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
+- **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
+  ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
@@ -1041,8 +1042,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`,
-`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/gull/graa.ts`. Kortet: `src/ui/komponenter/Graa.tsx`.
+`src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
+`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/gull/graa.ts`. Kortet: `src/ui/komponenter/Graa.tsx`.
 
 <!-- /forklaringer:graa -->
 
@@ -1588,6 +1589,11 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Arealet av grått areal i gull, 20. oktober 2026.** Det samme som for inngrepsfri natur: arealet av grått areal i kommunen ble
+talt i sølv (`solv.graa`). Nå regnes det i gull og lagres, i `gull.graaAreal`, med arealet per trinn og samlet i km², rundet til 10
+dekar som før. Sølv har bare trinnet per rute (`solv.graabit`). Siden om grått areal leser arealet derfra. Tallene er ikke endret, og
+regresjonstesten for Trondheim, Surnadal og Oslo ga ingen avvik. Testet i Chromium, ikke på iPhone.
 
 **Arealet av inngrepsfri natur i gull, 20. oktober 2026.** Inngrepsfri natur er ett datasett i sølv med år: én rad per rute og
 år, med sonen (`solv.inonbit`). Arealet i kommunen ble talt i sølv, i to tabeller med den samme utregningen: én for nyeste år

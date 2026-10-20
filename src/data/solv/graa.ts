@@ -1,5 +1,5 @@
 /* Sølv for grått areal: de to bildene av hver bit fra kart over grå arealer (NIBIO, testversjon) gjort om til trinn per rute, etter
-   andel vegetasjon, og trinnene talt i kommunen. Grått areal er areal som alt er tatt i bruk eller sterkt påvirket av bygge- og
+   andel vegetasjon. Arealet i kommunen regnes i gull (gull.graaAreal). Grått areal er areal som alt er tatt i bruk eller sterkt påvirket av bygge- og
    anleggsaktivitet. Og trinnet per piksel i kartet, én sannhet per nivå (solv.graatrinn og solv.graatrinnUt, se nivaer.ts), med
    grønt i bebygd område etter den samme regelen som tallene (graaOgGront). */
 import { katalog } from '../katalog.ts';
@@ -7,7 +7,6 @@ import { arbeid } from './arbeid.ts';
 import { FLISNIVA, bitAv, bitRuter, type Flis, type Rutebilde } from './felles.ts';
 import { iBlokk, type Klasser } from './grunnkart.ts';
 import { BEB } from './klasser.ts';
-import { tellIKommune, type Bitruter } from './kommune.ts';
 import { biterIFlisen, flestIFlisen, graaHalvpart, rutenIFlis } from './nivaer.ts';
 export { GRAATRINN, ellerTom, graaTrinn, tolkGraa } from './tolking.ts';
 
@@ -28,17 +27,6 @@ export async function graabit(tc: Flis): Promise<Graatrinn> {
   const [P, V] = await Promise.all([0, 1].map(lag => katalog.bronse.graabit([lag, tc])));
   return { ...bitRuter(tc), kl: await arbeid<Uint8Array | null>({ type: 'graa', P, V }) };
 }
-/* Tabellen solv.graa: antall ruter per trinn (plass 1–6) innenfor kommunen nr, og bitene kommunen har ruter i */
-export async function graa(nr: string): Promise<Bitruter> {
-  return tellIKommune(
-    nr,
-    7,
-    tc => katalog.solv.graabit(tc).then(D => D.kl),
-    t => t || null,
-    0
-  );
-}
-
 /* Tabellen solv.graatrinn: trinnet per piksel i flisen tc [z, x, y] fra nivå 10, 0 for ikke grått. På nivå 10 er det rutene i biten
    tallene regnes av (solv.graabit), så kartet henter ingenting nytt. Finere nivåer leses av de to kartbildene for flisen
    (bronse.graaflis) med den samme funksjonen som bitene (tolkGraa): skarpere, men ingen tall regnes av dem. */

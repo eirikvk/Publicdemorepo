@@ -1,4 +1,5 @@
-/* Gull for grått areal: arealet per trinn i kommunen (gull.graa), og kryssingen med utbyggingen (gull.graakryss og gull.graaIPlan).
+/* Gull for grått areal: arealet per trinn i kommunen, regnet én gang og lagret (gull.graaAreal), det temasiden viser (gull.graa), og
+   kryssingen med utbyggingen (gull.graakryss og gull.graaIPlan).
    Grått areal krysses med utbyggingen for seg, ikke som en kolonne, fordi det også teller planlagt utbygging der det alt er bebygd,
    og grønt i bebygd område. Kryssingen regnes for et utvalg av utbyggingen (Utvalg i gull/utbygging.ts): den nye planen eller den
    gamle, i hele kommunen eller i ett eget område, med den samme funksjonen. Nøkkelen er utvalget, som 5001 eller 5001/gammel. */
@@ -8,7 +9,7 @@ import { egenKopi } from '../generelt/kopi.ts';
 import { katalog } from '../katalog.ts';
 import { bitAv, flisnavn, ruteKm2, ruteX, ruteY, type Flis } from '../solv/felles.ts';
 import { graaVed, type Graatrinn } from '../solv/graa.ts';
-import { BITRES, tellIBitene } from '../solv/kommune.ts';
+import { BITRES, tellIBitene, tellIKommune } from '../solv/kommune.ts';
 import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Kommunebilde } from './felles.ts';
 import { lesUtvalg, type Utbygging, type Utvalg } from './utbygging.ts';
 
@@ -164,9 +165,26 @@ export async function graaIPlan(n: string): Promise<GraaIPlan | null> {
    arealer ikke har noe i kommunen. Arealet samlet (sum) og per trinn (trinn) står med uansett. */
 export type Graavisning = ReturnType<typeof byggGraa> & { sum: number; trinn: number[] };
 export async function graa(nr: string): Promise<Graavisning> {
-  const [S, land] = await Promise.all([katalog.solv.graa(nr), landareal(nr)]),
-    A = arealFraRuter(S.n, S.res, S.skala);
+  const [A, land] = await Promise.all([katalog.gull.graaAreal(nr), landareal(nr)]);
   return { ...byggGraa({ nr, tilstand: 'ok', trinn: A.km2, sum: A.sum }, land), sum: A.sum, trinn: A.km2 };
+}
+/* Arealet av grått areal i kommunen: km² per trinn (plass 1–6, plass 0 er ikke grått og står tom) og samlet, rundet til 10 dekar */
+export interface GraaAreal {
+  km2: number[];
+  sum: number;
+}
+/* Tabellen gull.graaAreal: arealet av grått areal per trinn i kommunen nr. Rutene på 10,6 meter (solv.graabit) telles per trinn i
+   kommunen, og en rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), rettet for
+   målestokken. Antall ruter ganger arealet av en rute er arealet. */
+export async function graaAreal(nr: string): Promise<GraaAreal> {
+  const S = await tellIKommune(
+    nr,
+    7,
+    tc => katalog.solv.graabit(tc).then(D => D.kl),
+    t => t || null,
+    0
+  );
+  return arealFraRuter(S.n, S.res, S.skala);
 }
 
 /* Grått areal i villreinområdene: arealet av villreinområdene i kommunen (villrein), det grå arealet i dem (sum), og andelen av

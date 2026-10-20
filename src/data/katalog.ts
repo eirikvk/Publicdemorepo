@@ -959,16 +959,6 @@ export const katalog = {
       etl: solvGraa.graabit,
       eksempel: flisMidt(BITNIVA)
     }),
-    graa: tabell({
-      lag: 'solv',
-      navn: 'graa',
-      tittel: 'Grått areal i kommunen',
-      om: 'antall ruter à 10,6 meter per trinn innenfor kommunen, og bitene kommunen har ruter i',
-      forklaring:
-        'Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.',
-      husk: 3,
-      etl: solvGraa.graa
-    }),
     graatrinn: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinn',
@@ -1674,13 +1664,23 @@ export const katalog = {
       gammelFast: true,
       etl: gullGraa.graakryss
     }),
+    graaAreal: tabell<string, gullGraa.GraaAreal>({
+      lag: 'gull',
+      navn: 'graaAreal',
+      tittel: 'Areal av grått areal',
+      om: 'arealet av grått areal per trinn i kommunen, i km² rundet til 10 dekar, regnet av rutene på 10,6 meter',
+      forklaring:
+        'Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten. Antall ruter ganger arealet av en rute (10,6 × 10,6 meter) er arealet, rundet til 10 dekar per trinn.',
+      husk: 40,
+      etl: gullGraa.graaAreal
+    }),
     graa: tabell({
       lag: 'gull',
       navn: 'graa',
       tittel: 'Grått areal',
       om: 'grått areal: arealet samlet og per trinn, og andelen av landarealet',
       forklaring:
-        'Antall ruter per trinn regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall, og andelen av landarealet regnes ut.',
+        'Arealet per trinn og samlet, avrundet til nærmeste 10 dekar som SSBs tall, og andelen av landarealet.',
       usikkerhet: ['Grått betyr ikke ledig. Kartet skiller ikke et boligområde i bruk fra en nedlagt industritomt.'],
       husk: 6,
       etl: gullGraa.graa

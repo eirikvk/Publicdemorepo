@@ -114,7 +114,7 @@ export async function trykkIKartet(e: MapBrowserEvent) {
   const [kl, pv, graa, sone] = await Promise.all([
     slaaOpp(klasserIFlis),
     planVises ? slaaOpp(tc => planIFlis(tc, ui.visSmale)) : 0,
-    talt(katalog.solv.graa) ? slaaOpp(graaIFlis) : null,
+    talt(katalog.gull.graaAreal) ? slaaOpp(graaIFlis) : null,
     talt(katalog.gull.inonAreal) ? slaaOpp(soneIFlis) : null
   ]);
   /* et nyere trykk, et trykk utenfor kommunen, en annen kommune eller tegning har tatt over */
