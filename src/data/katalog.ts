@@ -1103,7 +1103,7 @@ export const katalog = {
       tittel: 'Verneområdene per rute, per verneform',
       om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med én kategori per gruppe av verneformer (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning), og arealet per gruppe',
       forklaring:
-        'Som verneområdene per rute, men delt på gruppene av verneformer. Der områder fra ulike grupper overlapper, telles ruta i den første gruppen, så gruppene summerer til det vernede arealet. Brukes når det vernede arealet deles på land og sjø.',
+        'Som verneområdene per rute, men delt på gruppene av verneformer. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av dem, og gruppene viser hele arealet med hver verneform. Der grupper overlapper, blir summen av gruppene større enn det vernede arealet. Brukes når det vernede arealet deles på land og sjø.',
       etterBehov: true,
       husk: 12,
       etl: solvTemaer.verneformAndel
@@ -1210,9 +1210,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'vernLandSjo',
       tittel: 'Vernet areal på land og i sjø',
-      om: 'det vernede arealet i kommunen i km² per gruppe av verneformer, alle seks gruppene, på land og i sjø, av blokkene på 10,6 meter i grunnkartet og verneområdene per rute (solv.verneformAndel). Sjø er hav i grunnkartet; land er alt annet, også innsjøer og elver. Lagret for noen kommuner, ellers hentet fra NIBIO.',
+      om: 'det vernede arealet i kommunen i km² per gruppe av verneformer, alle seks gruppene, og arealet som er telt i flere grupper, på land og i sjø, av blokkene på 10,6 meter i grunnkartet og verneområdene per rute (solv.verneformAndel og solv.vernAndel). Sjø er hav i grunnkartet; land er alt annet, også innsjøer og elver. Lagret for noen kommuner, ellers hentet fra NIBIO.',
       forklaring:
-        'Hvor mye av det vernede som ligger på land og hvor mye i sjø, per verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Der verneområder overlapper, telles arealet én gang. Ruter uten klasse i grunnkartet er ikke med.',
+        'Hvor mye av det vernede som ligger på land og hvor mye i sjø, per verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Et sted med flere verneformer telles i hver av dem, så hver verneform har hele arealet sitt. Det som er telt mer enn én gang, står for seg: gruppene minus det gir det vernede arealet, der overlapp telles én gang. Ruter uten klasse i grunnkartet er ikke med.',
       usikkerhet: [
         'Arealet er talt i ruter på 10,6 meter og kan avvike litt fra arealet av flatene. Grensen mellom land og sjø er grunnkartets, som kan være en annen enn verneområdets egen.'
       ],

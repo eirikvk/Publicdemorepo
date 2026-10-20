@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import type { Kartleggingen, TemaIPlan, Temaet } from '../../data/gull/temaer.ts';
 import type { Rad } from '../../data/cache.ts';
-import type { Naturtema as Tema } from '../../data/solv/temaer.ts';
+import { FLERE_VERNEFORMER, type Naturtema as Tema } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { settSlor, visIKartet } from '../kart/naturtema.ts';
@@ -114,10 +114,13 @@ function VernLandSjo() {
   if (!R) return null;
   if (R.status === 'henter') return <p className="hint">Regner ut det vernede arealet på land og i sjø …</p>;
   if (R.status === 'feil' || !R.verdi) return null;
-  const V = R.verdi.filter(g => g.land + g.sjo > 0);
+  /* verneformene med areal, og arealet som er telt i mer enn én av dem, som trekkes fra i summen */
+  const V = R.verdi.filter(g => g.gruppe !== FLERE_VERNEFORMER && g.land + g.sjo > 0),
+    F = R.verdi.find(g => g.gruppe === FLERE_VERNEFORMER && g.land + g.sjo > 0);
   if (!V.length) return null;
   const tall = (km2: number) => (km2 ? dekar(km2).replace(' daa', '') : '0'),
-    sum = (f: (g: (typeof V)[number]) => number) => V.reduce((a, g) => a + f(g), 0);
+    minus = (km2: number) => (km2 ? '−' + tall(km2) : '0'),
+    sum = (f: (g: (typeof V)[number]) => number) => V.reduce((a, g) => a + f(g), 0) - (F ? f(F) : 0);
   return (
     <>
       <Talltabell
@@ -128,6 +131,14 @@ function VernLandSjo() {
             navn: g.navn,
             tall: [[tall(g.land)], [tall(g.sjo)], [tall(g.land + g.sjo)]] as [string][]
           })),
+          ...(F
+            ? [
+                {
+                  navn: F.navn,
+                  tall: [[minus(F.land)], [minus(F.sjo)], [minus(F.land + F.sjo)]] as [string][]
+                }
+              ]
+            : []),
           ...(V.length > 1
             ? [
                 {
@@ -142,8 +153,10 @@ function VernLandSjo() {
         ]}
       />
       <p className="hint">
-        Talt i rutene i grunnkartet fra NIBIO: sjø er hav i grunnkartet, land er alt annet, også innsjøer og elver. Der
-        områder overlapper, telles arealet én gang.
+        Talt i rutene i grunnkartet fra NIBIO: sjø er hav i grunnkartet, land er alt annet, også innsjøer og elver.{' '}
+        {F
+          ? 'Et sted med flere verneformer er med i hver av dem. Det som er telt mer enn én gang, er trukket fra, så summen er det vernede arealet.'
+          : 'Der områder overlapper, telles arealet én gang.'}
       </p>
     </>
   );

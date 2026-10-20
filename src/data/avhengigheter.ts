@@ -81,7 +81,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
     'solv.kommunebiter',
     'solv.vernAndel'
   ],
-  'gull.vernLandSjo': ['solv.blokker', 'solv.klasser', 'solv.verneformAndel'],
+  'gull.vernLandSjo': ['solv.blokker', 'solv.klasser', 'solv.vernAndel', 'solv.verneformAndel'],
   'gull.skog': ['gull.detaljareal'],
   'gull.vatmark': ['gull.detaljareal'],
   'gull.vernetNatur': ['gull.detaljareal', 'gull.detaljerIVerneomrader'],

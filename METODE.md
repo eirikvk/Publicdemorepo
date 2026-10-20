@@ -683,7 +683,8 @@ begge og forskjellen.
 
 **Kort fortalt.** Verneområdene kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er
 områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen som ligger i
-et verneområde. Tabellen per verneform deler det vernede på land og sjø etter grunnkartet fra NIBIO, der sjø er hav.
+et verneområde. Tabellen per verneform deler det vernede på land og sjø etter grunnkartet fra NIBIO, der sjø er hav. Der
+verneformer overlapper, telles arealet i hver av dem, og det som er telt mer enn én gang, trekkes fra i summen.
 
 **Tabeller.** Kortet viser `gull.verneomrader`, `gull.verneomraderIPlan` og `gull.vernLandSjo`. Det står i
 `src/ui/komponenter/Naturtema.tsx`.
@@ -732,8 +733,9 @@ vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
    dekningsandelen i ruter på 10,6 meter. Justeres: Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i
    bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir
    arealet av verneområdene i kommunen, og brukes når de krysses med utbyggingen og detaljklassene. Justeres: Som verneområdene
-   per rute, men delt på gruppene av verneformer. Der områder fra ulike grupper overlapper, telles ruta i den første gruppen, så
-   gruppene summerer til det vernede arealet. Brukes når det vernede arealet deles på land og sjø.
+   per rute, men delt på gruppene av verneformer. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av
+   dem, og gruppene viser hele arealet med hver verneform. Der grupper overlapper, blir summen av gruppene større enn det vernede
+   arealet. Brukes når det vernede arealet deles på land og sjø.
 4. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og
    underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype.
@@ -804,8 +806,9 @@ vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
     for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område
     regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.
 16. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
-    verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Der
-    verneområder overlapper, telles arealet én gang. Ruter uten klasse i grunnkartet er ikke med.
+    verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Et sted med
+    flere verneformer telles i hver av dem, så hver verneform har hele arealet sitt. Det som er telt mer enn én gang, står for
+    seg: gruppene minus det gir det vernede arealet, der overlapp telles én gang. Ruter uten klasse i grunnkartet er ikke med.
 17. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to
     områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
@@ -1589,6 +1592,15 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Hver verneform med hele arealet sitt, 20. oktober 2026.** Det vernede arealet per verneform (`gull.vernLandSjo`) talte et sted
+med flere verneformer bare i den første, i rekkefølgen nasjonalpark, naturreservat, landskapsvernområde, marint verneområde,
+artsfredning og annen fredning. Et naturreservat inne i en nasjonalpark var dermed ikke med i tallet for naturreservat. Nå regnes hver
+gruppe for seg i sølv (`solv.verneformAndel`), så hver verneform har hele arealet sitt, og summen av gruppene kan bli større enn det
+vernede arealet. Det som er telt mer enn én gang, står i en egen rad, «Telt i flere verneformer»: summen av gruppene minus
+verneområdene slått sammen (`solv.vernAndel`), talt i de samme rutene i grunnkartet. Hovedsiden trekker raden fra, så summen i
+tabellen er det vernede arealet. Tvillingen viser stolpene per verneform som før, med en merknad når noe er telt i flere. Tallene
+endres bare der verneformer overlapper.
 
 **Arealet av grått areal i gull, 20. oktober 2026.** Det samme som for inngrepsfri natur: arealet av grått areal i kommunen ble
 talt i sølv (`solv.graa`). Nå regnes det i gull og lagres, i `gull.graaAreal`, med arealet per trinn og samlet i km², rundet til 10

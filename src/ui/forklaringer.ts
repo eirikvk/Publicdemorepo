@@ -239,7 +239,7 @@ export const KORT: Kort[] = [
     komponent: NATUR,
     sporsmal: 'Hvor mye av kommunen er verneområder, og hvor mye planlagt utbygging ligger innenfor?',
     kortFortalt:
-      'Verneområdene kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen som ligger i et verneområde. Tabellen per verneform deler det vernede på land og sjø etter grunnkartet fra NIBIO, der sjø er hav.',
+      'Verneområdene kommer fra Miljødirektoratet. Hvert område klippes mot kommunegrensen, og arealet i kommunen er områdene slått sammen, så overlapp telles én gang. Planlagt utbygging innenfor er den delen av rutene i utbyggingen som ligger i et verneområde. Tabellen per verneform deler det vernede på land og sjø etter grunnkartet fra NIBIO, der sjø er hav. Der verneformer overlapper, telles arealet i hver av dem, og det som er telt mer enn én gang, trekkes fra i summen.',
     tabeller: ['gull.verneomrader', 'gull.verneomraderIPlan', 'gull.vernLandSjo'],
     regnestykke: hent => {
       const T = hent(katalog.gull.verneomrader);

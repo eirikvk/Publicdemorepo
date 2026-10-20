@@ -8,7 +8,7 @@ import { useState, type ReactNode } from 'react';
 import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
-import { NATURTEMA } from '../../src/data/solv/temaer.ts';
+import { FLERE_VERNEFORMER, NATURTEMA } from '../../src/data/solv/temaer.ts';
 import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../tekst.ts';
 import { MdCheckbox } from '../md.ts';
 import Kart, { type Kartlag } from '../komponenter/Kart.tsx';
@@ -510,21 +510,32 @@ function Vern({ tema }: { tema: Tema }) {
           }
           kilder={['grunnkart', 'vern']}
         >
-          {svar(L, l => (
-            <>
-              <div className="figur-valg">
-                <MdCheckbox label="Landareal" checked={land} onChange={e => settLand(e.target.checked)} />
-                <MdCheckbox label="Sjøareal" checked={sjo} onChange={e => settSjo(e.target.checked)} />
-              </div>
-              <Stolper
-                hva="Vernet areal per verneform"
-                data={VERNEFORMER_I_FIGUREN.map(id => {
-                  const x = l.find(g => g.gruppe === id)!;
-                  return { navn: x.navn, km2: (land ? x.land : 0) + (sjo ? x.sjo : 0), farge: VERNEFORMFARGE[id] };
-                })}
-              />
-            </>
-          ))}
+          {svar(L, l => {
+            const valgt = (x: { land: number; sjo: number }) => (land ? x.land : 0) + (sjo ? x.sjo : 0),
+              F = l.find(g => g.gruppe === FLERE_VERNEFORMER),
+              flere = F ? valgt(F) : 0;
+            return (
+              <>
+                <div className="figur-valg">
+                  <MdCheckbox label="Landareal" checked={land} onChange={e => settLand(e.target.checked)} />
+                  <MdCheckbox label="Sjøareal" checked={sjo} onChange={e => settSjo(e.target.checked)} />
+                </div>
+                <Stolper
+                  hva="Vernet areal per verneform"
+                  data={VERNEFORMER_I_FIGUREN.map(id => {
+                    const x = l.find(g => g.gruppe === id)!;
+                    return { navn: x.navn, km2: valgt(x), farge: VERNEFORMFARGE[id] };
+                  })}
+                />
+                {flere > 0 && (
+                  <p className="hint">
+                    {iTekst(flere)} har mer enn én verneform og er med i hver av dem, så stolpene til sammen er mer enn
+                    det vernede arealet.
+                  </p>
+                )}
+              </>
+            );
+          })}
         </Figur>
       )}
       <Figur

@@ -333,7 +333,7 @@ tema der det finnes (`src/ui/tvilling.ts`): Utvikling fremover og Naturtapet, te
     hovedøkosystem (`gull.okosystemregnskap`). De samme for alle kommunene (`gull.okosystemerNorge`, ett kall til SSB) gir
     sammenligningen med Norge (`gull.sammenligning`). De to regnes først når tvillingen ber om dem (`etterBehov`), så hovedsiden
     henter dem ikke. Se METODE.md, SSB-tallene.
-  - Naturtemaene (`gull/temaer.ts`, `gull/grunnkart.ts` og `gull/inon.ts`): vernet areal per gruppe av verneformer, på land og i sjø (`gull.vernLandSjo`, etter behov), villreinområdene med
+  - Naturtemaene (`gull/temaer.ts`, `gull/grunnkart.ts` og `gull/inon.ts`): vernet areal per gruppe av verneformer, på land og i sjø, med det som er telt i flere verneformer for seg (`gull.vernLandSjo`, etter behov), villreinområdene med
     andelen (`gull.villreinPerOmrade`), verdsatt natur per naturtype (`gull.verdsattPerNaturtype`) og inngrepsfri natur i
     villreinområdene (`gull.inonIVillrein`), også over tid (`gull.inonIVillreinUtvikling`, etter behov). Og det som var merket «Kan regnes ut»: verdsatt natur som vurderes per lokalitet eller
     per naturtype (`gull.verdsattVurderes`), verneområdene med gruppen for verneformen (`gull.verneformer`), grått areal i

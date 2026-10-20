@@ -2,13 +2,14 @@
    lagrede klasser ligger blokkene ferdig sammen med siden. For de andre lager sølv dem av kartbildene fra NIBIO når kommunen velges,
    med den samme funksjonen som laget de lagrede. Utbyggingen (gull/utbygging.ts) regnes av blokkene, og kartet tegner dem zoomet ut.
    Nederst arealet per detaljklasse, i hele kommunen (gull.detaljareal) og i verneområdene (gull.detaljerIVerneomrader), som
-   foreløpig bare tvillingen fra Figma bruker, og det vernede arealet på land og i sjø per gruppe av verneformer (gull.vernLandSjo). */
+   foreløpig bare tvillingen fra Figma bruker, og det vernede arealet på land og i sjø per gruppe av verneformer, med det som er telt i flere grupper (gull.vernLandSjo). */
 import { katalog } from '../katalog.ts';
 import { FLISNIVA, bitAv, ruteM } from '../solv/felles.ts';
 import { tellIKommunen } from '../solv/grunnkart.ts';
 import { kommuneIBlokk, type Andelsbit } from '../solv/kommune.ts';
 import { DETALJKLASSER } from '../solv/klasser.ts';
-import { VERNEFORMGRUPPER } from '../solv/temaer.ts';
+import { FLERE_VERNEFORMER, VERNEFORMGRUPPER } from '../solv/temaer.ts';
+import { summen } from '../generelt/tall.ts';
 import { arealFraRuter, tiDekar } from './felles.ts';
 
 /* Dagens klasser for hele kommunen: om kommunen har lagrede klasser (lagret), og hvor mange blokker den har (blokker) */
@@ -95,21 +96,31 @@ export interface VernLandSjo {
   ukjent: number;
 }
 /* Tabellen gull.vernLandSjo: det vernede arealet i kommunen nr per gruppe av verneformer (VERNEFORMGRUPPER), alle gruppene i den
-   rekkefølgen, også de uten areal. Hver rute teller med den delen av den som ligger i gruppen og i kommunen (solv.verneformAndel), og
-   klassen i grunnkartet sier om ruta er sjø (hav) eller land (alt annet, også innsjøer og elver). Der grupper overlapper, telles ruta
-   i den første gruppen. Blokkene leses én gang for alle gruppene, seks om gangen. null når kommunen ikke har noen blokker. */
+   rekkefølgen, også de uten areal, og til slutt arealet som er telt i mer enn én gruppe (FLERE_VERNEFORMER). Hver rute teller med den
+   delen av den som ligger i gruppen og i kommunen (solv.verneformAndel), og klassen i grunnkartet sier om ruta er sjø (hav) eller land
+   (alt annet, også innsjøer og elver). Et sted med flere verneformer er med i hver av dem, så gruppene viser hele arealet med hver
+   verneform. Det som er telt mer enn én gang, er summen av gruppene minus verneområdene slått sammen (solv.vernAndel), talt i de samme
+   rutene: gruppene minus det gir det vernede arealet. Blokkene leses én gang for alle lagene, seks om gangen. null når kommunen ikke
+   har noen blokker. */
 export async function vernLandSjo(nr: string): Promise<VernLandSjo[] | null> {
-  const [L, A] = await Promise.all([katalog.solv.blokker([nr, FLISNIVA]), katalog.solv.verneformAndel(nr)]);
+  const [L, A, U] = await Promise.all([
+    katalog.solv.blokker([nr, FLISNIVA]),
+    katalog.solv.verneformAndel(nr),
+    katalog.solv.vernAndel(nr)
+  ]);
   if (!L.length) return null;
-  const n = A.biter.map(() => new Array<number>(DETALJKLASSER.length + 1).fill(0)),
+  /* lagene som telles: gruppene, og til slutt alle verneområdene slått sammen */
+  const lag = [...A.biter, U.biter[0]],
+    G = A.biter.length,
+    n = lag.map(() => new Array<number>(DETALJKLASSER.length + 1).fill(0)),
     ko = L.filter(tc => {
       const b = bitAv(tc);
-      return A.biter.some(KB => KB.some(K => K.tc[1] === b[1] && K.tc[2] === b[2]));
+      return lag.some(KB => KB.some(K => K.tc[1] === b[1] && K.tc[2] === b[2]));
     });
   await Promise.all(
     Array.from({ length: 6 }, async () => {
       for (let b = ko.shift(); b; b = ko.shift()) {
-        const andeler = A.biter.map(KB => kommuneIBlokk(KB, b));
+        const andeler = lag.map(KB => kommuneIBlokk(KB, b));
         if (andeler.every(D => D.andel && !D.andel.a.length)) continue;
         const K = { kl: (await katalog.solv.klasser(b)).detalj };
         andeler.forEach((D, k) => {
@@ -120,9 +131,16 @@ export async function vernLandSjo(nr: string): Promise<VernLandSjo[] | null> {
     })
   );
   const res = ruteM(FLISNIVA),
-    hav = DETALJKLASSER.findIndex(k => k.id === 'hav');
-  return VERNEFORMGRUPPER.map(([gruppe, navn], k) => {
-    const { km2, sum } = arealFraRuter(n[k].slice(1), res, 1e6);
-    return { gruppe, navn, land: tiDekar(sum - km2[hav]), sjo: km2[hav], ukjent: tiDekar((n[k][0] * res * res) / 1e6) };
-  });
+    hav = DETALJKLASSER.findIndex(k => k.id === 'hav'),
+    rad = (gruppe: string, navn: string, t: number[]): VernLandSjo => {
+      const { km2, sum } = arealFraRuter(t.slice(1), res, 1e6);
+      return { gruppe, navn, land: tiDekar(sum - km2[hav]), sjo: km2[hav], ukjent: tiDekar((t[0] * res * res) / 1e6) };
+    },
+    /* per klasse: summen av gruppene minus det samlede, aldri under null (andelene per gruppe og samlet kan avrundes ulikt i
+       kantrutene) */
+    flere = n[G].map((u, i) => Math.max(0, summen(n.slice(0, G).map(t => t[i])) - u));
+  return [
+    ...VERNEFORMGRUPPER.map(([gruppe, navn], k) => rad(gruppe, navn, n[k])),
+    rad(FLERE_VERNEFORMER, 'Telt i flere verneformer', flere)
+  ];
 }

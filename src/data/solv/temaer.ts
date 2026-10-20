@@ -17,6 +17,7 @@ import {
   type Utsnitt
 } from '../generelt/geometri.ts';
 import { summen } from '../generelt/tall.ts';
+import { egenKopi } from '../generelt/kopi.ts';
 import { andelSum, dekningI, ringer, type Ringer } from '../generelt/dekning.ts';
 import { katalog } from '../katalog.ts';
 import { biterI, m2PerKm2, rutenett } from './felles.ts';
@@ -73,6 +74,8 @@ export const VERNEFORMGRUPPER: [id: string, navn: string][] = [
   ['arts', 'Artsfredning'],
   ['annen', 'Annen fredning']
 ];
+/* Gruppen i gull.vernLandSjo for arealet som er telt i mer enn én gruppe av verneformer */
+export const FLERE_VERNEFORMER = 'flere';
 /* Gruppen for verneformen slik Miljødirektoratet skriver den (som MarintVerneomraade eller Dyrefredningsomraade) */
 export function verneformgruppe(verneform: unknown): string {
   const v = String(verneform || '').toLowerCase();
@@ -314,7 +317,8 @@ export async function verdsattVurderes(nr: string): Promise<Temaomrader> {
    som vurderes per kategori, det kartlagte, og verdsatt natur innenfor det kartlagte */
 export type Temaid = 'vern' | 'verneform' | 'rein' | 'verdi' | 'vurderes' | 'kartlagt' | 'verdiKartlagt';
 /* Et tema i kommunen som dekningsandel: bitene per kategori med andelen per rute (biter, se andelsbiter i kommune.ts), arealet per
-   kategori i km² og samlet (sum). Der flater overlapper, telles arealet én gang, i den første kategorien (høyest verdi først). */
+   kategori i km² og samlet (sum). Der flater overlapper, telles arealet én gang, i den første kategorien (høyest verdi først),
+   unntatt i verneformene, der hver kategori regnes for seg (solv.verneformAndel). */
 export interface Temaandel {
   nr: string;
   tema: Temaid;
@@ -355,7 +359,8 @@ async function temaandel(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[
       kat.map((_, i) => m + i)
     ),
     km2 = biter.map(L => (summen(L.map(K => K.antall * K.faktor)) * BITRES * BITRES) / 1e6);
-  return { nr, tema, biter, km2, sum: summen(km2) };
+  /* tallene kopieres, for temaet regnes for flere utvalg etter hverandre (generelt/kopi.ts); bitene deles med vilje */
+  return { nr, tema, biter, ...egenKopi({ km2, sum: summen(km2) }) };
 }
 /* Tabellene solv.vernAndel, solv.villreinAndel, solv.verdsattAndel, solv.vurderesAndel, solv.kartlagtAndel og
    solv.verdsattIKartlagtAndel: temaet i kommunen nr som dekningsandel (temaandel). Verdsatt natur og verdsatt natur som vurderes har
@@ -364,17 +369,20 @@ export async function vernAndel(nr: string): Promise<Temaandel> {
   return temaandel(nr, 'vern', perKategori((await katalog.solv.verneomrader(nr)).omrader, 1));
 }
 /* Tabellen solv.verneformAndel: verneområdene som dekningsandel med én kategori per gruppe av verneformer, i rekkefølgen i
-   VERNEFORMGRUPPER. Der områder fra ulike grupper overlapper, telles ruta i den første gruppen, så gruppene summerer til det samme
-   som solv.vernAndel. */
+   VERNEFORMGRUPPER. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av dem: arealet per gruppe er hele
+   arealet med den verneformen. Der grupper overlapper, blir summen av gruppene (sum) derfor større enn det vernede arealet i
+   solv.vernAndel, der overlapp telles én gang. */
 export async function verneformAndel(nr: string): Promise<Temaandel> {
-  const O = (await katalog.solv.verneomrader(nr)).omrader;
-  return temaandel(
-    nr,
-    'verneform',
-    VERNEFORMGRUPPER.map(([id]) =>
-      ringer(O.filter(o => verneformgruppe(o.egenskaper.verneform) === id).map(o => o.koord))
-    )
-  );
+  const O = (await katalog.solv.verneomrader(nr)).omrader,
+    G = await Promise.all(
+      VERNEFORMGRUPPER.map(([id]) =>
+        temaandel(nr, 'verneform', [
+          ringer(O.filter(o => verneformgruppe(o.egenskaper.verneform) === id).map(o => o.koord))
+        ])
+      )
+    ),
+    km2 = G.map(A => A.km2[0]);
+  return { nr, tema: 'verneform', biter: G.map(A => A.biter[0]), ...egenKopi({ km2, sum: summen(km2) }) };
 }
 export async function villreinAndel(nr: string): Promise<Temaandel> {
   return temaandel(nr, 'rein', perKategori((await katalog.solv.villrein(nr)).omrader, 1));
