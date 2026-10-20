@@ -22,12 +22,16 @@ import {
   VURDERES,
   verneformgruppe,
   naturSok,
+  perKategori,
+  temabiter,
   type Kartlagt,
   type Omradesok,
   type Naturtema,
   type TemaOmrade,
+  type Temabiter,
   type Temaomrader
 } from '../solv/temaer.ts';
+import { ringer } from '../generelt/dekning.ts';
 import { andel, landareal } from './felles.ts';
 import { byggUtvalg, lesUtvalg, ruteFaktor, ruteVekt, type Utbygging, type Utvalg } from './utbygging.ts';
 
@@ -323,7 +327,12 @@ export function byggTemaet(
 /* Kartleggingen av verdsatt natur: det kartlagte (E), verdsatt natur innenfor det per verdikategori (inne), arealet og andelen av
    landarealet som er kartlagt, og helhetsbildet: landarealet delt i kartlagt og ikke kartlagt, og verdsatt natur i hver del. T er
    temaet, land landarealet i km². */
-export function byggKartleggingen(E: Kartlagt | null, inne: number[] | null, T: Temaet, land: number) {
+export function byggKartleggingen(
+  E: (Kartlagt & { km2: number }) | null,
+  inne: number[] | null,
+  T: Temaet,
+  land: number
+) {
   let helhet = null;
   if (E && E.km2 > 0 && inne && T.klasser && land > 0 && T.antall > 0) {
     const L = land,
@@ -392,19 +401,28 @@ export interface TemaIPlan {
 const [VERN, REIN, VERDI] = NATURTEMA;
 const ikke = () => null; /* det kartlagte kan mangle uten at svaret er feil: da er det ikke med */
 
-/* Tabellen gull.vernAreal: arealet av verneområdene i kommunen nr i km², av verneområdene i rutene (solv.vernAndel), der områdene
-   er slått sammen, så overlapp telles én gang. km2 har én kategori, og sum er det samme tallet. Ikke rundet, som før: tallene rundes når de vises. */
-export interface VernAreal {
+/* Arealet av et tema i kommunen i km², av temaet i rutene (A, fra sølv): per kategori (km2) og samlet (sum). Flatene er slått sammen
+   i rutene, så overlapp telles én gang, i den høyeste kategorien. Ikke rundet: tallene rundes når de vises. */
+export interface Temaareal {
   km2: number[];
   sum: number;
 }
-export async function vernAreal(nr: string): Promise<VernAreal> {
-  const km2 = (await katalog.solv.vernAndel(nr)).biter.map(arealAvBiter);
+const arealAv = (A: Temabiter): Temaareal => {
+  const km2 = A.biter.map(arealAvBiter);
+  /* tallene kopieres, for arealet regnes for flere temaer og kommuner etter hverandre (generelt/kopi.ts) */
   return egenKopi({ km2, sum: summen(km2) });
-}
+};
+/* Tabellene gull.vernAreal, gull.villreinAreal, gull.verdsattAreal, gull.vurderesAreal og gull.kartlagtAreal: arealet av hvert tema
+   i kommunen nr, av tabellen for temaet i rutene i sølv. Verneområdene, villreinområdene og det kartlagte har én kategori; verdsatt
+   natur har én per verdikategori, med og uten fast verdi. */
+export const vernAreal = async (nr: string): Promise<Temaareal> => arealAv(await katalog.solv.vernAndel(nr));
+export const villreinAreal = async (nr: string): Promise<Temaareal> => arealAv(await katalog.solv.villreinAndel(nr));
+export const verdsattAreal = async (nr: string): Promise<Temaareal> => arealAv(await katalog.solv.verdsattAndel(nr));
+export const vurderesAreal = async (nr: string): Promise<Temaareal> => arealAv(await katalog.solv.vurderesAndel(nr));
+export const kartlagtAreal = async (nr: string): Promise<Temaareal> => arealAv(await katalog.solv.kartlagtAndel(nr));
 
-/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A (gull.vernAreal, og fra
-   dekningsandelen i solv.villreinAndel og solv.verdsattAndel): samlet og per verdikategori, der overlapp telles én gang. Hver tabell gir sitt eget areal, så koden viser hva hver
+/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A (gull.vernAreal,
+   gull.villreinAreal og gull.verdsattAreal): samlet og per verdikategori, der overlapp telles én gang. Hver tabell gir sitt eget areal, så koden viser hva hver
    av dem bygger på (verktoy/forklaringer.ts leser det). */
 async function temaet(
   tema: Naturtema,
@@ -419,27 +437,28 @@ export async function verneomrader(nr: string): Promise<Temaet> {
   return temaet(VERN, nr, await katalog.solv.verneomrader(nr), katalog.gull.vernAreal(nr));
 }
 export async function villrein(nr: string): Promise<Temaet> {
-  return temaet(REIN, nr, await katalog.solv.villrein(nr), katalog.solv.villreinAndel(nr));
+  return temaet(REIN, nr, await katalog.solv.villrein(nr), katalog.gull.villreinAreal(nr));
 }
 export async function verdsattNatur(nr: string): Promise<Temaet> {
-  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr), katalog.solv.verdsattAndel(nr));
+  return temaet(VERDI, nr, await katalog.solv.verdsattNatur(nr), katalog.gull.verdsattAreal(nr));
 }
 
 /* Tabellen gull.verdsattNaturKartlagt: kartleggingen av verdsatt natur i kommunen nr. Uten det kartlagte er det ingen kartlegging å
    vise. */
 export async function verdsattNaturKartlagt(nr: string): Promise<Kartleggingen> {
-  const [T, E, inne, land] = await Promise.all([
+  const [T, E, A, inne, land] = await Promise.all([
     katalog.gull.verdsattNatur(nr),
     katalog.solv.kartlagt(nr).catch(ikke),
+    katalog.gull.kartlagtAreal(nr).catch(ikke),
     katalog.gull.verdsattNaturIKartlagt(nr).catch(ikke),
     landareal(nr)
   ]);
-  return byggKartleggingen(E, inne, T, land);
+  return byggKartleggingen(E && A ? { ...E, km2: A.sum } : null, inne, T, land);
 }
 
 /* Tabellene gull.utbyggingIVerneomrader, gull.utbyggingIVillrein og gull.utbyggingIVerdsattNatur: kolonnene for temaet i
    utbyggingen for kommunen nr (temaKolonne), med temaet (T) og utbyggingen (R) de er regnet av. null uten utbygging. Oppslagene for
-   områdene huskes i solv.naturoppslag. */
+   områdene huskes i gull.naturoppslag. */
 export interface Temakolonne extends Andelskolonne {
   T: Temaet;
   R: Utbygging;
@@ -455,7 +474,7 @@ async function kolonne(tema: Naturtema, nr: string, T: Temaet, A: Promise<{ bite
   if (!R) return null;
   const orden = O && O.R === R ? O : byggRadorden(R);
   const navn = new Map<object, string>(T.omrader.map((o, i) => [o, `${tema.id}/${nr}/${i}`]));
-  const kommune = () => katalog.solv.naturoppslag.straks('kommune/' + nr, () => naturSok(g, null))!.flate;
+  const kommune = () => katalog.gull.naturoppslag.straks('kommune/' + nr, () => naturSok(g, null))!.flate;
   /* de forrige kolonnene for de samme områdene og den samme plasseringen av rutenettet, så bare nye ruter regnes ut */
   const M = katalog.gull.temaminne.straks(`${tema.id}/${nr}`, () => ({ forrige: null as Temakolonne | null })),
     F = M.forrige,
@@ -464,8 +483,8 @@ async function kolonne(tema: Naturtema, nr: string, T: Temaet, A: Promise<{ bite
       R,
       biter,
       kommune,
-      (o, lag) => katalog.solv.naturoppslag.straks(navn.get(o)!, lag),
-      o => o.uklippet || !!tema.samlet,
+      (o, lag) => katalog.gull.naturoppslag.straks(navn.get(o)!, lag),
+      o => o.uklippet,
       orden,
       F && F.T === T && F.R.z === R.z && F.R.cx0 === R.cx0 && F.R.cy0 === R.cy0 && F.R.w === R.w ? F : null
     ),
@@ -522,12 +541,16 @@ export async function utbyggingUtenforKartlagt(n: string): Promise<UtenforKartla
   return egenKopi({ ...G, natKm2: G.nat * r, ukjentKm2: G.ukjent * r, andel: andel(G.ukjent, G.nat) });
 }
 
-/* Tabellen gull.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte i kommunen nr, fra dekningsandelen
-   med det kartlagte som maske (solv.verdsattIKartlagtAndel), eller null når ingenting er kartlagt */
+/* Tabellen gull.verdsattNaturIKartlagt: verdsatt natur per verdikategori innenfor det kartlagte i kommunen nr, eller null når
+   ingenting er kartlagt. Kryssingen av de to datasettene: lokalitetene (solv.verdsattNatur) legges i rutene med både kommunen og
+   dekningsflatene (solv.kartlagt) som masker, og arealet regnes av rutene som for temaene (arealAv). */
 export async function verdsattNaturIKartlagt(nr: string): Promise<number[] | null> {
-  const K = await katalog.solv.kartlagtAndel(nr);
+  const K = await katalog.gull.kartlagtAreal(nr);
   if (!(K.sum > 0)) return null;
-  return (await katalog.solv.verdsattIKartlagtAndel(nr)).km2;
+  const [O, E] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.solv.kartlagt(nr)]);
+  return arealAv(
+    await temabiter(nr, 'verdiKartlagt', perKategori(O.omrader, VERDI.klasser!.length), [ringer(E.flater)])
+  ).km2;
 }
 
 /* Verneområdene i kommunen med gruppen for verneformen, til kartet over verneformene: flaten (koord, klippet mot kommunen) og gruppen */
@@ -551,14 +574,15 @@ export interface VerdsattVurderes {
   sum: number;
   ufullstendig: boolean;
 }
-/* Tabellen gull.verdsattVurderes: lokalitetene fra solv.verdsattVurderes, med arealet per kategori i kommunen fra dekningsandelen
-   (solv.vurderesAndel), så overlapp telles én gang, som for verdsatt natur */
+/* Tabellen gull.verdsattVurderes: lokalitetene uten fast verdi fra solv.verdsattNatur, med arealet per kategori i kommunen
+   (gull.vurderesAreal), så overlapp telles én gang, som for verdsatt natur */
 export async function verdsattVurderes(nr: string): Promise<VerdsattVurderes> {
-  const [T, A] = await Promise.all([katalog.solv.verdsattVurderes(nr), katalog.solv.vurderesAndel(nr)]),
+  const [T, A] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.gull.vurderesAreal(nr)]),
     n = VURDERES.klasser!.length;
+  const O = T.utenFastVerdi || [];
   return {
-    omrader: T.omrader,
-    antall: Array.from({ length: n }, (_, v) => T.omrader.filter(o => (o.v || 0) === v).length),
+    omrader: O,
+    antall: Array.from({ length: n }, (_, v) => O.filter(o => (o.v || 0) === v).length),
     klasser: A.km2,
     sum: A.sum,
     ufullstendig: !!T.ufullstendig

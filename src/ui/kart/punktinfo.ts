@@ -100,7 +100,7 @@ export function punktinfo(
         id = o.egenskaper.OBJECTID;
       lag.push({
         tittel: o.navn,
-        rader: [[o.uklippet || t.samlet ? 'Areal' : 'Areal i kommunen', dekar(o.km2)]],
+        rader: [[o.uklippet ? 'Areal' : 'Areal i kommunen', dekar(o.km2)]],
         felt,
         kilde: `${t.navn}, Miljødirektoratet`,
         lenke: o.url ? { tekst: 'Faktaark', url: o.url } : undefined,

@@ -12,7 +12,11 @@ const kilder = (id: string) =>
 test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () => {
   assert.ok(kilder('vern').includes('bronse.verneomrader: solv.verneomrader + solv.vernAndel + solv.verneformAndel'));
   /* en sølvtabell uten egen kilde hører til kilden for tabellen den bygger på */
-  assert.ok(kilder('verdi').includes('bronse.verdsattNatur: solv.verdsattNatur + solv.verdsattAndel'));
+  /* verdsatt natur med og uten fast verdi er ett datasett, med én henting */
+  assert.ok(
+    kilder('verdi').includes('bronse.verdsattNatur: solv.verdsattNatur + solv.verdsattAndel + solv.vurderesAndel')
+  );
+  assert.ok(kilder('verdi').includes('bronse.kartlagt: solv.kartlagt + solv.kartlagtAndel'));
   /* arealet av grått areal regnes i gull, så sølv har bare trinnet per rute */
   assert.ok(kilder('graa').includes('bronse.graabit: solv.graabit'));
   /* egne områder i ruter hører til egne områder, ikke til rutestørrelsen */
@@ -50,6 +54,18 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata bare 
   assert.equal(ds('solv.verneomrader').datasett, DATASETT.vern);
   assert.ok(!ds('bronse.verneomrader').stotte && !ds('solv.verneomrader').stotte);
   assert.ok(ds('solv.vernAndel').stotte && ds('solv.verneformAndel').stotte);
+  /* de andre naturtemaene på samme måte: flatene er dataene, rutene støttedata, og ingen kryssing av to datasett i sølv */
+  for (const [data, stotte] of [
+    ['solv.villrein', ['solv.villreinAndel']],
+    ['solv.verdsattNatur', ['solv.verdsattAndel', 'solv.vurderesAndel']],
+    ['solv.kartlagt', ['solv.kartlagtAndel']]
+  ] as [string, string[]][]) {
+    assert.ok(ds(data).datasett && !ds(data).stotte, `${data} er data`);
+    for (const n of stotte)
+      assert.ok(ds(n).stotte && ds(n).datasett === ds(data).datasett, `${n} er støttedata til ${data}`);
+  }
+  assert.ok(!alle.some(t => t.lag !== 'gull' && ['verdsattVurderes', 'verdsattIKartlagtAndel'].includes(t.navn)));
+  assert.equal(ds('gull.naturoppslag').lag, 'gull');
   /* grunnkartet: klassene og detaljklassene er én tabell i sølv */
   assert.equal(ds('solv.klasser').datasett, DATASETT.grunnkart);
   assert.ok(!alle.some(t => t.navn === 'detaljklasser'));

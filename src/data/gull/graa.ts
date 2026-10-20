@@ -199,8 +199,9 @@ export interface GraaIVillrein {
    områder overlapper, telles ruta én gang. Alle trinnene er grått areal, også grått uten oppgitt andel vegetasjon. null når kommunen
    ikke har villreinområder. */
 export async function graaIVillrein(nr: string): Promise<GraaIVillrein | null> {
+  const R = await katalog.gull.villreinAreal(nr);
+  if (!(R.sum > 0)) return null;
   const V = await katalog.solv.villreinAndel(nr);
-  if (!(V.sum > 0)) return null;
   const n = await tellIBitene(
       V.biter[0],
       1,
@@ -209,7 +210,7 @@ export async function graaIVillrein(nr: string): Promise<GraaIVillrein | null> {
       0
     ),
     sum = tiDekar((n[0] * BITRES * BITRES) / 1e6),
-    villrein = tiDekar(V.sum);
+    villrein = tiDekar(R.sum);
   return { villrein, sum, andel: andel(sum, villrein) };
 }
 

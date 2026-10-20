@@ -98,8 +98,8 @@ function Helhet({
           : 'Ingen verdsatt natur er registrert her, og det finnes ikke noe kart over hvor det er lett.'}
       </p>
       <p className="hint">
-        Fargene er de samme som i listen over. Lave tall der det ikke er kartlagt, kan bety at det ikke er lett, ikke at
-        naturen mangler verdi. Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen derfra kan ikke
+        Fargene er de samme som i listen over. Lave tall der det ikke er kartlagt, kan bety at det ikke er lett etter,
+        ikke at naturen mangler verdi. Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen derfra kan ikke
         overføres direkte til resten.
         {E.fra ? ` Kartlagt etter Miljødirektoratets instruks ${periode(E.fra, E.til!)}.` : ''}
       </p>

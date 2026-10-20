@@ -73,12 +73,13 @@ async function iBitene(KB: Andelsbit[], aar: number) {
 }
 /* Tabellen gull.inonIVillrein: inngrepsfri natur (solv.inonbit) i villreinområdene i kommunen, talt med andelen av hver rute som
    ligger i villreinområdene og i kommunen (solv.villreinAndel). Der områder overlapper, telles ruta én gang. Arealet av villreinområdene
-   er det samme som i gull.villrein. null når kommunen ikke har villreinområder. */
+   er det samme som i gull.villrein (gull.villreinAreal). null når kommunen ikke har villreinområder. */
 export async function inonIVillrein(nr: string): Promise<InonIVillrein | null> {
-  const V = await katalog.solv.villreinAndel(nr);
-  if (!(V.sum > 0)) return null;
-  const A = await iBitene(V.biter[0], INON_NYESTE),
-    villrein = tiDekar(V.sum);
+  const R = await katalog.gull.villreinAreal(nr);
+  if (!(R.sum > 0)) return null;
+  const V = await katalog.solv.villreinAndel(nr),
+    A = await iBitene(V.biter[0], INON_NYESTE),
+    villrein = tiDekar(R.sum);
   return { villrein, sum: A.sum, soner: A.km2, andel: andel(A.sum, villrein) };
 }
 
@@ -129,9 +130,10 @@ export async function inonUtvikling(nr: string): Promise<InonUtvikling> {
 /* Tabellen gull.inonIVillreinUtvikling: det samme i villreinområdene i kommunen (som gull.inonIVillrein), og andelen av
    villreinområdene. null når kommunen ikke har villreinområder. */
 export async function inonIVillreinUtvikling(nr: string): Promise<(InonUtvikling & { villrein: number }) | null> {
-  const V = await katalog.solv.villreinAndel(nr);
-  if (!(V.sum > 0)) return null;
-  const villrein = tiDekar(V.sum),
+  const R = await katalog.gull.villreinAreal(nr);
+  if (!(R.sum > 0)) return null;
+  const V = await katalog.solv.villreinAndel(nr),
+    villrein = tiDekar(R.sum),
     A = await perAar(aar => iBitene(V.biter[0], aar));
   return { ...byggUtvikling(A, villrein), villrein };
 }

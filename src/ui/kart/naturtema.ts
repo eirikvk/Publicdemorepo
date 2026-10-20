@@ -398,7 +398,7 @@ abonner(() => {
       const E = O ? verdi(katalog.solv.kartlagt) : null;
       if (ny('kartlagt', E)) settDekning(E);
       if (nyGrense && G) dekLag.setExtent(G.ext);
-      dekLag.setVisible(paa && ui.slorPaa && !!G && !!E && E.km2 > 0);
+      dekLag.setVisible(paa && ui.slorPaa && !!G && !!E && !!E.flate && E.flate.length > 0);
     }
   }
 });

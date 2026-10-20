@@ -113,6 +113,90 @@ export function flatesok(koord: Flerflate, ext: Utsnitt = utsnitt(koord)): Flate
       }
   return { ext, y0, dy, band: lister.map(l => Float64Array.from(l)) };
 }
+/* Ringen klippet mot rektangelet e, kant for kant (Sutherland–Hodgman). Der ringen går ut og inn igjen, går den klippede ringen
+   langs kanten av e, så den kan ha kanter oppå hverandre der. Bare innenfor e er den lik ringen. */
+function ringIUtsnitt(ring: Ring, e: Utsnitt): Ring {
+  const lukket = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1];
+  let ut = lukket ? ring.slice(0, -1) : ring;
+  const sider: [inne: (p: Punkt) => boolean, kutt: (a: Punkt, b: Punkt) => Punkt][] = [
+    [p => p[0] >= e[0], (a, b) => [e[0], a[1] + ((b[1] - a[1]) * (e[0] - a[0])) / (b[0] - a[0])]],
+    [p => p[0] <= e[2], (a, b) => [e[2], a[1] + ((b[1] - a[1]) * (e[2] - a[0])) / (b[0] - a[0])]],
+    [p => p[1] >= e[1], (a, b) => [a[0] + ((b[0] - a[0]) * (e[1] - a[1])) / (b[1] - a[1]), e[1]]],
+    [p => p[1] <= e[3], (a, b) => [a[0] + ((b[0] - a[0]) * (e[3] - a[1])) / (b[1] - a[1]), e[3]]]
+  ];
+  for (const [inne, kutt] of sider) {
+    const inn = ut;
+    ut = [];
+    for (let i = 0; i < inn.length; i++) {
+      const a = inn[(i + inn.length - 1) % inn.length],
+        b = inn[i];
+      if (inne(b)) {
+        if (!inne(a)) ut.push(kutt(a, b));
+        ut.push(b);
+      } else if (inne(a)) ut.push(kutt(a, b));
+    }
+  }
+  return ut.length >= 3 ? [...ut, ut[0]] : [];
+}
+/* Flerflaten klippet mot rektangelet e, ring for ring, raskt også for store flater. Bare det som ligger innenfor e, er riktig: langs
+   kanten av e kan den klippede flaten ha kanter oppå hverandre. Brukes til å klippe en liten flate mot den delen av en stor flate som
+   ligger rundt den, med e litt større enn den lille flaten. */
+export function iUtsnitt(koord: Flerflate, e: Utsnitt): Flerflate {
+  const ut: Flerflate = [];
+  for (const flate of koord) {
+    if (!flate.length) continue;
+    const ytre = ringIUtsnitt(flate[0], e);
+    if (!ytre.length) continue;
+    ut.push([
+      ytre,
+      ...flate
+        .slice(1)
+        .map(r => ringIUtsnitt(r, e))
+        .filter(r => r.length)
+    ]);
+  }
+  return ut;
+}
+/* Kantene i en flerflate sortert i bånd etter y, som i flatesok, men med alle kantene, også de vannrette: til å finne om kanten
+   av flaten går gjennom et utsnitt (kantIUtsnitt) */
+export function kantsok(koord: Flerflate, ext: Utsnitt = utsnitt(koord)): Flatesok {
+  let n = 0;
+  for (const flate of koord) for (const ring of flate) n += ring.length;
+  const nb = Math.max(1, Math.min(4096, Math.ceil(n / 4))),
+    y0 = ext[1],
+    dy = (ext[3] - ext[1]) / nb || 1,
+    lister: number[][] = Array.from({ length: nb }, () => []);
+  for (const flate of koord)
+    for (const ring of flate)
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i],
+          [xj, yj] = ring[j],
+          a = Math.max(0, Math.floor((Math.min(yi, yj) - y0) / dy)),
+          b = Math.min(nb - 1, Math.floor((Math.max(yi, yj) - y0) / dy));
+        for (let k = a; k <= b; k++) lister[k].push(xi, yi, xj, yj);
+      }
+  return { ext, y0, dy, band: lister.map(l => Float64Array.from(l)) };
+}
+/* Om noen av kantene i S (fra kantsok) kan gå gjennom utsnittet e: en kant med et utsnitt som overlapper e. Er svaret nei, ligger
+   alt innenfor e enten helt inne i flaten eller helt utenfor, og ett punkt avgjør hvilket (iFlate eller iSok). */
+export function kantIUtsnitt(S: Flatesok, e: Utsnitt) {
+  if (!overlapper(S.ext, e)) return false;
+  const nb = S.band.length,
+    a = Math.max(0, Math.floor((e[1] - S.y0) / S.dy)),
+    b = Math.min(nb - 1, Math.floor((e[3] - S.y0) / S.dy));
+  for (let k = a; k <= b; k++) {
+    const B = S.band[k];
+    for (let i = 0; i < B.length; i += 4)
+      if (
+        Math.max(B[i], B[i + 2]) >= e[0] &&
+        Math.min(B[i], B[i + 2]) <= e[2] &&
+        Math.max(B[i + 1], B[i + 3]) >= e[1] &&
+        Math.min(B[i + 1], B[i + 3]) <= e[3]
+      )
+        return true;
+  }
+  return false;
+}
 /* Om punktet (x, y) ligger i flaten bak oppslaget S, med samme regel som iFlate */
 export function iSok(S: Flatesok, x: number, y: number) {
   if (x < S.ext[0] || x > S.ext[2] || y < S.ext[1] || y > S.ext[3]) return false;

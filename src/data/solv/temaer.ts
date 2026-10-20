@@ -1,6 +1,7 @@
 /* Sølv for naturtemaene fra Miljødirektoratet: verneområder, villreinområder og verdsatt natur. Flatene gjøres om til felles form:
-   klippet mot kommunen og med areal i km², og som oppslag for punkter når de skal krysses med utbyggingen. Også det kartlagte
-   området for naturtyper. Flatene kommer som GeoJSON. */
+   klippet mot kommunen og med areal i km² per område, i rutene, og som oppslag for punkter når de skal krysses med utbyggingen. Også
+   det kartlagte området for naturtyper. Flatene kommer som GeoJSON. Hvert tema er et datasett der flatene er dataene og rutene
+   støttedata; arealet av temaet regnes i gull. */
 import polygonClipping from 'polygon-clipping';
 import {
   areal,
@@ -14,14 +15,16 @@ import {
   type Flerflate,
   type FlateMedUtsnitt,
   type GeoJsonFlate,
-  type Utsnitt
+  type Utsnitt,
+  iSok,
+  iUtsnitt,
+  kantIUtsnitt,
+  kantsok
 } from '../generelt/geometri.ts';
-import { summen } from '../generelt/tall.ts';
-import { egenKopi } from '../generelt/kopi.ts';
 import { andelSum, dekningI, ringer, type Ringer } from '../generelt/dekning.ts';
 import { katalog } from '../katalog.ts';
 import { biterI, m2PerKm2, rutenett } from './felles.ts';
-import { andelsbiter, arealAvBiter, BITRES, type Andelsbit } from './kommune.ts';
+import { andelsbiter, BITRES, type Andelsbit } from './kommune.ts';
 
 /* Naturtemaene. samlet: mange små lokaliteter, der arealet per verdikategori regnes samlet og bare de som berøres av planlagt
    utbygging, listes. dekning: temaet har et kart over hvor det er kartlagt. klasser: verdikategoriene, [navn, farge], høyest verdi
@@ -120,9 +123,11 @@ export interface Omradesok {
   flate: Flatesok;
   kommune: Flatesok | null;
 }
-/* Det kartlagte området for naturtyper i kommunen: arealet i km², årene kartleggingen er gjort, og flaten */
+/* Det kartlagte for naturtyper rundt kommunen: dekningsflatene slik de kom (flater, til det kartlagte i rutene), årene
+   kartleggingen er gjort, og flatene slått sammen og klippet mot kommunen (flate, til kartet). Arealet regnes i gull
+   (gull.kartlagtAreal). */
 export interface Kartlagt {
-  km2: number;
+  flater: Flerflate[];
   fra?: number | null;
   til?: number | null;
   flate?: Flerflate;
@@ -211,12 +216,24 @@ const fastRekkefolge = (a: Omrade, b: Omrade) => {
   );
 };
 
-/* Verneområder og villreinområder: hver flate klippes mot kommunen, og arealet av det som ligger i kommunen regnes ut, rettet for
-   målestokken midt i området. Feiler klippingen, regnes arealet i stedet med dekningsandelen (dekketIKommune), og flaten er uklippet.
+/* Kommunen som oppslag for mange flater: kantene (kantsok) og punktene (flatesok). En flate der ingen kant av kommunen går gjennom
+   utsnittet, ligger helt inne i kommunen eller helt utenfor, og trenger ikke klippes. */
+export interface Kommunesok {
+  kanter: Flatesok;
+  sok: Flatesok;
+}
+export const kommunesok = (kommune: FlateMedUtsnitt): Kommunesok => ({
+  kanter: kantsok(kommune.koord, kommune.ext),
+  sok: flatesok(kommune.koord, kommune.ext)
+});
+/* Naturtemaene: hver flate klippes mot kommunen, og arealet av det som ligger i kommunen regnes ut, rettet for målestokken midt i
+   området. Feiler klippingen, regnes arealet i stedet med dekningsandelen (dekketIKommune), og flaten er uklippet. Med K (kommunesok)
+   klippes bare flatene kanten av kommunen går gjennom: de andre er med som de er, eller ikke med når de ligger utenfor. Det gjør
+   klippingen av mange små lokaliteter rask, og gir den samme flaten.
    les gir navn og opplysninger fra egenskapene. Gir områdene sortert etter areal, størst først. Arealet er per område: der to områder
-   overlapper, har begge overlappet. Arealet av temaet i kommunen, der overlapp telles én gang, regnes av dekningsandelen
-   (temaandel). */
-export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Les): Omrade[] {
+   overlapper, har begge overlappet. Arealet av temaet i kommunen, der overlapp telles én gang, regnes i gull av temaet i rutene
+   (temabiter). */
+export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Les, K?: Kommunesok): Omrade[] {
   return features
     .map(f => {
       const g = f.geometry;
@@ -225,10 +242,23 @@ export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Le
       let koord: Flerflate | null = null,
         uklippet = false,
         km2: number;
-      try {
-        koord = polygonClipping.intersection(hele as Mangekant, kommune.koord as Mangekant);
-      } catch (e) {
-        koord = null;
+      const e = K && hele.length ? utsnitt(hele) : null;
+      if (K && e && !kantIUtsnitt(K.kanter, e)) {
+        /* kanten av kommunen går ikke gjennom flaten: den ligger helt inne, eller helt utenfor */
+        const [x, y] = hele[0][0][0];
+        if (!iSok(K.sok, x, y)) return null;
+        koord = hele;
+      } else {
+        /* med K klippes flaten mot den delen av kommunen som ligger rundt den (10 meter utenfor utsnittet), som gir den samme
+           flaten mye raskere; feiler det, mot hele kommunen */
+        const rundt = e ? iUtsnitt(kommune.koord, [e[0] - 10, e[1] - 10, e[2] + 10, e[3] + 10]) : null;
+        for (const mot of rundt ? [rundt, kommune.koord] : [kommune.koord])
+          try {
+            koord = polygonClipping.intersection(hele as Mangekant, mot as Mangekant);
+            break;
+          } catch (e) {
+            koord = null;
+          }
       }
       if (koord) {
         if (!koord.length) return null;
@@ -246,32 +276,13 @@ export function klippNatur(features: Objekt[], kommune: FlateMedUtsnitt, les: Le
     .sort((a, b) => b.km2 - a.km2 || fastRekkefolge(a, b));
 }
 
-/* Verdsatt natur: lokalitetene med areal hver for seg, uten klipping mot kommunen (til listen), rettet for målestokken midt i
-   lokaliteten. Arealet per verdikategori i kommunen regnes av dekningsandelen (temaandel). Lokalitetene sorteres med høyest verdi
-   først (v = 0 er høyest), og så etter areal. */
-export function lokaliteter(features: Objekt[], les: Les): Omrade[] {
-  const omrader = features
-    .filter(f => f.geometry && f.geometry.coordinates)
-    .map(f => {
-      const koord = flerflate(f.geometry as GeoJsonFlate);
-      return {
-        koord,
-        uklippet: false,
-        km2: koord.length ? areal(koord) / m2PerKm2(omriss(koord)) : 0,
-        ...les(f.properties || {}),
-        egenskaper: f.properties || {}
-      };
-    })
-    .sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2 || fastRekkefolge(a, b));
-  return omrader;
-}
-
-/* Kartleggingsgrad: dekningsflatene for naturtypekartlegging slått sammen og klippet mot kommunen. Gir det kartlagte arealet, flaten
-   og årene kartleggingen er gjort. Feiler sammenslåingen, er flaten ikke med og arealet 0. */
+/* Kartleggingsgrad: dekningsflatene for naturtypekartlegging, årene kartleggingen er gjort, og flatene slått sammen og klippet mot
+   kommunen. Feiler sammenslåingen, er den sammenslåtte flaten ikke med. */
 export function byggDekning(features: Objekt[], kommune: FlateMedUtsnitt): Kartlagt {
   const fl = features.filter(f => f.geometry && f.geometry.coordinates);
-  if (!fl.length) return { km2: 0 };
-  const [forste, ...resten] = fl.map(f => flerflate(f.geometry as GeoJsonFlate) as Mangekant);
+  if (!fl.length) return { flater: [] };
+  const flater = fl.map(f => flerflate(f.geometry as GeoJsonFlate)),
+    [forste, ...resten] = flater as Mangekant[];
   let u: Flerflate | undefined;
   try {
     u = polygonClipping.intersection(polygonClipping.union(forste, ...resten), kommune.koord as Mangekant);
@@ -280,62 +291,69 @@ export function byggDekning(features: Objekt[], kommune: FlateMedUtsnitt): Kartl
   }
   const aar = fl.map(f => parseInt((f.properties || {})['Årstall'], 10)).filter(v => v > 1900);
   return {
-    km2: u && u.length ? areal(u) / m2PerKm2(kommune.ext) : 0,
+    flater,
     fra: aar.length ? Math.min(...aar) : null,
     til: aar.length ? Math.max(...aar) : null,
     flate: u
   };
 }
 
-/* Områdene i et tema fra svaret j: klippet mot kommunen (verdsatt natur uklippet), med utsnittet. ufullstendig sier at tjenesten ikke
-   ga alle lokalitetene i ett svar. */
-async function temaomrader(tema: Naturtema, nr: string, j: { features?: Objekt[]; exceededTransferLimit?: boolean }) {
-  if (!j || !Array.isArray(j.features)) throw new Error('uventet svar');
+/* Områdene i et tema fra flatene F, klippet mot kommunen nr, med utsnittet. Lokalitetene i verdsatt natur (samlet) sorteres med
+   høyest verdi først og så etter areal, og klippes med kommunen som oppslag (kommunesok), for de er mange. */
+async function temaomrader(tema: Naturtema, nr: string, F: Objekt[]): Promise<TemaOmrade[]> {
   const g = await katalog.solv.grense(nr),
-    les = EGENSKAPER[tema.id],
-    alle = tema.samlet ? lokaliteter(j.features, les) : klippNatur(j.features, g, les),
-    omrader = alle.map(o => ({ ...o, ext: utsnitt(o.koord) }));
-  return tema.samlet ? { omrader, ufullstendig: !!j.exceededTransferLimit } : { omrader };
+    alle = klippNatur(F, g, EGENSKAPER[tema.id], tema.samlet ? kommunesok(g) : undefined);
+  if (tema.samlet) alle.sort((a, b) => (a.v || 0) - (b.v || 0) || b.km2 - a.km2 || fastRekkefolge(a, b));
+  return alle.map(o => ({ ...o, ext: utsnitt(o.koord) }));
 }
-/* Tabellene solv.verneomrader, solv.villrein og solv.verdsattNatur: områdene i hvert tema med areal og opplysninger */
-export type Temaomrader = { omrader: TemaOmrade[]; ufullstendig?: boolean };
+const flaterI = (j: { features?: Objekt[] }) => {
+  if (!j || !Array.isArray(j.features)) throw new Error('uventet svar');
+  return j.features;
+};
+/* Tabellene solv.verneomrader, solv.villrein og solv.verdsattNatur: områdene i temaet, klippet mot kommunen, med areal og
+   opplysninger. I verdsatt natur er omrader lokalitetene med fast verdi, og utenFastVerdi de uten. ufullstendig sier at tjenesten
+   ikke ga alle lokalitetene. */
+export type Temaomrader = { omrader: TemaOmrade[]; utenFastVerdi?: TemaOmrade[]; ufullstendig?: boolean };
 export async function verneomrader(nr: string): Promise<Temaomrader> {
-  return temaomrader(VERN, nr, await katalog.bronse.verneomrader(nr));
+  return { omrader: await temaomrader(VERN, nr, flaterI(await katalog.bronse.verneomrader(nr))) };
 }
 export async function villrein(nr: string): Promise<Temaomrader> {
-  return temaomrader(REIN, nr, await katalog.bronse.villrein(nr));
+  return { omrader: await temaomrader(REIN, nr, flaterI(await katalog.bronse.villrein(nr))) };
 }
+/* Verdsatt natur: alle lokalitetene i kommunen, klippet mot den, med verdikategorien. De med fast verdi (svært stor, stor, middels
+   og noe verdi) står i omrader, med v fra 0 (svært stor) til 3, og de uten fast verdi (vurderes per lokalitet, vurderes per
+   naturtype og ikke gitt verdi) i utenFastVerdi, med v fra 0 til 2. */
+/* Verdikategoriene med fast verdi, slik Miljødirektoratet skriver dem */
+export const FASTE_VERDIER = ['Svært stor verdi', 'Stor verdi', 'Middels verdi', 'Noe verdi'];
+/* Tabellen solv.verdsattNatur: lokalitetene i verdsatt natur, delt på om verdikategorien er fast */
 export async function verdsattNatur(nr: string): Promise<Temaomrader> {
-  return temaomrader(VERDI, nr, await katalog.bronse.verdsattNatur(nr));
+  const j = await katalog.bronse.verdsattNatur(nr),
+    F = flaterI(j),
+    fast = (f: Objekt) => FASTE_VERDIER.includes((f.properties || {}).Verdikategori),
+    [omrader, utenFastVerdi] = await Promise.all([
+      temaomrader(VERDI, nr, F.filter(fast)),
+      temaomrader(
+        VURDERES,
+        nr,
+        F.filter(f => !fast(f))
+      )
+    ]);
+  return { omrader, utenFastVerdi, ufullstendig: !!j.exceededTransferLimit };
 }
-/* Tabellen solv.verdsattVurderes: lokalitetene uten fast verdi (vurderes per lokalitet, per naturtype, eller ikke gitt verdi),
-   uklippet, som verdsatt natur */
-export async function verdsattVurderes(nr: string): Promise<Temaomrader> {
-  return temaomrader(VURDERES, nr, await katalog.bronse.verdsattVurderes(nr));
-}
-/* Naturtemaene som dekningsandel i kommunen (solv.vernAndel og de andre): verneområdene, villreinområdene, verdsatt natur og verdsatt natur
-   som vurderes per kategori, det kartlagte, og verdsatt natur innenfor det kartlagte */
+/* Naturtemaene i rutene (solv.vernAndel og de andre): verneområdene, også per verneform, villreinområdene, verdsatt natur med og
+   uten fast verdi per kategori, det kartlagte, og verdsatt natur innenfor det kartlagte (regnet i gull) */
 export type Temaid = 'vern' | 'verneform' | 'rein' | 'verdi' | 'vurderes' | 'kartlagt' | 'verdiKartlagt';
 /* Et tema i kommunen i rutene: bitene per kategori med andelen per rute (biter, se andelsbiter i kommune.ts). Der flater
    overlapper, telles ruta én gang, i den første kategorien (høyest verdi først), unntatt i verneformene, der hver kategori regnes
-   for seg (solv.verneformAndel). */
+   for seg (solv.verneformAndel). Arealet regnes av bitene i gull (arealAvBiter i kommune.ts). */
 export interface Temabiter {
   nr: string;
   tema: Temaid;
   biter: Andelsbit[][];
 }
-/* Det samme med arealet per kategori i km² og samlet (sum), for temaene der arealet ennå regnes i sølv. For verneområdene regnes
-   det i gull (gull.vernAreal). */
-export interface Temaandel extends Temabiter {
-  km2: number[];
-  sum: number;
-}
 /* Flatene i områdene O per kategori v, i flat form */
-const perKategori = (O: Omrade[], antall: number) =>
+export const perKategori = (O: Omrade[], antall: number) =>
   Array.from({ length: antall }, (_, v) => ringer(O.filter(o => (o.v || 0) === v).map(o => o.koord)));
-/* Flatene fra svaret j */
-const flatene = (j: { features?: Objekt[] }) =>
-  (j.features || []).filter(f => f.geometry && f.geometry.coordinates).map(f => flerflate(f.geometry as GeoJsonFlate));
 /* Utsnittet ringene dekker til sammen, eller null uten ringer */
 function ringOmriss(lagene: Ringer[]): Utsnitt | null {
   const e = [Infinity, Infinity, -Infinity, -Infinity];
@@ -349,8 +367,9 @@ function ringOmriss(lagene: Ringer[]): Utsnitt | null {
   return e[0] < e[2] ? (e as Utsnitt) : null;
 }
 /* Temaet i kommunen nr som dekningsandel per rute. Lagene er kommunen (maske), eventuelt flere masker (som det kartlagte), og
-   flatene per kategori i kat, med høyest verdi først. Regnes bare i bitene flatene har noe i. */
-async function temabiter(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[] = []): Promise<Temabiter> {
+   flatene per kategori i kat, med høyest verdi først. Regnes bare i bitene flatene har noe i. Brukes også av gull, når to datasett
+   krysses (gull.verdsattNaturIKartlagt). */
+export async function temabiter(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[] = []): Promise<Temabiter> {
   const g = await katalog.solv.grense(nr),
     lagene = [ringer([g.koord]), ...maske, ...kat],
     m = 1 + maske.length,
@@ -364,15 +383,8 @@ async function temabiter(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[
     );
   return { nr, tema, biter };
 }
-/* Det samme med arealet per kategori (arealAvBiter i kommune.ts) */
-async function temaandel(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[] = []): Promise<Temaandel> {
-  const A = await temabiter(nr, tema, kat, maske),
-    km2 = A.biter.map(arealAvBiter);
-  /* tallene kopieres, for temaet regnes for flere utvalg etter hverandre (generelt/kopi.ts); bitene deles med vilje */
-  return { ...A, ...egenKopi({ km2, sum: summen(km2) }) };
-}
 /* Tabellen solv.vernAndel: verneområdene i kommunen nr i rutene, slått sammen, så der områder overlapper, telles ruta én gang.
-   Støttedata til verneområdene (solv.verneomrader): arealet regnes av dem i gull (gull.vernAreal). */
+   Støttedata til verneområdene (solv.verneomrader). Tabellene for de andre temaene under er bygd på samme måte. */
 export async function vernAndel(nr: string): Promise<Temabiter> {
   return temabiter(nr, 'vern', perKategori((await katalog.solv.verneomrader(nr)).omrader, 1));
 }
@@ -389,38 +401,28 @@ export async function verneformAndel(nr: string): Promise<Temabiter> {
     );
   return { nr, tema: 'verneform', biter: G.map(A => A.biter[0]) };
 }
-/* Tabellene solv.villreinAndel, solv.verdsattAndel, solv.vurderesAndel, solv.kartlagtAndel og solv.verdsattIKartlagtAndel: temaet
-   i kommunen nr som dekningsandel med arealet (temaandel). Verdsatt natur og verdsatt natur som vurderes har én kategori per verdi,
-   og verdsatt natur i det kartlagte har det kartlagte som maske i tillegg til kommunen. */
-export async function villreinAndel(nr: string): Promise<Temaandel> {
-  return temaandel(nr, 'rein', perKategori((await katalog.solv.villrein(nr)).omrader, 1));
+/* Tabellen solv.villreinAndel: villreinområdene i rutene, slått sammen */
+export async function villreinAndel(nr: string): Promise<Temabiter> {
+  return temabiter(nr, 'rein', perKategori((await katalog.solv.villrein(nr)).omrader, 1));
 }
-export async function verdsattAndel(nr: string): Promise<Temaandel> {
-  return temaandel(nr, 'verdi', perKategori((await katalog.solv.verdsattNatur(nr)).omrader, VERDI.klasser!.length));
+/* Tabellene solv.verdsattAndel og solv.vurderesAndel: verdsatt natur med og uten fast verdi i rutene, med én kategori per
+   verdikategori. Der lokaliteter overlapper, telles ruta i den høyeste verdien. */
+export async function verdsattAndel(nr: string): Promise<Temabiter> {
+  return temabiter(nr, 'verdi', perKategori((await katalog.solv.verdsattNatur(nr)).omrader, VERDI.klasser!.length));
 }
-export async function vurderesAndel(nr: string): Promise<Temaandel> {
-  return temaandel(
+export async function vurderesAndel(nr: string): Promise<Temabiter> {
+  return temabiter(
     nr,
     'vurderes',
-    perKategori((await katalog.solv.verdsattVurderes(nr)).omrader, VURDERES.klasser!.length)
+    perKategori((await katalog.solv.verdsattNatur(nr)).utenFastVerdi || [], VURDERES.klasser!.length)
   );
 }
-export async function kartlagtAndel(nr: string): Promise<Temaandel> {
-  return temaandel(nr, 'kartlagt', [ringer(flatene(await katalog.bronse.kartlagt(nr)))]);
+/* Tabellen solv.kartlagtAndel: det kartlagte i rutene, av dekningsflatene slik de kom (solv.kartlagt), slått sammen */
+export async function kartlagtAndel(nr: string): Promise<Temabiter> {
+  return temabiter(nr, 'kartlagt', [ringer((await katalog.solv.kartlagt(nr)).flater)]);
 }
-export async function verdsattIKartlagtAndel(nr: string): Promise<Temaandel> {
-  const [O, j] = await Promise.all([katalog.solv.verdsattNatur(nr), katalog.bronse.kartlagt(nr)]);
-  return temaandel(nr, 'verdiKartlagt', perKategori(O.omrader, VERDI.klasser!.length), [ringer(flatene(j))]);
-}
-/* Tabellen solv.kartlagt: det som er kartlagt for naturtyper etter Miljødirektoratets instruks i kommunen: arealet fra
-   dekningsandelen (solv.kartlagtAndel), årene, og flaten slått sammen og klippet mot kommunen til kartet. Feiler sammenslåingen, er
-   flaten ikke med, men arealet er det. */
+/* Tabellen solv.kartlagt: det som er kartlagt for naturtyper etter Miljødirektoratets instruks rundt kommunen (byggDekning). */
 export async function kartlagt(nr: string): Promise<Kartlagt> {
-  const [j, g, A] = await Promise.all([
-      katalog.bronse.kartlagt(nr),
-      katalog.solv.grense(nr),
-      katalog.solv.kartlagtAndel(nr)
-    ]),
-    E = byggDekning(j.features || [], g);
-  return { ...E, km2: A.sum };
+  const [j, g] = await Promise.all([katalog.bronse.kartlagt(nr), katalog.solv.grense(nr)]);
+  return byggDekning(flaterI(j), g);
 }

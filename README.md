@@ -154,7 +154,7 @@ regner likt. Filene importerer ingenting.
 
 | Fil | Innhold |
 |---|---|
-| `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp, oppslag av mange punkter i en flate, og et rutenett av punkter for å finne punktene i et utsnitt |
+| `geometri.ts` | Flater og utsnitt: typene, arealet med fortegn og omløpsretning, utsnittet som rommer en flate, snitt og overlapp, oppslag av mange punkter i en flate, kantene i bånd for å se om kanten av en flate går gjennom et utsnitt, en flate klippet mot et rektangel, og et rutenett av punkter for å finne punktene i et utsnitt |
 | `tall.ts` | Summen av en liste tall (`summen`) |
 | `kopi.ts` | En egen kopi av et ferdig svar (`egenKopi`), som omvei rundt en feil i JavaScript-motoren. Se regel 7 under Prinsippene for dataflyten. |
 | `farge.ts` | Hvilken av noen farger en farge ligger nærmest (`naermesteFarge`) |
@@ -173,7 +173,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
 | `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger og med de 19 detaljklassene, per flis, de lagrede klassene og detaljklassene per blokk med registrene, og grunnkartet i ett punkt |
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
-| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
+| `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi (med og uten fast verdi, i én henting) og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som bilder per bit (2048 x 2048 ruter à 10,6 meter) og i ett punkt |
 | `nibio-graa.ts` | Kart over grå arealer, som to bilder per bit (alt grått areal, og andel vegetasjon) og som de samme to bildene per flis til kartet zoomet inn |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
@@ -194,7 +194,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017, og hver arealklasse for seg per år (til tvillingen fra Figma) |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
-| `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen, temaet som andel per rute i bitene (`solv.vernAndel` og de andre, med arealet per kategori for alle unntatt verneområdene, der arealet regnes i gull), og flatene som oppslag for rutene i utbyggingen |
+| `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen (lokalitetene i verdsatt natur bare der kanten av kommunen går gjennom dem, og da mot den delen av kommunen som ligger rundt), temaet som andel per rute i bitene (`solv.vernAndel` og de andre, uten arealet, som regnes i gull), og flatene som oppslag for rutene i utbyggingen |
 | `inon.ts` | Inngrepsfri natur: sone per rute, sonen per piksel i kartet på hvert nivå (`solv.inonsoner` og `solv.inonsonerUt`), og sonene i naturen |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon, trinnet per piksel i kartet på hvert nivå (`solv.graatrinn` og `solv.graatrinnUt`), og grønt i bebygd område |
 | `nivaer.ts` | Én sannhet per nivå for temaene i biter: rutene i en bit lest for en flis på nivå 10 og finere, og halvregelen zoomet ut |
@@ -215,7 +215,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Brukes av tvillingen og i sammenligningen for egne områder. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, for et utvalg, kortversjonen til oversikten, og planlagt utbygging per detaljklasse |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner den gamle planen med den nye, for hele kommunen og hvert område. Analysene er de samme som for kommuneplanen, regnet for hvert utvalg; her settes bare radene og forskjellen sammen. |
-| `temaer.ts` | Naturtemaene: arealet av verneområdene (`gull.vernAreal`), temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte. Når egne områder endres, regnes kolonnene bare ut for rutene som er nye (`gull.temaminne` og `gull.radorden`). |
+| `temaer.ts` | Naturtemaene: arealet av hvert tema (`gull.vernAreal` og de andre), temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur og kryssingen med det kartlagte, oppslagene til kryssingen med utbyggingen (`gull.naturoppslag`), kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte. Når egne områder endres, regnes kolonnene bare ut for rutene som er nye (`gull.temaminne` og `gull.radorden`). |
 | `inon.ts` | Tallene på siden |
 | `graa.ts` | Arealet per trinn, og kryssingen med utbyggingen |
 
@@ -457,8 +457,9 @@ verneområdene. Hver tabell beskriver innholdet i sine egne data (`innhold`), og
 En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes etter komma, som «Dekningen av kommuneplanen,
 kartbilder». Datasettene står i `DATASETT` i katalogen. I katalogvisningen står dataene som én vanlig rad, i gruppen for filen de
 lages i, og støttedataene ligger bak knappen «Støttedata» på raden. Bare én av knappene Info, Data og Støttedata på en rad er åpen om
-gangen. Det som ikke er ferdig i støttedataene, står også på raden. Seks datasett er delt inn slik: arealklassene fra grunnkartet,
-grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen og verneområdene. Arealklassene fra grunnkartet er ett datasett med to kolonner,
+gangen. Det som ikke er ferdig i støttedataene, står også på raden. Ni datasett er delt inn slik: arealklassene fra grunnkartet,
+grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen og de fire naturtemaene: verneområdene, villreinområdene, verdsatt
+natur og det kartlagte for naturtyper. Arealklassene fra grunnkartet er ett datasett med to kolonner,
 klassen og detaljklassen, i én tabell i sølv (`solv.klasser`). Støttedataene er de lagrede klassene og detaljklassene, blokkene i
 kommunen, klassene zoomet ut og grunnkartet i et punkt. For grått areal og inngrepsfri natur er støttedataene kartet zoomet inn og ut
 (og sonen i et punkt), og for kommunegrensen de lagrede grensene. Kommuneplanen er *Areal satt av til framtidig utbygging i
@@ -468,6 +469,12 @@ kommuneplanen*, ikke hele kommuneplanen. Dataene er kartbildene (`bronse.planfli
 Verneområdene kommer som flater, så der er det vektoren som er dataene: områdene klippet mot kommunen, med opplysningene
 (`bronse.verneomrader` og `solv.verneomrader`). Verneområdene i rutene er avledet av flatene og er støttedata (`vernAndel` og
 `verneformAndel`), etter prinsippet om at det samme ikke skal ligge to ganger i sølv. Der kilden er kartbilder, er rutene dataene.
+Villreinområdene, verdsatt natur og det kartlagte er delt inn på samme måte, og arealet av hvert tema regnes i gull av rutene
+(`gull.vernAreal`, `gull.villreinAreal`, `gull.verdsattAreal`, `gull.vurderesAreal` og `gull.kartlagtAreal`). Verdsatt natur er ett
+datasett med én henting: lokalitetene med og uten fast verdi, klippet mot kommunen, i én tabell i sølv. Kryssingen av verdsatt
+natur og det kartlagte regnes i gull (`gull.verdsattNaturIKartlagt`), og oppslagene for kryssingen med utbyggingen er en
+hjelpetabell i gull (`gull.naturoppslag`). Alle feltene for et område i naturtemaene er felles støttedata og står foreløpig utenfor
+datasettene.
 
 **Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
 ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes

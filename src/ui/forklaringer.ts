@@ -280,7 +280,7 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye verdsatt natur er registrert i kommunen, hvor mye av kommunen er kartlagt, og hvor mye planlagt utbygging ligger i verdsatt natur eller der det ikke er kartlagt?',
     kortFortalt:
-      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.',
+      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.',
     tabeller: [
       'gull.verdsattNatur',
       'gull.verdsattNaturKartlagt',
@@ -436,7 +436,7 @@ export const KORT: Kort[] = [
     komponent: TEMASIDER,
     sporsmal: 'Hvilke verdsatte naturtyper er funnet i kommunen, og hvor mye er det av hver?',
     kortFortalt:
-      'Lokalitetene med verdi fra Miljødirektoratet grupperes etter naturtype, med arealet, antall lokaliteter og den høyeste verdien. Arealet er summen av hele lokalitetene, også delene som ligger utenfor kommunen, og der lokaliteter overlapper, telles det flere ganger. Listen gjelder bare det som er kartlagt.',
+      'Lokalitetene med verdi fra Miljødirektoratet grupperes etter naturtype, med arealet, antall lokaliteter og den høyeste verdien. Arealet er summen av lokalitetene, klippet mot kommunen, og der lokaliteter overlapper, telles det flere ganger. Listen gjelder bare det som er kartlagt.',
     tabeller: ['gull.verdsattPerNaturtype'],
     regnestykke: hent => {
       const N = hent(katalog.gull.verdsattPerNaturtype);

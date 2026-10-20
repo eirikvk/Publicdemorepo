@@ -10,7 +10,7 @@
    kildene og tolkingen av dem er store og huskes for noen få kommuner. Gull er små tabeller og huskes for flere. Tabeller merket
    brukerstyrt bygger på det brukeren gjør, og regnes ut på nytt når datamotoren sier fra om at det er endret.
    Tabeller uten ETL-funksjon er kildene fra brukeren, som datamotoren fyller (bronse.egne), og hjelpetabeller som
-   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og solv.naturoppslag).
+   en ETL-funksjon fyller underveis (gull.utbyggingsblokker og gull.naturoppslag).
 
    ETL-funksjonene skal være vanlige funksjonserklæringer (export async function), ikke piler: katalogen og ETL-filene bruker hverandre,
    og bare funksjonserklæringer finnes før filene er ferdig lastet. */
@@ -141,7 +141,8 @@ export const KILDE = {
    (stotte, med navnet og hva den er til for). En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes
    etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen. Tallene kan regnes av støttedata som er
    dataene i en annen form, som arealet av verneområdene av verneområdene per rute. Foreløpig er grunnkartet, grått areal,
-   inngrepsfri natur, kommunegrensen, kommuneplanen og verneområdene delt inn slik. */
+   inngrepsfri natur, kommunegrensen, kommuneplanen og de fire naturtemaene delt inn slik. Oppslaget av alle feltene for et område i
+   naturtemaene er felles for dem og står foreløpig utenfor datasettene. */
 export const DATASETT = {
   grunnkart: {
     navn: 'Arealklasser fra grunnkartet',
@@ -198,6 +199,37 @@ export const DATASETT = {
       [
         'Verneområdene per rute og verneform',
         'det samme for hver gruppe av verneformer for seg, til det vernede arealet per verneform på land og i sjø.'
+      ]
+    ]
+  },
+  villrein: {
+    navn: 'Villreinområder',
+    om: 'Én rad per villreinområde (leveområde) som ligger helt eller delvis i kommunen, med flaten klippet mot kommunegrensen (som vektor), arealet av området i kommunen, og opplysningene: navn, om det er et nasjonalt villreinområde, funksjonen og perioden, og lenke til faktaarket. Fra Miljødirektoratet. Arealet av alle villreinområdene samlet regnes i gull (gull.villreinAreal).',
+    stotte: [
+      [
+        'Villreinområdene per rute',
+        'flatene slått sammen og lagt på rutene på 10,6 meter, så der områder overlapper, telles arealet én gang, og villreinområdene kan krysses med utbyggingen, grått areal og inngrepsfri natur.'
+      ]
+    ]
+  },
+  verdsatt: {
+    navn: 'Verdsatt natur',
+    om: 'Én rad per lokalitet med en naturtype og en verdikategori som ligger helt eller delvis i kommunen, med flaten klippet mot kommunegrensen (som vektor), arealet av lokaliteten i kommunen, og opplysningene: naturtypen, områdenavnet, verdikategorien og lenke til faktaarket. Verdikategorien er fast (svært stor, stor, middels eller noe verdi) eller ikke fast (vurderes per lokalitet, vurderes per naturtype, eller ikke gitt verdi). Fra Miljødirektoratet. Arealet per verdikategori regnes i gull (gull.verdsattAreal og gull.vurderesAreal).',
+    stotte: [
+      [
+        'Verdsatt natur per rute',
+        'lokalitetene med fast verdi lagt på rutene på 10,6 meter per verdikategori, så der lokaliteter overlapper, telles arealet én gang, i den høyeste verdien, og verdsatt natur kan krysses med utbyggingen og det kartlagte.'
+      ],
+      ['Verdsatt natur uten fast verdi per rute', 'det samme for lokalitetene uten fast verdi.']
+    ]
+  },
+  kartlagt: {
+    navn: 'Kartlagt for naturtyper',
+    om: 'Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks rundt kommunen, med året kartleggingen er gjort, og flatene slått sammen og klippet mot kommunen. Fra Miljødirektoratet. Arealet som er kartlagt, regnes i gull (gull.kartlagtAreal).',
+    stotte: [
+      [
+        'Det kartlagte per rute',
+        'dekningsflatene slått sammen og lagt på rutene på 10,6 meter, så det kartlagte arealet kan regnes, og det kartlagte kan krysses med verdsatt natur og utbyggingen.'
       ]
     ]
   },
@@ -320,7 +352,7 @@ export const katalog = {
       navn: 'temaegenskaper',
       endepunkt: `${E.MILJO}{tjeneste}/MapServer/{lag}/query`,
       tittel: 'Alle feltene for et område',
-      om: 'alle feltene for ett område i et naturtema fra Miljødirektoratet, kalt med [tema, OBJECTID]. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: «tema/OBJECTID».',
+      om: 'alle feltene for ett område i et naturtema fra Miljødirektoratet, kalt med [tema, OBJECTID]. Til detaljene ved trykk i kartet. Felles støttedata for naturtemaene, foreløpig utenfor datasettene. Lagres ikke. Nøkkel: «tema/OBJECTID».',
       forklaring: 'Alle feltene for området man har trykket på, slått opp med OBJECTID i karttjenesten.',
       husk: 0,
       nokkel: ([t, id]) => `${t}/${id}`,
@@ -657,8 +689,11 @@ export const katalog = {
     villrein: tabell({
       lag: 'bronse',
       navn: 'villrein',
+      datasett: DATASETT.villrein,
+      innhold:
+        'Ett svar per kommune med villreinområdene som berører den: hvert område som flate, forenklet med 20 meter, med alle feltene fra kilden, som navn, om området er nasjonalt, funksjonen og faktaarket.',
       endepunkt: E.VILLREIN,
-      tittel: 'Villreinområder',
+      tittel: 'Villreinområder, GeoJSON',
       om: 'villreinområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
         'Leveområdene for villrein i kommunen som flater i UTM 33, forenklet med 20 meter, side for side når de ikke kommer i ett svar.',
@@ -669,32 +704,26 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'bronse',
       navn: 'verdsattNatur',
+      datasett: DATASETT.verdsatt,
+      innhold:
+        'Ett svar per kommune med lokalitetene som berører den og har en verdikategori, med og uten fast verdi: hver lokalitet som flate, forenklet med 5 meter, med feltene verdikategori, naturtype, områdenavn og faktaark.',
       endepunkt: E.VERDSATT,
-      tittel: 'Verdsatt natur',
-      om: 'naturtyper med verdi i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
+      tittel: 'Verdsatt natur, GeoJSON',
+      om: 'naturtyper med en verdikategori i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
-        'Naturtyper med svært stor, stor, middels eller noe verdi i kommunen, som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar.',
+        'Naturtyper med svært stor, stor, middels eller noe verdi, og de som skal vurderes per lokalitet eller per naturtype eller ikke er gitt verdi, i kommunen, som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar.',
       kilde: KILDE.verdsatt,
       husk: 0,
       etl: mdirNatur.verdsattNatur
     }),
-    verdsattVurderes: tabell({
-      lag: 'bronse',
-      navn: 'verdsattVurderes',
-      endepunkt: E.VERDSATT,
-      tittel: 'Verdsatt natur uten fast verdi',
-      om: 'naturtyper i kommunen fra Miljødirektoratet som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
-      forklaring:
-        'Lokalitetene i det samme laget som verdsatt natur, med verdikategorien «Vurderes per lokalitet», «Vurderes per naturtype» eller «Ikke gitt verdi», som flater i UTM 33, forenklet med 5 meter.',
-      kilde: KILDE.verdsatt,
-      husk: 0,
-      etl: mdirNatur.verdsattVurderes
-    }),
     kartlagt: tabell({
       lag: 'bronse',
       navn: 'kartlagt',
+      datasett: DATASETT.kartlagt,
+      innhold:
+        'Ett svar per kommune med dekningsflatene som berører utsnittet rundt kommunen, forenklet med 10 meter, med året flaten ble kartlagt.',
       endepunkt: E.KARTLAGT,
-      tittel: 'Kartlagt for naturtyper',
+      tittel: 'Kartlagt for naturtyper, GeoJSON',
       om: 'dekningsflatene for naturtypekartlegging rundt kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
         'Dekningsflatene for naturtypekartlegging etter Miljødirektoratets instruks rundt kommunen, forenklet med 10 meter, side for side når de ikke kommer i ett svar.',
@@ -1077,7 +1106,10 @@ export const katalog = {
     villrein: tabell({
       lag: 'solv',
       navn: 'villrein',
-      tittel: 'Villreinområder, klippet',
+      datasett: DATASETT.villrein,
+      innhold:
+        'Én rad per villreinområde i kommunen: flaten klippet mot kommunegrensen, arealet av området i kommunen i km², navnet, om det er et nasjonalt villreinområde, funksjonen og perioden, lenken til faktaarket, og alle feltene slik kilden ga dem. Der to områder overlapper, har begge med seg overlappet.',
+      tittel: 'Villreinområder',
       om: 'villreinområdene klippet mot kommunen, med areal og opplysninger',
       forklaring:
         'Flatene klippes mot kommunegrensen, og arealet av hvert område i kommunen regnes ut. Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter.',
@@ -1088,27 +1120,16 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'solv',
       navn: 'verdsattNatur',
-      tittel: 'Lokaliteter med verdsatt natur',
-      om: 'lokalitetene med verdsatt natur, uklippet, med areal, verdi og opplysninger',
+      datasett: DATASETT.verdsatt,
+      innhold:
+        'Én rad per lokalitet i kommunen: flaten klippet mot kommunegrensen, arealet av lokaliteten i kommunen i km², naturtypen, områdenavnet, verdikategorien, lenken til faktaarket, og alle feltene slik kilden ga dem. Lokalitetene med fast verdi og de uten ligger i hver sin liste.',
+      tittel: 'Verdsatt natur',
+      om: 'lokalitetene med verdsatt natur, med og uten fast verdi, klippet mot kommunen, med areal, verdikategori og opplysninger',
       forklaring:
-        'Lokalitetene leses med verdien og arealet av hele lokaliteten, og sorteres med høyest verdi først og så etter areal. De klippes ikke mot kommunen: det gjør dekningsandelen (solv.verdsattAndel) og kryssingen med utbyggingen.',
-      usikkerhet: [
-        'Arealet per lokalitet i listen er arealet av hele lokaliteten, også en del som ligger utenfor kommunen. Summene per verdikategori er klippet mot kommunen.'
-      ],
+        'Lokalitetene klippes mot kommunegrensen, og arealet av hver lokalitet i kommunen regnes ut. Bare lokalitetene kanten av kommunen går gjennom, klippes; de andre ligger helt inne. De sorteres med høyest verdi først og så etter areal. Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter.',
       husk: 30,
       etl: solvTemaer.verdsattNatur,
       glemt: (_, nr) => glemMasker('verdi/' + nr + '/')
-    }),
-    verdsattVurderes: tabell({
-      lag: 'solv',
-      navn: 'verdsattVurderes',
-      tittel: 'Lokaliteter uten fast verdi',
-      om: 'lokalitetene med naturtyper som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, uklippet, med areal og opplysninger.',
-      forklaring:
-        'Lokalitetene leses som verdsatt natur, med kategorien (per lokalitet, per naturtype eller ikke gitt verdi) i stedet for verdien.',
-      usikkerhet: ['Arealet per lokalitet er arealet av hele lokaliteten, også en del som ligger utenfor kommunen.'],
-      husk: 30,
-      etl: solvTemaer.verdsattVurderes
     }),
     vernAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
@@ -1139,76 +1160,74 @@ export const katalog = {
       husk: 12,
       etl: solvTemaer.verneformAndel
     }),
-    villreinAndel: tabell<string, solvTemaer.Temaandel>({
+    villreinAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'villreinAndel',
+      datasett: DATASETT.villrein,
+      stotte: true,
+      innhold:
+        'For hver rute i bitene på 2048 × 2048 ruter: hvor stor del av ruta som ligger i et villreinområde og i kommunen, fra 0 til 100 %. Uten navn og opplysninger.',
       tittel: 'Villreinområdene per rute',
-      om: 'villreinområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med arealet',
+      om: 'villreinområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter)',
       forklaring:
-        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet av villreinområdene i kommunen, og brukes når de krysses med utbyggingen, grått areal og inngrepsfri natur.',
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Arealet av villreinområdene regnes av den i gull (gull.villreinAreal), og den brukes når villreinområdene krysses med utbyggingen, grått areal og inngrepsfri natur.',
       husk: 30,
       etl: solvTemaer.villreinAndel
     }),
-    verdsattAndel: tabell<string, solvTemaer.Temaandel>({
+    verdsattAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'verdsattAndel',
+      datasett: DATASETT.verdsatt,
+      stotte: true,
+      innhold:
+        'For hver rute i bitene på 2048 × 2048 ruter og hver av de fire faste verdikategoriene: hvor stor del av ruta som ligger i en lokalitet med den verdien og i kommunen. Der lokaliteter overlapper, er ruta med i den høyeste verdien.',
       tittel: 'Verdsatt natur per rute',
-      om: 'verdsatt natur i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), per verdikategori, med arealet',
+      om: 'verdsatt natur med fast verdi i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), per verdikategori',
       forklaring:
-        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet viser det. Gir arealet per verdikategori, og brukes når verdsatt natur krysses med utbyggingen.',
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet viser det. Arealet per verdikategori regnes av den i gull (gull.verdsattAreal), og den brukes når verdsatt natur krysses med utbyggingen.',
       husk: 30,
       etl: solvTemaer.verdsattAndel
     }),
-    vurderesAndel: tabell<string, solvTemaer.Temaandel>({
+    vurderesAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'vurderesAndel',
+      datasett: DATASETT.verdsatt,
+      stotte: true,
+      innhold:
+        'Det samme for de tre kategoriene uten fast verdi: vurderes per lokalitet, vurderes per naturtype og ikke gitt verdi. Der lokaliteter overlapper, er ruta med i den første.',
       tittel: 'Verdsatt natur uten fast verdi per rute',
-      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, som andel per rute i bitene, per kategori, med arealet',
+      om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi, som andel per rute i bitene, per kategori',
       forklaring:
-        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller «vurderes per lokalitet» først. Gir arealet per kategori.',
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller «vurderes per lokalitet» først. Arealet per kategori regnes av den i gull (gull.vurderesAreal).',
       husk: 30,
       etl: solvTemaer.vurderesAndel
     }),
-    kartlagtAndel: tabell<string, solvTemaer.Temaandel>({
+    kartlagtAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'kartlagtAndel',
+      datasett: DATASETT.kartlagt,
+      stotte: true,
+      innhold:
+        'For hver rute i bitene på 2048 × 2048 ruter: hvor stor del av ruta som er kartlagt og ligger i kommunen, fra 0 til 100 %.',
       tittel: 'Det kartlagte per rute',
-      om: 'det som er kartlagt for naturtyper i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med arealet',
+      om: 'det som er kartlagt for naturtyper i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter)',
       forklaring:
-        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet som er kartlagt, og hvor mye av planlagt utbygging på natur som ligger utenfor det kartlagte.',
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad, av dekningsflatene slik de kom (solv.kartlagt). Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Arealet som er kartlagt, regnes av den i gull (gull.kartlagtAreal), og den brukes til hvor mye av planlagt utbygging på natur som ligger utenfor det kartlagte.',
       husk: 30,
       etl: solvTemaer.kartlagtAndel
-    }),
-    verdsattIKartlagtAndel: tabell<string, solvTemaer.Temaandel>({
-      lag: 'solv',
-      navn: 'verdsattIKartlagtAndel',
-      tittel: 'Verdsatt natur i det kartlagte per rute',
-      om: 'verdsatt natur innenfor det kartlagte i kommunen som andel per rute i bitene, per verdikategori, med arealet',
-      forklaring:
-        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Både kommunen og det kartlagte er masker, så bare det som ligger i begge, telles. Gir arealet per verdikategori innenfor det kartlagte.',
-      husk: 30,
-      etl: solvTemaer.verdsattIKartlagtAndel
     }),
     kartlagt: tabell({
       lag: 'solv',
       navn: 'kartlagt',
-      tittel: 'Det kartlagte',
-      om: 'det som er kartlagt for naturtyper etter Miljødirektoratets instruks, klippet mot kommunen',
+      datasett: DATASETT.kartlagt,
+      innhold:
+        'Dekningsflatene rundt kommunen slik de kom, det første og det siste året kartleggingen er gjort, og flatene slått sammen og klippet mot kommunen, til kartet.',
+      tittel: 'Kartlagt for naturtyper',
+      om: 'det som er kartlagt for naturtyper etter Miljødirektoratets instruks: dekningsflatene, årene, og flatene slått sammen og klippet mot kommunen',
       forklaring:
-        'Arealet er dekningsflatene som andel per rute i kommunen (solv.kartlagtAndel), så overlapp telles én gang. Til kartet slås flatene sammen og klippes mot kommunen.',
-      usikkerhet: ['Dekningsflatene kan ligge delvis i vann, mens kartleggingsgraden regnes av landarealet.'],
+        'Dekningsflatene beholdes slik de kom, så det kartlagte kan legges i rutene og krysses med verdsatt natur. Til kartet slås flatene sammen og klippes mot kommunen. Feiler sammenslåingen, er den sammenslåtte flaten ikke med.',
       husk: 30,
       etl: solvTemaer.kartlagt
-    }),
-    naturoppslag: tabell<string, Omradesok | null>({
-      lag: 'solv',
-      navn: 'naturoppslag',
-      fil: 'solv/temaer.ts',
-      tittel: 'Oppslag i områdene',
-      om: 'hjelpetabell: områdene i naturtemaene og kommunen som oppslag, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området, eller kommune/kommune. Lages første gang en rute med planlagt utbygging kan ligge i området.',
-      forklaring:
-        'Hvert område får et oppslag som gir hvor stor del av en rute som ligger i flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor stort området er.',
-      husk: Infinity
     })
   },
   gull: {
@@ -1314,7 +1333,7 @@ export const katalog = {
       tittel: 'Verdsatt natur uten fast verdi',
       om: 'lokalitetene som skal vurderes per lokalitet eller per naturtype, eller ikke er gitt verdi: antall og arealet i kommunen per kategori, og flatene til kartet.',
       forklaring:
-        'Arealet per kategori regnes som for verdsatt natur, fra dekningsandelen (solv.vurderesAndel), så overlapp telles én gang.',
+        'Lokalitetene uten fast verdi fra verdsatt natur (solv.verdsattNatur). Arealet per kategori regnes som for verdsatt natur (gull.vurderesAreal), så overlapp telles én gang.',
       usikkerhet: [
         'Kategoriene sier at verdien ikke er satt, ikke at naturen er mindre verdifull. «Ikke gitt verdi» gjelder bare noen få lokaliteter i landet, de fleste med naturtypen «Ikke kartlagt».'
       ],
@@ -1728,7 +1747,7 @@ export const katalog = {
       gammelFast: true,
       etl: gullGraa.graaIPlan
     }),
-    vernAreal: tabell<string, gullTemaer.VernAreal>({
+    vernAreal: tabell<string, gullTemaer.Temaareal>({
       lag: 'gull',
       navn: 'vernAreal',
       tittel: 'Areal av verneområdene',
@@ -1737,6 +1756,57 @@ export const katalog = {
         'Andelen av hver rute som ligger i et verneområde og i kommunen, summeres bit for bit og rettes for målestokken i biten (solv.vernAndel). Summen ganger arealet av en rute (10,6 × 10,6 meter) er arealet. Områdene er slått sammen i rutene, så der to områder overlapper, telles overlappet én gang.',
       husk: 40,
       etl: gullTemaer.vernAreal
+    }),
+    villreinAreal: tabell<string, gullTemaer.Temaareal>({
+      lag: 'gull',
+      navn: 'villreinAreal',
+      tittel: 'Areal av villreinområdene',
+      om: 'arealet av villreinområdene i kommunen i km², der overlapp telles én gang, regnet av villreinområdene per rute på 10,6 meter',
+      forklaring:
+        'Andelen av hver rute som ligger i et villreinområde og i kommunen, summeres bit for bit og rettes for målestokken i biten (solv.villreinAndel). Summen ganger arealet av en rute (10,6 × 10,6 meter) er arealet. Der to områder overlapper, telles overlappet én gang.',
+      husk: 40,
+      etl: gullTemaer.villreinAreal
+    }),
+    verdsattAreal: tabell<string, gullTemaer.Temaareal>({
+      lag: 'gull',
+      navn: 'verdsattAreal',
+      tittel: 'Areal av verdsatt natur',
+      om: 'arealet av verdsatt natur med fast verdi i kommunen i km², per verdikategori og samlet, regnet av verdsatt natur per rute på 10,6 meter',
+      forklaring:
+        'Andelen av hver rute som ligger i en lokalitet og i kommunen, per verdikategori, summeres bit for bit og rettes for målestokken i biten (solv.verdsattAndel). Summen ganger arealet av en rute er arealet. Der lokaliteter overlapper, telles overlappet én gang, i den høyeste verdien.',
+      husk: 40,
+      etl: gullTemaer.verdsattAreal
+    }),
+    vurderesAreal: tabell<string, gullTemaer.Temaareal>({
+      lag: 'gull',
+      navn: 'vurderesAreal',
+      tittel: 'Areal av verdsatt natur uten fast verdi',
+      om: 'arealet av lokalitetene uten fast verdi i kommunen i km², per kategori og samlet, regnet av verdsatt natur uten fast verdi per rute på 10,6 meter',
+      forklaring:
+        'Som arealet av verdsatt natur, av solv.vurderesAndel. Der lokaliteter overlapper, telles overlappet én gang, i den første kategorien.',
+      etterBehov: true,
+      husk: 40,
+      etl: gullTemaer.vurderesAreal
+    }),
+    kartlagtAreal: tabell<string, gullTemaer.Temaareal>({
+      lag: 'gull',
+      navn: 'kartlagtAreal',
+      tittel: 'Areal av det kartlagte',
+      om: 'arealet som er kartlagt for naturtyper i kommunen i km², der overlapp telles én gang, regnet av det kartlagte per rute på 10,6 meter',
+      forklaring:
+        'Andelen av hver rute som er kartlagt og ligger i kommunen, summeres bit for bit og rettes for målestokken i biten (solv.kartlagtAndel). Summen ganger arealet av en rute er arealet. Der dekningsflater overlapper, telles overlappet én gang.',
+      husk: 40,
+      etl: gullTemaer.kartlagtAreal
+    }),
+    naturoppslag: tabell<string, Omradesok | null>({
+      lag: 'gull',
+      navn: 'naturoppslag',
+      fil: 'gull/temaer.ts',
+      tittel: 'Oppslag i områdene',
+      om: 'hjelpetabell til kryssingen i gull: områdene i naturtemaene og kommunen som oppslag, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området, eller kommune/kommune. Lages første gang en rute med planlagt utbygging kan ligge i området.',
+      forklaring:
+        'Hvert område får et oppslag som gir hvor stor del av en rute som ligger i flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er ingen ruter i oppslaget, så svaret er det samme hvor stort området er.',
+      husk: Infinity
     }),
     verneomrader: tabell({
       lag: 'gull',
@@ -1780,7 +1850,7 @@ export const katalog = {
       tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen: listen, arealet og andelen av landarealet',
       forklaring:
-        'Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i kommunen.',
+        'Arealet i kommunen er villreinområdene slått sammen (gull.villreinAreal), så der to områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i kommunen.',
       husk: 6,
       etl: gullTemaer.villrein
     }),
@@ -1813,7 +1883,7 @@ export const katalog = {
       tittel: 'Verdsatt natur',
       om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, og andelen av landarealet',
       forklaring:
-        'Arealet samlet og per verdikategori fra dekningsandelen i sølv (solv.verdsattAndel), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet.',
+        'Arealet samlet og per verdikategori (gull.verdsattAreal), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet.',
       husk: 6,
       etl: gullTemaer.verdsattNatur
     }),
@@ -1823,7 +1893,7 @@ export const katalog = {
       tittel: 'Verdsatt natur i det kartlagte',
       om: 'verdsatt natur per verdikategori innenfor det kartlagte',
       forklaring:
-        'Verdsatt natur per verdikategori innenfor det kartlagte, fra dekningsandelen med både kommunen og det kartlagte som masker (solv.verdsattIKartlagtAndel).',
+        'Kryssingen av verdsatt natur og det kartlagte: lokalitetene med fast verdi legges i rutene med både kommunen og dekningsflatene som masker, så bare det som ligger i begge, telles, og arealet per verdikategori regnes av rutene. Der lokaliteter overlapper, teller den høyeste verdien.',
       husk: 30,
       etl: gullTemaer.verdsattNaturIKartlagt
     }),
@@ -1835,7 +1905,7 @@ export const katalog = {
       forklaring:
         'Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og vises som høyst 100 %. Helhetsbildet deler landarealet i kartlagt og ikke kartlagt, og viser verdsatt natur per verdi i hver del.',
       usikkerhet: [
-        'Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen verdsatt natur der kan ikke overføres til resten. Utenfor det kartlagte betyr «ingen registrert» at det ikke er lett, ikke at naturen mangler verdi.'
+        'Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen verdsatt natur der kan ikke overføres til resten. Utenfor det kartlagte betyr «ingen registrert» at det ikke er lett etter, ikke at naturen mangler verdi.'
       ],
       husk: 6,
       etl: gullTemaer.verdsattNaturKartlagt
@@ -1943,7 +2013,7 @@ for (const lag of Object.values(katalog))
   }
 
 /* Maskene til et tema i en kommune glemmes når områdene glemmes */
-const glemMasker = (start: string) => glem(katalog.solv.naturoppslag, k => k.startsWith(start));
+const glemMasker = (start: string) => glem(katalog.gull.naturoppslag, k => k.startsWith(start));
 
 /* Tabellene for hvert naturtema, etter id, til siden og kartet som er felles for temaene: områdene i sølv, og i gull temaet,
    planlagt utbygging i det, og for verdsatt natur kartleggingen og planlagt utbygging utenfor det kartlagte */
