@@ -9,7 +9,7 @@ import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { FLERE_VERNEFORMER, NATURTEMA } from '../../src/data/solv/temaer.ts';
-import { andelTekst, antallOrd, dekar, iTekst, nf, pst } from '../tekst.ts';
+import { andelTekst, antallOrd, dekar, iTekst, nf, pst, verdiOverlapp } from '../tekst.ts';
 import { MdCheckbox } from '../md.ts';
 import Kart, { type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
@@ -771,6 +771,7 @@ function Verdi({ tema }: { tema: Tema }) {
               }
             ]}
           />
+          {v.flere > 0 && <p className="hint">{verdiOverlapp(iTekst(v.flere))}</p>}
         </Figur>
       )}
       {v && v.antall > 0 && (

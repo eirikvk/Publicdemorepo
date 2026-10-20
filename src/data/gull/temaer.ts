@@ -284,12 +284,14 @@ export function kryssKartlagt(U: Utvalg, K: Andelsbit[]): Ukjent {
   return { nat, ukjent };
 }
 
-/* Et naturtema i kommunen: områdene, arealet samlet og per verdikategori (verdsatt natur), andelen av landarealet, antall områder,
-   og per verdikategori antall lokaliteter og arealet. Arealer er i km², andeler i prosent. */
+/* Et naturtema i kommunen: områdene, arealet samlet og per verdikategori (verdsatt natur), arealet som telles mer enn én gang når
+   områdene summeres (flere), andelen av landarealet, antall områder, og per verdikategori antall lokaliteter og arealet. Arealer er
+   i km², andeler i prosent. */
 export interface Temaet {
   nr: string;
   omrader: TemaOmrade[];
   sum: number;
+  flere: number;
   klasser: number[] | null;
   ufullstendig: boolean;
   andelLand: number | null;
@@ -297,7 +299,9 @@ export interface Temaet {
   hoyVerdi: number | null;
   perKlasse: { antall: number; km2: number }[] | null;
 }
-/* Temaet bygd av områdene O fra sølv, arealet A (samlet og per verdikategori) og landarealet land */
+/* Temaet bygd av områdene O fra sølv, arealet A (samlet og per verdikategori) og landarealet land. Det som telles mer enn én gang
+   (flere), er summen av arealet per område minus arealet der overlapp telles én gang. Arealet per område er regnet av flaten, og
+   arealet samlet av rutene, så de kan skille litt også uten overlapp: under én dekar eller 0,02 % av arealet regnes som 0. */
 export function byggTemaet(
   tema: Naturtema,
   nr: string,
@@ -308,11 +312,13 @@ export function byggTemaet(
   const o = O.omrader,
     sum = A.sum || 0,
     klasser = tema.samlet && tema.klasser ? A.klasser || null : null,
-    harKlasser = !!(tema.klasser && klasser && o.length);
+    harKlasser = !!(tema.klasser && klasser && o.length),
+    flere = summen(o.map(x => x.km2)) - sum;
   return {
     nr,
     omrader: o,
     sum,
+    flere: flere > Math.max(0.001, sum * 2e-4) ? flere : 0,
     klasser,
     ufullstendig: !!O.ufullstendig,
     andelLand: andel(sum, land),

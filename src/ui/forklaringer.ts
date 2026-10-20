@@ -60,10 +60,8 @@ const land = (hent: Hent) => {
 function omradesum(T: Temaet, flertall: string) {
   const o = [...T.omrader].sort((a, b) => b.km2 - a.km2),
     vis = o.slice(0, 3).map(x => `${x.navn} ${hele(x.km2)}`),
-    rest = o.length - vis.length,
-    overlapp =
-      o.reduce((s, x) => s + x.km2, 0) - T.sum > Math.max(0.001, T.sum * 2e-4); /* mer enn én dekar og 0,02 % */
-  return `${o.length === 1 ? 'Ett område' : `${ant(o.length)} ${flertall}`}: ${ramse([...vis, rest > 0 && `${ant(rest)} til med ${hele(o.slice(3).reduce((s, x) => s + x.km2, 0))}`])} dekar. Til sammen ${daa(T.sum)}${overlapp ? ', der overlapp telles én gang' : ''}.`;
+    rest = o.length - vis.length;
+  return `${o.length === 1 ? 'Ett område' : `${ant(o.length)} ${flertall}`}: ${ramse([...vis, rest > 0 && `${ant(rest)} til med ${hele(o.slice(3).reduce((s, x) => s + x.km2, 0))}`])} dekar. Til sammen ${daa(T.sum)}${T.flere > 0 ? ', der overlapp telles én gang' : ''}.`;
 }
 /* Planlagt utbygging i et tema, i ruter og dekar */
 function iPlanen(I: TemaIPlan | null, best: string, flertall = 'områder') {
@@ -280,7 +278,7 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor mye verdsatt natur er registrert i kommunen, hvor mye av kommunen er kartlagt, og hvor mye planlagt utbygging ligger i verdsatt natur eller der det ikke er kartlagt?',
     kortFortalt:
-      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.',
+      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Hvor mye lokalitetene overlapper, står for seg. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.',
     tabeller: [
       'gull.verdsattNatur',
       'gull.verdsattNaturKartlagt',
@@ -293,6 +291,11 @@ export const KORT: Kort[] = [
       if (!T || !T.antall || !T.perKlasse) return null;
       const linjer = [
         `${stor(ramse(VERDI.klasser!.map(([navn], v) => `${navn.toLowerCase()} ${hele(T.perKlasse![v].km2)}`)))} dekar. Til sammen ${daa(T.sum)} i ${ant(T.antall)} lokaliteter.`,
+        ...(T.flere > 0
+          ? [
+              `Lokalitetene hver for seg er til sammen ${daa(T.sum + T.flere)}. Det er ${daa(T.flere)} mer, fordi lokaliteter overlapper. Der teller den høyeste verdien.`
+            ]
+          : []),
         ...avLand(hent, T.andelLand)
       ];
       const K = hent(katalog.gull.verdsattNaturKartlagt);

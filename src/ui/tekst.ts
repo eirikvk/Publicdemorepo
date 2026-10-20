@@ -56,3 +56,6 @@ export const henteTekst = (h: { ferdig: number; av: number }) =>
 /* Det samme kort, til merkelappen i kartet */
 export const henteKort = (h: { ferdig: number; av: number }) =>
   h.av ? `Henter kart: ${nf(h.ferdig, 0)} av ${nf(h.av, 0)}` : 'Henter kart …';
+/* Overlappet i verdsatt natur (flere i gull.verdsattNatur), med arealet skrevet ut (mengde), likt på siden og i tvillingen */
+export const verdiOverlapp = (mengde: string) =>
+  `Noen lokaliteter overlapper, til sammen ca. ${mengde}, for eksempel der et sted er kartlagt både før og etter dagens instruks. Der er arealet med i den høyeste verdien, så det telles én gang.`;

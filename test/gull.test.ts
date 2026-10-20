@@ -14,6 +14,8 @@ import {
 } from '../src/data/gull/naturregnskap.ts';
 import { lagEndring, lagFordeling, lagOkosystemareal, lagOkosystemendring } from '../src/data/solv/naturregnskap.ts';
 import type { Arealdetaljer } from '../src/data/solv/ssb.ts';
+import { byggTemaet } from '../src/data/gull/temaer.ts';
+import { NATURTEMA, type Temaomrader } from '../src/data/solv/temaer.ts';
 
 /* De syntetiske tabellene lages i sølv med kodene hos SSB, og leses i gull med hovedøkosystemene i grunnkartet */
 const byggFordeling = (D: Arealdetaljer, aar: string, flate: number) => fordelingAv(lagFordeling(D, aar, flate));
@@ -282,4 +284,16 @@ test('inngrepsfri natur over tid: endringen per periode, og inngrepsnær natur f
   /* sone 1 kan krympe mens sone 2 vokser: sonene flytter seg, og summen er den samme */
   assert.deepEqual(U.perioder[1], { fra: 2008, til: 2013, soner: [0, -0.5, 0.5], naer: 0 });
   assert.deepEqual(U.perioder[3], { fra: 2018, til: 2023, soner: [-1, 0.5, 0], naer: 0.5 });
+});
+
+test('verdsatt natur: det som telles mer enn én gang, er summen av lokalitetene minus arealet, og små avvik er 0', () => {
+  const VERDI = NATURTEMA.find(t => t.id === 'verdi')!,
+    O = (...km2: number[]) => ({ omrader: km2.map((k, i) => ({ km2: k, v: i % 4 })) }) as unknown as Temaomrader,
+    A = { sum: 1.2, klasser: [1, 0.2, 0, 0] };
+  /* to lokaliteter på 1 og 0,5 km² som dekker 1,2 km² til sammen: 0,3 km² er telt to ganger */
+  assert.ok(Math.abs(byggTemaet(VERDI, '5001', O(1, 0.5), A, 10).flere - 0.3) < 1e-12);
+  /* uten overlapp skiller arealet av flatene og av rutene litt: under én dekar er 0 */
+  assert.equal(byggTemaet(VERDI, '5001', O(1, 0.2009), A, 10).flere, 0);
+  /* og under 0,02 % av arealet er 0, også når det er mer enn én dekar */
+  assert.equal(byggTemaet(VERDI, '5001', O(10000, 1.2), { sum: 10001, klasser: [] }, 10).flere, 0);
 });

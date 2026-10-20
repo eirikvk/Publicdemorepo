@@ -1905,9 +1905,12 @@ export const katalog = {
       lag: 'gull',
       navn: 'verdsattNatur',
       tittel: 'Verdsatt natur',
-      om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, og andelen av landarealet',
+      om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, hvor mye lokalitetene overlapper, og andelen av landarealet',
       forklaring:
-        'Arealet samlet og per verdikategori (gull.verdsattAreal), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet.',
+        'Arealet samlet og per verdikategori (gull.verdsattAreal), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet. Hvor mye lokalitetene overlapper, er summen av arealet per lokalitet minus arealet samlet. Under én dekar eller 0,02 % regnes som 0, for arealet per lokalitet er regnet av flaten og arealet samlet av rutene.',
+      usikkerhet: [
+        'Lokaliteter fra ulike kartlegginger kan ligge oppå hverandre med ulik verdi. Miljødirektoratet sier ikke hvilken som gjelder, så den høyeste verdien teller.'
+      ],
       husk: 6,
       etl: gullTemaer.verdsattNatur
     }),

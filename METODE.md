@@ -736,9 +736,10 @@ som ligger i et villreinområde.
 ligger i verdsatt natur eller der det ikke er kartlagt?
 
 **Kort fortalt.** Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet
-regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien.
-Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi
-lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
+regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Hvor
+mye lokalitetene overlapper, står for seg. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter
+Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt
+verdi) er ikke med i tallene, men nevnes for seg.
 
 **Tabeller.** Kortet viser `gull.verdsattNatur`, `gull.verdsattNaturKartlagt`, `gull.verdsattNaturIPlan`,
 `gull.utbyggingUtenforKartlagt` og `gull.verdsattVurderes`. Det står i `src/ui/komponenter/Naturtema.tsx`.
@@ -858,7 +859,9 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
     verdikategori, summeres bit for bit og rettes for målestokken i biten (solv.verdsattAndel). Summen ganger arealet av en rute
     er arealet. Der lokaliteter overlapper, telles overlappet én gang, i den høyeste verdien.
 22. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori (gull.verdsattAreal), der overlapp telles én
-    gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet.
+    gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet. Hvor mye lokalitetene
+    overlapper, er summen av arealet per lokalitet minus arealet samlet. Under én dekar eller 0,02 % regnes som 0, for arealet per
+    lokalitet er regnet av flaten og arealet samlet av rutene.
 23. **Areal av det kartlagte** (`gull.kartlagtAreal`). Andelen av hver rute som er kartlagt og ligger i kommunen, summeres bit for
     bit og rettes for målestokken i biten (solv.kartlagtAndel). Summen ganger arealet av en rute er arealet. Der dekningsflater
     overlapper, telles overlappet én gang.
@@ -918,6 +921,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
   eksempel på Frøya.
 - Arealet er talt i ruter på 10,6 meter og kan avvike litt fra arealet av flatene. Grensen mellom land og sjø er grunnkartets, som
   kan være en annen enn verneområdets egen.
+- Lokaliteter fra ulike kartlegginger kan ligge oppå hverandre med ulik verdi. Miljødirektoratet sier ikke hvilken som gjelder, så
+  den høyeste verdien teller.
 - Det kartlagte er ikke et tilfeldig utvalg av kommunen, så andelen verdsatt natur der kan ikke overføres til resten. Utenfor det
   kartlagte betyr «ingen registrert» at det ikke er lett etter, ikke at naturen mangler verdi.
 - Kategoriene sier at verdien ikke er satt, ikke at naturen er mindre verdifull. «Ikke gitt verdi» gjelder bare noen få
@@ -1660,6 +1665,17 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Overlapp i verdsatt natur, 20. oktober 2026.** Lokalitetene i verdsatt natur kan ligge oppå hverandre. Beskrivelsene hos
+Geonorge sier at datasettet er satt sammen av tre grunnlagsdatasett (utvalgte naturtyper, kartleggingen etter instruksen og den
+eldre kartleggingen etter DN-håndbok 13), men ikke hvilken lokalitet som gjelder der de overlapper, eller at nyere kartlegging
+erstatter eldre. Vi beholder derfor regelen om at den høyeste verdien teller, som er den forsiktige, og som kartet viser. Nytt er
+hvor mye lokalitetene overlapper (`flere` i `gull.verdsattNatur`): summen av arealet per lokalitet minus arealet der overlapp
+telles én gang. Arealet per lokalitet er regnet av flaten og arealet samlet av rutene, så de skiller litt også uten overlapp (høyst
+27 dekar i villreinområdene i Oppdal og 18 i verneområdene i Kautokeino, under 0,003 %). Under én dekar eller 0,02 % regnes derfor som 0, den
+samme grensen som forklaringene brukte. Overlappet er 6 957 dekar i Trondheim, 1 341 i Oslo, 630 i Malvik og 190 i Surnadal.
+Siden og tvillingen viser det i én setning under verdikategoriene. Verneområdene og villreinområdene har ikke noe overlapp over
+grensen i kommunene i testen. Regresjonstesten ga avvik bare i det nye feltet og den nye setningen.
 
 **Kommunene som ett datasett, og andre støttedata, 20. oktober 2026.** Kommunegrensen ble datasettet «Kommunene»: listen over fylker
 og kommuner og grensen til hver kommune er dataene, og de lagrede grensene, kommunen i bitene, flaten til alle kommunene og kommunen

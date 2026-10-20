@@ -15,7 +15,7 @@ import { settSlor, visIKartet } from '../kart/naturtema.ts';
 import { ui } from '../tilstand.ts';
 import { Fargelinje, Forklaring, Stripe, Talltabell, type Stripedel } from './deler.tsx';
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.ts';
-import { antallOrd, dekar, iTekst, nf, periode, pst, stor } from '../tekst.ts';
+import { antallOrd, dekar, iTekst, nf, periode, pst, stor, verdiOverlapp } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
 
 export const ETT: Record<string, string> = {
@@ -296,6 +296,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
           })}
         </ul>
       )}
+      {N.perKlasse && N.flere > 0 && <p className="hint">{verdiOverlapp(iTekst(N.flere))}</p>}
       {t.id === 'verdi' && <UtenVerdi />}
       {helhet && <Helhet t={t} H={K!.helhet!} E={E!} />}
       {merk && <p>{merk}</p>}

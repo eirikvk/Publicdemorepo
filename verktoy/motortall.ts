@@ -92,6 +92,8 @@ export function motortall() {
         id: t.id,
         feil: false,
         sum: r(x.sum),
+        /* arealet som telles mer enn én gang når områdene summeres (fra 20. oktober 2026) */
+        flere: r(x.flere),
         antall: x.omrader.length,
         klasser: rund(x.klasser || null),
         regnet: !!C,
