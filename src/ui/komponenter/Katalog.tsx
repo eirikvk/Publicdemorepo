@@ -1,6 +1,6 @@
 /* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
    etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Dataene i et datasett i sølv (DATASETT i katalogen) står som én
-   vanlig rad med navnet på datasettet. Støttetabellene ligger bak knappen «Støtte» på raden, med hva de er til for først. «Info» viser hva tabellen er, det tekniske navnet og hvor
+   vanlig rad, og støttedataene ligger bak knappen «Støttedata» på raden, med hva hver av dem er til for først. «Info» viser hva tabellen er, det tekniske navnet og hvor
    ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
@@ -206,15 +206,15 @@ function Sporring({ d }: { d: Tabellen }) {
   );
 }
 
-/* Det «Info» viser: for dataene i et datasett hva datasettet er og tabellen dataene ligger i, for en støttetabell hvilke data den
-   støtter, og innholdet. Så hva tabellen er, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som huskes. */
+/* Det «Info» viser: for dataene i et datasett hva datasettet er og tabellen dataene ligger i, for støttedata hvilke data de støtter,
+   og innholdet. Så hva tabellen er, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som huskes. */
 function Info({ d }: { d: Tabellen }) {
   return (
     <>
       {d.datasett && !d.stotte && <p>{stor(d.datasett.om)}</p>}
       {d.datasett && (
         <p>
-          {d.stotte ? `Støttetabell for «${d.datasett.navn}».` : `Dataene ligger i tabellen «${d.tittel}».`}
+          {d.stotte ? `Støttedata for «${d.datasett.navn}».` : `Dataene ligger i tabellen «${d.tittel}».`}
           {d.innholdet ? ' ' + stor(d.innholdet) : ''}
         </p>
       )}
@@ -303,10 +303,10 @@ function KartetsMinne({ M }: { M: Minne }) {
 
 /* Det som ikke er ferdig i tabellen: nøklene som henter, har feilet eller er utdatert */
 const uferdigeI = (d: Tabellen) => d.rader.filter(x => x.status !== 'ok' || x.utdatert);
-/* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under. Dataene i et datasett står
-   med navnet på datasettet, og har i tillegg knappen «Støtte», som viser hva støttetabellene er til for og støttetabellene under
-   raden. Det som ikke er ferdig i støttetabellene, står også på raden, så det ikke skjules. En støttetabell har innholdet under
-   tittelen. */
+/* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under. Dataene i et datasett har i
+   tillegg knappen «Støttedata», som viser hva hver støttedata er til for, og så støttedataene under raden. Bare én av de tre knappene
+   på en rad er åpen om gangen. Det som ikke er ferdig i støttedataene, står også på raden, så det ikke skjules. Støttedata har
+   innholdet under tittelen. */
 function Tabellrad({
   d,
   apen,
@@ -324,7 +324,16 @@ function Tabellrad({
     uferdigStotte = stotte.filter(s => uferdigeI(s).length),
     her = apen && apen.navn === d.navn ? apen.hva : null,
     id = 'katalog-' + d.navn.replace('.', '-'),
-    tittel = d.datasett && !d.stotte ? d.datasett.navn : d.tittel;
+    tittel = d.tittel,
+    /* Info og Data lukker støttedataene, og støttedataene lukker Info og Data på raden */
+    vis = (hva: 'info' | 'data') => {
+      settVisStotte(false);
+      veksle(d.navn, hva);
+    },
+    visStotteNa = () => {
+      if (!visStotte && her) veksle(d.navn, her);
+      settVisStotte(!visStotte);
+    };
   return (
     <>
       <tr className={d.stotte ? 'stotterad' : undefined}>
@@ -340,7 +349,7 @@ function Tabellrad({
           )}
           {uferdigStotte.length > 0 && (
             <small className="uferdig">
-              Støtte: {uferdigStotte.map(s => `${s.tittel} ${uferdigeI(s).map(statusen).join(', ')}`).join('; ')}
+              Støttedata: {uferdigStotte.map(s => `${s.tittel} ${uferdigeI(s).map(statusen).join(', ')}`).join('; ')}
             </small>
           )}
         </td>
@@ -352,7 +361,7 @@ function Tabellrad({
               aria-expanded={her === 'info'}
               aria-controls={her === 'info' ? id : undefined}
               aria-label={`Info om ${tittel} (${d.navn})`}
-              onClick={() => veksle(d.navn, 'info')}
+              onClick={() => vis('info')}
             >
               Info
             </MdButton>
@@ -362,7 +371,7 @@ function Tabellrad({
               aria-expanded={her === 'data'}
               aria-controls={her === 'data' ? id : undefined}
               aria-label={`Data i ${tittel} (${d.navn})`}
-              onClick={() => veksle(d.navn, 'data')}
+              onClick={() => vis('data')}
             >
               Data
             </MdButton>
@@ -374,10 +383,10 @@ function Tabellrad({
                 mode="small"
                 aria-expanded={visStotte}
                 aria-controls={visStotte ? id + '-stotte' : undefined}
-                aria-label={`${stotte.length} støttetabeller for ${tittel}`}
-                onClick={() => settVisStotte(!visStotte)}
+                aria-label={`Støttedata for ${tittel}, ${stotte.length} tabeller`}
+                onClick={visStotteNa}
               >
-                Støtte ({stotte.length})
+                Støttedata ({stotte.length})
               </MdButton>
             </div>
           )}
@@ -408,7 +417,16 @@ function Tabellrad({
         <>
           <tr className="stotteforklaring" id={id + '-stotte'}>
             <td colSpan={3}>
-              <b>Støttetabeller.</b> {d.datasett && d.datasett.stotte}
+              <b>Støttedata</b> trengs for å hente og forstå dataene, men tallene regnes ikke av dem.
+              {d.datasett && d.datasett.stotte && (
+                <ul>
+                  {d.datasett.stotte.map(([navn, hva]) => (
+                    <li key={navn}>
+                      <b>{navn}:</b> {hva}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </td>
           </tr>
           {stotte.map(s => (
@@ -431,8 +449,8 @@ export default function Katalog() {
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
         Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå, etter filen de lages i. Data med
-        støttetabeller, som trengs for å hente og forstå dataene, står som én rad med knappen «Støtte», som viser
-        støttetabellene. Foreløpig gjelder det kommuneplanen. «Info» sier hva tabellen er og hvor ETL-funksjonen ligger.
+        støttedata, som trengs for å hente og forstå dataene, står som én rad med knappen «Støttedata», som viser
+        støttedataene. Foreløpig gjelder det kommuneplanen. «Info» sier hva tabellen er og hvor ETL-funksjonen ligger.
         «Data» viser det som ligger i cachen. Tabeller som ikke lagrer, kan spørres i stedet, også fra kildene, men ikke
         etter noe som ikke finnes. Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i
         nettleseren. Nettleserens vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv
@@ -451,7 +469,7 @@ export default function Katalog() {
       {K &&
         (['bronse', 'solv', 'gull'] as const).map(lag => {
           const T = K.filter(d => d.lag === lag),
-            vises = T.filter(d => !d.stotte) /* støttetabellene står under dataene de støtter */,
+            vises = T.filter(d => !d.stotte) /* støttedataene står under dataene de støtter */,
             filer = [...new Set(vises.map(d => d.fil))],
             stotteFor = (d: Tabellen) =>
               d.datasett ? T.filter(s => s.stotte && s.datasett && s.datasett.navn === d.datasett!.navn) : [];

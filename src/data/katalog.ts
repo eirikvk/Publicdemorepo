@@ -133,17 +133,25 @@ export const KILDE = {
 /* Datasettene i sølv. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Tabellene i bronse og sølv som henter
    og lager det, hører til datasettet (datasett på tabellen) på én av to måter:
    - dataene: selve datasettet, i bronse slik det hentes og i sølv slik det er gjort om
-   - støttetabeller (stotte på tabellen): det som trengs for å hente og forstå dataene, som en sjekk av om dataene finnes, en oversikt
+   - støttedata (stotte på tabellen): det som trengs for å hente og forstå dataene, som en sjekk av om dataene finnes, en oversikt
      som gjør hentingen raskere, opplysninger om dataene, eller oppslag når man trykker i kartet.
-   Hver tabell beskriver innholdet i sine egne data (innhold på tabellen). Hva støttetabellene er til for, står én gang, på datasettet
-   (stotte). Støttetabeller kan favne bredere enn dataene, for eksempel hele kommuneplanen, men tallene regnes ikke av dem. Foreløpig
+   Hver tabell beskriver innholdet i sine egne data (innhold på tabellen). Hva hver støttedata er til for, står én gang, på datasettet
+   (stotte, med navnet og hva den er til for). En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes
+   etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen, men tallene regnes ikke av dem. Foreløpig
    er bare kommuneplanen delt inn slik. */
 export const DATASETT = {
   utbyggingsareal: {
     navn: 'Areal satt av til framtidig utbygging i kommuneplanen',
     om: 'For hver rute på 10,6 meter i kommunen: om ruta ligger i areal kommuneplanen setter av til framtidig bebyggelse og anlegg, eller samferdsel. Laget av kommuneplanene hos DiBK. Det er ikke hele kommuneplanen: andre arealformål og nåværende byggeområder er valgt bort.',
-    stotte:
-      'Støttetabellene trengs for å hente og forstå dataene, men tallene regnes ikke av dem. Dekningen avgjør om DiBK har planen for kommunen: dekker den under 15 % av kommunen, finnes ikke datasettet der. Opplysningene sier hvilken plan det er. Oversikten gjør hentingen raskere, så kartbildene bare hentes der det er plan. Oppslaget i et punkt viser flatene i kommuneplanen når man trykker i kartet.'
+    stotte: [
+      [
+        'Dekningen av kommuneplanen',
+        'avgjør om DiBK har planen for kommunen. Dekker den under 15 % av kommunen, finnes ikke dataene der.'
+      ],
+      ['Opplysninger om kommuneplanen', 'hvilken plan det er, hvem som leverte den og når den ble kopiert til DiBK.'],
+      ['Oversikten over arealet satt av', 'gjør hentingen raskere, så kartbildene bare hentes der det er plan.'],
+      ['Kommuneplanen i et punkt', 'viser flatene i kommuneplanen når man trykker i kartet.']
+    ]
   }
 } satisfies Record<string, Datasettinfo>;
 
@@ -204,7 +212,7 @@ export const katalog = {
       innhold:
         'Flatene i kommuneplanene i ett punkt, med alle arealformål og statuser, feltene DiBK har om hver flate, og flaten selv.',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Kommuneplanen i et punkt',
+      tittel: 'Kommuneplanen i et punkt, oppslag',
       om: 'flatene i kommuneplanene i et punkt fra DiBK, med egenskapene og flaten, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke: sølv lagrer det som trengs. Nøkkel: punktet i hele meter.',
       forklaring:
         'Oppslag i kommuneplanene fra DiBK i punktet man har trykket på (GetFeatureInfo), med alle arealformål.',
@@ -424,7 +432,7 @@ export const katalog = {
       innhold:
         'Hele kommuneplanen som bilder, med alle arealformål og begge statuser: ett bilde per bit på 21,7 × 21,7 km, der en piksel er en rute på 10,6 meter og viser om noen plan dekker den.',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Bilder av kommuneplanen',
+      tittel: 'Dekningen av kommuneplanen, kartbilder',
       om: 'hele kommuneplanen fra DiBK i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
       forklaring:
         'Hele kommuneplanen i DiBKs egen stil, ett bilde per bit med ruter på 10,6 meter. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
@@ -441,7 +449,7 @@ export const katalog = {
       stotte: true,
       innhold: 'Plan-id, hvem som leverte planen og datoen den ble kopiert til DiBK, for planen i ett punkt.',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Opplysninger om kommuneplanen',
+      tittel: 'Opplysninger om kommuneplanen, oppslag',
       om: 'hvilken kommuneplan DiBK har, slått opp midt i det planen dekker',
       forklaring:
         'Plan-id, hvem som leverte planen og når den ble kopiert til DiBK, slått opp midt i det planen dekker.',
@@ -457,7 +465,7 @@ export const katalog = {
       innhold:
         'Ett bilde over hele kommunen med det samme utvalget som dataene (framtidig bebyggelse og anlegg, og samferdsel), der en piksel er 85 × 85 meter.',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Oversikt over kommuneplanen',
+      tittel: 'Oversikten over arealet satt av, kartbilde',
       om: 'ett bilde av kommuneplanen fra DiBK over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Brukes til å hente kartbildene bare der det er plan.',
       teknisk: true,
       forklaring:
@@ -473,7 +481,7 @@ export const katalog = {
       innhold:
         'Kartbilder der flatene kommuneplanen setter av til framtidig bebyggelse og anlegg, eller samferdsel, er fylt: én flis på 512 × 512 piksler, der en piksel er en rute på 10,6 meter.',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Kartbilder av kommuneplanen',
+      tittel: 'Areal satt av til framtidig utbygging, kartbilder',
       om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       forklaring:
         'Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis: arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og uten kantstrek.',
@@ -766,7 +774,7 @@ export const katalog = {
       stotte: true,
       innhold:
         'Hvor stor andel av rutene i kommunen kommuneplanen dekker, med alle arealformål, og én rute midt i det planen dekker.',
-      tittel: 'Hvor mye planen dekker',
+      tittel: 'Dekningen av kommuneplanen',
       om: 'hvor stor del av kommunen kommuneplanen dekker, talt i ruter på 10,6 meter bit for bit, og en rute midt i det planen dekker',
       forklaring:
         'Andelen av rutene på 10,6 meter i kommunen som planen dekker, der en rute er tegnet når den er minst 100 av 255 dekket. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.',
@@ -780,7 +788,7 @@ export const katalog = {
       stotte: true,
       innhold:
         'Om DiBK har kommuneplanen for kommunen, hvor stor del av kommunen den dekker, og plan-id, hvem som leverte planen og når den ble kopiert til DiBK.',
-      tittel: 'Kommuneplanen',
+      tittel: 'Opplysninger om kommuneplanen',
       om: 'om DiBK har kommuneplanen, hvor stor del av kommunen den dekker, og hvilken plan det er',
       forklaring: 'Om DiBK har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.',
       usikkerhet: ['Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.'],
@@ -793,7 +801,7 @@ export const katalog = {
       datasett: DATASETT.utbyggingsareal,
       stotte: true,
       innhold: 'For hver piksel på 85 × 85 meter i kommunen: om noe av utvalget i dataene ligger der.',
-      tittel: 'Hvor kommuneplanen ligger',
+      tittel: 'Oversikten over arealet satt av',
       om: 'for hver piksel i oversikten over kommuneplanen (85 meter) om noe av planen ligger der. Utbyggingen henter kartbildene fra DiBK bare for blokkene der oversikten har noe, eller rett ved.',
       teknisk: true,
       forklaring:
@@ -807,7 +815,7 @@ export const katalog = {
       datasett: DATASETT.utbyggingsareal,
       innhold:
         'For hver rute på 10,6 meter i én flis: 1 når minst halve ruta ligger i areal satt av til framtidig bebyggelse og anlegg, eller samferdsel, ellers 0.',
-      tittel: 'Kommuneplanen per rute',
+      tittel: 'Areal satt av til framtidig utbygging i kommuneplanen',
       om: 'kommuneplanen fra DiBK i én flis som planen per rute, i samme datamodell som egne områder: 1 der planen dekker minst halve ruta. Kalt med flisen [z, x, y]. Lagres ikke: blokkene i utbyggingen lagres, og kartbildet i bronse holder for å lage den på nytt.',
       forklaring:
         'En rute er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.',
@@ -938,7 +946,7 @@ export const katalog = {
       stotte: true,
       innhold:
         'Flatene i kommuneplanene i ett punkt, med feltene fra DiBK, navnet på arealformål og status fra kodelistene, og flaten selv.',
-      tittel: 'Kommuneplanen i et punkt, tolket',
+      tittel: 'Kommuneplanen i et punkt',
       om: 'flatene i kommuneplanene i et punkt, med feltene og flaten, og navnet på arealformål og status fra kodelisten. Nøkkel: punktet i hele meter.',
       forklaring:
         'Feltene slik DiBK gir dem, med navnet på arealformål og arealbruksstatus fra kodelistene i Geonorge, og flaten.',

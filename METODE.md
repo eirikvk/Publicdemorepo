@@ -460,7 +460,7 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
 
 ### Fra kilde til tall
 
-1. **Bilder av kommuneplanen** (`bronse.planbit` → `solv.plandekning`). Hentes fra
+1. **Dekningen av kommuneplanen, kartbilder** (`bronse.planbit` → `solv.plandekning`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Hele kommuneplanen i DiBKs egen stil, ett bilde per bit med ruter på 10,6
    meter. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Direktoratet for byggkvalitet
    (DiBK), Kommuneplaner, WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge
@@ -472,7 +472,7 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-3. **Opplysninger om kommuneplanen** (`bronse.planopplysninger` → `solv.planinfo`). Hentes fra
+3. **Opplysninger om kommuneplanen, oppslag** (`bronse.planopplysninger` → `solv.planinfo`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Plan-id, hvem som leverte planen og når den ble kopiert til DiBK, slått
    opp midt i det planen dekker. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
    WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: Om
@@ -484,7 +484,7 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
    nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
    viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
-5. **Kartbilder av kommuneplanen** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
+5. **Areal satt av til framtidig utbygging, kartbilder** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis:
    arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og
    uten kantstrek. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
@@ -523,16 +523,17 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Lagrede klasser per blokk** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Dagens klasser i en blokk slik de er
   lagret sammen med siden. Det er svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så
   ingenting må hentes fra NIBIO.
-- **Oversikt over kommuneplanen** (`bronse.planoversikt`). Hentes fra `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Ett
-  bilde av kommuneplanen over hele kommunen, med samme utvalg og stil som kartbildene og én piksel per 85 meter. Det er et vanlig
-  PNG, ikke med fargetabell, for der forsvinner piksler som en liten flate bare dekker en bit av.
+- **Oversikten over arealet satt av, kartbilde** (`bronse.planoversikt`). Hentes fra
+  `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Ett bilde av kommuneplanen over hele kommunen, med samme utvalg og stil
+  som kartbildene og én piksel per 85 meter. Det er et vanlig PNG, ikke med fargetabell, for der forsvinner piksler som en liten
+  flate bare dekker en bit av.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
   dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
-- **Hvor kommuneplanen ligger** (`solv.planoversikt`). Hvor i kommunen planen ligger, fra oversikten. Kartbildene fra DiBK hentes
-  bare for blokkene der oversikten har noe, i blokken eller én piksel utenfor.
+- **Oversikten over arealet satt av** (`solv.planoversikt`). Hvor i kommunen planen ligger, fra oversikten. Kartbildene fra DiBK
+  hentes bare for blokkene der oversikten har noe, i blokken eller én piksel utenfor.
 - **Kommuneplanen alene, sist regnet ut** (`gull.planAlene`). Kommuneplanen alene er den samme uansett egne områder, så den ryddes
   for smale striper én gang så lenge blokkene med planen er de samme.
 - **Utbyggingen i blokker** (`gull.utbyggingsblokker`). Utbyggingen i blokker på 512 × 512 ruter, så bare blokker med nytt kart
@@ -626,7 +627,7 @@ begge og forskjellen.
    framtidig, eller uten status, er utbygging, som i kommuneplanen. Uten arealformål er alle flatene utbygging. Et tegnet område
    er utbygging til brukeren sier noe annet. Justeres: Flatene legges i planrutenettet etter halvregelen. Overlapper flater i
    samme område, vinner utbygging. Overlapper områder, gjelder det siste.
-2. **Kommuneplanen** (`solv.planinfo`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+2. **Opplysninger om kommuneplanen** (`solv.planinfo`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
 3. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Forklart under [Grått areal](#grått-areal).
 4. **Planlagt utbygging** (`gull.planlagt`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
 5. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
@@ -1582,15 +1583,16 @@ grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokein
 
 **Datasett i sølv i katalogen, 20. oktober 2026.** Katalogen har fått begrepet *datasett i sølv*: ett sett data fra virkeligheten,
 gjort om til vår standard. Tabellene i bronse og sølv som henter og lager det, er delt i dataene, som er selve datasettet, og
-støttetabeller, som trengs for å hente og forstå dataene. Hver tabell beskriver innholdet i sine egne data, og hva støttetabellene er
-til for, står én gang, på datasettet. Det første datasettet er kommuneplanen. Det vi har i sølv, er ikke hele kommuneplanen, men
+støttedata, som trengs for å hente og forstå dataene. Hver tabell beskriver innholdet i sine egne data, og hva hver støttedata er til
+for, står én gang, på datasettet. Det første datasettet er kommuneplanen. Det vi har i sølv, er ikke hele kommuneplanen, men
 *areal satt av til framtidig utbygging i kommuneplanen*: for hver rute på 10,6 meter om den ligger i en flate med status framtidig og
 formålet bebyggelse og anlegg, eller samferdsel. Andre arealformål og nåværende byggeområder er valgt bort allerede i spørringen til
 DiBK. Dataene er kartbildene. Dekningen, som avgjør om DiBK har planen, opplysningene om planen, oversikten som gjør hentingen
-raskere og oppslaget når man trykker i kartet, er støttetabeller. I katalogvisningen under Tekniske valg står dataene som én vanlig
-rad med navnet på datasettet, og støttetabellene ligger bak knappen «Støtte» på raden. Tallene og
-infoboksene er ikke endret. Kontroll: regresjonstesten for Trondheim ga ingen avvik, og katalogvisningen ble sett på 390 og 1280 px
-uten feil. Testet i Chromium, ikke på iPhone.
+raskere og oppslaget når man trykker i kartet, er støttedata. Tabellene har fått navn etter innholdet, som «Dekningen av
+kommuneplanen», og i bronse med hvordan de hentes etter komma. I katalogvisningen under Tekniske valg står dataene som én vanlig rad,
+og støttedataene ligger bak knappen «Støttedata» på raden. Tallene er ikke endret. I infoboksene har stegene fått de nye navnene.
+Kontroll: regresjonstesten for Trondheim ga ingen avvik, og katalogvisningen ble sett på 390 og 1280 px uten feil. Testet i
+Chromium, ikke på iPhone.
 
 **Feil i JavaScript-motoren: tallene får en egen kopi, 19. oktober 2026.** Under egne områder ble kommuneplanen alene for et
 tegnet område av og til lik tallet med egne områder: 14 265 dekar natur i stedet for 714 i testområdet i Trondheim. Jordbruket var

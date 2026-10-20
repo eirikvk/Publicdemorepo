@@ -30,13 +30,13 @@ export interface Kildeinfo {
   adresse: string;
   lisens: string;
 }
-/* Et datasett i sølv: ett sett data fra virkeligheten, gjort om til vår standard. Navnet, én setning om hva det er, og hva
-   støttetabellene er til for. Tabellene i bronse og sølv som henter og lager det, hører til datasettet (datasett i Tabelldef): dataene,
-   som er selve datasettet, og støttetabellene. Står i katalogen (DATASETT). */
+/* Et datasett i sølv: ett sett data fra virkeligheten, gjort om til vår standard. Navnet, én setning om hva det er, og hva hver
+   støttedata er til for, som [navn, hva]. Tabellene i bronse og sølv som henter og lager det, hører til datasettet (datasett i
+   Tabelldef): dataene, som er selve datasettet, og støttedataene. Står i katalogen (DATASETT). */
 export interface Datasettinfo {
   navn: string;
   om: string;
-  stotte?: string;
+  stotte?: [navn: string, hva: string][];
 }
 export type Status = 'henter' | 'feil' | 'ok';
 /* Én rad: status, verdien (den siste som ble ferdig), utgaven (et løpenummer som er nytt hver gang en verdi legges inn, så det aldri
@@ -78,7 +78,7 @@ export interface Tabelldef<N, V> {
   usikkerhet?: string[] /* forbehold ved tallene som kommer fra dette steget */;
   kilde?: Kildeinfo /* i bronse: hvor dataene hentes fra */;
   datasett?: Datasettinfo /* i bronse og sølv: datasettet i sølv tabellen hører til */;
-  stotte?: boolean /* i et datasett: tabellen er en støttetabell. Uten er den dataene, altså selve datasettet. */;
+  stotte?: boolean /* i et datasett: tabellen er støttedata. Uten er den dataene, altså selve datasettet. */;
   innhold?: string /* hva dataene i tabellen er, på klarspråk: hva en rad, et bilde eller en verdi inneholder */;
   endepunkt?: string /* i bronse: adressen som kalles, uten parametre ({…} er det som settes inn), eller filen sammen med siden */;
   teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i
