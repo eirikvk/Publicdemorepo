@@ -41,15 +41,20 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata bare 
       `${d.navn} har ingen data`
     );
   }
-  /* kommuneplanen: kartbildene er dataene, dekningen og oversikten er støttedata, og hva hver er til for, står på datasettet med det
-     samme navnet som tabellen i sølv */
-  for (const [navn] of DATASETT.utbyggingsareal.stotte)
-    assert.ok(
-      alle.some(t => t.lag === 'solv' && t.stotte && (t as { tittel?: string }).tittel === navn),
-      `${navn} finnes ikke i sølv`
-    );
+  /* kommuneplanen: kartbildene er dataene, dekningen og oversikten er støttedata */
   const ds = (n: string) => alle.find(t => `${t.lag}.${t.navn}` === n)!;
   assert.equal(ds('bronse.planflis').datasett, DATASETT.utbyggingsareal);
   assert.ok(!ds('bronse.planflis').stotte && !ds('solv.kommuneplanruter').stotte);
   assert.ok(ds('bronse.planbit').stotte && ds('bronse.planoversikt').stotte && ds('bronse.planopplysninger').stotte);
+  /* grunnkartet: klassene og detaljklassene er én tabell i sølv */
+  assert.equal(ds('solv.klasser').datasett, DATASETT.grunnkart);
+  assert.ok(!alle.some(t => t.navn === 'detaljklasser'));
+  /* hva hver støttedata er til for, står på datasettet med det samme navnet som en av støttetabellene (i bronse med hvordan den
+     hentes etter komma) */
+  for (const d of Object.values(DATASETT))
+    for (const [navn] of d.stotte || [])
+      assert.ok(
+        alle.some(t => t.datasett === d && t.stotte && (t as { tittel?: string }).tittel!.split(', ')[0] === navn),
+        `${navn} finnes ikke blant støttedataene i ${d.navn}`
+      );
 });

@@ -76,13 +76,13 @@ export interface PlanlagtDetaljer {
   rute: number;
 }
 /* Tabellen gull.planlagtPerDetaljklasse: den planlagte utbyggingen i utvalget n (gull.utbygging, uten smale striper) fordelt på
-   detaljklassene i grunnkartet (solv.detaljklasser). Hver rute med planlagt utbygging på natur får den naturklassen det er mest av
+   detaljklassene i grunnkartet (solv.klasser). Hver rute med planlagt utbygging på natur får den naturklassen det er mest av
    i ruta, og hver rute på jordbruk den jordbruksklassen det er mest av. Detaljklassene er på 10,6 meter, som rutene i utbyggingen, så
    hver rute er én av dem. Slik blir summen den samme som natur og jordbruk satt av i gull.plansum. Detaljklassene er lest innenfor
-   dagens klasser (solv.detaljklasser), så ruta har alltid en klasse av riktig slag, om ikke annet en restklasse. Ukjent er det bare
+   dagens klasser (solv.klasser), så ruta har alltid en klasse av riktig slag, om ikke annet en restklasse. Ukjent er det bare
    når ruta ikke har noen detaljklasse. null uten utbygging, eller når kommunen ikke har noen blokker. */
 export async function planlagtPerDetaljklasse(n: string): Promise<PlanlagtDetaljer | null> {
-  const [L, U] = await Promise.all([katalog.solv.detaljblokker(lesUtvalg(n).nr), katalog.gull.utvalg(n)]);
+  const [L, U] = await Promise.all([katalog.solv.blokker([lesUtvalg(n).nr, FLISNIVA]), katalog.gull.utvalg(n)]);
   if (!U || !L.length) return null;
   const R = U.R,
     f = 1 << (FLISNIVA - R.z) /* detaljruter langs siden av en rute */,
@@ -108,7 +108,7 @@ export async function planlagtPerDetaljklasse(n: string): Promise<PlanlagtDetalj
     }
     const bx = Math.floor(k / 65536),
       by = k % 65536,
-      K = await katalog.solv.detaljklasser([FLISNIVA, bx, by]);
+      D = (await katalog.solv.klasser([FLISNIVA, bx, by])).detalj;
     for (const q of celler) {
       const i = U.celler[q],
         gruppe = U.ryddetV[q] === 1 ? 'nat' : 'jor',
@@ -117,13 +117,13 @@ export async function planlagtPerDetaljklasse(n: string): Promise<PlanlagtDetalj
       let best = 0;
       if (f === 1) {
         /* én detaljrute per rute, som på 10,6 meter */
-        const kl = K.kl[Y * 512 + X];
+        const kl = D[Y * 512 + X];
         if (kl && gruppeAv[kl - 1] === gruppe) best = kl;
       } else {
         const tell = new Map<number, number>();
         for (let dy = 0; dy < f; dy++)
           for (let dx = 0; dx < f; dx++) {
-            const kl = K.kl[(Y + dy) * 512 + X + dx];
+            const kl = D[(Y + dy) * 512 + X + dx];
             if (kl && gruppeAv[kl - 1] === gruppe) tell.set(kl, (tell.get(kl) || 0) + 1);
           }
         let flest = 0;

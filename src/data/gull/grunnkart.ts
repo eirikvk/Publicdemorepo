@@ -39,7 +39,7 @@ export interface Detaljareal {
   hentet: string;
   versjon: string;
 }
-/* Tabellen gull.detaljareal: arealet per detaljklasse i kommunen nr, av blokkene på 10,6 meter (solv.detaljklasser) med kommunens
+/* Tabellen gull.detaljareal: arealet per detaljklasse i kommunen nr, av blokkene på 10,6 meter (detaljklassen i solv.klasser) med kommunens
    andel i hver rute (solv.kommunebiter). For kommunene med lagrede detaljklasser (bronse.detaljregister) leses blokkene fra filene. For de
    andre hentes de fra NIBIO, ett kall per blokk, så det tar lenger tid. */
 export async function detaljareal(nr: string): Promise<Detaljareal | null> {
@@ -54,7 +54,7 @@ export async function detaljerIVerneomrader(nr: string): Promise<Detaljareal | n
    utenfor temaet hoppes over, og blokkene leses seks om gangen. hentet og versjon er fra registeret når kommunen har lagrede
    detaljklasser, ellers tomme. null når kommunen ikke har noen blokker. */
 async function tellDetaljer(nr: string, tema: Andelsbit[] | null): Promise<Detaljareal | null> {
-  const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.detaljblokker(nr)]),
+  const [reg, L] = await Promise.all([katalog.bronse.detaljregister(), katalog.solv.blokker([nr, FLISNIVA])]),
     lagret = !!(reg && reg.kommuner && reg.kommuner[nr]);
   if (!L.length) return null;
   const KB = tema || (await katalog.solv.kommunebiter(nr)),
@@ -68,8 +68,8 @@ async function tellDetaljer(nr: string, tema: Andelsbit[] | null): Promise<Detal
       for (let b = ko.shift(); b; b = ko.shift()) {
         const A = kommuneIBlokk(KB, b);
         if (A.andel && !A.andel.a.length) continue;
-        const K = await katalog.solv.detaljklasser(b);
-        tellIKommunen(K, A, n.length).forEach((v, k) => (n[k] += v));
+        const K = await katalog.solv.klasser(b);
+        tellIKommunen({ kl: K.detalj }, A, n.length).forEach((v, k) => (n[k] += v));
       }
     })
   );
@@ -99,7 +99,7 @@ export interface VernLandSjo {
    klassen i grunnkartet sier om ruta er sjø (hav) eller land (alt annet, også innsjøer og elver). Der grupper overlapper, telles ruta
    i den første gruppen. Blokkene leses én gang for alle gruppene, seks om gangen. null når kommunen ikke har noen blokker. */
 export async function vernLandSjo(nr: string): Promise<VernLandSjo[] | null> {
-  const [L, A] = await Promise.all([katalog.solv.detaljblokker(nr), katalog.solv.verneformAndel(nr)]);
+  const [L, A] = await Promise.all([katalog.solv.blokker([nr, FLISNIVA]), katalog.solv.verneformAndel(nr)]);
   if (!L.length) return null;
   const n = A.biter.map(() => new Array<number>(DETALJKLASSER.length + 1).fill(0)),
     ko = L.filter(tc => {
@@ -111,7 +111,7 @@ export async function vernLandSjo(nr: string): Promise<VernLandSjo[] | null> {
       for (let b = ko.shift(); b; b = ko.shift()) {
         const andeler = A.biter.map(KB => kommuneIBlokk(KB, b));
         if (andeler.every(D => D.andel && !D.andel.a.length)) continue;
-        const K = await katalog.solv.detaljklasser(b);
+        const K = { kl: (await katalog.solv.klasser(b)).detalj };
         andeler.forEach((D, k) => {
           if (D.andel && !D.andel.a.length) return;
           tellIKommunen(K, D, n[k].length).forEach((v, i) => (n[k][i] += v));

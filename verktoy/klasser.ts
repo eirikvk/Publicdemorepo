@@ -9,13 +9,13 @@
        node verktoy/klasser.ts --fylke 50 --hentet "11. oktober 2026"
        node verktoy/klasser.ts 5001 --detalj --hentet "13. oktober 2026"
 
-   Med --detalj lages detaljklassene (19 klasser fra NIBIO og to restklasser, solv.detaljklasser) i stedet, bare på nivå 10, i
-   public/detaljklasser/ og public/detaljklasser.json. Detaljklassen leses innenfor dagens klasse i ruta, og dagens klasser tas da
-   fra de lagrede når kommunen har dem, så de to stemmer overens. En blokk koster ett kall mot NIBIO, og ett til for dagens klasser
-   når de ikke er lagret.
+   Med --detalj lages detaljklassene (19 klasser fra NIBIO og to restklasser, detaljklassen i solv.klasser) i stedet, bare på nivå
+   10, i public/detaljklasser/ og public/detaljklasser.json. Detaljklassen leses innenfor dagens klasse i ruta, og dagens klasser tas
+   da fra de lagrede når kommunen har dem, så de to stemmer overens. Begge kolonnene i solv.klasser lages hver gang, så en blokk
+   koster ett kall mot NIBIO for hver kolonne som ikke er lagret.
 
    Blokkene legges i public/klasser/z/x/y.png, og public/klasser.json oppdateres. Blokker som alt er lagret, hoppes over uten
-   --paa-nytt. En blokk koster ett kall mot NIBIO. Grunnkartet er lisensiert «Norge digitalt begrenset». Tallene regnes bare på nivå
+   --paa-nytt. En blokk koster to kall mot NIBIO, ett for klassene og ett for detaljklassene, når ingen av dem er lagret. Grunnkartet er lisensiert «Norge digitalt begrenset». Tallene regnes bare på nivå
    10, så det er det eneste nivået som lagres. */
 import fs from 'node:fs';
 import path from 'node:path';

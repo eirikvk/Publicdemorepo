@@ -150,11 +150,11 @@ areal, inngrepsfri natur og tvillingens lag av skog, andre detaljklasser og grå
 - Nivå 10, ruter på 10,6 meter: rutene tallene regnes av. For grunnkartet blokkene (`solv.klasser`), lagret for mange kommuner, og
   for grått areal og inngrepsfri natur bitene (`solv.graabit` og `solv.inonbit`), så kartet henter ingenting nytt. Det er den ferdige
   sannheten.
-- Finere nivåer, 11, 12 og videre (5,3, 2,6 meter og så videre): `solv.klasser` og `solv.detaljklasser` lest av NIBIOs kartbilde på
-  det nivået, med detaljklassen innenfor dagens klasse på det samme nivået. Grått areal (`solv.graatrinn`) lest av de to kartbildene
+- Finere nivåer, 11, 12 og videre (5,3, 2,6 meter og så videre): `solv.klasser`, med klassene og detaljklassene lest av NIBIOs to
+  kartbilder på det nivået, med detaljklassen innenfor dagens klasse på det samme nivået. Grått areal (`solv.graatrinn`) lest av de to kartbildene
   fra NIBIO på det nivået, med den samme regelen som bitene. Inngrepsfri natur (`solv.inonsoner`) er rutene på 10,6 meter, så
   sonegrensene følger dem også zoomet inn. Ingen tall regnes av de finere nivåene.
-- Zoomet ut, under nivå 10: utledet av nivå 10 (`solv.klasserUt`, `solv.detaljklasserUt`, `solv.graatrinnUt` og
+- Zoomet ut, under nivå 10: utledet av nivå 10 (`solv.klasserUt`, med klassene og detaljklassene, `solv.graatrinnUt` og
   `solv.inonsonerUt`). Hver piksel er flere ruter. Den får klassen flest av dem har, og detaljklassen flest av rutene med den klassen
   har, så skog alltid ligger innenfor natur. Grått areal og sonene følger halvregelen, som for én rute: en piksel er grå når minst
   halvparten av rutene er grå, og i en sone når minst halvparten av rutene er minst så langt fra inngrep.
@@ -225,7 +225,7 @@ slik tjenesten selv tillater. Tallene kan derfor endre seg fra dag til dag når 
    Bildet har 24 bit farge, fordi fargetabellen i et bilde med 8 bit er for grov til å skille blandingene. Stilen er for lang til å
    stå i adressen (NIBIO svarer 414), så kartbildene hentes med POST. Klassen leses som i steg 2: den nærmeste blandingen av to av
    de 19 fargene, regnet ut én gang per farge i bildet (`detaljklasserIFlis`). Blokkene er på nivå 10 (10,6 meter), ett kartbilde
-   per blokk (`solv.detaljklasser`).
+   per blokk. Klassene og detaljklassene er to kolonner i det samme datasettet i sølv (`solv.klasser`).
 
    Detaljklassen leses så innenfor dagens klasse i den samme ruta (`detaljIKlassen`). Hører den til en annen av dagens klasser,
    som i kanten mellom to flater der de to kartbildene blander fargene ulikt, blir den en restklasse: «Jordbruk, uspesifisert» eller
@@ -274,7 +274,7 @@ kartet: `src/ui/kart/grunnkart.ts`. Dagens klasser per blokk og zoomet ut: `solv
 `src/data/solv/grunnkart.ts`, de lagrede blokkene i `bronse.klassefil` og `bronse.klasseregister`, og alle blokkene for kommunen i
 `gull.dagensKlasser` (`src/data/gull/grunnkart.ts`). Dagens klasser i en flis til kartlagene: `klasserIFlis` i
 `src/data/motor/kartverdier.ts`. Detaljklassene: `DETALJKLASSER`, `detaljklasserIFlis`, `detaljIKlassen` og `detaljfilIFlis` i
-`src/data/solv/klasser.ts`, stilen og `bronse.detaljflis` i `src/data/bronse/nibio-grunnkart.ts`, `solv.detaljklasser` i
+`src/data/solv/klasser.ts`, stilen og `bronse.detaljflis` i `src/data/bronse/nibio-grunnkart.ts`, `solv.klasser` i
 `src/data/solv/grunnkart.ts` og `gull.detaljareal` i `src/data/gull/grunnkart.ts`.
 
 ## SSB-tallene og utbredelsesregnskapet
@@ -322,7 +322,7 @@ innenfor kommunegrensen fra Kartverket.
    gjelder dagens kommune også der kommuner er slått sammen. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealet per klasse i 2017 og i nyeste år.
    Avviker kommunens samlede areal med mer enn 0,5 %, er grensen trolig flyttet, og årene sammenlignes ikke.
-3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
@@ -340,11 +340,11 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
-  og andelen per rute lagret sammen med siden.
-- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
-  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
-  hentes fra Kartverket.
+- **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
+  andelen per rute lagret sammen med siden.
+- **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
+  flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
+  ingenting må hentes fra Kartverket.
 
 ### Usikkerhet
 
@@ -466,7 +466,7 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    (DiBK), Kommuneplaner, WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge
    digitalt-lisensen. Justeres: Andelen av rutene på 10,6 meter i kommunen som planen dekker, der en rute er tegnet når den er
    minst 100 av 255 dekket. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.
-2. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+2. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
@@ -477,52 +477,65 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    opp midt i det planen dekker. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
    WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: Om
    DiBK har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.
-4. **Kartbilder av grunnkartet** (`bronse.grunnkartflis` → `solv.klasser`). Hentes fra
+4. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
+   `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og
+   underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype.
+   Hver klasse i sin farge, med 24 bit farge. Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
+   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
+5. **Arealklasser fra grunnkartet, kartbilder med klassene** (`bronse.grunnkartflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
-   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
-   Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
-   nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
-   viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
-5. **Areal satt av til framtidig utbygging, kartbilder** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
+   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
+6. **Areal satt av til framtidig utbygging, kartbilder** (`bronse.planflis` → `solv.kommuneplanruter`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis:
    arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og
    uten kantstrek. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
    WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: En
    rute er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.
-6. **Egne områder per rute** (`solv.egneruter`). Forklart under [Egne områder](#egne-områder-og-opplastet-plan).
-7. **Kommuneplanen** (`gull.kommuneplan`). Opplysningene om kommuneplanen fra sølv, slik siden viser dem.
-8. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for hele kommunen, i blokkene på 10,6 meter. For kommunene med
-   lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og
-   blokkene lages med den samme funksjonen.
-9. **Utbyggingen** (`gull.utbygging`). For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker
-   mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er
-   bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
-   jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene,
-   ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt
-   som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem, så
-   analysene av planlagt utbygging kan regnes for begge planene: den nye, med egne områder, og den gamle, kommuneplanen alene, i
-   hele kommunen eller i ett eget område, med de samme funksjonene.
-10. **Planlagt utbygging** (`gull.planlagt`). De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er
+7. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
+   kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
+   leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
+   uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
+   kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også
+   zoomet inn, så hver piksel er den samme klassen i alle lagene.
+8. **Egne områder per rute** (`solv.egneruter`). Forklart under [Egne områder](#egne-områder-og-opplastet-plan).
+9. **Kommuneplanen** (`gull.kommuneplan`). Opplysningene om kommuneplanen fra sølv, slik siden viser dem.
+10. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for hele kommunen, i blokkene på 10,6 meter. For kommunene med
+    lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og
+    blokkene lages med den samme funksjonen.
+11. **Utbyggingen** (`gull.utbygging`). For hver blokk legges planen oppå dagens klasser, rute for rute. Ruter kommunen dekker
+    mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er
+    bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
+    jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene,
+    ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt
+    som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem, så
+    analysene av planlagt utbygging kan regnes for begge planene: den nye, med egne områder, og den gamle, kommuneplanen alene, i
+    hele kommunen eller i ett eget område, med de samme funksjonene.
+12. **Planlagt utbygging** (`gull.planlagt`). De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er
     andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
-  og andelen per rute lagret sammen med siden.
+- **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
+  andelen per rute lagret sammen med siden.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
   rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
   kommunen velges.
-- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
-  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
-  hentes fra Kartverket.
-- **Register over lagrede klasser** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
+- **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
+  flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
+  ingenting må hentes fra Kartverket.
+- **Lagrede klasser, register** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
   sammen med siden, og blokkene for hver.
-- **Lagrede klasser per blokk** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Dagens klasser i en blokk slik de er
-  lagret sammen med siden. Det er svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så
-  ingenting må hentes fra NIBIO.
+- **Lagrede detaljklasser, register** (`bronse.detaljregister`). Hentes fra `detaljklasser.json`: Kommunene som har detaljklassene
+  lagret sammen med siden, og blokkene for hver.
+- **Lagrede detaljklasser, filer** (`bronse.detaljfil`). Hentes fra `detaljklasser/{z}/{x}/{y}.png`: Detaljklassene i en blokk
+  slik de er lagret sammen med siden: detaljklassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen
+  (verktoy/klasser.ts --detalj).
+- **Lagrede klasser, filer** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Klassene i en blokk slik de er lagret
+  sammen med siden: klassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så de ikke
+  må hentes fra NIBIO.
 - **Oversikten over arealet satt av, kartbilde** (`bronse.planoversikt`). Hentes fra
   `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Ett bilde av kommuneplanen over hele kommunen, med samme utvalg og stil
   som kartbildene og én piksel per 85 meter. Det er et vanlig PNG, ikke med fargetabell, for der forsvinner piksler som en liten
@@ -705,7 +718,7 @@ vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+2. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
@@ -721,22 +734,15 @@ vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
    arealet av verneområdene i kommunen, og brukes når de krysses med utbyggingen og detaljklassene. Justeres: Som verneområdene
    per rute, men delt på gruppene av verneformer. Der områder fra ulike grupper overlapper, telles ruta i den første gruppen, så
    gruppene summerer til det vernede arealet. Brukes når det vernede arealet deles på land og sjø.
-4. **Kartbilder av grunnkartet med detaljklasser** (`bronse.detaljflis` → `solv.detaljklasser`). Hentes fra
+4. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og
    underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype.
    Hver klasse i sin farge, med 24 bit farge. Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
-   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
-   Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er
-   mest av, når fargen er en blanding. Så leses den innenfor dagens klasse i ruta (solv.klasser): hører den til en annen klasse,
-   blir den «jordbruk, uspesifisert» eller «natur, uspesifisert», så detaljklassene summerer til dagens klasser. De lagrede filene
-   leses med eksakte farger.
-5. **Kartbilder av grunnkartet** (`bronse.grunnkartflis` → `solv.klasser`). Hentes fra
+   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
+5. **Arealklasser fra grunnkartet, kartbilder med klassene** (`bronse.grunnkartflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
-   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
-   Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
-   nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
-   viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
+   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
 6. **Villreinområder** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/villrein/MapServer/1/query`: Leveområdene for villrein i kommunen som
    flater i UTM 33, forenklet med 20 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
@@ -779,67 +785,71 @@ vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.
 10. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i
     flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er
     ingen ruter i oppslaget, så svaret er det samme hvor stort området er.
-11. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder
+11. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
+    kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
+    leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
+    uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
+    kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser,
+    også zoomet inn, så hver piksel er den samme klassen i alle lagene.
+12. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder
     overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
-12. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-13. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
+13. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+14. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
     og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). For hver rute med planlagt utbygging: hvor stor del av
     ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor
     stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.
-14. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
+15. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
     i planen** (`gull.verdsattNaturIPlan`). Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og
     for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område
     regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.
-15. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
+16. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
     verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Der
     verneområder overlapper, telles arealet én gang. Ruter uten klasse i grunnkartet er ikke med.
-16. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to
+17. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (solv.villreinAndel), så der to
     områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
-17. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori fra dekningsandelen i sølv
+18. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori fra dekningsandelen i sølv
     (solv.verdsattAndel), der overlapp telles én gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen
     av landarealet.
-18. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Verdsatt natur per verdikategori innenfor det kartlagte,
+19. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Verdsatt natur per verdikategori innenfor det kartlagte,
     fra dekningsandelen med både kommunen og det kartlagte som masker (solv.verdsattIKartlagtAndel).
-19. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
+20. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
     vises som høyst 100 %. Helhetsbildet deler landarealet i kartlagt og ikke kartlagt, og viser verdsatt natur per verdi i hver
     del.
-20. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
+21. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
     striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte
     (solv.kartlagtAndel), er ikke kartlagt.
-21. **Verdsatt natur uten fast verdi** (`gull.verdsattVurderes`). Arealet per kategori regnes som for verdsatt natur, fra
+22. **Verdsatt natur uten fast verdi** (`gull.verdsattVurderes`). Arealet per kategori regnes som for verdsatt natur, fra
     dekningsandelen (solv.vurderesAndel), så overlapp telles én gang.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
-  og andelen per rute lagret sammen med siden.
-- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
-  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
-  hentes fra Kartverket.
+- **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
+  andelen per rute lagret sammen med siden.
+- **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
+  flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
+  ingenting må hentes fra Kartverket.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
   rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
   kommunen velges.
-- **Register over lagrede detaljklasser** (`bronse.detaljregister`). Hentes fra `detaljklasser.json`: Kommunene som har
-  detaljklassene lagret sammen med siden, og blokkene for hver.
-- **Lagrede detaljklasser per blokk** (`bronse.detaljfil`). Hentes fra `detaljklasser/{z}/{x}/{y}.png`: Detaljklassene i en blokk
-  slik de er lagret sammen med siden. Det er svaret fra solv.detaljklasser, laget på forhånd med den samme funksjonen
+- **Lagrede detaljklasser, register** (`bronse.detaljregister`). Hentes fra `detaljklasser.json`: Kommunene som har detaljklassene
+  lagret sammen med siden, og blokkene for hver.
+- **Lagrede detaljklasser, filer** (`bronse.detaljfil`). Hentes fra `detaljklasser/{z}/{x}/{y}.png`: Detaljklassene i en blokk
+  slik de er lagret sammen med siden: detaljklassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen
   (verktoy/klasser.ts --detalj).
-- **Register over lagrede klasser** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
+- **Lagrede klasser, register** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
   sammen med siden, og blokkene for hver.
-- **Lagrede klasser per blokk** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Dagens klasser i en blokk slik de er
-  lagret sammen med siden. Det er svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så
-  ingenting må hentes fra NIBIO.
+- **Lagrede klasser, filer** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Klassene i en blokk slik de er lagret
+  sammen med siden: klassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så de ikke
+  må hentes fra NIBIO.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
   dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
-- **Blokkene med detaljklasser** (`solv.detaljblokker`). Blokkene med detaljklasser for kommunen: de samme blokkene som for dagens
-  klasser.
 - **Radene i utbyggingen i rekkefølge** (`gull.radorden`). Rekkefølgen på radene i utbyggingen, regnet én gang for alle temaene.
 - **Kolonnene for temaene, sist regnet ut** (`gull.temaminne`). De siste kolonnene for temaet, så andelen bare regnes ut for ruter
   som ikke var med sist. Andelen i en rute avhenger bare av ruta.
@@ -898,7 +908,7 @@ samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit` → `solv.inon` → `solv.inonAar`). Hentes fra
+2. **Inngrepsfri natur, kartbilder** (`bronse.inonbit` → `solv.inonbit` → `solv.inon` → `solv.inonAar`). Hentes fra
    `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit og år, med ruter på 10,6 meter, uten
    glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med
    de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Miljødirektoratet,
@@ -908,7 +918,7 @@ samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses
    langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
    Justeres: Det samme som for nyeste år (solv.inon), talt i de samme rutene med den samme andelen av hver rute i kommunen, men av
    kartet for det året.
-3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
@@ -924,14 +934,14 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
-  og andelen per rute lagret sammen med siden.
+- **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
+  andelen per rute lagret sammen med siden.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
   rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
   kommunen velges.
-- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
-  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
-  hentes fra Kartverket.
+- **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
+  flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
+  ingenting må hentes fra Kartverket.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
@@ -980,7 +990,7 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Bilder av grått areal** (`bronse.graabit` → `solv.graabit` → `solv.graa`). Hentes fra
+2. **Grått areal, kartbilder** (`bronse.graabit` → `solv.graabit` → `solv.graa`). Hentes fra
    `https://wms.nibio.no/cgi-bin/graastruktur`: To bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått
    areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs
    kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [NIBIO, Miljødirektoratet,
@@ -989,7 +999,7 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
    En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått
    uten oppgitt andel, som veier, for seg. Justeres: Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles
    med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
-3. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
@@ -1008,14 +1018,14 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
-  og andelen per rute lagret sammen med siden.
+- **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
+  andelen per rute lagret sammen med siden.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
   rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
   kommunen velges.
-- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
-  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
-  hentes fra Kartverket.
+- **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
+  flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
+  ingenting må hentes fra Kartverket.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
@@ -1166,28 +1176,21 @@ ned mest.
 
 ### Fra kilde til tall
 
-1. **Kommunegrensen** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+1. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-2. **Kartbilder av grunnkartet med detaljklasser** (`bronse.detaljflis` → `solv.detaljklasser`). Hentes fra
+2. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og
    underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype.
    Hver klasse i sin farge, med 24 bit farge. Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
-   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
-   Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er
-   mest av, når fargen er en blanding. Så leses den innenfor dagens klasse i ruta (solv.klasser): hører den til en annen klasse,
-   blir den «jordbruk, uspesifisert» eller «natur, uspesifisert», så detaljklassene summerer til dagens klasser. De lagrede filene
-   leses med eksakte farger.
-3. **Kartbilder av grunnkartet** (`bronse.grunnkartflis` → `solv.klasser`). Hentes fra
+   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
+3. **Arealklasser fra grunnkartet, kartbilder med klassene** (`bronse.grunnkartflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
-   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset. Justeres:
-   Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på
-   nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet
-   viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.
+   2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
 4. **Verneområder** (`bronse.verneomrader` → `solv.verneomrader` → `solv.vernAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer/0/query`: Verneområdene i kommunen som flater i UTM 33,
    forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
@@ -1201,7 +1204,7 @@ ned mest.
    det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
    natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-6. **Bilder av inngrepsfri natur** (`bronse.inonbit` → `solv.inonbit`). Hentes fra
+6. **Inngrepsfri natur, kartbilder** (`bronse.inonbit` → `solv.inonbit`). Hentes fra
    `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit og år, med ruter på 10,6 meter, uten
    glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med
    de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Miljødirektoratet,
@@ -1216,7 +1219,7 @@ ned mest.
    dekningsandelen i ruter på 10,6 meter. Justeres: Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i
    bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir
    arealet av villreinområdene i kommunen, og brukes når de krysses med utbyggingen, grått areal og inngrepsfri natur.
-8. **Bilder av grått areal** (`bronse.graabit` → `solv.graabit`). Hentes fra `https://wms.nibio.no/cgi-bin/graastruktur`: To
+8. **Grått areal, kartbilder** (`bronse.graabit` → `solv.graabit`). Hentes fra `https://wms.nibio.no/cgi-bin/graastruktur`: To
    bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått areal, og flatene med andel vegetasjon, der
    trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene. En bit er 21,7 km på hver side, og
    kommunen hentes i så mange biter som trengs. Kilde: [NIBIO, Miljødirektoratet, Kartverket og SSB, Kart over grå arealer,
@@ -1250,105 +1253,109 @@ ned mest.
     (SSB), tabell 09594, Arealbruk og arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Svaret for
     alle kommunene delt opp per kommune. Avviker kommunens samlede areal med mer enn 0,5 % fra 2017 til 2024, er grensen trolig
     flyttet.
-13. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i
+13. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
+    kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
+    leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
+    uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
+    kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser,
+    også zoomet inn, så hver piksel er den samme klassen i alle lagene.
+14. **Oppslag i områdene** (`solv.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i
     flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er
     ingen ruter i oppslaget, så svaret er det samme hvor stort området er.
-14. **Areal per detaljklasse** (`gull.detaljareal`). Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og
+15. **Areal per detaljklasse** (`gull.detaljareal`). Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og
     blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Er detaljklassene
     ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.
-15. **Skog i grunnkartet** (`gull.skog`). Skog er økosystemtypen skog i grunnkartet, også tresatt myr og tresatt innmarksbeite.
+16. **Skog i grunnkartet** (`gull.skog`). Skog er økosystemtypen skog i grunnkartet, også tresatt myr og tresatt innmarksbeite.
     Arealet summeres fra detaljklassene, og andelen er av landarealet i grunnkartet (alt unntatt hav, innsjøer og elver).
-16. **Våtmark i grunnkartet** (`gull.vatmark`). Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr,
+17. **Våtmark i grunnkartet** (`gull.vatmark`). Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr,
     som skissene regner med i våtmarken. Tresatt myr er dermed både skog og våtmark.
-17. **Areal per detaljklasse i verneområdene** (`gull.detaljerIVerneomrader`). Grunnkartets økosystemtyper i verneområdene: hvor
+18. **Areal per detaljklasse i verneområdene** (`gull.detaljerIVerneomrader`). Grunnkartets økosystemtyper i verneområdene: hvor
     mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Er
     detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.
-18. **Naturen i verneområdene** (`gull.vernetNatur`). Arealet per detaljklasse innenfor verneområdene, summert til økosystemtypene
+19. **Naturen i verneområdene** (`gull.vernetNatur`). Arealet per detaljklasse innenfor verneområdene, summert til økosystemtypene
     på nivå 1 og til land, sjø og ferskvann.
-19. **Verdsatt natur** (`gull.verdsattNatur`). Forklart under [Verdsatt natur](#verdsatt-natur).
-20. **Verdsatt natur per naturtype** (`gull.verdsattPerNaturtype`). Lokalitetene gruppert per naturtype. Arealet er summen av
+20. **Verdsatt natur** (`gull.verdsattNatur`). Forklart under [Verdsatt natur](#verdsatt-natur).
+21. **Verdsatt natur per naturtype** (`gull.verdsattPerNaturtype`). Lokalitetene gruppert per naturtype. Arealet er summen av
     lokalitetene, så overlapp telles flere ganger.
-21. **Villreinområder** (`gull.villrein`). Forklart under [Villrein](#villrein).
-22. **Villreinområdene i kommunen** (`gull.villreinPerOmrade`). Hvert villreinområde med arealet i kommunen og andelen av
+22. **Villreinområder** (`gull.villrein`). Forklart under [Villrein](#villrein).
+23. **Villreinområdene i kommunen** (`gull.villreinPerOmrade`). Hvert villreinområde med arealet i kommunen og andelen av
     landarealet hos SSB.
-23. **Inngrepsfri natur i villreinområdene** (`gull.inonIVillrein`). Hver rute teller med den delen av den som ligger i
+24. **Inngrepsfri natur i villreinområdene** (`gull.inonIVillrein`). Hver rute teller med den delen av den som ligger i
     villreinområdene og i kommunen (solv.villreinAndel), og sonen kommer fra bildet av inngrepsfri natur. Andelen er inngrepsfri
     natur av villreinområdene i kommunen.
-24. **Inngrepsfri natur i villreinområdene over tid** (`gull.inonIVillreinUtvikling`). Som inngrepsfri natur i villreinområdene
+25. **Inngrepsfri natur i villreinområdene over tid** (`gull.inonIVillreinUtvikling`). Som inngrepsfri natur i villreinområdene
     (gull.inonIVillrein), for hvert år, i de samme rutene med den samme andelen av hver rute. Villreinområdene er dagens.
-25. **Grått areal i villreinområdene** (`gull.graaIVillrein`). Hver rute teller med den delen av den som ligger i villreinområdene
+26. **Grått areal i villreinområdene** (`gull.graaIVillrein`). Hver rute teller med den delen av den som ligger i villreinområdene
     og i kommunen (solv.villreinAndel), og trinnet kommer fra bildet av grått areal. Alle trinnene er grått areal, uansett andel
     vegetasjon. Andelen er grått areal av villreinområdene i kommunen.
-26. **Grått areal** (`gull.graa`). Forklart under [Grått areal](#grått-areal).
-27. **Grønne arealer i bebyggelse** (`gull.gronneArealer`). Summen av de to øverste trinnene i gull.graa (50–75 og 75–100 %
+27. **Grått areal** (`gull.graa`). Forklart under [Grått areal](#grått-areal).
+28. **Grønne arealer i bebyggelse** (`gull.gronneArealer`). Summen av de to øverste trinnene i gull.graa (50–75 og 75–100 %
     vegetasjon).
-28. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-29. **Planlagt utbygging per detaljklasse** (`gull.planlagtPerDetaljklasse`). Planlagt utbygging per økosystemtype i grunnkartet:
+29. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+30. **Planlagt utbygging per detaljklasse** (`gull.planlagtPerDetaljklasse`). Planlagt utbygging per økosystemtype i grunnkartet:
     hvor mye av naturen som settes av, er skog, våtmark, tresatt myr og så videre. Hver rute med planlagt utbygging får den typen
     det er mest av i ruta, så summen er den samme som natur og jordbruk satt av. Er detaljklassene ikke lagret for kommunen,
     hentes de fra NIBIO, ett kall per blokk.
-30. **Planlagt utbygging per økosystemtype** (`gull.planPerOkosystem`). Planlagt utbygging per detaljklasse, summert til
+31. **Planlagt utbygging per økosystemtype** (`gull.planPerOkosystem`). Planlagt utbygging per detaljklasse, summert til
     økosystemtypene på nivå 1. Andelen er arealet satt av delt på arealet av typen i kommunen.
-31. **Verneområder** (`gull.verneomrader`). Forklart under [Verneområder](#verneområder).
-32. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
+32. **Verneområder** (`gull.verneomrader`). Forklart under [Verneområder](#verneområder).
+33. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
     og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). For hver rute med planlagt utbygging: hvor stor del av
     ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor
     stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.
-33. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
+34. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
     i planen** (`gull.verdsattNaturIPlan`). Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og
     for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område
     regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.
-34. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Forklart under [Grått areal](#grått-areal).
-35. **Grått areal i planen** (`gull.graaIPlan`). Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon
+35. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Forklart under [Grått areal](#grått-areal).
+36. **Grått areal i planen** (`gull.graaIPlan`). Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon
     (trinnene fra 50 % og opp), og på grønt i bebygd område.
-36. **Endring mellom bebygd og landklassene 2017–2024 (syntetisk)** (`gull.bebygdEndring`). Syntetiske tall til SSBs tabell
+37. **Endring mellom bebygd og landklassene 2017–2024 (syntetisk)** (`gull.bebygdEndring`). Syntetiske tall til SSBs tabell
     kommer. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel. Økningen i bebygd er summen av
     økningene i hver bebygd klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og
     resten fra naturen etter arealet i 2017.
-37. **Hovedøkosystemer per kommune 2024 (syntetisk)** (`gull.okosystemfordeling`). Syntetiske tall til SSBs tabell kommer. SSBs
+38. **Hovedøkosystemer per kommune 2024 (syntetisk)** (`gull.okosystemfordeling`). Syntetiske tall til SSBs tabell kommer. SSBs
     arealklasser for 2024 oversettes til hovedøkosystemer med en fast nøkkel. Havet er kommunens flate minus land og ferskvann.
     Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
-38. **Kortene på oversikten (syntetisk)** (`gull.oversiktKort`). Hovedøkosystemene summert til natur, jordbruk og bebygd, og
+39. **Kortene på oversikten (syntetisk)** (`gull.oversiktKort`). Hovedøkosystemene summert til natur, jordbruk og bebygd, og
     endringen mellom bebygd og de andre summert på samme måte.
-39. **Nedbygd per landklasse 2017–2024 (syntetisk)** (`gull.nedbygging`). Arealet fra hver landklasse til bebygd, med andelen av
+40. **Nedbygd per landklasse 2017–2024 (syntetisk)** (`gull.nedbygging`). Arealet fra hver landklasse til bebygd, med andelen av
     arealet klassen hadde i 2017.
-40. **Regnskap per hovedøkosystem 2017–2024 (syntetisk)** (`gull.okosystemregnskap`). Arealet i 2024 med det som gikk til og fra
+41. **Regnskap per hovedøkosystem 2017–2024 (syntetisk)** (`gull.okosystemregnskap`). Arealet i 2024 med det som gikk til og fra
     bebygd lagt tilbake gir arealet i 2017. Summen for land er den samme begge år.
-41. **Hovedøkosystemer i alle kommuner (syntetisk)** (`gull.okosystemerNorge`). Arealet per hovedøkosystem i 2024 og endringen
+42. **Hovedøkosystemer i alle kommuner (syntetisk)** (`gull.okosystemerNorge`). Arealet per hovedøkosystem i 2024 og endringen
     mellom bebygd og landklassene fra 2017, for hver kommune og for Norge, av SSBs arealklasser for alle kommunene og flaten til
     hver kommune.
-42. **Kommunen sammenlignet med Norge (syntetisk)** (`gull.sammenligning`). Kommunen mot summen for Norge. Plassen er blant
+43. **Kommunen sammenlignet med Norge (syntetisk)** (`gull.sammenligning`). Kommunen mot summen for Norge. Plassen er blant
     kommunene som kan sammenlignes med 2017, der 1 bygget ned mest, etter areal og etter andel av arealet i 2017.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
-- **Register over lagrede detaljklasser** (`bronse.detaljregister`). Hentes fra `detaljklasser.json`: Kommunene som har
-  detaljklassene lagret sammen med siden, og blokkene for hver.
-- **Register over lagrede kommunegrenser** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen
-  og andelen per rute lagret sammen med siden.
+- **Lagrede detaljklasser, register** (`bronse.detaljregister`). Hentes fra `detaljklasser.json`: Kommunene som har detaljklassene
+  lagret sammen med siden, og blokkene for hver.
+- **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
+  andelen per rute lagret sammen med siden.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
   rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
   kommunen velges.
-- **Lagret kommunegrense** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som flerflate i
-  UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så ingenting må
-  hentes fra Kartverket.
+- **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
+  flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
+  ingenting må hentes fra Kartverket.
 - **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
   ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
-- **Lagrede detaljklasser per blokk** (`bronse.detaljfil`). Hentes fra `detaljklasser/{z}/{x}/{y}.png`: Detaljklassene i en blokk
-  slik de er lagret sammen med siden. Det er svaret fra solv.detaljklasser, laget på forhånd med den samme funksjonen
+- **Lagrede detaljklasser, filer** (`bronse.detaljfil`). Hentes fra `detaljklasser/{z}/{x}/{y}.png`: Detaljklassene i en blokk
+  slik de er lagret sammen med siden: detaljklassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen
   (verktoy/klasser.ts --detalj).
-- **Register over lagrede klasser** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
+- **Lagrede klasser, register** (`bronse.klasseregister`). Hentes fra `klasser.json`: Kommunene som har dagens klasser lagret
   sammen med siden, og blokkene for hver.
-- **Lagrede klasser per blokk** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Dagens klasser i en blokk slik de er
-  lagret sammen med siden. Det er svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så
-  ingenting må hentes fra NIBIO.
+- **Lagrede klasser, filer** (`bronse.klassefil`). Hentes fra `klasser/{z}/{x}/{y}.png`: Klassene i en blokk slik de er lagret
+  sammen med siden: klassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så de ikke
+  må hentes fra NIBIO.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
   dekker. For noen kommuner ligger svaret lagret sammen med siden (bronse.andelfil).
 - **Blokkene i kommunen** (`solv.blokker`). Blokkene der kommunen dekker noe av minst én rute.
-- **Blokkene med detaljklasser** (`solv.detaljblokker`). Blokkene med detaljklasser for kommunen: de samme blokkene som for dagens
-  klasser.
 - **Utvalg av utbyggingen** (`gull.utvalg`). Rutene med planlagt utbygging på natur eller jordbruk i den nye eller den gamle
   planen, i hele kommunen eller i ett eget område. Alle analysene for et utvalg bruker de samme rutene.
 - **Radene i utbyggingen i rekkefølge** (`gull.radorden`). Rekkefølgen på radene i utbyggingen, regnet én gang for alle temaene.
@@ -1378,12 +1385,12 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/bronse/nibio-grunnkart.ts`, `src/data/solv/grunnkart.ts`,
+`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/bronse/nibio-grunnkart.ts`,
 `src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`,
 `src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`, `src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`,
-`src/data/gull/grunnkart.ts`, `src/data/gull/okosystemer.ts`, `src/data/gull/temaer.ts`, `src/data/gull/inon.ts`,
-`src/data/gull/graa.ts`, `src/data/gull/planlagt.ts`, `src/data/gull/syntetisk.ts`, `src/data/gull/utbygging.ts`. Kortene:
-`srcFigma/sider/Temasider.tsx`, `srcFigma/sider/Hovedsider.tsx`.
+`src/data/solv/grunnkart.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/okosystemer.ts`, `src/data/gull/temaer.ts`,
+`src/data/gull/inon.ts`, `src/data/gull/graa.ts`, `src/data/gull/planlagt.ts`, `src/data/gull/syntetisk.ts`,
+`src/data/gull/utbygging.ts`. Kortene: `srcFigma/sider/Temasider.tsx`, `srcFigma/sider/Hovedsider.tsx`.
 
 <!-- /forklaringer:tvilling -->
 
@@ -1580,6 +1587,24 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Klassene og detaljklassene som ett datasett, og fire nye datasett i katalogen, 20. oktober 2026.** Dagens klasser og
+detaljklassene var to tabeller i sølv, fordi de kom til på ulike tidspunkter og hentes som to ulike kartbilder. Innholdsmessig er det
+ett datasett: grunnkartet per rute, med klassen og detaljklassen som to kolonner, der detaljklassen alltid ligger innenfor klassen. Nå
+er de én tabell i sølv (`solv.klasser`), og det samme zoomet ut (`solv.klasserUt`). Detaljklassen leses som før innenfor klassen i
+ruta. De lagrede filene leses kolonne for kolonne: der en kolonne er lagret, hentes den ikke fra NIBIO. `solv.detaljklasser`,
+`solv.detaljklasserUt` og `solv.detaljblokker` er tatt bort.
+
+Grått areal, inngrepsfri natur og kommunegrensen er også delt inn i data og støttedata. For grått areal og inngrepsfri natur er
+støttedataene kartet zoomet inn og ut, og for kommunegrensen de lagrede grensene. Tellingene i kommunen og andelen per rute er ikke
+med ennå.
+
+Tallene er ikke endret. Regresjonstesten for Trondheim, Surnadal og Oslo ga ingen avvik. Det koster mer der klassene ikke er lagret,
+fordi detaljklassene nå hentes for alle kommuner, også når siden bare viser klassene: ett kall til mot NIBIO per blokk. Surnadal fikk
+41 kall og 4,9 MB mer, og grunnkartet var lest etter 12,9 sekunder mot 10,8 før. Oslo fikk 30 kall og 5,4 MB mer, og 19,6 sekunder
+mot 18,0. I Trondheim, der begge er lagret, var det ingen målbar forskjell, også med nettleseren gjort fire ganger tregere (9–12
+sekunder før og 10–11 etter). Slik at blokkene ikke leses to ganger, husker `solv.klasser` nå 64 blokker i stedet for 32, og de
+lagrede detaljklassene og kartbildene med detaljklasser huskes som klassene. Målt i Chromium, ikke på iPhone.
 
 **Datasett i sølv i katalogen, 20. oktober 2026.** Katalogen har fått begrepet *datasett i sølv*: ett sett data fra virkeligheten,
 gjort om til vår standard. Tabellene i bronse og sølv som henter og lager det, er delt i dataene, som er selve datasettet, og
@@ -2064,7 +2089,7 @@ så begge sidene bygger på én metode:
 - Svarene er nye tabeller i gull: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype
   (`gull/okosystemer.ts`), kortene og arealklassene fra SSB (`gull/regnskap.ts`), og verneformene, villreinområdene og verdsatt
   natur per naturtype (`gull/temaer.ts`).
-- Kartlagene i tvillingen finner blokkene gjennom sølv (`solv.detaljblokker`), ikke registeret i bronse.
+- Kartlagene i tvillingen finner blokkene gjennom sølv (`solv.detaljblokker`, nå `solv.blokker`), ikke registeret i bronse.
 
 Lagsjekken stopper nye utregninger i tvillingen. Tvillingens sider viser samme tekst og tall før og etter (sammenlignet side for side
 for Trondheim, Oppdal og Oslo). Regresjonstesten for hovedsiden ga ingen avvik i tallene. To skjermbilder skilte seg fra

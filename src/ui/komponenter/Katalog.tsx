@@ -304,7 +304,7 @@ function KartetsMinne({ M }: { M: Minne }) {
 /* Det som ikke er ferdig i tabellen: nøklene som henter, har feilet eller er utdatert */
 const uferdigeI = (d: Tabellen) => d.rader.filter(x => x.status !== 'ok' || x.utdatert);
 /* Én tabell i katalogen: tittelen, hvor mye som er lagret, og knappene Info og Data med det de viser under. Dataene i et datasett har i
-   tillegg knappen «Støttedata», som viser hva hver støttedata er til for, og så støttedataene under raden. Bare én av de tre knappene
+   tillegg knappen «Støttedata», som viser hva hver støttedata i laget er til for, og så støttedataene under raden. Bare én av de tre knappene
    på en rad er åpen om gangen. Det som ikke er ferdig i støttedataene, står også på raden, så det ikke skjules. Støttedata har
    innholdet under tittelen. */
 function Tabellrad({
@@ -420,11 +420,13 @@ function Tabellrad({
               <b>Støttedata</b> trengs for å hente og forstå dataene, men tallene regnes ikke av dem.
               {d.datasett && d.datasett.stotte && (
                 <ul>
-                  {d.datasett.stotte.map(([navn, hva]) => (
-                    <li key={navn}>
-                      <b>{navn}:</b> {hva}
-                    </li>
-                  ))}
+                  {d.datasett.stotte
+                    .filter(([navn]) => stotte.some(s => s.tittel.split(', ')[0] === navn))
+                    .map(([navn, hva]) => (
+                      <li key={navn}>
+                        <b>{navn}:</b> {hva}
+                      </li>
+                    ))}
                 </ul>
               )}
             </td>
@@ -471,8 +473,11 @@ export default function Katalog() {
           const T = K.filter(d => d.lag === lag),
             vises = T.filter(d => !d.stotte) /* støttedataene står under dataene de støtter */,
             filer = [...new Set(vises.map(d => d.fil))],
+            /* støttedataene står under den siste tabellen med data i datasettet i laget, så dataene står samlet over dem */
             stotteFor = (d: Tabellen) =>
-              d.datasett ? T.filter(s => s.stotte && s.datasett && s.datasett.navn === d.datasett!.navn) : [];
+              d.datasett && T.filter(x => x.datasett && x.datasett.navn === d.datasett!.navn && !x.stotte).pop() === d
+                ? T.filter(s => s.stotte && s.datasett && s.datasett.navn === d.datasett!.navn)
+                : [];
           return (
             <MdAccordionItem
               key={lag}

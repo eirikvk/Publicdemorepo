@@ -171,7 +171,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 eller ett punkt |
 | `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve, summert til tre klasser og hver arealklasse for seg |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
-| `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger, per flis, de lagrede klassene per blokk med registeret, og grunnkartet i ett punkt |
+| `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger og med de 19 detaljklassene, per flis, de lagrede klassene og detaljklassene per blokk med registrene, og grunnkartet i ett punkt |
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
 | `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som bilder per bit (2048 x 2048 ruter à 10,6 meter) og i ett punkt |
@@ -184,7 +184,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 |---|---|
 | `felles.ts` | UTM33, flisnettet, rutenettene, alle terskler, målestokken i UTM (arealet av en flate i km² i terrenget), og datamodellen for planen per rute (`Planruter`) |
 | `kommune.ts` | Kommunegrensen i UTM33 med utsnittet, dekningsandelen til flater i bitene (`andelsbiter`), kommunens flate i bitene (`solv.kommunebiter`), og et tema som hentes i biter talt i kommunen eller i et naturtema i den (`tellIKommune`, `tellIBitene`) |
-| `grunnkart.ts` | Grunnkartet fra NIBIO, én felles sannhet per nivå: dagens klasser per blokk på 10,6 meter (`solv.klasser`, laget av kartbildene eller lagret) og på finere nivåer av kartbildet der, den vanligste klassen zoomet ut (`solv.klasserUt`), og blokkene i kommunen |
+| `grunnkart.ts` | Grunnkartet fra NIBIO, én felles sannhet per nivå, som ett datasett med to kolonner: klassen og detaljklassen per rute, i blokker på 10,6 meter (`solv.klasser`, laget av de to kartbildene eller lagret, kolonne for kolonne) og på finere nivåer av kartbildene der, den vanligste klassen og detaljklassen zoomet ut (`solv.klasserUt`), og blokkene i kommunen |
 | `projeksjoner.ts` | Projeksjonene siden kjenner, og omregning til UTM33 |
 | `raster.ts` | Lerretet: bildene leses inn, og kartet tegnes. Dekningen av flater regnes ikke her, men i `generelt/dekning.ts`. Tegneflatene brukes om igjen, én per størrelse. Den eneste filen i sølv og gull som bruker nettleseren, sammen med bakgrunnstråden. |
 | `tolking.ts` | Tolkingen av kartbildene til verdier per rute for grått areal, inngrepsfri natur og kommuneplanen, uten katalogen, så den kan kjøres i bakgrunnstråden |
@@ -318,7 +318,7 @@ tema der det finnes (`src/ui/tvilling.ts`): Utvikling fremover og Naturtapet, te
   - bare bruker typer fra gull, ikke funksjonene,
   - og fra bronse i katalogen bare kartbildene (tabeller som slutter på «flis»), slik kartet i hovedsiden gjør.
 - Kartet er det samme som i hovedsiden. Hvilket tema det viser, følger siden, som i hovedsiden (`ui.side`). Lagene bare tvillingen
-  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.detaljblokker`, `solv.detaljklasser` og `solv.graa`), flatene i gull
+  har (`srcFigma/kartlag.ts`), tegnes av sølv (`solv.blokker`, detaljklassene i `solv.klasser` og `solv.graa`), flatene i gull
   (`gull.verneformer` og `gull.verdsattVurderes`) og kartbildene fra bronse.
 - Noen tabeller bruker foreløpig bare tvillingen, og hovedsiden henter dem ikke:
   - Grunnkartet med detaljklassene (`gull/okosystemer.ts`): skog (`gull.skog`), våtmark (`gull.vatmark`), naturen i
@@ -454,8 +454,12 @@ dem. Hver tabell beskriver innholdet i sine egne data (`innhold`), og hva hver s
 En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes etter komma, som «Dekningen av kommuneplanen,
 kartbilder». Datasettene står i `DATASETT` i katalogen. I katalogvisningen står dataene som én vanlig rad, i gruppen for filen de
 lages i, og støttedataene ligger bak knappen «Støttedata» på raden. Bare én av knappene Info, Data og Støttedata på en rad er åpen om
-gangen. Det som ikke er ferdig i støttedataene, står også på raden. Foreløpig er bare kommuneplanen delt inn slik: datasettet er
-*Areal satt av til framtidig utbygging i kommuneplanen*, ikke hele kommuneplanen. Dataene er kartbildene (`bronse.planflis` og
+gangen. Det som ikke er ferdig i støttedataene, står også på raden. Fem datasett er delt inn slik: arealklassene fra grunnkartet,
+grått areal, inngrepsfri natur, kommunegrensen og kommuneplanen. Arealklassene fra grunnkartet er ett datasett med to kolonner,
+klassen og detaljklassen, i én tabell i sølv (`solv.klasser`). Støttedataene er de lagrede klassene og detaljklassene, blokkene i
+kommunen, klassene zoomet ut og grunnkartet i et punkt. For grått areal og inngrepsfri natur er støttedataene kartet zoomet inn og ut
+(og sonen i et punkt), og for kommunegrensen de lagrede grensene. Kommuneplanen er *Areal satt av til framtidig utbygging i
+kommuneplanen*, ikke hele kommuneplanen. Dataene er kartbildene (`bronse.planflis` og
 `solv.kommuneplanruter`). Støttedataene er dekningen av kommuneplanen (`planbit`, `plandekning`), opplysningene om den
 (`planopplysninger`, `planinfo`), oversikten over arealet satt av (`planoversikt`) og kommuneplanen i et punkt (`planIPunkt`).
 
@@ -466,10 +470,11 @@ slik: kartet holder de ferdige flisene selv, og nettleseren har sin egen hurtigb
 svaret ikke lagres, så to som spør samtidig, gir ett kall til kilden. Hva som lagres, følger prinsipp 6 under.
 
 **Cachen kan starte utfylt.** En tabell kan ha ferdige svar som ligger lagret sammen med siden (`lagret` i katalogen). Finnes
-svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Dagens klasser per blokk (`solv.klasser`) er
-slik: for 57 kommuner (alle i Trøndelag og Finnmark, og Bergen) er svaret laget på forhånd av den samme ETL-funksjonen
+svaret der, brukes det, og ETL-funksjonen kjøres ikke. Ellers kjøres den som vanlig. Kommunegrensen og andelen per rute er slik.
+Grunnkartet per blokk (`solv.klasser`) er lagret kolonne for kolonne, og ETL-funksjonen leser den lagrede kolonnen der den finnes og
+henter resten fra NIBIO: for 57 kommuner (alle i Trøndelag og Finnmark, og Bergen) er klassene laget på forhånd av den samme ETL-funksjonen
 (`verktoy/klasser.ts`) og lagret som små bilder i `public/klasser/`, på 10,6 meter (nivå 10), 4 971 filer og 20 MB. Siden slipper da kallene mot NIBIO, og nettleseren henter
-bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (`solv.detaljklasser`) er lagret på samme måte for 59 kommuner, alle i Trøndelag og
+bare filene for valgt kommune. Blokkene i kommunen (`solv.blokker`) står i registeret (`public/klasser.json`). Detaljklassene (den andre kolonnen i `solv.klasser`) er lagret på samme måte for 59 kommuner, alle i Trøndelag og
 Finnmark, og Stavanger, Sandnes og Bodø (`verktoy/klasser.ts --detalj`, i `public/detaljklasser/`, 5 254 filer og 59 MB), lest
 innenfor de lagrede dagens klassene. For de andre kommunene lages de av kartbildene fra NIBIO, med den samme funksjonen. For de 60 kommunene
 med lagrede klasser eller detaljklasser er også kommunegrensen (`solv.grense`) og kommunens andel per rute i bitene

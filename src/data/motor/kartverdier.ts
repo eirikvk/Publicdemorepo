@@ -4,7 +4,7 @@
    hvordan verdiene ser ut. Trykk i kartet slår opp i de samme funksjonene (verdiIPunkt).
    Hver funksjon gir én verdi per piksel i flisen tc (512 x 512), 0 for ingenting, eller null når det ikke er noe å vise:
    - Nivå 10: rutene på 10,6 meter som tallene regnes av.
-   - Finere nivåer: sølv på det nivået (solv.klasser, solv.detaljklasser, solv.graatrinn og solv.inonsoner).
+   - Finere nivåer: sølv på det nivået (solv.klasser, solv.graatrinn og solv.inonsoner).
    - Grovere nivåer: utledet av nivå 10 for valgt kommune (tabellene som slutter på Ut).
    Lagene som bygger på dagens klasser, leser dem på det samme nivået, så de aldri er uenige med dem. */
 import { katalog } from '../katalog.ts';
@@ -23,8 +23,8 @@ const ut = (tc: Flis): [string, number, number, number] | null => {
   return nr ? [nr, tc[0], tc[1], tc[2]] : null;
 };
 
-/* Dagens klasser per piksel: plassen i ALLE pluss én (1 bebygd, 2 jordbruk, 3 natur, 4–6 vann), 0 ukjent. Fra nivå 10 solv.klasser,
-   og zoomet ut solv.klasserUt. */
+/* Dagens klasser per piksel: plassen i ALLE pluss én (1 bebygd, 2 jordbruk, 3 natur, 4–6 vann), 0 ukjent. Klassen i grunnkartet, fra
+   nivå 10 solv.klasser, og zoomet ut solv.klasserUt. */
 export async function klasserIFlis(tc: Flis): Promise<Uint8Array | null> {
   const t0 = performance.now(),
     k = tc[0] < FLISNIVA ? ut(tc) : null;
@@ -33,12 +33,12 @@ export async function klasserIFlis(tc: Flis): Promise<Uint8Array | null> {
   tidSlutt('dagens klasser', t0);
   return K.kl;
 }
-/* Detaljklassen per piksel: plassen i DETALJKLASSER pluss én, 0 ukjent. Fra nivå 10 solv.detaljklasser, og zoomet ut
-   solv.detaljklasserUt. Den ligger alltid innenfor dagens klasse i klasserIFlis. */
+/* Detaljklassen per piksel: plassen i DETALJKLASSER pluss én, 0 ukjent. Detaljklassen i grunnkartet, fra nivå 10 solv.klasser, og
+   zoomet ut solv.klasserUt. Den ligger alltid innenfor dagens klasse i klasserIFlis. */
 export async function detaljerIFlis(tc: Flis): Promise<Uint8Array | null> {
   const k = tc[0] < FLISNIVA ? ut(tc) : null;
   if (tc[0] < FLISNIVA && !k) return null;
-  return (await (k ? katalog.solv.detaljklasserUt(k) : katalog.solv.detaljklasser(tc))).kl;
+  return (await (k ? katalog.solv.klasserUt(k) : katalog.solv.klasser(tc))).detalj;
 }
 /* Grått areal per piksel: trinnet 1–6 der det er grått, GRONT (7) der det er bebygd, men ikke grått, og 0 ellers (graaOgGront i
    solv/graa.ts). Fra nivå 10 solv.graatrinn, og zoomet ut solv.graatrinnUt, med dagens klasser på det samme nivået. */

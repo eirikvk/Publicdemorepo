@@ -318,10 +318,18 @@ export function detaljIKlassen(D: Uint8Array, K: Uint8Array): Uint8Array {
 export function detaljfilIFlis(K: Piksler): Uint8Array {
   const kl = new Uint8Array(K.length / 4),
     DETALJPLASS = new Map(DETALJTABELL.map(([r, g, b], i) => [(r << 16) | (g << 8) | b, i]));
+  /* nabopiksler har som regel samme farge, så den siste huskes og slås ikke opp på nytt */
+  let sist = -1,
+    plass = 0;
   for (let i = 0, q = 0; i < K.length; i += 4, q++) {
     if (K[i + 3] < SYNLIG) continue;
-    const p = DETALJPLASS.get((K[i] << 16) | (K[i + 1] << 8) | K[i + 2]);
-    kl[q] = p ? p : detaljklasseAv(K[i], K[i + 1], K[i + 2]) + 1;
+    const c = (K[i] << 16) | (K[i + 1] << 8) | K[i + 2];
+    if (c !== sist) {
+      const p = DETALJPLASS.get(c);
+      sist = c;
+      plass = p ? p : detaljklasseAv(K[i], K[i + 1], K[i + 2]) + 1;
+    }
+    kl[q] = plass;
   }
   return kl;
 }

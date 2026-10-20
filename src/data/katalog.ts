@@ -138,8 +138,52 @@ export const KILDE = {
    Hver tabell beskriver innholdet i sine egne data (innhold på tabellen). Hva hver støttedata er til for, står én gang, på datasettet
    (stotte, med navnet og hva den er til for). En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes
    etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen, men tallene regnes ikke av dem. Foreløpig
-   er bare kommuneplanen delt inn slik. */
+   er grunnkartet, grått areal, inngrepsfri natur, kommunegrensen og kommuneplanen delt inn slik. */
 export const DATASETT = {
+  grunnkart: {
+    navn: 'Arealklasser fra grunnkartet',
+    om: 'For hver rute på 10,6 meter: klassen (bebygd, jordbruk, natur, vann eller ukjent) og detaljklassen (19 klasser fra grunnkartet, som skog etter treslag og myr, og to restklasser). Laget av Nasjonalt grunnkart for arealanalyse fra NIBIO. Detaljklassen ligger alltid innenfor klassen.',
+    stotte: [
+      [
+        'Lagrede klasser',
+        'for 57 kommuner ligger klassene i blokkene på 10,6 meter ferdig sammen med siden, laget med den samme funksjonen, så de ikke hentes fra NIBIO.'
+      ],
+      ['Lagrede detaljklasser', 'det samme for detaljklassene, for 59 kommuner.'],
+      ['Blokkene i kommunen', 'hvilke blokker på 10,6 meter kommunen dekker noe av, så bare de hentes.'],
+      ['Arealklassene zoomet ut', 'klassene og detaljklassene i kartet zoomet ut, utledet av blokkene.'],
+      ['Grunnkartet i et punkt', 'alle feltene i grunnkartet der man trykker i kartet.']
+    ]
+  },
+  graa: {
+    navn: 'Grått areal',
+    om: 'For hver rute på 10,6 meter: om ruta er grått areal, og i så fall trinnet etter andel vegetasjon (under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, eller uten oppgitt andel, som veier). Fra kart over grå arealer, testversjon.',
+    stotte: [
+      [
+        'Grått areal zoomet inn',
+        'trinnet per piksel i kartet fra nivå 10 og innover, finere nivåer fra egne kartbilder.'
+      ],
+      ['Grått areal zoomet ut', 'trinnet per piksel i kartet zoomet ut, utledet av rutene.']
+    ]
+  },
+  inon: {
+    navn: 'Inngrepsfri natur',
+    om: 'For hver rute på 10,6 meter og hvert år Miljødirektoratet har status for (1988, 2008, 2013, 2018 og 2023): sonen, villmarkspreget (mer enn 5 km fra tyngre tekniske inngrep), sone 1 (3–5 km) eller sone 2 (1–3 km), eller ingen sone.',
+    stotte: [
+      ['Inngrepsfri natur zoomet inn', 'sonen per piksel i kartet fra nivå 10 og innover, i nyeste år.'],
+      ['Inngrepsfri natur zoomet ut', 'sonen per piksel i kartet zoomet ut, i nyeste år.'],
+      ['Inngrepsfri natur i et punkt', 'sonen der man trykker i kartet.']
+    ]
+  },
+  grense: {
+    navn: 'Kommunegrensen',
+    om: 'Kommunens grense som flate i UTM 33, med utsnittet rundt den og arealet i km². Fra Kartverket.',
+    stotte: [
+      [
+        'Lagrede kommunegrenser',
+        'for 60 kommuner ligger grensen ferdig sammen med siden, så den ikke hentes fra Kartverket.'
+      ]
+    ]
+  },
   utbyggingsareal: {
     navn: 'Areal satt av til framtidig utbygging i kommuneplanen',
     om: 'For hver rute på 10,6 meter i kommunen: om ruta ligger i areal kommuneplanen setter av til framtidig bebyggelse og anlegg, eller samferdsel. Laget av kommuneplanene hos DiBK. Det er ikke hele kommuneplanen: andre arealformål og nåværende byggeområder er valgt bort.',
@@ -173,8 +217,10 @@ export const katalog = {
     kommunegrense: tabell({
       lag: 'bronse',
       navn: 'kommunegrense',
+      datasett: DATASETT.grense,
+      innhold: 'Kommunens grense som GeoJSON fra Kartverkets kommuneinfo.',
       endepunkt: `${E.KOMMUNEINFO}/kommuner/{kommunenummer}/omrade`,
-      tittel: 'Kommunegrensen',
+      tittel: 'Kommunegrensen, GeoJSON',
       om: 'kommunegrensen fra Kartverket som GeoJSON',
       forklaring: 'Kommunegrensen som flate i UTM 33.',
       kilde: KILDE.kartverket,
@@ -224,8 +270,12 @@ export const katalog = {
     grunnkartIPunkt: tabell<number[], string>({
       lag: 'bronse',
       navn: 'grunnkartIPunkt',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold:
+        'Feltene i grunnkartet i ett punkt: økosystemtype, arealdekke, skogbonitet, grunnforhold og kilden, som GML.',
       endepunkt: E.GRUNNKART,
-      tittel: 'Grunnkartet i et punkt',
+      tittel: 'Grunnkartet i et punkt, oppslag',
       om: 'grunnkartet i et punkt fra NIBIO, med økosystemtype, arealdekke, skogbonitet, grunnforhold og kilden, som GML. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: punktet i hele meter.',
       forklaring: 'Oppslag i grunnkartet fra NIBIO i punktet man har trykket på (GetFeatureInfo).',
       kilde: KILDE.grunnkart,
@@ -236,8 +286,11 @@ export const katalog = {
     inonIPunkt: tabell<number[], unknown>({
       lag: 'bronse',
       navn: 'inonIPunkt',
+      datasett: DATASETT.inon,
+      stotte: true,
+      innhold: 'Sonen i ett punkt, med id og arealet av sonen, som GeoJSON.',
       endepunkt: E.INON,
-      tittel: 'Inngrepsfri natur i et punkt',
+      tittel: 'Inngrepsfri natur i et punkt, oppslag',
       om: 'sonen for inngrepsfri natur i et punkt fra Miljødirektoratet, som GeoJSON. Til detaljene ved trykk i kartet. Lagres ikke. Nøkkel: punktet i hele meter.',
       forklaring: 'Oppslag i kartet over inngrepsfri natur i punktet man har trykket på (GetFeatureInfo).',
       kilde: KILDE.inon,
@@ -306,8 +359,11 @@ export const katalog = {
     grenseregister: tabell<void, kartverket.Grenseregister | null>({
       lag: 'bronse',
       navn: 'grenseregister',
+      datasett: DATASETT.grense,
+      stotte: true,
+      innhold: 'Kommunene som har grensen og andelen per rute lagret sammen med siden, og når de er hentet.',
       endepunkt: 'kommunegrenser.json',
-      tittel: 'Register over lagrede kommunegrenser',
+      tittel: 'Lagrede kommunegrenser, register',
       om: 'kommunene som har kommunegrensen og andelen per rute i bitene lagret sammen med siden, og når de er hentet',
       teknisk: true,
       forklaring: 'Kommunene som har grensen og andelen per rute lagret sammen med siden.',
@@ -317,8 +373,11 @@ export const katalog = {
     grensefil: tabell<string, kartverket.LagretGrense | null>({
       lag: 'bronse',
       navn: 'grensefil',
+      datasett: DATASETT.grense,
+      stotte: true,
+      innhold: 'Grensen for én kommune slik den er lagret, i samme form som i sølv.',
       endepunkt: 'kommunegrenser/{kommunenummer}.json',
-      tittel: 'Lagret kommunegrense',
+      tittel: 'Lagrede kommunegrenser, filer',
       om: 'kommunegrensen slik den er lagret sammen med siden: svaret fra solv.grense. null når kommunen ikke er lagret.',
       teknisk: true,
       forklaring:
@@ -353,8 +412,11 @@ export const katalog = {
     grunnkartflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'grunnkartflis',
+      datasett: DATASETT.grunnkart,
+      innhold:
+        'Kartbilder der hver klasse (bebygd, jordbruk, natur og tre slags vann) har sin farge: én flis på 512 × 512 piksler, der en piksel er en rute.',
       endepunkt: E.GRUNNKART,
-      tittel: 'Kartbilder av grunnkartet',
+      tittel: 'Arealklasser fra grunnkartet, kartbilder med klassene',
       om: 'kartbilder av dagens arealklasser fra NIBIO, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       forklaring:
         'Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen stil uten kantstrek (se Arealklassene).',
@@ -366,21 +428,28 @@ export const katalog = {
     detaljflis: tabell<Flis, ArrayBuffer>({
       lag: 'bronse',
       navn: 'detaljflis',
+      datasett: DATASETT.grunnkart,
+      innhold:
+        'Kartbilder der hver av de 19 detaljklassene har sin farge, med 24 bit farge: én flis på 512 × 512 piksler, der en piksel er en rute.',
       endepunkt: E.GRUNNKART,
-      tittel: 'Kartbilder av grunnkartet med detaljklasser',
-      om: 'kartbilder av de 19 detaljklassene fra NIBIO, 512 x 512 piksler med 24 bit farge, kalt med flisen [10, x, y]. Stilen er for lang til å stå i adressen, så de hentes med POST. Brukes foreløpig bare til å lage de lagrede detaljklassene. Nøkkel: flisen som «z/x/y».',
+      tittel: 'Arealklasser fra grunnkartet, kartbilder med detaljklassene',
+      om: 'kartbilder av de 19 detaljklassene fra NIBIO, 512 x 512 piksler med 24 bit farge, kalt med flisen [10, x, y]. Stilen er for lang til å stå i adressen, så de hentes med POST. Nøkkel: flisen som «z/x/y».',
       forklaring:
         'Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype. Hver klasse i sin farge, med 24 bit farge.',
       kilde: KILDE.grunnkart,
-      husk: 50,
+      husk: 400,
       nokkel: flisnavn,
       etl: nibioGrunnkart.detaljflis
     }),
     detaljregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'detaljregister',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold:
+        'Kommunene som har detaljklassene lagret sammen med siden, blokkene for hver, når de er laget og fra hvilken årsversjon av grunnkartet.',
       endepunkt: 'detaljklasser.json',
-      tittel: 'Register over lagrede detaljklasser',
+      tittel: 'Lagrede detaljklasser, register',
       om: 'kommunene som har detaljklassene lagret sammen med siden, og blokkene på nivå 10 for hver',
       teknisk: true,
       forklaring: 'Kommunene som har detaljklassene lagret sammen med siden, og blokkene for hver.',
@@ -390,21 +459,28 @@ export const katalog = {
     detaljfil: tabell<Flis, ArrayBuffer | null>({
       lag: 'bronse',
       navn: 'detaljfil',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold: 'Detaljklassene i én blokk på 512 × 512 ruter, som PNG med én farge per detaljklasse.',
       endepunkt: 'detaljklasser/{z}/{x}/{y}.png',
-      tittel: 'Lagrede detaljklasser per blokk',
+      tittel: 'Lagrede detaljklasser, filer',
       om: 'detaljklassene i en blokk på nivå 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [10, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
       teknisk: true,
       forklaring:
-        'Detaljklassene i en blokk slik de er lagret sammen med siden. Det er svaret fra solv.detaljklasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts --detalj).',
-      husk: 0,
+        'Detaljklassene i en blokk slik de er lagret sammen med siden: detaljklassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts --detalj).',
+      husk: 1024,
       nokkel: flisnavn,
       etl: nibioGrunnkart.detaljfil
     }),
     klasseregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'klasseregister',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold:
+        'Kommunene som har klassene lagret sammen med siden, blokkene for hver, når de er laget og fra hvilken årsversjon av grunnkartet.',
       endepunkt: 'klasser.json',
-      tittel: 'Register over lagrede klasser',
+      tittel: 'Lagrede klasser, register',
       om: 'kommunene som har dagens klasser lagret sammen med siden, og blokkene på nivå 10 for hver',
       teknisk: true,
       forklaring: 'Kommunene som har dagens klasser lagret sammen med siden, og blokkene for hver.',
@@ -414,12 +490,15 @@ export const katalog = {
     klassefil: tabell<Flis, ArrayBuffer | null>({
       lag: 'bronse',
       navn: 'klassefil',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold: 'Klassene i én blokk på 512 × 512 ruter, som PNG med én farge per klasse.',
       endepunkt: 'klasser/{z}/{x}/{y}.png',
-      tittel: 'Lagrede klasser per blokk',
+      tittel: 'Lagrede klasser, filer',
       om: 'dagens klasser i en blokk på nivå 10 slik de er lagret sammen med siden, som PNG med fargetabell, kalt med blokken [z, x, y]. null når blokken ikke er lagret. Nøkkel: blokken som «z/x/y».',
       teknisk: true,
       forklaring:
-        'Dagens klasser i en blokk slik de er lagret sammen med siden. Det er svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så ingenting må hentes fra NIBIO.',
+        'Klassene i en blokk slik de er lagret sammen med siden: klassene i svaret fra solv.klasser, laget på forhånd med den samme funksjonen (verktoy/klasser.ts), så de ikke må hentes fra NIBIO.',
       husk: 1024,
       nokkel: flisnavn,
       etl: nibioGrunnkart.klassefil
@@ -496,8 +575,10 @@ export const katalog = {
     inonbit: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
       navn: 'inonbit',
+      datasett: DATASETT.inon,
+      innhold: 'Ett bilde per bit på 21,7 × 21,7 km og år, der en piksel er en rute på 10,6 meter og fargen er sonen.',
       endepunkt: E.INON,
-      tittel: 'Bilder av inngrepsfri natur',
+      tittel: 'Inngrepsfri natur, kartbilder',
       om: 'bildet av inngrepsfri natur fra Miljødirektoratet for et år i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med [år, biten]. Nøkkel: «år/z/x/y».',
       forklaring:
         'Ett bilde per bit og år, med ruter på 10,6 meter, uten glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
@@ -510,8 +591,11 @@ export const katalog = {
     graabit: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
       navn: 'graabit',
+      datasett: DATASETT.graa,
+      innhold:
+        'To bilder per bit på 21,7 × 21,7 km, der en piksel er en rute på 10,6 meter: ett med alt grått areal, og ett med flatene med andel vegetasjon, der trinnet er fargen.',
       endepunkt: E.GRAA,
-      tittel: 'Bilder av grått areal',
+      tittel: 'Grått areal, kartbilder',
       om: 'ett av de to bildene av grått areal fra NIBIO i en bit, en flis på nivå 8 med 2048 x 2048 ruter à 10,6 meter, som PNG. Kalt med [lag, biten]: lag 0 er alt grått areal, lag 1 flatene med andel vegetasjon. Nøkkel: «lag/z/x/y».',
       forklaring:
         'To bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått areal, og flatene med andel vegetasjon, der trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs.',
@@ -527,8 +611,11 @@ export const katalog = {
     graaflis: tabell<[number, Flis], ArrayBuffer>({
       lag: 'bronse',
       navn: 'graaflis',
+      datasett: DATASETT.graa,
+      stotte: true,
+      innhold: 'De samme to bildene for en flis finere enn nivå 10, 512 × 512 piksler.',
       endepunkt: E.GRAA,
-      tittel: 'Kartbilder av grått areal',
+      tittel: 'Grått areal zoomet inn, kartbilder',
       om: 'ett av de to bildene av grått areal fra NIBIO for en flis finere enn nivå 10, 512 x 512 piksler, kalt med [lag, flisen] som bitene (bronse.graabit). Bare til kartet zoomet inn. Nøkkel: «lag/z/x/y».',
       kilde: KILDE.graa,
       husk: 400,
@@ -610,6 +697,8 @@ export const katalog = {
     grense: tabell({
       lag: 'solv',
       navn: 'grense',
+      datasett: DATASETT.grense,
+      innhold: 'Grensen som flerflate i UTM 33, utsnittet rundt den og flaten i km².',
       tittel: 'Kommunegrensen',
       om: 'kommunegrensen som flerflate i UTM33, med utsnitt og flate i km²',
       forklaring:
@@ -674,69 +763,43 @@ export const katalog = {
       husk: 1,
       etl: solvKommune.kommuneareal
     }),
-    klasser: tabell<Flis, solvGrunnkart.Klasser>({
+    klasser: tabell<Flis, solvGrunnkart.Grunnkart>({
       lag: 'solv',
       navn: 'klasser',
-      tittel: 'Dagens klasser per flis',
-      om: 'dagens klasse per rute i en flis, kalt med flisen [z, x, y] fra nivå 10: ett kartbilde fra NIBIO. På nivå 10 er ruta 10,6 meter, og det er blokkene tallene regnes av; for noen kommuner ligger de lagret sammen med siden (bronse.klassefil), og da hentes ingenting fra NIBIO. Finere nivåer er den felles sannheten for kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
+      datasett: DATASETT.grunnkart,
+      tittel: 'Arealklasser fra grunnkartet',
+      om: 'klassen og detaljklassen per rute i en flis, kalt med flisen [z, x, y] fra nivå 10: to kartbilder fra NIBIO, ett med klassene og ett med detaljklassene. På nivå 10 er ruta 10,6 meter, og det er blokkene tallene regnes av; for noen kommuner ligger klassene og detaljklassene lagret sammen med siden (bronse.klassefil og bronse.detaljfil), og da hentes den kolonnen ikke fra NIBIO. Finere nivåer er den felles sannheten for kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
+      innhold:
+        'For hver rute i en flis på 512 × 512 ruter: klassen (bebygd, jordbruk, natur, vann eller ukjent) og detaljklassen, en av 19 klasser fra grunnkartet eller en restklasse. Detaljklassen ligger alltid innenfor klassen.',
       forklaring:
-        'Dagens klasse per rute i fliser på 512 × 512 ruter, ett kartbilde per flis (se Arealklassene). Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 kommuner er de lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.',
-      husk: 32,
-      nokkel: flisnavn,
-      etl: solvGrunnkart.klasser,
-      lagret: solvGrunnkart.lagredeKlasser,
-      eksempel: flisMidt(PLANNIVA)
-    }),
-    detaljklasser: tabell<Flis, solvGrunnkart.Klasser>({
-      lag: 'solv',
-      navn: 'detaljklasser',
-      tittel: 'Detaljklasser per flis',
-      om: 'detaljklassen per rute i en flis, kalt med flisen [z, x, y] fra nivå 10, laget av ett kartbilde fra NIBIO (bronse.detaljflis) lest innenfor dagens klasser på det samme nivået (solv.klasser). Tallene regnes på nivå 10 (10,6 meter), og for noen kommuner ligger de blokkene lagret sammen med siden (bronse.detaljfil). Finere nivåer er til kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
-      forklaring:
-        'Detaljklassen per rute i en blokk på 512 × 512 ruter à 10,6 meter. Klassen leses av fargen som for dagens klasser: det det er mest av, når fargen er en blanding. Så leses den innenfor dagens klasse i ruta (solv.klasser): hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur, uspesifisert», så detaljklassene summerer til dagens klasser. De lagrede filene leses med eksakte farger.',
+        'Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur, uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59 kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også zoomet inn, så hver piksel er den samme klassen i alle lagene.',
       husk: 64,
       nokkel: flisnavn,
-      etl: solvGrunnkart.detaljklasser,
-      lagret: solvGrunnkart.lagredeDetaljklasser,
-      eksempel: flisMidt(10)
+      etl: solvGrunnkart.klasser,
+      eksempel: flisMidt(PLANNIVA)
     }),
-    klasserUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
+    klasserUt: tabell<[string, number, number, number], solvGrunnkart.Grunnkart>({
       lag: 'solv',
       navn: 'klasserUt',
-      tittel: 'Dagens klasser zoomet ut',
-      om: 'dagens klasse per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]: kartet zoomet ut. Nøkkel: «nummer/z/x/y».',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      tittel: 'Arealklassene zoomet ut',
+      om: 'klassen og detaljklassen per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]: kartet zoomet ut. Nøkkel: «nummer/z/x/y».',
+      innhold:
+        'For hver piksel i en flis under nivå 10: klassen flest av rutene på 10,6 meter under den har, og detaljklassen flest av rutene med den klassen har.',
       teknisk: true,
       forklaring:
-        'Hver piksel er flere ruter på 10,6 meter i kommunens blokker, og får klassen flest av dem har. Utledet av blokkene tallene regnes av, så alle kartlagene zoomet ut viser den samme klassen i hver piksel. Endrer ingen tall.',
+        'Hver piksel er flere ruter på 10,6 meter i kommunens blokker, og får klassen flest av dem har, og så detaljklassen flest av rutene med den klassen har. Utledet av blokkene tallene regnes av, så alle kartlagene zoomet ut viser den samme klassen i hver piksel. Endrer ingen tall.',
       husk: 32,
       nokkel: ([nr, z, x, y]) => `${nr}/${z}/${x}/${y}`,
       etl: solvGrunnkart.klasserUt
     }),
-    detaljklasserUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
-      lag: 'solv',
-      navn: 'detaljklasserUt',
-      tittel: 'Detaljklasser zoomet ut',
-      om: 'detaljklassen per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]. Nøkkel: «nummer/z/x/y».',
-      teknisk: true,
-      forklaring:
-        'Hver piksel får dagens klasse flest av rutene har, og så detaljklassen flest av rutene med den klassen har, så detaljklassen alltid ligger innenfor dagens klasse også zoomet ut. Endrer ingen tall.',
-      husk: 32,
-      nokkel: ([nr, z, x, y]) => `${nr}/${z}/${x}/${y}`,
-      etl: solvGrunnkart.detaljklasserUt
-    }),
-    detaljblokker: tabell<string, Flis[]>({
-      lag: 'solv',
-      navn: 'detaljblokker',
-      tittel: 'Blokkene med detaljklasser',
-      om: 'blokkene på nivå 10 for kommunen, som [10, x, y]: de samme som for dagens klasser (solv.blokker). De lagrede leses fra filene, de andre hentes fra NIBIO.',
-      teknisk: true,
-      forklaring: 'Blokkene med detaljklasser for kommunen: de samme blokkene som for dagens klasser.',
-      husk: 12,
-      etl: solvGrunnkart.detaljblokker
-    }),
     blokker: tabell<[string, number], Flis[]>({
       lag: 'solv',
       navn: 'blokker',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold: 'Blokkene på nivå 10, som [10, x, y], der kommunen dekker noe av minst én rute.',
       tittel: 'Blokkene i kommunen',
       om: 'blokkene på nivå 10 der kommunen dekker noe av minst én rute, fra kommunens andel i bitene (solv.kommunebiter), kalt med [kommunenummer, nivå]. Nøkkel: «nummer/nivå».',
       teknisk: true,
@@ -839,7 +902,10 @@ export const katalog = {
     inonbit: tabell<[number, Flis], solvInon.Inonsoner>({
       lag: 'solv',
       navn: 'inonbit',
-      tittel: 'Inngrepsfri natur per rute',
+      datasett: DATASETT.inon,
+      innhold:
+        'For hver rute i en bit på 2048 × 2048 ruter og et år: sonen (villmarkspreget, sone 1 eller sone 2), eller ingen.',
+      tittel: 'Inngrepsfri natur',
       om: 'sonen per rute i en bit (2048 x 2048 ruter à 10,6 meter) for et år, kalt med [år, biten]. Nøkkel: «år/z/x/y».',
       forklaring:
         'En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km) eller villmarkspreget (minst 5 km). Alle årene tolkes likt.',
@@ -872,7 +938,10 @@ export const katalog = {
     inonsoner: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'inonsoner',
-      tittel: 'Inngrepsfri natur per flis',
+      datasett: DATASETT.inon,
+      stotte: true,
+      innhold: 'Sonen per piksel i en flis fra nivå 10, i nyeste år.',
+      tittel: 'Inngrepsfri natur zoomet inn',
       om: 'sonen per piksel i en flis fra nivå 10, kalt med flisen [z, x, y]: 0 uten sone, 1 villmarkspreget, 2 sone 1, 3 sone 2. Til kartet. Nøkkel: flisen som «z/x/y».',
       teknisk: true,
       forklaring:
@@ -884,6 +953,9 @@ export const katalog = {
     inonsonerUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'inonsonerUt',
+      datasett: DATASETT.inon,
+      stotte: true,
+      innhold: 'Sonen per piksel i en flis under nivå 10 for kommunen, i nyeste år.',
       tittel: 'Inngrepsfri natur zoomet ut',
       om: 'sonen per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]. Nøkkel: «nummer/z/x/y».',
       teknisk: true,
@@ -896,7 +968,10 @@ export const katalog = {
     graabit: tabell<Flis, solvGraa.Graatrinn>({
       lag: 'solv',
       navn: 'graabit',
-      tittel: 'Grått areal per rute',
+      datasett: DATASETT.graa,
+      innhold:
+        'For hver rute i en bit på 2048 × 2048 ruter: trinnet etter andel vegetasjon (1–6), eller 0 når ruta ikke er grå.',
+      tittel: 'Grått areal',
       om: 'trinnet per rute i en bit (2048 x 2048 ruter à 10,6 meter), kalt med biten [8, x, y]. Nøkkel: biten som «z/x/y».',
       forklaring:
         'En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50, 50–75 eller 75–100 %, og grått uten oppgitt andel, som veier, for seg.',
@@ -918,7 +993,10 @@ export const katalog = {
     graatrinn: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinn',
-      tittel: 'Grått areal per flis',
+      datasett: DATASETT.graa,
+      stotte: true,
+      innhold: 'Trinnet per piksel i en flis fra nivå 10: 0 når pikselen ikke er grå, ellers trinnet 1–6.',
+      tittel: 'Grått areal zoomet inn',
       om: 'trinnet per piksel i en flis fra nivå 10, kalt med flisen [z, x, y]: 0 ikke grått, ellers trinnet 1–6 som i bitene. Til kartet. Nøkkel: flisen som «z/x/y».',
       teknisk: true,
       forklaring:
@@ -930,6 +1008,9 @@ export const katalog = {
     graatrinnUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinnUt',
+      datasett: DATASETT.graa,
+      stotte: true,
+      innhold: 'Trinnet per piksel i en flis under nivå 10 for kommunen.',
       tittel: 'Grått areal zoomet ut',
       om: 'trinnet per piksel i en flis under nivå 10 for kommunen, kalt med [kommunenummer, z, x, y]. Nøkkel: «nummer/z/x/y».',
       teknisk: true,
@@ -957,7 +1038,10 @@ export const katalog = {
     grunnkartIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
       lag: 'solv',
       navn: 'grunnkartIPunkt',
-      tittel: 'Grunnkartet i et punkt, tolket',
+      datasett: DATASETT.grunnkart,
+      stotte: true,
+      innhold: 'Feltene i grunnkartet i ett punkt, lest av svaret fra NIBIO.',
+      tittel: 'Grunnkartet i et punkt',
       om: 'feltene i grunnkartet i et punkt, lest av GML-svaret fra NIBIO. Nøkkel: punktet i hele meter.',
       forklaring: 'Feltene slik NIBIO gir dem.',
       husk: 20,
@@ -967,7 +1051,10 @@ export const katalog = {
     inonIPunkt: tabell<number[], solvPunkt.Punktflate[]>({
       lag: 'solv',
       navn: 'inonIPunkt',
-      tittel: 'Inngrepsfri natur i et punkt, tolket',
+      datasett: DATASETT.inon,
+      stotte: true,
+      innhold: 'Id, sone og arealet av sonen i ett punkt.',
+      tittel: 'Inngrepsfri natur i et punkt',
       om: 'feltene for sonen i et punkt: id, sone og arealet av sonen. Nøkkel: punktet i hele meter.',
       forklaring: 'Feltene slik Miljødirektoratet gir dem.',
       husk: 20,
