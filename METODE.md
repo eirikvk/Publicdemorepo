@@ -1679,6 +1679,15 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Kolonnene i eksempelradene forklart, 20. oktober 2026.** De tre siste innspillene fra vurderingen er tatt inn. Hver kolonne kan ha
+en forklaring, en enhet og navnet på kodene (`kolonner` i `Tabelldef`, samlet i `src/data/kolonneinfo.ts`), og de vises i
+kolonneoverskriften, ved verdien i cellen (som «3 Natur» og «2 Sone 2, 1–3 km fra inngrep») og i en liste «Om kolonnene». Kodene
+hentes fra listene sidene bruker: klassene og detaljklassene i grunnkartet, sonene for inngrepsfri natur, trinnene for grått areal,
+verdikategoriene, verneformene og økosystemtypene hos SSB. Radformene vet selv hva x, y, bit, andel og faktor er, og JSON-stat tar
+enheten fra tabellen. Tabellene med ruter sier hvilken verdi som betyr at ruta ikke har data (`tom`), og en test krever det. Det
+rettet en feil: i inngrepsfri natur er 0 villmarkspreget natur og 255 uten sone, så rutene med villmarkspreget natur var utelatt
+før. I grunnkartet er 0 ukjent, i grått areal ikke grått, og i planene utenfor planen. Ingen tall er endret.
+
 **Eksempelrader i katalogen, 20. oktober 2026.** «Data» i katalogen viste formen på verdien (bilder, rutenett, tabeller og et tre),
 men ikke radene der dataene er lagret pakket. Nå står eksempelrader først, som i Databricks: hva én rad er, hvor mange det er, og 20
 rader spredt jevnt over alle, med kolonnene, typene og hvor mange rader som har verdi. Hva én rad er, sier tabellen selv (`radform`
@@ -1690,8 +1699,7 @@ og flatene står under, og tabellene og feltene som før sto der, er borte, så 
 av tre agenter (datamodell, brukervennlighet og kode). Det som er tatt inn: spredte rader i stedet for de første, riktig antall i
 JSON-stat, ingen tomme lister som rader, ingen rader for hurtigminne, kolonnene funnet av alle radene, nøkkelkolonnene først, x og y
 i flisnettet også for andelene, tall med komma, ett svar loddrett, alle feltene i en rad under tabellen i full lengde med lenker,
-plassen til raden blant alle, fast første kolonne, og at en feil i eksempelradene ikke stanser siden. Ikke tatt inn ennå: forklaring
-og enhet per kolonne, navn på kodene (som 01 Skog) og hvilken verdi som betyr «ingen data» per tabell. Ingen tall er endret.
+plassen til raden blant alle, fast første kolonne, og at en feil i eksempelradene ikke stanser siden. Forklaring og enhet per kolonne, navn på kodene og hvilken verdi som betyr «ingen data» per tabell kom samme dag (over). Ingen tall er endret.
 
 **Gull etter det sidene viser, og ett regnskap for hovedsiden og tvillingen, 20. oktober 2026.** Hovedsiden og tvillingen hadde
 hvert sitt sett tabeller for SSB-tallene, regnet av de samme to tabellene: utbredelsen, endringen og oppstillingen for hovedsiden,

@@ -37,6 +37,9 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et 
       assert.ok(t.lag === 'bronse' || t.lag === 'solv', `${t.lag}.${t.navn} kan ikke høre til et datasett`);
     if (t.datasett || t.stotte) assert.ok(t.innhold, `${t.lag}.${t.navn} mangler innholdet`);
   }
+  /* tabellene med ruter sier hvilken verdi som betyr at ruta ikke har data (tom), også når ingen verdi gjør det (null) */
+  for (const t of alle as { lag: string; navn: string; radform?: unknown }[])
+    if (t.radform === 'ruter') assert.ok('tom' in t, `${t.lag}.${t.navn} sier ikke hvilken verdi som er tom`);
   /* i gull er det sidene viser (tabellene i et kort), data, og alt annet støttedata: mellomregninger og hurtigminne */
   const { KORT } = await import('../src/ui/forklaringer.ts'),
     vist = new Set(KORT.flatMap(k => k.tabeller));

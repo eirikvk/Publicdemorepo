@@ -56,6 +56,17 @@ export interface Rad<V> {
    liste med en liste inni hvert element (fylkene med kommunene: utvid er feltet med den indre listen, og som er navnet på elementet
    over). Til eksempelradene i katalogvisningen (src/ui/eksempelrader.ts). */
 export type Radform = 'ruter' | 'andeler' | 'kommuner' | 'jsonstat' | { utvid: string; som: string };
+/* En kolonne i eksempelradene: hva den er, enheten, og navnet på kodene i den (kode som tekst: navn) */
+export interface Kolonneinfo {
+  om?: string;
+  enhet?: string;
+  koder?: Record<string, string>;
+}
+/* Verdien som betyr at en rute ikke har data, og hva den betyr. Ruter med den i alle kolonnene utelates fra eksempelradene. */
+export interface Tom {
+  verdi: number;
+  betyr: string;
+}
 /* En tabell: laget (bronse, sølv eller gull), navnet, hva den er, hvor mange nøkler som huskes, og ETL-funksjonen som lager verdien.
    N er det nøkkelen lages av, og V verdien. */
 export interface Tabelldef<N, V> {
@@ -87,6 +98,11 @@ export interface Tabelldef<N, V> {
     data, og mellomregninger og hurtigminne støttedata. */;
   innhold?: string /* hva dataene i tabellen er, på klarspråk: hva en rad, et bilde eller en verdi inneholder */;
   radform?: Radform /* hva én rad er, når verdien ikke er en liste eller et svar med en liste inni (Radform) */;
+  kolonner?: Record<
+    string,
+    Kolonneinfo
+  > /* kolonnene i eksempelradene som trenger en forklaring, en enhet eller navn på kodene */;
+  tom?: Tom | null /* for ruter: verdien som betyr at ruta ikke har data. null: alle rutene har data. */;
   endepunkt?: string /* i bronse: adressen som kalles, uten parametre ({…} er det som settes inn), eller filen sammen med siden */;
   teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i
      infoknappene, bare i en liste for seg i metodebeskrivelsen. */;
@@ -407,6 +423,8 @@ export function innhold() {
     stotte: !!t.stotte,
     innholdet: t.innhold || '',
     radform: t.radform || null,
+    kolonner: t.kolonner || null,
+    tom: t.tom === undefined ? undefined : t.tom,
     sporbar: !t.husk && !!t.etl,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,

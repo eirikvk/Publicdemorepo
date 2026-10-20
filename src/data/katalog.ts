@@ -31,6 +31,7 @@ import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvPunkt from './solv/punkt.ts';
 import * as solvSsb from './solv/ssb.ts';
 import * as solvNaturregnskap from './solv/naturregnskap.ts';
+import * as kolonner from './kolonneinfo.ts';
 type solvSsbJson = solvSsb.JsonStat;
 import * as solvTemaer from './solv/temaer.ts';
 import { BITNIVA, PLANNIVA, flisVed, flisnavn, type Fylke, type Flis, type Planruter } from './solv/felles.ts';
@@ -464,6 +465,7 @@ export const katalog = {
     kommuneareal: tabell<void, kartverket.Kommuneareal>({
       lag: 'bronse',
       navn: 'kommuneareal',
+      kolonner: kolonner.KOMMUNEAREAL,
       radform: 'kommuner',
       datasett: DATASETT.kommuner,
       stotte: true,
@@ -512,6 +514,7 @@ export const katalog = {
     detaljregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'detaljregister',
+      kolonner: kolonner.REGISTER,
       radform: 'kommuner',
       datasett: DATASETT.grunnkart,
       stotte: true,
@@ -544,6 +547,7 @@ export const katalog = {
     klasseregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'klasseregister',
+      kolonner: kolonner.REGISTER,
       radform: 'kommuner',
       datasett: DATASETT.grunnkart,
       stotte: true,
@@ -783,6 +787,7 @@ export const katalog = {
     okosystemareal: tabell<void, solvNaturregnskap.Okosystemareal>({
       lag: 'solv',
       navn: 'okosystemareal',
+      kolonner: kolonner.OKOSYSTEMAREAL,
       radform: 'kommuner',
       datasett: DATASETT.naturregnskap,
       innhold:
@@ -800,6 +805,7 @@ export const katalog = {
     okosystemendring: tabell<void, solvNaturregnskap.Okosystemendring>({
       lag: 'solv',
       navn: 'okosystemendring',
+      kolonner: kolonner.OKOSYSTEMENDRING,
       radform: 'kommuner',
       datasett: DATASETT.naturregnskap,
       innhold:
@@ -817,6 +823,7 @@ export const katalog = {
     kommuneareal: tabell<void, Record<string, number>>({
       lag: 'solv',
       navn: 'kommuneareal',
+      kolonner: kolonner.KOMMUNEAREAL,
       radform: 'kommuner',
       datasett: DATASETT.kommuner,
       stotte: true,
@@ -830,6 +837,8 @@ export const katalog = {
     klasser: tabell<Flis, solvGrunnkart.Grunnkart>({
       lag: 'solv',
       navn: 'klasser',
+      kolonner: kolonner.KLASSER,
+      tom: kolonner.TOM_KLASSER,
       radform: 'ruter',
       datasett: DATASETT.grunnkart,
       tittel: 'Arealklasser fra grunnkartet',
@@ -846,6 +855,8 @@ export const katalog = {
     klasserUt: tabell<[string, number, number, number], solvGrunnkart.Grunnkart>({
       lag: 'solv',
       navn: 'klasserUt',
+      kolonner: kolonner.KLASSER,
+      tom: kolonner.TOM_KLASSER,
       radform: 'ruter',
       datasett: DATASETT.grunnkart,
       stotte: true,
@@ -892,6 +903,8 @@ export const katalog = {
     egneruter: tabell<string, solvEgne.Egenplan[]>({
       lag: 'solv',
       navn: 'egneruter',
+      kolonner: kolonner.EGNE,
+      tom: kolonner.TOM_EGNE,
       radform: 'ruter',
       datasett: DATASETT.egne,
       innhold:
@@ -949,6 +962,8 @@ export const katalog = {
     planoversikt: tabell({
       lag: 'solv',
       navn: 'planoversikt',
+      kolonner: kolonner.PLANOVERSIKT,
+      tom: kolonner.TOM_PLANOVERSIKT,
       radform: 'ruter',
       datasett: DATASETT.utbyggingsareal,
       stotte: true,
@@ -964,6 +979,8 @@ export const katalog = {
     kommuneplanruter: tabell<Flis, Planruter>({
       lag: 'solv',
       navn: 'kommuneplanruter',
+      kolonner: kolonner.KOMMUNEPLAN,
+      tom: kolonner.TOM_KOMMUNEPLAN,
       radform: 'ruter',
       datasett: DATASETT.utbyggingsareal,
       innhold:
@@ -997,6 +1014,8 @@ export const katalog = {
     inonbit: tabell<[number, Flis], solvInon.Inonsoner>({
       lag: 'solv',
       navn: 'inonbit',
+      kolonner: kolonner.INONBIT,
+      tom: kolonner.TOM_INONBIT,
       radform: 'ruter',
       datasett: DATASETT.inon,
       innhold:
@@ -1013,6 +1032,8 @@ export const katalog = {
     inonsoner: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'inonsoner',
+      kolonner: kolonner.INONFLIS,
+      tom: kolonner.TOM_INONFLIS,
       radform: 'ruter',
       datasett: DATASETT.inon,
       stotte: true,
@@ -1029,6 +1050,8 @@ export const katalog = {
     inonsonerUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'inonsonerUt',
+      kolonner: kolonner.INONFLIS,
+      tom: kolonner.TOM_INONFLIS,
       radform: 'ruter',
       datasett: DATASETT.inon,
       stotte: true,
@@ -1045,6 +1068,8 @@ export const katalog = {
     graabit: tabell<Flis, solvGraa.Graatrinn>({
       lag: 'solv',
       navn: 'graabit',
+      kolonner: kolonner.GRAA,
+      tom: kolonner.TOM_GRAA,
       radform: 'ruter',
       datasett: DATASETT.graa,
       innhold:
@@ -1061,6 +1086,8 @@ export const katalog = {
     graatrinn: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinn',
+      kolonner: kolonner.GRAA,
+      tom: kolonner.TOM_GRAA,
       radform: 'ruter',
       datasett: DATASETT.graa,
       stotte: true,
@@ -1077,6 +1104,8 @@ export const katalog = {
     graatrinnUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinnUt',
+      kolonner: kolonner.GRAA,
+      tom: kolonner.TOM_GRAA,
       radform: 'ruter',
       datasett: DATASETT.graa,
       stotte: true,
@@ -1146,6 +1175,7 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'solv',
       navn: 'verneomrader',
+      kolonner: kolonner.OMRADER,
       datasett: DATASETT.vern,
       innhold:
         'Én rad per verneområde i kommunen: flaten klippet mot kommunegrensen, arealet av området i kommunen i km², navnet, verneformen og vernedatoen, lenken til faktaarket, og alle feltene slik kilden ga dem. Der to områder overlapper, har begge med seg overlappet.',
@@ -1160,6 +1190,7 @@ export const katalog = {
     villrein: tabell({
       lag: 'solv',
       navn: 'villrein',
+      kolonner: kolonner.OMRADER,
       datasett: DATASETT.villrein,
       innhold:
         'Én rad per villreinområde i kommunen: flaten klippet mot kommunegrensen, arealet av området i kommunen i km², navnet, om det er et nasjonalt villreinområde, funksjonen og perioden, lenken til faktaarket, og alle feltene slik kilden ga dem. Der to områder overlapper, har begge med seg overlappet.',
@@ -1174,6 +1205,7 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'solv',
       navn: 'verdsattNatur',
+      kolonner: kolonner.OMRADER,
       datasett: DATASETT.verdsatt,
       innhold:
         'Én rad per lokalitet i kommunen: flaten klippet mot kommunegrensen, arealet av lokaliteten i kommunen i km², naturtypen, områdenavnet, verdikategorien, lenken til faktaarket, og alle feltene slik kilden ga dem. Lokalitetene med fast verdi og de uten ligger i hver sin liste.',
@@ -1188,6 +1220,7 @@ export const katalog = {
     vernAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'vernAndel',
+      kolonner: kolonner.VERN_ANDEL,
       radform: 'andeler',
       datasett: DATASETT.vern,
       stotte: true,
@@ -1203,6 +1236,7 @@ export const katalog = {
     verneformAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'verneformAndel',
+      kolonner: kolonner.VERNEFORM_ANDEL,
       radform: 'andeler',
       datasett: DATASETT.vern,
       stotte: true,
@@ -1219,6 +1253,7 @@ export const katalog = {
     villreinAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'villreinAndel',
+      kolonner: kolonner.VILLREIN_ANDEL,
       radform: 'andeler',
       datasett: DATASETT.villrein,
       stotte: true,
@@ -1234,6 +1269,7 @@ export const katalog = {
     verdsattAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'verdsattAndel',
+      kolonner: kolonner.VERDSATT_ANDEL,
       radform: 'andeler',
       datasett: DATASETT.verdsatt,
       stotte: true,
@@ -1249,6 +1285,7 @@ export const katalog = {
     vurderesAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'vurderesAndel',
+      kolonner: kolonner.VURDERES_ANDEL,
       radform: 'andeler',
       datasett: DATASETT.verdsatt,
       stotte: true,
@@ -1264,6 +1301,7 @@ export const katalog = {
     kartlagtAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'kartlagtAndel',
+      kolonner: kolonner.KARTLAGT_ANDEL,
       radform: 'andeler',
       datasett: DATASETT.kartlagt,
       stotte: true,
@@ -1428,6 +1466,10 @@ export const katalog = {
     okosystemfordeling: tabell({
       lag: 'gull',
       navn: 'okosystemfordeling',
+      kolonner: {
+        gruppe: { om: 'klassen hovedøkosystemet hører til' },
+        km2: { om: 'arealet i 2024', enhet: 'km²' }
+      },
       stotte: true,
       innhold: 'Arealet per hovedøkosystem i kommunen i 2024 i km², med året, kilden og om tallene er syntetiske.',
       tittel: 'Hovedøkosystemer per kommune 2024',
@@ -1440,6 +1482,11 @@ export const katalog = {
     bebygdEndring: tabell({
       lag: 'gull',
       navn: 'bebygdEndring',
+      kolonner: {
+        gruppe: { om: 'klassen hovedøkosystemet hører til' },
+        tilBebygd: { om: 'fra hovedøkosystemet til bebygd, 2017–2024', enhet: 'km²' },
+        fraBebygd: { om: 'fra bebygd til hovedøkosystemet, 2017–2024', enhet: 'km²' }
+      },
       stotte: true,
       innhold:
         'For hver landklasse arealet i km² som gikk til bebygd og tilbake fra 2017 til 2024, og om årene kan sammenlignes.',
@@ -1462,6 +1509,12 @@ export const katalog = {
     okosystemregnskap: tabell({
       lag: 'gull',
       navn: 'okosystemregnskap',
+      kolonner: {
+        gruppe: { om: 'klassen hovedøkosystemet hører til' },
+        inngaende: { om: 'arealet i 2017', enhet: 'km²' },
+        endring: { om: 'endringen mot bebygd', enhet: 'km²' },
+        utgaende: { om: 'arealet i 2024', enhet: 'km²' }
+      },
       tittel: 'Regnskapet per hovedøkosystem og klasse 2017–2024',
       om: 'utbredelsesregnskapet: arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd og arealet i 2024 (utgående), og summene for natur, jordbruk og bebygd og for landarealet, fra de to tabellene fra SSB. Hovedsiden viser summene, tvillingen hovedøkosystemene.',
       forklaring:
@@ -1511,6 +1564,13 @@ export const katalog = {
     utbredelse: tabell({
       lag: 'gull',
       navn: 'utbredelse',
+      kolonner: {
+        id: { om: 'klassen' },
+        km2: { om: 'arealet i 2024', enhet: 'km²' },
+        andel: { om: 'andelen av landarealet', enhet: '%' },
+        endring: { om: 'endringen fra 2017', enhet: 'km²' },
+        pst: { om: 'endringen i prosent av arealet i 2017', enhet: '%' }
+      },
       tittel: 'Natur, jordbruk og bebygd nå og endringen fra 2017',
       om: 'natur, jordbruk og bebygd i 2024 med arealet og andelen av landarealet, og endringen fra 2017, fra de to tabellene fra SSB (gull.okosystemfordeling og gull.bebygdEndring). Syntetisk så lenge tabellene i sølv er det. Hovedsiden og tvillingen viser den samme.',
       forklaring:
@@ -1882,6 +1942,7 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'gull',
       navn: 'verneomrader',
+      kolonner: kolonner.OMRADER,
       tittel: 'Verneområder',
       om: 'verneområdene i kommunen: listen, arealet og andelen av landarealet',
       forklaring:
@@ -1908,6 +1969,7 @@ export const katalog = {
     verneomraderIPlan: tabell({
       lag: 'gull',
       navn: 'verneomraderIPlan',
+      kolonner: kolonner.OMRADER,
       tittel: 'Verneområder i planen',
       om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnene. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
@@ -1920,6 +1982,7 @@ export const katalog = {
     villrein: tabell({
       lag: 'gull',
       navn: 'villrein',
+      kolonner: kolonner.OMRADER,
       tittel: 'Villreinområder',
       om: 'villreinområdene i kommunen: listen, arealet og andelen av landarealet',
       forklaring:
@@ -1943,6 +2006,7 @@ export const katalog = {
     villreinIPlan: tabell({
       lag: 'gull',
       navn: 'villreinIPlan',
+      kolonner: kolonner.OMRADER,
       tittel: 'Villreinområder i planen',
       om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnene. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
@@ -1955,6 +2019,7 @@ export const katalog = {
     verdsattNatur: tabell({
       lag: 'gull',
       navn: 'verdsattNatur',
+      kolonner: kolonner.OMRADER,
       tittel: 'Verdsatt natur',
       om: 'verdsatt natur i kommunen: lokalitetene, arealet samlet og per verdikategori, hvor mye lokalitetene overlapper, og andelen av landarealet',
       forklaring:
@@ -2006,6 +2071,7 @@ export const katalog = {
     verdsattNaturIPlan: tabell({
       lag: 'gull',
       navn: 'verdsattNaturIPlan',
+      kolonner: kolonner.OMRADER,
       tittel: 'Verdsatt natur i planen',
       om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnene. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:

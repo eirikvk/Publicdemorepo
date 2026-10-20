@@ -14,8 +14,8 @@ import { app } from '../../data/motor/tilstand.ts';
 import { kartetsMidte, kartetsMinne } from '../kart/kart.ts';
 import { kb, nf, tid } from '../tekst.ts';
 import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
-import { celle, eksempelrader, type Eksempelrader, type Kolonne } from '../eksempelrader.ts';
-import type { Radform } from '../../data/cache.ts';
+import { celle, eksempelrader, kodenavn, type Eksempelrader, type Kolonne } from '../eksempelrader.ts';
+import type { Kolonneinfo, Radform, Tom } from '../../data/cache.ts';
 import { MdAccordionItem, MdButton } from './md.ts';
 import { AVHENGIGHETER } from '../../data/avhengigheter.ts';
 import { KORT } from '../forklaringer.ts';
@@ -114,8 +114,9 @@ function antallTekst(E: Eksempelrader) {
   return E.spredt ? `${n} Her er ${nf(E.rader.length, 0)} av dem, spredt jevnt fra den første.` : n;
 }
 /* En verdi i full lengde, med lenke når det er en nettadresse */
-function Verdi({ x }: { x: unknown }) {
-  const t = celle(x, true).tekst;
+function Verdi({ x, k }: { x: unknown; k?: Kolonneinfo }) {
+  const navn = k ? kodenavn(k, x) : '',
+    t = celle(x, true).tekst + (navn ? ' ' + navn : '');
   return typeof x === 'string' && /^https?:\/\//.test(x) ? (
     <a href={x} target="_blank" rel="noopener">
       {t}
@@ -126,7 +127,8 @@ function Verdi({ x }: { x: unknown }) {
 }
 /* Alle feltene i en rad, loddrett: felt, type og verdi, med kolonnene i tabellen først */
 function Feltene({ r, K, id, tittel }: { r: Record<string, unknown>; K: Kolonne[]; id?: string; tittel: string }) {
-  const navn = [...K.map(k => k.navn).filter(k => k in r), ...Object.keys(r).filter(k => !K.some(x => x.navn === k))];
+  const navn = [...K.map(k => k.navn).filter(k => k in r), ...Object.keys(r).filter(k => !K.some(x => x.navn === k))],
+    info = (n: string) => K.find(k => k.navn === n);
   return (
     <div className="feltene" id={id}>
       <table className="talltabell">
@@ -143,16 +145,57 @@ function Feltene({ r, K, id, tittel }: { r: Record<string, unknown>; K: Kolonne[
             <tr key={k}>
               <th scope="row">
                 <code>{k}</code>
+                {info(k) && info(k)!.om && <small>{info(k)!.om}</small>}
               </th>
-              <td>{celle(r[k]).type}</td>
               <td>
-                <Verdi x={r[k]} />
+                {celle(r[k]).type}
+                {info(k) && info(k)!.enhet ? `, ${info(k)!.enhet}` : ''}
+              </td>
+              <td>
+                <Verdi x={r[k]} k={info(k)} />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+/* Punktum etter en oppramsing, når den siste teksten ikke alt slutter med punktum */
+const punktum = (t: string) => (/[.!?]$/.test(t) ? '' : '.');
+/* Hva hver kolonne er: navnet, typen og enheten, forklaringen, og navnet på kodene, som en liste som kan foldes ut */
+function OmKolonnene({ K }: { K: Kolonne[] }) {
+  return (
+    <details className="omkolonnene">
+      <summary>Om kolonnene</summary>
+      <dl>
+        {K.map(k => (
+          <div key={k.navn}>
+            <dt>
+              <code>{k.navn}</code>
+              <small>
+                {' '}
+                {k.type}
+                {k.enhet ? `, ${k.enhet}` : ''}
+              </small>
+            </dt>
+            <dd>
+              {k.om ? stor(k.om) : 'Ingen forklaring.'}
+              {k.koder && (
+                <>
+                  {' '}
+                  Kodene:{' '}
+                  {Object.entries(k.koder)
+                    .map(([v, n]) => `${v} ${n}`)
+                    .join(', ')}
+                  .
+                </>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 /* Eksempelradene: hva én rad er, hvor mange det er og hvilke som vises, feltene som står én gang ved siden av radene, og radene som
@@ -193,7 +236,7 @@ function Eksempeltabell({ E }: { E: Eksempelrader }) {
               <code>{k}</code> {x}
             </span>
           ))}
-          .
+          {punktum(E.om[E.om.length - 1][1])}
         </p>
       )}
       {lik.length > 0 && (
@@ -203,6 +246,8 @@ function Eksempeltabell({ E }: { E: Eksempelrader }) {
             <span key={k.navn}>
               {i ? ', ' : ''}
               <code>{k.navn}</code> {celle(E.rader[0][k.navn]).tekst || 'tom'}
+              {kodenavn(k, E.rader[0][k.navn]) ? ' ' + kodenavn(k, E.rader[0][k.navn]) : ''}
+              {k.enhet && celle(E.rader[0][k.navn]).type === 'tall' ? ' ' + k.enhet : ''}
             </span>
           ))}
           .
@@ -229,6 +274,7 @@ function Eksempeltabell({ E }: { E: Eksempelrader }) {
                       <small>
                         <span className="skjult">, type </span>
                         {k.type}
+                        {k.enhet ? `, ${k.enhet}` : ''}
                         {k.fylt < k.av ? `, i ${nf(k.fylt, 0)} av ${nf(k.av, 0)}` : ''}
                       </small>
                     </th>
@@ -251,7 +297,8 @@ function Eksempeltabell({ E }: { E: Eksempelrader }) {
                       </button>
                     </td>
                     {K.map(k => {
-                      const c = celle(r[k.navn]);
+                      const c = celle(r[k.navn]),
+                        navn = kodenavn(k, r[k.navn]);
                       return (
                         <td
                           key={k.navn}
@@ -264,6 +311,7 @@ function Eksempeltabell({ E }: { E: Eksempelrader }) {
                           }
                         >
                           {c.tekst}
+                          {navn ? <span className="kodenavn"> {navn}</span> : null}
                         </td>
                       );
                     })}
@@ -274,6 +322,7 @@ function Eksempeltabell({ E }: { E: Eksempelrader }) {
           </div>
         )
       )}
+      {E.kolonner.some(k => k.om || k.enhet || k.koder) && <OmKolonnene K={E.kolonner} />}
       {!ett && vises.length > K.length && (
         <p className="hint">
           Tabellen viser {K.length} av {vises.length} kolonner. Trykk på ▸ for å se alle feltene i en rad.
@@ -293,11 +342,13 @@ const janei = (x: string) => (x === 'true' ? 'ja' : x === 'false' ? 'nei' : x);
 /* En verdi vist i deler: om dataene (foran, og feltene som beskriver dataene), eksempelradene, dataene som bilde etter formen de har
    (Datavisning.tsx), og alle feltene som tre. Uten eksempelrader vises dataene etter formen de har, som før. Kan eksempelradene ikke
    lages, vises verdien uten dem. */
-function Innholdet({ v, foran, radform }: { v: unknown; foran: [string, string][]; radform: Radform | null }) {
+/* Det tabellen sier om eksempelradene: hva én rad er, kolonnene og verdien for ruter uten data */
+type Radvalg = { radform: Radform | null; kolonner: Record<string, Kolonneinfo> | null; tom?: Tom | null };
+function Innholdet({ v, foran, t }: { v: unknown; foran: [string, string][]; t: Radvalg }) {
   const [vist] = useState<{ om: [string, string][]; former: Form[]; tekst: string; E: Eksempelrader | null }>(() => {
     let E: Eksempelrader | null = null;
     try {
-      E = eksempelrader(v, radform);
+      E = eksempelrader(v, t.radform, { kolonner: t.kolonner, tom: t.tom });
     } catch (e) {
       E = null;
     }
@@ -344,7 +395,7 @@ function Innholdet({ v, foran, radform }: { v: unknown; foran: [string, string][
 }
 
 /* Én rad i cachen. Verdien leses fra cachen først når raden åpnes. */
-function Rad({ navn, r, radform }: { navn: string; r: Raden; radform: Radform | null }) {
+function Rad({ navn, r, t }: { navn: string; r: Raden; t: Radvalg }) {
   const [apen, settApen] = useState(false),
     v = apen ? verdiI(navn, r.nokkel) : undefined;
   return (
@@ -364,7 +415,7 @@ function Rad({ navn, r, radform }: { navn: string; r: Raden; radform: Radform | 
               ...(r.ms ? ([['Laget på', tid(r.ms)]] as [string, string][]) : []),
               ['Lagret', alder(r.sekunder) + ' siden']
             ]}
-            radform={radform}
+            t={t}
           />
         ))}
     </details>
@@ -411,7 +462,7 @@ function Sporring({ d }: { d: Tabellen }) {
               ['Nøkkel', nokkelen(svar.nokkel)],
               ['Tid', tid(svar.ms)]
             ]}
-            radform={d.radform}
+            t={d}
           />
         ))}
     </>
@@ -683,7 +734,7 @@ function Tabellrad({
                   {!d.husk ? (
                     <Sporring d={d} />
                   ) : r.length ? (
-                    r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} radform={d.radform} />)
+                    r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} t={d} />)
                   ) : (
                     <p>Ingenting lagret ennå.</p>
                   )}

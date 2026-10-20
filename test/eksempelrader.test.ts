@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HEL } from '../src/data/generelt/dekning.ts';
-import { celle, eksempelrader, flat, kolonnerI, plasser } from '../src/ui/eksempelrader.ts';
+import { celle, eksempelrader, flat, kodenavn, kolonnerI, plasser } from '../src/ui/eksempelrader.ts';
 
 test('eksempelrader: radene som vises er spredt jevnt fra den første, eller alle når de er få', () => {
   assert.deepEqual(plasser(3), [0, 1, 2]);
@@ -224,4 +224,43 @@ test('eksempelrader: lister som går i ring eller er svært dype, gir ikke feil'
   let dyp: unknown = [[1, 2]];
   for (let i = 0; i < 5000; i++) dyp = [dyp];
   assert.doesNotThrow(() => celle(dyp));
+});
+
+test('eksempelrader: verdien for ruter uten data, forklaring og enhet per kolonne, og navnet på kodene', () => {
+  /* inngrepsfri natur: 0 er villmarkspreget natur, 255 er uten sone */
+  const sone = Uint8Array.of(0, 255, 1, 255),
+    T = { verdi: 255, betyr: 'uten sone' },
+    kolonner = { sone: { om: 'sonen', koder: { '0': 'Villmarkspreget', '1': 'Sone 1' } } };
+  const E = eksempelrader({ z: 10, cx0: 0, cy0: 0, w: 2, h: 2, sone }, 'ruter', { tom: T, kolonner })!;
+  assert.equal(E.antall, 2);
+  assert.deepEqual(
+    E.rader.map(r => r.sone),
+    [0, 1]
+  );
+  assert.ok(E.hva.includes('Ruter med 255 i alle kolonnene (uten sone) er utelatt.'));
+  const k = E.kolonner.find(x => x.navn === 'sone')!;
+  assert.equal(k.om, 'sonen');
+  assert.equal(kodenavn(k, 0), 'Villmarkspreget');
+  assert.equal(kodenavn(k, 7), '');
+  /* radformen vet hva x og y er, og tabellen kan overstyre */
+  assert.ok(E.kolonner.find(x => x.navn === 'x')!.om!.includes('flisnettet'));
+  /* null: alle rutene har data */
+  assert.equal(eksempelrader({ w: 2, h: 2, kl: new Uint8Array(4) }, 'ruter', { tom: null })!.antall, 4);
+  /* andelene har enhet 0–1, og JSON-stat tar enheten fra innholdet */
+  const A = eksempelrader([{ tc: [8, 0, 0], antall: 0, hel: true, andel: null, faktor: 1 }], 'andeler')!;
+  assert.equal(A.kolonner.find(x => x.navn === 'andel')!.enhet, '0–1');
+  const J = eksempelrader(
+    {
+      class: 'dataset',
+      id: ['Region', 'ContentsCode'],
+      size: [1, 1],
+      dimension: {
+        Region: { label: 'region', category: { index: ['5001'] } },
+        ContentsCode: { label: 'statistikkvariabel', category: { index: ['Areal'], unit: { Areal: { base: 'km²' } } } }
+      },
+      value: [3]
+    },
+    'jsonstat'
+  )!;
+  assert.equal(J.kolonner.find(x => x.navn === 'verdi')!.enhet, 'km²');
 });

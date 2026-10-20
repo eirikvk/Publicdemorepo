@@ -16,16 +16,19 @@
    rader som har verdi. Et felt inni et annet felt flates ut ett nivå (egenskaper.navn). Det som ligger dypere, lister og flater,
    vises kort i cellen, og hele raden kan foldes ut. Bilder og binære filer har ingen rader. Rene funksjoner, uten React. */
 import { HEL, type Andel } from '../data/generelt/dekning.ts';
-import type { Radform } from '../data/cache.ts';
+import type { Kolonneinfo, Radform, Tom } from '../data/cache.ts';
 
 export type Kolonnetype = 'tall' | 'tekst' | 'ja/nei' | 'flate' | 'liste' | 'objekt' | 'tom' | 'blandet';
-/* En kolonne: navnet, typen, og hvor mange av radene som har en verdi i den (fylt av av) */
-export interface Kolonne {
+/* En kolonne: navnet, typen, hvor mange av radene som har en verdi i den (fylt av av), og hva den er, enheten og navnet på kodene,
+   når det er kjent (fra tabellen, eller fra radformen) */
+export interface Kolonne extends Kolonneinfo {
   navn: string;
   type: Kolonnetype;
   fylt: number;
   av: number;
 }
+/* Navnet på koden v i kolonnen k, eller tomt */
+export const kodenavn = (k: Kolonneinfo, v: unknown) => (k.koder && enkel(v) ? k.koder[String(v)] || '' : '');
 /* Eksempelradene i en verdi: hva én rad er (hva), kolonnene, radene som vises med alle feltene, hvor mange rader det er i alt (null
    når det ikke er kjent), plassen til hver rad som vises blant alle radene (fra 1), om radene som vises, er spredt over flere
    (spredt), hodet (om), nøkkelkolonnene som identifiserer en rad, og en merknad når verdien ikke passet radformen til tabellen */
@@ -39,6 +42,7 @@ export interface Eksempelrader {
   om: [string, string][];
   nokler: string[];
   merknad?: string;
+  info?: Record<string, Kolonneinfo>;
 }
 export const MAKS_RADER = 20;
 /* Høyst så mange rader brukes til å finne kolonnene og typene */
@@ -186,8 +190,10 @@ const ferdig = (
   antall: number | null,
   om: [string, string][],
   nokler: string[],
-  skjema: Record<string, unknown>[] = rader
+  skjema: Record<string, unknown>[] = rader,
+  info: Record<string, Kolonneinfo> = {}
 ): Eksempelrader => ({
+  info,
   hva,
   kolonner: kolonnerI(skjema, nokler),
   rader,
@@ -202,9 +208,15 @@ const ferdig = (
    tallrekker med én verdi per rute. Ruta står med x og y i flisnettet når alle rutenettene har plasseringen (cx0, cy0), ellers i
    rutenettet. Ruter der alle verdiene er 0, er utelatt. To løp: først telles rutene med verdi, så hentes de som vises, spredt jevnt
    over dem. */
-function ruter(v: unknown): Eksempelrader | null {
+const KOLONNE_X_Y: Record<string, Kolonneinfo> = {
+  x: { om: 'kolonnen i flisnettet på nivå 10, 10,6 meter per rute, mot øst' },
+  y: { om: 'raden i flisnettet på nivå 10, 10,6 meter per rute, mot sør' }
+};
+function ruter(v: unknown, tom: Tom | null | undefined): Eksempelrader | null {
   const nett = (Array.isArray(v) ? v : [v]).filter(erObjekt);
   if (!nett.length || !nett.every(g => typeof g.w === 'number' && typeof g.h === 'number')) return null;
+  /* verdien som betyr at ruta ikke har data: 0 når tabellen ikke sier noe */
+  const t = tom ? tom.verdi : 0;
   const deler = nett.map((g, gi) => {
     const w = g.w as number,
       h = g.h as number,
@@ -213,13 +225,15 @@ function ruter(v: unknown): Eksempelrader | null {
       ),
       F = felt.map(([, a]) => a);
     let n = 0;
-    if (F.length === 1) {
+    if (!F.length) n = 0;
+    else if (tom === null) n = w * h;
+    else if (F.length === 1) {
       const a = F[0];
-      for (let q = 0; q < a.length; q++) if (a[q]) n++;
-    } else if (F.length)
+      for (let q = 0; q < a.length; q++) if (a[q] !== t) n++;
+    } else
       for (let q = 0; q < w * h; q++)
         for (let c = 0; c < F.length; c++)
-          if (F[c][q]) {
+          if (F[c][q] !== t) {
             n++;
             break;
           }
@@ -241,9 +255,9 @@ function ruter(v: unknown): Eksempelrader | null {
     const x0 = global ? (d.g.cx0 as number) : 0,
       y0 = global ? (d.g.cy0 as number) : 0;
     for (let q = 0; q < d.w * d.h && neste < maal.length; q++) {
-      let med = false;
-      for (let c = 0; c < d.F.length; c++)
-        if (d.F[c][q]) {
+      let med = tom === null;
+      for (let c = 0; c < d.F.length && !med; c++)
+        if (d.F[c][q] !== t) {
           med = true;
           break;
         }
@@ -260,13 +274,27 @@ function ruter(v: unknown): Eksempelrader | null {
     }
   }
   const om = flere ? [['rutenett', String(nett.length)] as [string, string]] : hodet(nett[0], []);
+  const utelatt =
+    tom === null
+      ? 'Alle rutene er med.'
+      : tom
+        ? `Ruter med ${tom.verdi} i alle kolonnene (${tom.betyr}) er utelatt.`
+        : 'Ruter der alle verdiene er 0, er utelatt.';
   return ferdig(
-    `Én rad per rute der ikke alle verdiene er 0. ${global ? 'x og y er ruta i flisnettet, med 10,6 meter per rute på nivå 10.' : 'x og y er ruta i rutenettet.'}`,
+    `Én rad per rute. ${utelatt} ${global ? 'x og y er ruta i flisnettet, med 10,6 meter per rute på nivå 10.' : 'x og y er ruta i rutenettet.'}`,
     rader,
     maal,
     antall,
     om,
-    flere ? ['id', 'x', 'y'] : ['x', 'y']
+    flere ? ['id', 'x', 'y'] : ['x', 'y'],
+    rader,
+    global
+      ? { ...KOLONNE_X_Y, id: { om: 'rutenettet ruta hører til' } }
+      : {
+          x: { om: 'kolonnen i rutenettet, mot høyre' },
+          y: { om: 'raden i rutenettet, nedover' },
+          id: { om: 'rutenettet ruta hører til' }
+        }
   );
 }
 
@@ -334,7 +362,15 @@ function andeler(v: unknown): Eksempelrader | null {
     maal,
     antall,
     o ? hodet(o, ['biter']) : [],
-    kategorier ? ['kategori', 'x', 'y'] : ['x', 'y']
+    kategorier ? ['kategori', 'x', 'y'] : ['x', 'y'],
+    rader,
+    {
+      ...KOLONNE_X_Y,
+      kategori: { om: 'kategorien i temaet, fra 0' },
+      bit: { om: 'biten ruta ligger i: en flis på nivå 8 med 2048 × 2048 ruter, som z/x/y' },
+      andel: { om: 'hvor stor del av ruta som er med', enhet: '0–1' },
+      faktor: { om: 'målestokken i biten: arealet av en rute rettes med den' }
+    }
   );
 }
 
@@ -359,7 +395,8 @@ function kommuner(v: unknown): Eksempelrader | null {
     nr.length,
     felt === null ? [] : hodet(v, [felt]),
     ['kommune'],
-    nr.slice(0, MAKS_SKJEMA).map(rad)
+    nr.slice(0, MAKS_SKJEMA).map(rad),
+    { kommune: { om: 'kommunenummeret' } }
   );
 }
 
@@ -423,8 +460,21 @@ function jsonstat(v: unknown): Eksempelrader | null {
       ...hodet(v, ['id', 'size', 'value', 'version', 'class']),
       ...id.flatMap((d, k): [string, string][] => (en[k] ? [[d, navn(k, 0)]] : []))
     ],
-    id.filter((_, k) => !en[k])
+    id.filter((_, k) => !en[k]),
+    rader,
+    {
+      ...Object.fromEntries(id.map(d => [d, { om: dim[d] && dim[d]!.label ? dim[d]!.label : undefined }])),
+      verdi: { om: 'verdien', enhet: enhetI(dim) }
+    }
   );
+}
+/* Enheten for verdiene i JSON-stat: enheten til innholdet (category.unit) når tabellen har bare ett slags innhold */
+function enhetI(dim: Record<string, Dimensjon | undefined>): string | undefined {
+  for (const d of Object.values(dim)) {
+    const u = d && d.category && (d.category as { unit?: Record<string, { base?: string }> }).unit;
+    if (u && Object.keys(u).length === 1) return Object.values(u)[0].base;
+  }
+  return undefined;
 }
 
 /* Uten radform: en liste av ordbøker er radene. Et svar med lister av ordbøker øverst har den lengste som ikke er tom, som radene, og
@@ -487,16 +537,33 @@ function liste(v: unknown): Eksempelrader | null {
   return ferdig('Svaret har ingen liste, så alle feltene står i én rad.', [flat(v)], [0], 1, [], []);
 }
 
-const FORMER: Record<string, (v: unknown) => Eksempelrader | null> = { ruter, andeler, kommuner, jsonstat };
+/* Hva tabellen sier om kolonnene og om ruter uten data (kolonner og tom i Tabelldef) */
+export interface Valg {
+  kolonner?: Record<string, Kolonneinfo> | null;
+  tom?: Tom | null;
+}
+const FORMER: Record<string, (v: unknown, valg: Valg) => Eksempelrader | null> = {
+  ruter: (v, valg) => ruter(v, valg.tom),
+  andeler,
+  kommuner,
+  jsonstat
+};
 /* Eksempelradene i verdien v, med radformen til tabellen (form), eller som liste eller svar uten. null når verdien ikke har rader,
-   som et bilde. Passer ikke verdien til radformen, brukes listen, med en merknad. */
-export function eksempelrader(v: unknown, form: Radform | null): Eksempelrader | null {
+   som et bilde. Passer ikke verdien til radformen, brukes listen, med en merknad. Kolonnene får det tabellen sier om dem (valg),
+   ellers det radformen vet. */
+export function eksempelrader(v: unknown, form: Radform | null, valg: Valg = {}): Eksempelrader | null {
+  const E = finn(v, form, valg);
+  if (!E) return null;
+  const info = { ...E.info, ...(valg.kolonner || {}) };
+  return { ...E, kolonner: E.kolonner.map(k => ({ ...k, ...(info[k.navn] || {}) })) };
+}
+function finn(v: unknown, form: Radform | null, valg: Valg): Eksempelrader | null {
   if (!form) return liste(v);
   if (typeof form === 'object') {
     if (Array.isArray(v) && v.some(x => erObjekt(x) && Array.isArray(x[form.utvid])))
       return fraListe(v, `Én rad per element i «${form.utvid}», med feltene for ${form.som} foran.`, [], form);
   } else {
-    const E = FORMER[form](v);
+    const E = FORMER[form](v, valg);
     if (E) return E;
   }
   const L = liste(v);

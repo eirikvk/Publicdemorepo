@@ -239,3 +239,29 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* Navnet på koden i en celle, og forklaringen under feltet i en rad: dempet */
+.katalog table.eksempelrader .kodenavn,
+.katalog .feltene th small {
+  color: var(--dempet);
+}
+.katalog .feltene th small {
+  display: block;
+  font-weight: var(--md-typography-weight-regular, 400);
+}
+/* Om kolonnene: navnet med type og enhet, og forklaringen under */
+.katalog details.omkolonnene {
+  margin-top: var(--md-spacing-8);
+}
+.katalog details.omkolonnene dl {
+  margin: var(--md-spacing-8) 0 0;
+}
+.katalog details.omkolonnene dl > div + div {
+  margin-top: var(--md-spacing-8);
+}
+.katalog details.omkolonnene dt small {
+  color: var(--dempet);
+}
+.katalog details.omkolonnene dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
