@@ -3,8 +3,9 @@
    katalogen) står som én vanlig rad, og støttedataene ligger bak knappen «Støttedata» på raden, med hva hver av dem er til for først.
    Støttedata som ikke hører til ett datasett, står for seg sist i laget, som «Andre støttedata». Gull står etter kortene som viser
    tallene (KORT i forklaringer.ts): hvert kort med tabellene det viser, og støttedataene det bygger på, mellomregninger og
-   hurtigminne, bak knappen på den siste. «Info» viser hva tabellen er, det tekniske navnet og hvor
-   ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
+   hurtigminne, bak knappen på den siste. «Info» viser hva tabellen er, kilden med kildens egen beskrivelse, hvor den hentes fra og
+   hvordan den lages, hva den bygger på, usikkerheten, det tekniske navnet og hvor ETL-funksjonen ligger: det samme som infoboksene
+   og METODE.md bygger på. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
    siden tegnes. */
@@ -18,7 +19,7 @@ import { celle, eksempelrader, kodenavn, type Eksempelrader, type Kolonne } from
 import type { Kolonneinfo, Radform, Tom } from '../../data/cache.ts';
 import { MdAccordionItem, MdButton } from './md.ts';
 import { AVHENGIGHETER } from '../../data/avhengigheter.ts';
-import { KORT } from '../forklaringer.ts';
+import { KORT, tabellen } from '../forklaringer.ts';
 import './Katalog.css';
 
 type Innhold = ReturnType<typeof innhold>;
@@ -470,8 +471,11 @@ function Sporring({ d }: { d: Tabellen }) {
 }
 
 /* Det «Info» viser: for dataene i et datasett hva datasettet er og tabellen dataene ligger i, for støttedata hvilke data de støtter,
-   og innholdet. Så hva tabellen er, hvordan den kalles, hvor ETL-funksjonen ligger, og hvor mye som huskes. */
+   og innholdet. Så hva tabellen er, kilden med kildens egen beskrivelse, hvor den hentes fra og hvordan den lages (forklaringen),
+   hva den bygger på, og usikkerheten: det samme som infoboksene og METODE.md bygger på. Til slutt hvordan den kalles, hvor
+   ETL-funksjonen ligger, og hvor mye som huskes. */
 function Info({ d }: { d: Tabellen }) {
+  const bygger = AVHENGIGHETER[d.navn] || [];
   return (
     <>
       {d.datasett && !d.stotte && <p>{stor(d.datasett.om)}</p>}
@@ -488,6 +492,50 @@ function Info({ d }: { d: Tabellen }) {
         </p>
       )}
       <p>{stor(d.om)}</p>
+      {d.kilde && (
+        <p>
+          Kilde:{' '}
+          <a href={d.kilde.adresse}>
+            {d.kilde.navn}: {d.kilde.datasett}
+          </a>
+          , {d.kilde.lisens}.
+          {d.kilde.beskrivelse ? ` Slik kilden beskriver dataene, kort og med egne ord: ${d.kilde.beskrivelse}` : ''}
+        </p>
+      )}
+      {(d.endepunkt || d.forklaring) && (
+        <p>
+          {d.endepunkt ? (
+            <>
+              Hentes fra <code>{d.endepunkt}</code>
+              {d.forklaring ? ': ' : '.'}
+            </>
+          ) : (
+            'Slik lages den: '
+          )}
+          {d.forklaring}
+        </p>
+      )}
+      {bygger.length > 0 && (
+        <p>
+          Bygger på{' '}
+          {bygger.map((n, i) => (
+            <span key={n}>
+              {i > 0 && (i === bygger.length - 1 ? ' og ' : ', ')}«{tabellen(n).tittel}» <code>{n}</code>
+            </span>
+          ))}
+          .
+        </p>
+      )}
+      {d.usikkerhet.length > 0 && (
+        <>
+          <p>Usikkerhet:</p>
+          <ul className="usikkerhet">
+            {d.usikkerhet.map(u => (
+              <li key={u}>{u}</li>
+            ))}
+          </ul>
+        </>
+      )}
       <p>
         Kalles som <code>katalog.{d.navn}(nøkkel)</code>.{' '}
         {d.etl ? (

@@ -98,7 +98,7 @@ test('infoboksen med ett tall per seksjon: kildene først, bare data som steg, o
       assert.ok(k.tabeller.includes(t), `${k.id}: ${t} er ikke et tall i kortet`);
     for (const t of k.tabeller) {
       const L = linjeFor(k, t),
-        S = L.steg.flatMap(s => ('steg' in s ? [s.steg] : []));
+        S = L.steg.map(s => s.steg);
       /* støttedata og tekniske tabeller er aldri egne steg, og tallet står til slutt */
       for (const s of S) assert.ok(!s.tabell.stotte && !s.tabell.teknisk, `${k.id}, ${t}: ${s.navn} er ikke data`);
       assert.equal(S[S.length - 1]?.navn, t, `${k.id}: ${t} står ikke til slutt`);
@@ -116,13 +116,18 @@ test('infoboksen med ett tall per seksjon: kildene først, bare data som steg, o
     ['Verdsatt natur', 'Syntetisk naturregnskap fra SSB', 'Kommunene']
   );
   const steg = L.steg[L.steg.length - 1];
-  assert.ok('steg' in steg && steg.underveis.some(u => u.navn === 'gull.verdsattAreal'));
-  /* et annet tall i kortet står som en henvisning, uten det det bygger på */
+  assert.ok(steg.underveis.some(u => u.navn === 'gull.verdsattAreal'));
+  /* seksjonen står på egne bein: et annet tall i kortet er et vanlig steg, og utbyggingen er med, med kildene sine */
   const K = linjeFor(k, 'gull.verdsattNaturKartlagt');
-  assert.ok(K.steg.some(s => 'henvisning' in s && s.her && s.henvisning.navn === 'gull.verdsattNatur'));
-  /* utbyggingen forklares av planlagt utbygging */
-  const I = linjeFor(k, 'gull.verdsattNaturIPlan');
-  assert.ok(I.steg.some(s => 'henvisning' in s && !s.her && s.henvisning.se === kortMed('planlagt')));
+  assert.deepEqual(
+    K.steg.map(s => s.steg.navn),
+    ['gull.verdsattNatur', 'gull.verdsattNaturKartlagt']
+  );
+  const G = linjeFor(k, 'gull.utbyggingUtenforKartlagt'),
+    navn = G.kilder.map(q => q.datasett && q.datasett.navn);
+  for (const d of ['Kartlagt for naturtyper', 'Arealklasser fra grunnkartet', 'Kommunene'])
+    assert.ok(navn.includes(d), `utbygging utenfor det kartlagte mangler ${d}`);
+  assert.ok(G.steg.some(s => s.underveis.some(u => u.navn === 'gull.utbygging')));
   /* alle kildene i kortet har sin egen beskrivelse */
   for (const t of k.tabeller)
     for (const q of linjeFor(k, t).kilder)

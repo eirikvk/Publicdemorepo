@@ -64,6 +64,19 @@
 .katalog tr.detalj > td > div > p:last-child {
   margin-bottom: 0;
 }
+/* Lange endepunkter i «Info» brytes, så adressen kan leses uten å rulle */
+.katalog tr.detalj > td > div > p code {
+  overflow-wrap: anywhere;
+}
+/* Usikkerheten i «Info»: forbeholdene som punktliste, som i infoboksene */
+.katalog tr.detalj ul.usikkerhet {
+  margin: 0 0 var(--md-spacing-8);
+  padding-left: 1.3em;
+  list-style: disc;
+}
+.katalog tr.detalj p:has(+ ul.usikkerhet) {
+  margin-bottom: var(--md-spacing-4);
+}
 .katalog code,
 .katalog pre {
   font-family: ui-monospace, Menlo, Consolas, monospace;

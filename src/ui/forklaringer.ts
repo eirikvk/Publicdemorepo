@@ -743,21 +743,26 @@ export const usikkerhetFor = (k: Kort) => [
       .flatMap(s => s.tabell.usikkerhet || [])
   ])
 ];
-/* Linjen fra kilde til ett tall: tallet er en tabell kortet viser, og hver seksjon i infoboksen har sin linje.
+/* Linjen fra kilde til ett tall: tallet er en tabell kortet viser, og hver seksjon i infoboksen har sin linje. Linjen står på egne
+   bein: alt tallet bygger på, er med, også det andre tall og kort bygger på, som utbyggingen, uten henvisninger dit.
    - kilder: datasettene tallet bygger på, hvert med kildene det hentes fra og tabellene i bronse og sølv som henter og gjør det om,
      støttedata medregnet. Kildene står først, med kildens egen beskrivelse (beskrivelse i KILDE). Det nærmeste datasettet først, og
      kommunene til slutt, fordi kommunegrensen er grunnlaget for alle tallene.
    - steg: tabellene i gull med data, i den rekkefølgen de bygger på hverandre, og tallet til slutt. Støttedata i gull er ikke egne
-     steg: de står under steget som bruker dem (underveis). Et annet tall i kortet, eller en tabell et annet kort forklarer, står
-     som en henvisning (her: et tall i dette kortet; ellers se), uten det den bygger på.
+     steg: de står under steget som bruker dem (underveis).
    - usikkerhet: forbeholdene på alle tabellene på linjen, støttedata medregnet, hvert én gang. Kortets egne står for seg.
-   Tekniske tabeller (teknisk i katalogen) står ikke med, men det de bygger på, gjør det. */
+   Tekniske tabeller (teknisk i katalogen) står ikke med, men det de bygger på, gjør det. Alt står i katalogen: forklaringen,
+   kilden med beskrivelsen, endepunktet og usikkerheten på hver tabell, og hva hver tabell bygger på (AVHENGIGHETER, lest ut av
+   koden). */
 export interface Kildesteg {
   datasett: Datasettinfo | null;
   kilder: Kildeinfo[];
   tabeller: Steg[];
 }
-export type Tallsteg = { steg: Steg; underveis: Steg[] } | { henvisning: Steg; her: boolean };
+export interface Tallsteg {
+  steg: Steg;
+  underveis: Steg[];
+}
 export interface Linje {
   kilder: Kildesteg[];
   steg: Tallsteg[];
@@ -765,23 +770,15 @@ export interface Linje {
 }
 export function linjeFor(k: Kort, tall: string): Linje {
   const steg = (n: string): Steg => ({ navn: n, tabell: tabellen(n) });
-  /* Henvisningen for en tabell som ikke er tallet: et annet tall i kortet, eller en tabell et annet kort viser eller forklarer */
-  const henvisning = (n: string): Tallsteg | null => {
-    if (n === tall) return null;
-    if (k.tabeller.includes(n)) return { henvisning: steg(n), her: true };
-    const e = eier(n);
-    return e && e !== k && !egne(k).includes(n) ? { henvisning: { ...steg(n), se: e }, her: false } : null;
-  };
   /* Avstanden fra tallet til hver tabell, til å ordne datasettene: det nærmeste først */
   const avstand = new Map<string, number>([[tall, 0]]),
     ko = [tall];
   for (const n of ko)
-    if (!henvisning(n))
-      for (const d of AVHENGIGHETER[n] || [])
-        if (!avstand.has(d)) {
-          avstand.set(d, avstand.get(n)! + 1);
-          ko.push(d);
-        }
+    for (const d of AVHENGIGHETER[n] || [])
+      if (!avstand.has(d)) {
+        avstand.set(d, avstand.get(n)! + 1);
+        ko.push(d);
+      }
   /* Gjennomgangen: det en tabell bygger på, først */
   const sett = new Set<string>(),
     S: Tallsteg[] = [],
@@ -790,12 +787,13 @@ export function linjeFor(k: Kort, tall: string): Linje {
   const besok = (n: string, bruker: { underveis: Steg[] } | null) => {
     if (sett.has(n)) return;
     sett.add(n);
-    const h = henvisning(n);
-    if (h) return void S.push(h);
     const t = tabellen(n),
       gull = n.startsWith('gull.'),
       dette = gull && !t.stotte && !t.teknisk ? { steg: steg(n), underveis: [] as Steg[] } : null;
-    for (const d of AVHENGIGHETER[n] || []) besok(d, dette || bruker);
+    /* tabellene med data først, så en mellomregning flere bruker, står under det første steget som bruker den */
+    const D = AVHENGIGHETER[n] || [],
+      data = (d: string) => !tabellen(d).stotte && !tabellen(d).teknisk;
+    for (const d of [...D.filter(data), ...D.filter(d => !data(d))]) besok(d, dette || bruker);
     if (t.teknisk) return;
     U.push(...(t.usikkerhet || []));
     if (dette) S.push(dette);

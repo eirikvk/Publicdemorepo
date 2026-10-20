@@ -62,7 +62,9 @@ const flisMidt =
    kontrollert mot Geonorge og data.norge.no 11. oktober 2026, bakgrunnskartet 19. oktober (data.norge.no oppgir det som tjeneste for
    Kartverkets kartdata, som har CC BY 4.0). Brukes av tabellene
    i bronse (kilde) til infoknappene og METODE.md. Beskrivelsen er vårt korte sammendrag av kildens egen beskrivelse på siden om
-   datasettet, lest 20. oktober 2026, for SSB på siden om statistikken. Den er første steg i infoboksene med ett tall per seksjon. */
+   datasettet, lest 20. oktober 2026, for SSB på siden om statistikken. Den er første steg i infoboksene med ett tall per seksjon,
+   og står i katalogvisningen. For DiBK lenkes det til datasettet Kommuneplaner hos data.norge.no, der WMS-tjenesten står som én av
+   distribusjonene, fordi siden om selve tjenesten ikke har noen beskrivelse (21. oktober 2026). */
 export const KILDE = {
   kartverket: {
     navn: 'Kartverket',
@@ -103,8 +105,10 @@ export const KILDE = {
   dibk: {
     navn: 'Direktoratet for byggkvalitet (DiBK)',
     datasett: 'Kommuneplaner, WMS-tjeneste',
-    adresse: 'https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138',
-    lisens: 'Norge digitalt-lisensen'
+    adresse: 'https://data.norge.no/datasets/e0d9bd64-1f03-3e06-99f4-fe8cabad6a93',
+    lisens: 'Norge digitalt-lisensen',
+    beskrivelse:
+      'En kopi for hele landet av kommuneplanene, holdt oppdatert ved at den synkroniseres med planene hos kommunene. Kommuneplanen er kommunens overordnede styringsdokument, med en samfunnsdel og en arealdel. Fra 1. januar 2026 drifter DiBK løsningen, Norge digitalt arealplankartløsning.'
   },
   vern: {
     navn: 'Miljødirektoratet',

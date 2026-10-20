@@ -493,7 +493,7 @@ bebygd areal, som oftest kommer av at grensene ikke er tegnet helt likt, tas bor
 1. **Dekningen av kommuneplanen, kartbilder** (`bronse.planbit` → `solv.plandekning`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Hele kommuneplanen i DiBKs egen stil, ett bilde per bit med ruter på 10,6
    meter. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Direktoratet for byggkvalitet
-   (DiBK), Kommuneplaner, WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge
+   (DiBK), Kommuneplaner, WMS-tjeneste](https://data.norge.no/datasets/e0d9bd64-1f03-3e06-99f4-fe8cabad6a93), Norge
    digitalt-lisensen. Justeres: Andelen av rutene på 10,6 meter i kommunen som planen dekker, der en rute er tegnet når den er
    minst 100 av 255 dekket. Under 15 % regnes som at DiBK ikke har planen, fordi naboplaner stikker litt inn langs grensen.
 2. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
@@ -505,8 +505,8 @@ bebygd areal, som oftest kommer av at grensene ikke er tegnet helt likt, tas bor
 3. **Opplysninger om kommuneplanen, oppslag** (`bronse.planopplysninger` → `solv.planinfo`). Hentes fra
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Plan-id, hvem som leverte planen og når den ble kopiert til DiBK, slått
    opp midt i det planen dekker. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
-   WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: Om
-   DiBK har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.
+   WMS-tjeneste](https://data.norge.no/datasets/e0d9bd64-1f03-3e06-99f4-fe8cabad6a93), Norge digitalt-lisensen. Justeres: Om DiBK
+   har kommuneplanen, hvor mye av kommunen den dekker, og hvilken plan det er.
 4. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og
    underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype.
@@ -520,8 +520,8 @@ bebygd areal, som oftest kommer av at grensene ikke er tegnet helt likt, tas bor
    `https://nap.ft.dibk.no/services/wms/kommuneplaner/`: Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis:
    arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og
    uten kantstrek. Kilde: [Direktoratet for byggkvalitet (DiBK), Kommuneplaner,
-   WMS-tjeneste](https://data.norge.no/data-services/65ca688d-3193-336f-b029-3344106dd138), Norge digitalt-lisensen. Justeres: En
-   rute er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.
+   WMS-tjeneste](https://data.norge.no/datasets/e0d9bd64-1f03-3e06-99f4-fe8cabad6a93), Norge digitalt-lisensen. Justeres: En rute
+   er planlagt utbygging når planen dekker minst halve ruta. Samme datamodell som egne områder.
 7. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
    kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
    leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
@@ -1678,6 +1678,15 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Infoboksen på egne bein, og det samme i katalogen, 21. oktober 2026.** Seksjonene i infoboksen for verdsatt natur viste til
+andre tall og kort, som «Utbyggingen. Forklart under Planlagt utbygging». Nå står hver seksjon på egne bein: alt tallet bygger på, er
+med. Utbygging utenfor det kartlagte har nå også kildene til utbyggingen (grunnkartet, kommuneplanen, egne planer og kommunene), og
+utbyggingen og dagens klasser som mellomregninger. Et annet tall i kortet er et vanlig steg. En mellomregning flere steg bruker, står
+under det første som bruker den. Kommuneplanen fra DiBK har fått en beskrivelse, og lenken går til datasettet Kommuneplaner hos
+data.norge.no, fordi siden om WMS-tjenesten ikke har noen beskrivelse. Alt i infoboksen står i katalogen (`src/data/katalog.ts`):
+forklaringen, kilden med beskrivelsen, endepunktet og usikkerheten på hver tabell, og hva hver tabell bygger på (lest ut av koden).
+Nå viser også «Info» i katalogvisningen dette, så katalogen og infoboksen viser det samme. Ingen tall er endret.
 
 **Ett tall per seksjon i infoboksen, prøvd på verdsatt natur, 20. oktober 2026.** Infoboksen for verdsatt natur dekket fem tall
 med ett regnestykke og én liste på 26 steg. Nå har den én seksjon per tall: kartleggingen, verdsatt natur i planen og de andre har
