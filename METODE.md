@@ -481,8 +481,8 @@ kartleggingsgrad, inngrepsfri natur og gjennomsnittet for temaene), krever en da
 **Spørsmål.** Hvor mye natur og jordbruk setter kommuneplanen av til utbygging?
 
 **Kort fortalt.** Kommuneplanen fra DiBK legges oppå dagens arealklasser fra NIBIO i et rutenett, med ruter på 10,6 meter. Ruter
-som i dag er natur eller jordbruk, og som planen setter av til bebyggelse, anlegg eller samferdsel, telles. Smale striper, som
-oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
+som i dag er natur eller jordbruk, og som planen setter av til bebyggelse, anlegg eller samferdsel, telles. Smale striper inntil
+bebygd areal, som oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
 
 **Tabeller.** Kortet viser `gull.kommuneplan` og `gull.planlagt`, og forklarer også `gull.utbygging`, `gull.dagensKlasser` og
 `solv.planinfo`. Det står i `src/ui/komponenter/Framtid.tsx`.
@@ -537,10 +537,12 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
     mindre enn halvparten av, er ikke med. Ruter som i dag er natur eller jordbruk og planlagt utbygging, merkes. Ruter som alt er
     bebygd eller vann, merkes ikke. Egne områder erstatter kommuneplanen innenfor flatene: som utbygging tar de all natur og alt
     jordbruk i ruta, og som ikke utbygging fjerner de det planen setter av der. Så tas smale striper ut: først finnes kjernene,
-    ruter med planlagt utbygging på alle fire sider, og så beholdes alt som henger sammen med en kjerne, også bare på skrå. Felt
-    som ikke er bredere enn to ruter, rundt 20 meter, noe sted, faller bort. Med egne områder regnes alt både med og uten dem, så
-    analysene av planlagt utbygging kan regnes for begge planene: den nye, med egne områder, og den gamle, kommuneplanen alene, i
-    hele kommunen eller i ett eget område, med de samme funksjonene.
+    ruter med planlagt utbygging på alle fire sider, og rutene rundt en kjerne er brede. Resten er smalt: felt som ikke er bredere
+    enn to ruter, rundt 20 meter, og smale armer på større felt. En smal rute faller bort når det er bebygd areal innenfor to
+    ruter i hver retning, for der kommer stripene som oftest av at plangrensen og grunnkartet ikke er tegnet helt likt. Andre
+    smale ruter telles, som en ny vei gjennom skog. Med egne områder regnes alt både med og uten dem, så analysene av planlagt
+    utbygging kan regnes for begge planene: den nye, med egne områder, og den gamle, kommuneplanen alene, i hele kommunen eller i
+    ett eget område, med de samme funksjonene.
 12. **Planlagt utbygging** (`gull.planlagt`). De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er
     andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.
 
@@ -590,7 +592,7 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - Kommuneplanens arealdel viser hva som er satt av, ikke hva som blir bygd. Reguleringsplaner er ikke med.
 - Ikke alle kommuner har planen sin hos DiBK. Oslo mangler.
 - Rutenettet overser bebygde flater som er smalere enn en rute, særlig veier. Regelen om smale striper tar bort det meste av
-  dette, men også noe som er reelt: smale felt og nye veier.
+  dette, men også noe som er reelt: smale felt og smale utvidelser inntil det som alt er bebygd.
 
 ### Kode
 
@@ -691,8 +693,8 @@ begge og forskjellen.
 
 ### Usikkerhet
 
-- Områder smalere enn rundt 20 meter faller for regelen om smale striper og gir ikke utslag. Funksjonen passer derfor for
-  kommuneplannivå, ikke for reguleringsplaner.
+- Områder smalere enn rundt 20 meter faller for regelen om smale striper og gir ikke utslag der de ligger inntil bebygd areal.
+  Funksjonen passer derfor best for kommuneplannivå, ikke for reguleringsplaner.
 - Lastes kommuneplanen selv opp, kan tabellen vise små forskjeller som bare kommer av at flatene legges i rutenettet på en annen
   måte enn bildene fra DiBK.
 
@@ -1666,6 +1668,18 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Smale striper bare inntil bebygd areal, 20. oktober 2026.** En gjennomgang av praksis i andre land og i Norge (SSB, Norkart for
+Operasjon Planvask, Vestland fylkeskommune, Sveits og Tyskland) viste at bredden på rundt 20 meter er på linje med andre, men at
+regelen hadde to svakheter. Smale armer som hang fast i et større felt, ble alltid beholdt, også langs eksisterende bebyggelse der
+stripene oftest oppstår. Og smale felt ute i naturen ble alltid tatt bort, også en planlagt ny vei gjennom skog. Nå deles planen i
+brede og smale deler. De brede er kjernene (ruter med planlagt utbygging på alle fire sider) og rutene rundt dem, også på skrå, så
+hjørnene i et felt er med. Resten er smalt. En smal rute faller bort når det er bebygd areal innenfor to ruter i hver retning, og
+telles ellers. Regelen er lokal: en smal arm fra bebygd areal og ut i naturen mister bare rutene nærmest det bebygde. Vann er ikke
+regnet som bebygd, så smale striper langs strandlinjen telles. Regelen ble implementert uten å måle virkningen først, etter avtale.
+Regresjonstesten etterpå: planlagt utbygging på natur i Trondheim 2 421 → 2 213 dekar og på jordbruk 799 → 784, i Surnadal natur 1
+329 → 1 325, og i Malvik natur 1 185 → 1 179. Tallet med smale striper er det samme. Nedgangen betyr at det tas bort mer i smale
+armer langs bebyggelse enn det kommer til av smale felt ute i naturen. Kontrollen mot vektoranalysen bør gjøres på nytt.
+
 **Overlapp i verdsatt natur, 20. oktober 2026.** Lokalitetene i verdsatt natur kan ligge oppå hverandre. Beskrivelsene hos
 Geonorge sier at datasettet er satt sammen av tre grunnlagsdatasett (utvalgte naturtyper, kartleggingen etter instruksen og den
 eldre kartleggingen etter DN-håndbok 13), men ikke hvilken lokalitet som gjelder der de overlapper, eller at nyere kartlegging
@@ -2461,9 +2475,9 @@ Svakheter:
 
 Åpne spørsmål om metoden:
 
-- **Smale striper på 10 meter.** Regelen tar bort felt som ikke er bredere enn to ruter. Med ruter på 10,6 meter er det rundt 20
-  meter, mot rundt 40 meter med 21 meter før 18. oktober 2026. Avklart 18. oktober: grensen følger rutene (rundt 20 meter) foreløpig,
-  og vi kommer tilbake til den. Den må også kontrolleres mot vektoranalysen.
+- **Smale striper på 10 meter.** Regelen tar bort smale deler, høyst to ruter brede (rundt 20 meter), som ligger inntil bebygd
+  areal (endret 20. oktober 2026, se loggen). Grensen følger rutene, så den er litt ulik langs rutenettet og på skrå. Den må
+  kontrolleres mot vektoranalysen og mot et manuelt utvalg.
 - **Halvregelen gjelder ikke overalt.** Grunnkartet og plansjekken bruker 100 av 255, og verdsatt natur regnes av dekningen.
   Klippingen til kommunen bruker halvregelen for blokkene.
 - **Avrundingen er ulik.** Inngrepsfri natur og grått areal rundes til 10 dekar i gull, de andre først på siden.

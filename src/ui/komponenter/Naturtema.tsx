@@ -249,7 +249,7 @@ export function Naturtema({ t: tema }: { t: Tema }) {
               : `Ingen planlagt utbygging innenfor ${t.best}.`}
           </b>
           {C.smal
-            ? ` I tillegg kommer ca. ${iTekst(C.smalKm2)} i smale striper, som oftest der grensene ikke er tegnet helt likt.`
+            ? ` I tillegg kommer ca. ${iTekst(C.smalKm2)} i smale striper inntil bebygd areal, som oftest der grensene ikke er tegnet helt likt.`
             : ''}
         </>
       );

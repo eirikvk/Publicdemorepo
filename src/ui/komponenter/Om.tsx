@@ -151,8 +151,9 @@ export default function Om({ teknisk, settTeknisk }: Tekniskvalg) {
           onChange={e => settSmale(e.target.checked)}
         />
         <p className="hint">
-          Smale striper er felt som ikke er bredere enn rundt 20 meter (to ruter på 10,6 meter) noe sted, ofte grøntdrag
-          og kanter langs eksisterende bebyggelse. Smale deler av et større felt vises alltid.
+          Smale striper er smale deler av planlagt utbygging, høyst rundt 20 meter brede (to ruter på 10,6 meter), som
+          ligger inntil bebygd areal. De kommer som oftest av at plangrensen og grunnkartet ikke er tegnet helt likt.
+          Smale deler ute i naturen, som en ny vei, telles med.
         </p>
       </section>
     </>

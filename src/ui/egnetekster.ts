@@ -75,10 +75,10 @@ export function iDag(O: Omradet, tall = iTekst): string[] {
   ];
 }
 
-/* Når et tegnet område for utbygging er så smalt at det faller for regelen om smale striper */
+/* Når et tegnet område for utbygging er så smalt og ligger så nær bebygd areal at det faller for regelen om smale striper */
 export const smalTekst = (g: EgetOmrade, O: Omradet | null) =>
   O && g.kilde === 'tegnet' && g.deler[0].type === 'bygg' && O.smal
-    ? 'Området er smalere enn rundt 40 meter og regnes som en smal stripe, så det gir ikke utslag.'
+    ? 'Området er smalt og ligger inntil bebygd areal, så det regnes som en smal stripe og gir ikke utslag.'
     : '';
 
 /* Hvorfor planlagt utbygging ikke kunne regnes ut (planTall er feil): kommuneplanen fra DiBK, eller et annet kart */

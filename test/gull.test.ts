@@ -245,6 +245,51 @@ test('utbyggingen: planen alene og planen med egne planer telles hver av sitt ru
   }
 });
 
+test('smale striper: smale deler inntil bebygd areal faller bort, smale deler ute i naturen telles', async () => {
+  const { ryddStriper } = await import('../src/data/gull/utbygging.ts');
+  const { glissent, leggInnDelt, finn, verdi } = await import('../src/data/generelt/glissen.ts');
+  /* én blokk med natur overalt (3), og et rutenett med planlagt utbygging på natur (1) */
+  const lag = (
+    felt: [x0: number, y0: number, w: number, h: number][],
+    bebygd: [number, number, number, number][] = []
+  ) => {
+    const G = { cx0: 0, cy0: 0, w: 512, h: 512 },
+      d = new Uint8Array(512 * 512),
+      k = new Uint8Array(512 * 512).fill(3);
+    for (const [x0, y0, w, h] of felt) for (let y = y0; y < y0 + h; y++) d.fill(1, y * 512 + x0, y * 512 + x0 + w);
+    for (const [x0, y0, w, h] of bebygd) for (let y = y0; y < y0 + h; y++) k.fill(1, y * 512 + x0, y * 512 + x0 + w);
+    const D = glissent(G),
+      K = glissent(G);
+    leggInnDelt(D, 0, 0, d);
+    leggInnDelt(K, 0, 0, k);
+    return { R: ryddStriper(D, K), K };
+  };
+  const beholdt = (R: ReturnType<typeof lag>['R']) => finn(R.ryddet, v => v === 1).length;
+  /* en stripe på to ruter ute i naturen, som en ny vei: beholdes */
+  assert.equal(beholdt(lag([[100, 100, 40, 2]]).R), 80);
+  /* den samme stripen inntil bebygd areal: faller bort */
+  assert.equal(beholdt(lag([[100, 100, 40, 2]], [[100, 102, 40, 3]]).R), 0);
+  /* et felt på 10 x 10 med bebygd areal langs den ene siden: hele feltet beholdes, også rutene nærmest det bebygde */
+  assert.equal(beholdt(lag([[100, 100, 10, 10]], [[100, 110, 10, 3]]).R), 100);
+  /* et felt med en arm på to ruter langs bebygd areal: armen faller bort, men ikke ruta rett inntil en kjerne */
+  const A = lag(
+    [
+      [100, 100, 10, 10],
+      [110, 108, 20, 2]
+    ],
+    [[110, 110, 20, 3]]
+  );
+  assert.equal(beholdt(A.R), 100 + 2); /* feltet, og de to armrutene rett ved siden av kjernene i kanten av feltet */
+  /* en arm på to ruter fra bebygd areal og ut i naturen: bare rutene innenfor to ruter fra det bebygde faller bort */
+  const B = lag([[200, 100, 2, 30]], [[195, 97, 12, 3]]);
+  assert.equal(beholdt(B.R), 2 * 28);
+  assert.equal(verdi(B.R.ryddet, 101 * 512 + 200), 0);
+  assert.equal(verdi(B.R.ryddet, 102 * 512 + 200), 1);
+  /* to ruter bebygd bort på skrå teller også: firkanten er 5 x 5 ruter */
+  assert.equal(beholdt(lag([[300, 300, 1, 1]], [[302, 302, 1, 1]]).R), 0);
+  assert.equal(beholdt(lag([[300, 300, 1, 1]], [[303, 302, 1, 1]]).R), 1);
+});
+
 test('egne planer: der planer overlapper, gjelder den siste', async () => {
   const { byggUtbygging, byggUtvalg } = await import('../src/data/gull/utbygging.ts');
   /* natur overalt og ingen kommuneplan */

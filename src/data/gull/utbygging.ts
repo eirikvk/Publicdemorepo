@@ -173,37 +173,43 @@ export function kombinerBlokk(kl: Uint8Array, plan: Uint8Array | null, andel: An
   return { d: noe(d) ? d : null, kl, pl: noe(pl) ? pl : null, n, andel, faktor };
 }
 
-/* Smale striper: felt som ikke er bredere enn to ruter (rundt 20 meter) noe sted. De oppstår mest der plangrensen og grunnkartet
-   ikke er tegnet helt likt, ofte langs eksisterende bebyggelse. Først finnes kjernene, altså ruter med planlagt utbygging på alle
-   fire sider. Så beholdes alt som henger sammen med en kjerne, også på skrå. Et større felt beholdes dermed helt, også der det
-   smalner av, og bare felt uten kjerne faller bort. d er rutenettet (1 natur, 2 jordbruk). Naboene finnes med nummeret på ruta,
-   som i et vanlig rutenett med bredden w. Gir de beholdte rutene (ryddet). */
-export function ryddStriper(d: Glissen): Rydding {
+/* Hvor nær bebygd areal en smal del av planen må ligge for å regnes som en smal stripe: innenfor så mange ruter i hver retning */
+export const STRIPE_BEBYGD = 2;
+/* Smale striper: smale deler av planlagt utbygging som ligger inntil bebygd areal. De oppstår mest der plangrensen skulle fulgt en
+   husvegg eller vegkant, men plangrensen og grunnkartet ikke er tegnet helt likt.
+   Først finnes de brede delene: kjernene, altså ruter med planlagt utbygging på alle fire sider, og rutene rundt en kjerne, også på
+   skrå, så hjørnene i et felt er med. Det som ikke er bredt, er smalt: felt som ikke er bredere enn to ruter (rundt 20 meter), og
+   smale armer på større felt. En smal rute med en bebygd rute (klasse 1 i kl) innenfor STRIPE_BEBYGD ruter i hver retning, faller bort.
+   Andre smale ruter beholdes, som en ny vei gjennom skog. Regelen er lokal: en smal arm fra et bebygd område og ut i naturen mister
+   bare rutene nærmest det bebygde. d er rutenettet (1 natur, 2 jordbruk), kl dagens klasser. Naboene finnes med nummeret på ruta, som
+   i et vanlig rutenett med bredden w. Gir de beholdte rutene (ryddet). */
+export function ryddStriper(d: Glissen, kl: Glissen): Rydding {
   const w = d.w,
-    n = d.w * d.h,
+    h = d.h,
+    n = w * h,
     v = (i: number) => verdi(d, i),
     celler = finn(d, x => x === 1 || x === 2);
   const ryddet = glissent(d);
-  let front: number[] = [];
+  /* de brede delene: kjernene og naboene deres */
   for (const i of celler) {
     const x = i % w;
-    if (x > 0 && x < w - 1 && i >= w && i < n - w && v(i - 1) && v(i + 1) && v(i - w) && v(i + w)) {
-      sett(ryddet, i, v(i)!);
-      front.push(i);
-    }
-  }
-  while (front.length) {
-    const ny: number[] = [];
-    for (const i of front)
-      for (const j of [i - 1, i + 1, i - w, i + w, i - w - 1, i - w + 1, i + w - 1, i + w + 1]) {
+    if (x > 0 && x < w - 1 && i >= w && i < n - w && v(i - 1) && v(i + 1) && v(i - w) && v(i + w))
+      for (const j of [i - w - 1, i - w, i - w + 1, i - 1, i, i + 1, i + w - 1, i + w, i + w + 1]) {
         const x = v(j);
-        if ((x === 1 || x === 2) && !verdi(ryddet, j)) {
-          sett(ryddet, j, x);
-          ny.push(j);
-        }
+        if ((x === 1 || x === 2) && !verdi(ryddet, j)) sett(ryddet, j, x);
       }
-    front = ny;
   }
+  /* de smale delene: beholdes når ingen bebygd rute ligger nær */
+  const r = STRIPE_BEBYGD,
+    naerBebygd = (i: number) => {
+      const x = i % w,
+        y = (i / w) | 0;
+      for (let yy = Math.max(0, y - r); yy <= Math.min(h - 1, y + r); yy++)
+        for (let xx = Math.max(0, x - r); xx <= Math.min(w - 1, x + r); xx++)
+          if (verdi(kl, yy * w + xx) === 1) return true;
+      return false;
+    };
+  for (const i of celler) if (!verdi(ryddet, i) && !naerBebygd(i)) sett(ryddet, i, v(i)!);
   return { alle: d, celler, ryddet };
 }
 /* Natur (1) og jordbruk (2) i det ryddede rutenettet L, blokk for blokk: hver rute vektet med kommunens andel i blokken (andeler,
@@ -284,7 +290,7 @@ export function byggUtbygging(
   const planensBlokker = nokler.map(([x, y]) => blokker.get(`${Z}/${x}/${y}`)!.d || null),
     sammeBlokker =
       !!alene && alene.d.length === planensBlokker.length && alene.d.every((b, k) => b === planensBlokker[k]),
-    kommuneplanen = sammeBlokker ? alene!.rydding : ryddStriper(d);
+    kommuneplanen = sammeBlokker ? alene!.rydding : ryddStriper(d, kl);
   if (E.length) {
     basis = kommuneplanen;
     d = kopiAv(d);
@@ -292,7 +298,7 @@ export function byggUtbygging(
     egetType = glissent(G);
     leggInnEgne(E, d, kl, eget, egetType);
   }
-  const { celler, ryddet } = E.length ? ryddStriper(d) : kommuneplanen;
+  const { celler, ryddet } = E.length ? ryddStriper(d, kl) : kommuneplanen;
   const egneTall: EgetTall[] = egneIder.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0 }));
   if (eget)
     for (const i of finn(eget, e => e !== 0)) {
