@@ -417,7 +417,8 @@ function Tabellrad({
         <>
           <tr className="stotteforklaring" id={id + '-stotte'}>
             <td colSpan={3}>
-              <b>Støttedata</b> trengs for å hente og forstå dataene, men tallene regnes ikke av dem.
+              <b>Støttedata</b> trengs for å hente, forstå og regne med dataene. De er opplysninger om dataene eller
+              dataene i en annen form, ikke nye data.
               {d.datasett && d.datasett.stotte && (
                 <ul>
                   {d.datasett.stotte

@@ -194,7 +194,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `ssb.ts` | SSB-svarene gjort om til km² per klasse, for nyeste år og 2017, og hver arealklasse for seg per år (til tvillingen fra Figma) |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
-| `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen, temaet som andel per rute i bitene med arealet per kategori (`solv.vernAndel` og de andre), og flatene som oppslag for rutene i utbyggingen |
+| `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen, temaet som andel per rute i bitene (`solv.vernAndel` og de andre, med arealet per kategori for alle unntatt verneområdene, der arealet regnes i gull), og flatene som oppslag for rutene i utbyggingen |
 | `inon.ts` | Inngrepsfri natur: sone per rute, sonen per piksel i kartet på hvert nivå (`solv.inonsoner` og `solv.inonsonerUt`), og sonene i naturen |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon, trinnet per piksel i kartet på hvert nivå (`solv.graatrinn` og `solv.graatrinnUt`), og grønt i bebygd område |
 | `nivaer.ts` | Én sannhet per nivå for temaene i biter: rutene i en bit lest for en flis på nivå 10 og finere, og halvregelen zoomet ut |
@@ -215,7 +215,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Brukes av tvillingen og i sammenligningen for egne områder. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, for et utvalg, kortversjonen til oversikten, og planlagt utbygging per detaljklasse |
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner den gamle planen med den nye, for hele kommunen og hvert område. Analysene er de samme som for kommuneplanen, regnet for hvert utvalg; her settes bare radene og forskjellen sammen. |
-| `temaer.ts` | Naturtemaene: temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte. Når egne områder endres, regnes kolonnene bare ut for rutene som er nye (`gull.temaminne` og `gull.radorden`). |
+| `temaer.ts` | Naturtemaene: arealet av verneområdene (`gull.vernAreal`), temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur, kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte. Når egne områder endres, regnes kolonnene bare ut for rutene som er nye (`gull.temaminne` og `gull.radorden`). |
 | `inon.ts` | Tallene på siden |
 | `graa.ts` | Arealet per trinn, og kryssingen med utbyggingen |
 
@@ -449,20 +449,25 @@ Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.
 
 **Datasett i sølv.** Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Tabellene i bronse og sølv som henter
 og lager det, hører til datasettet på én av to måter. *Dataene* er selve datasettet: i bronse slik det hentes, og i sølv slik det er
-gjort om. *Støttedata* trengs for å hente og forstå dataene: en sjekk av om dataene finnes, en oversikt som gjør hentingen raskere,
-opplysninger om dataene, eller oppslag når man trykker i kartet. Støttedata kan favne bredere enn dataene, men tallene regnes ikke av
-dem. Hver tabell beskriver innholdet i sine egne data (`innhold`), og hva hver støttedata er til for, står én gang, på datasettet.
+gjort om. *Støttedata* trengs for å hente, forstå og regne med dataene: en sjekk av om dataene finnes, en oversikt som gjør hentingen raskere,
+opplysninger om dataene, oppslag når man trykker i kartet, eller dataene i en annen form, som zoomet ut eller lagt på rutene.
+Støttedata er opplysninger om dataene eller dataene i en annen form, ikke nye data, så det samme ligger ikke to ganger i sølv.
+Støttedata kan favne bredere enn dataene, og tallene kan regnes av støttedata som er dataene i en annen form, som arealet av
+verneområdene. Hver tabell beskriver innholdet i sine egne data (`innhold`), og hva hver støttedata er til for, står én gang, på datasettet.
 En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes etter komma, som «Dekningen av kommuneplanen,
 kartbilder». Datasettene står i `DATASETT` i katalogen. I katalogvisningen står dataene som én vanlig rad, i gruppen for filen de
 lages i, og støttedataene ligger bak knappen «Støttedata» på raden. Bare én av knappene Info, Data og Støttedata på en rad er åpen om
-gangen. Det som ikke er ferdig i støttedataene, står også på raden. Fem datasett er delt inn slik: arealklassene fra grunnkartet,
-grått areal, inngrepsfri natur, kommunegrensen og kommuneplanen. Arealklassene fra grunnkartet er ett datasett med to kolonner,
+gangen. Det som ikke er ferdig i støttedataene, står også på raden. Seks datasett er delt inn slik: arealklassene fra grunnkartet,
+grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen og verneområdene. Arealklassene fra grunnkartet er ett datasett med to kolonner,
 klassen og detaljklassen, i én tabell i sølv (`solv.klasser`). Støttedataene er de lagrede klassene og detaljklassene, blokkene i
 kommunen, klassene zoomet ut og grunnkartet i et punkt. For grått areal og inngrepsfri natur er støttedataene kartet zoomet inn og ut
 (og sonen i et punkt), og for kommunegrensen de lagrede grensene. Kommuneplanen er *Areal satt av til framtidig utbygging i
 kommuneplanen*, ikke hele kommuneplanen. Dataene er kartbildene (`bronse.planflis` og
 `solv.kommuneplanruter`). Støttedataene er dekningen av kommuneplanen (`planbit`, `plandekning`), opplysningene om den
 (`planopplysninger`, `planinfo`), oversikten over arealet satt av (`planoversikt`) og kommuneplanen i et punkt (`planIPunkt`).
+Verneområdene kommer som flater, så der er det vektoren som er dataene: områdene klippet mot kommunen, med opplysningene
+(`bronse.verneomrader` og `solv.verneomrader`). Verneområdene i rutene er avledet av flatene og er støttedata (`vernAndel` og
+`verneformAndel`), etter prinsippet om at det samme ikke skal ligge to ganger i sølv. Der kilden er kartbilder, er rutene dataene.
 
 **Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
 ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes

@@ -133,12 +133,15 @@ export const KILDE = {
 /* Datasettene i sølv. Et datasett er ett sett data fra virkeligheten, gjort om til vår standard. Tabellene i bronse og sølv som henter
    og lager det, hører til datasettet (datasett på tabellen) på én av to måter:
    - dataene: selve datasettet, i bronse slik det hentes og i sølv slik det er gjort om
-   - støttedata (stotte på tabellen): det som trengs for å hente og forstå dataene, som en sjekk av om dataene finnes, en oversikt
-     som gjør hentingen raskere, opplysninger om dataene, eller oppslag når man trykker i kartet.
+   - støttedata (stotte på tabellen): det som trengs for å hente, forstå og regne med dataene, som en sjekk av om dataene finnes, en
+     oversikt som gjør hentingen raskere, opplysninger om dataene, oppslag når man trykker i kartet, eller dataene i en annen form,
+     som zoomet ut eller lagt på rutene. Støttedata er opplysninger om dataene eller dataene i en annen form, ikke nye data, så det
+     samme ligger ikke to ganger i sølv.
    Hver tabell beskriver innholdet i sine egne data (innhold på tabellen). Hva hver støttedata er til for, står én gang, på datasettet
    (stotte, med navnet og hva den er til for). En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes
-   etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen, men tallene regnes ikke av dem. Foreløpig
-   er grunnkartet, grått areal, inngrepsfri natur, kommunegrensen og kommuneplanen delt inn slik. */
+   etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen. Tallene kan regnes av støttedata som er
+   dataene i en annen form, som arealet av verneområdene av verneområdene per rute. Foreløpig er grunnkartet, grått areal,
+   inngrepsfri natur, kommunegrensen, kommuneplanen og verneområdene delt inn slik. */
 export const DATASETT = {
   grunnkart: {
     navn: 'Arealklasser fra grunnkartet',
@@ -181,6 +184,20 @@ export const DATASETT = {
       [
         'Lagrede kommunegrenser',
         'for 60 kommuner ligger grensen ferdig sammen med siden, så den ikke hentes fra Kartverket.'
+      ]
+    ]
+  },
+  vern: {
+    navn: 'Verneområder',
+    om: 'Én rad per verneområde som ligger helt eller delvis i kommunen, med flaten klippet mot kommunegrensen (som vektor), arealet av området i kommunen, og opplysningene fra Naturbase: navn, verneform, vernedato og lenke til faktaarket. Fra Miljødirektoratet. Arealet av alle verneområdene samlet regnes i gull (gull.vernAreal).',
+    stotte: [
+      [
+        'Verneområdene per rute',
+        'flatene slått sammen og lagt på rutene på 10,6 meter, så der områder overlapper, telles arealet én gang, og verneområdene kan krysses med grunnkartet og utbyggingen.'
+      ],
+      [
+        'Verneområdene per rute og verneform',
+        'det samme for hver gruppe av verneformer for seg, til det vernede arealet per verneform på land og i sjø.'
       ]
     ]
   },
@@ -625,8 +642,11 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'bronse',
       navn: 'verneomrader',
+      datasett: DATASETT.vern,
+      innhold:
+        'Ett svar per kommune med verneområdene som berører den: hvert område som flate, forenklet med 5 meter, med feltene offisielt navn, verneform, vernedato og faktaark.',
       endepunkt: E.VERN,
-      tittel: 'Verneområder',
+      tittel: 'Verneområder, GeoJSON',
       om: 'verneområdene i kommunen fra Miljødirektoratet, som GeoJSON. Lagres ikke: sølv lagrer det som trengs.',
       forklaring:
         'Verneområdene i kommunen som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar.',
@@ -1043,7 +1063,10 @@ export const katalog = {
     verneomrader: tabell({
       lag: 'solv',
       navn: 'verneomrader',
-      tittel: 'Verneområder, klippet',
+      datasett: DATASETT.vern,
+      innhold:
+        'Én rad per verneområde i kommunen: flaten klippet mot kommunegrensen, arealet av området i kommunen i km², navnet, verneformen og vernedatoen, lenken til faktaarket, og alle feltene slik kilden ga dem. Der to områder overlapper, har begge med seg overlappet.',
+      tittel: 'Verneområder',
       om: 'verneområdene klippet mot kommunen, med areal og opplysninger',
       forklaring:
         'Flatene klippes mot kommunegrensen, og arealet av hvert område i kommunen regnes ut. Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter.',
@@ -1087,23 +1110,31 @@ export const katalog = {
       husk: 30,
       etl: solvTemaer.verdsattVurderes
     }),
-    vernAndel: tabell<string, solvTemaer.Temaandel>({
+    vernAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'vernAndel',
+      datasett: DATASETT.vern,
+      stotte: true,
+      innhold:
+        'For hver rute i bitene på 2048 × 2048 ruter: hvor stor del av ruta som ligger i et verneområde og i kommunen, fra 0 til 100 %. Uten navn og opplysninger.',
       tittel: 'Verneområdene per rute',
-      om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med arealet',
+      om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter)',
       forklaring:
-        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Gir arealet av verneområdene i kommunen, og brukes når de krysses med utbyggingen og detaljklassene.',
+        'Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Arealet av verneområdene i kommunen regnes av den i gull (gull.vernAreal), og den brukes når verneområdene krysses med utbyggingen og detaljklassene.',
       husk: 30,
       etl: solvTemaer.vernAndel
     }),
-    verneformAndel: tabell<string, solvTemaer.Temaandel>({
+    verneformAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'verneformAndel',
-      tittel: 'Verneområdene per rute, per verneform',
-      om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med én kategori per gruppe av verneformer (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning), og arealet per gruppe',
+      datasett: DATASETT.vern,
+      stotte: true,
+      innhold:
+        'For hver rute i bitene på 2048 × 2048 ruter og hver av de seks gruppene av verneformer: hvor stor del av ruta som ligger i et verneområde med den verneformen og i kommunen. Et sted med flere verneformer er med i hver av dem.',
+      tittel: 'Verneområdene per rute og verneform',
+      om: 'verneområdene i kommunen som andel per rute i bitene (2048 x 2048 ruter à 10,6 meter), med én kategori per gruppe av verneformer (nasjonalpark, naturreservat, landskapsvernområde, marint verneområde, artsfredning og annen fredning)',
       forklaring:
-        'Som verneområdene per rute, men delt på gruppene av verneformer. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av dem, og gruppene viser hele arealet med hver verneform. Der grupper overlapper, blir summen av gruppene større enn det vernede arealet. Brukes når det vernede arealet deles på land og sjø.',
+        'Som verneområdene per rute, men delt på gruppene av verneformer. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av dem. Brukes når det vernede arealet deles på land og sjø.',
       etterBehov: true,
       husk: 12,
       etl: solvTemaer.verneformAndel
@@ -1697,13 +1728,23 @@ export const katalog = {
       gammelFast: true,
       etl: gullGraa.graaIPlan
     }),
+    vernAreal: tabell<string, gullTemaer.VernAreal>({
+      lag: 'gull',
+      navn: 'vernAreal',
+      tittel: 'Areal av verneområdene',
+      om: 'arealet av verneområdene i kommunen i km², der overlapp telles én gang, regnet av verneområdene per rute på 10,6 meter',
+      forklaring:
+        'Andelen av hver rute som ligger i et verneområde og i kommunen, summeres bit for bit og rettes for målestokken i biten (solv.vernAndel). Summen ganger arealet av en rute (10,6 × 10,6 meter) er arealet. Områdene er slått sammen i rutene, så der to områder overlapper, telles overlappet én gang.',
+      husk: 40,
+      etl: gullTemaer.vernAreal
+    }),
     verneomrader: tabell({
       lag: 'gull',
       navn: 'verneomrader',
       tittel: 'Verneområder',
       om: 'verneområdene i kommunen: listen, arealet og andelen av landarealet',
       forklaring:
-        'Arealet i kommunen er verneområdene slått sammen (solv.vernAndel), så der to områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i kommunen.',
+        'Arealet i kommunen er verneområdene slått sammen (gull.vernAreal), så der to områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i kommunen.',
       usikkerhet: [
         'Verneområder kan ligge i sjø og innsjøer, men andelen regnes av landarealet. I kystkommuner kan den bli høy, og over 100 %, for eksempel på Frøya.'
       ],

@@ -21,7 +21,7 @@ import { egenKopi } from '../generelt/kopi.ts';
 import { andelSum, dekningI, ringer, type Ringer } from '../generelt/dekning.ts';
 import { katalog } from '../katalog.ts';
 import { biterI, m2PerKm2, rutenett } from './felles.ts';
-import { andelsbiter, BITRES, type Andelsbit } from './kommune.ts';
+import { andelsbiter, arealAvBiter, BITRES, type Andelsbit } from './kommune.ts';
 
 /* Naturtemaene. samlet: mange små lokaliteter, der arealet per verdikategori regnes samlet og bare de som berøres av planlagt
    utbygging, listes. dekning: temaet har et kart over hvor det er kartlagt. klasser: verdikategoriene, [navn, farge], høyest verdi
@@ -316,13 +316,17 @@ export async function verdsattVurderes(nr: string): Promise<Temaomrader> {
 /* Naturtemaene som dekningsandel i kommunen (solv.vernAndel og de andre): verneområdene, villreinområdene, verdsatt natur og verdsatt natur
    som vurderes per kategori, det kartlagte, og verdsatt natur innenfor det kartlagte */
 export type Temaid = 'vern' | 'verneform' | 'rein' | 'verdi' | 'vurderes' | 'kartlagt' | 'verdiKartlagt';
-/* Et tema i kommunen som dekningsandel: bitene per kategori med andelen per rute (biter, se andelsbiter i kommune.ts), arealet per
-   kategori i km² og samlet (sum). Der flater overlapper, telles arealet én gang, i den første kategorien (høyest verdi først),
-   unntatt i verneformene, der hver kategori regnes for seg (solv.verneformAndel). */
-export interface Temaandel {
+/* Et tema i kommunen i rutene: bitene per kategori med andelen per rute (biter, se andelsbiter i kommune.ts). Der flater
+   overlapper, telles ruta én gang, i den første kategorien (høyest verdi først), unntatt i verneformene, der hver kategori regnes
+   for seg (solv.verneformAndel). */
+export interface Temabiter {
   nr: string;
   tema: Temaid;
   biter: Andelsbit[][];
+}
+/* Det samme med arealet per kategori i km² og samlet (sum), for temaene der arealet ennå regnes i sølv. For verneområdene regnes
+   det i gull (gull.vernAreal). */
+export interface Temaandel extends Temabiter {
   km2: number[];
   sum: number;
 }
@@ -344,9 +348,9 @@ function ringOmriss(lagene: Ringer[]): Utsnitt | null {
     }
   return e[0] < e[2] ? (e as Utsnitt) : null;
 }
-/* Temaet i kommunen nr som dekningsandel per rute og arealet per kategori. Lagene er kommunen (maske), eventuelt flere masker (som
-   det kartlagte), og flatene per kategori i kat, med høyest verdi først. Regnes bare i bitene flatene har noe i. */
-async function temaandel(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[] = []): Promise<Temaandel> {
+/* Temaet i kommunen nr som dekningsandel per rute. Lagene er kommunen (maske), eventuelt flere masker (som det kartlagte), og
+   flatene per kategori i kat, med høyest verdi først. Regnes bare i bitene flatene har noe i. */
+async function temabiter(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[] = []): Promise<Temabiter> {
   const g = await katalog.solv.grense(nr),
     lagene = [ringer([g.koord]), ...maske, ...kat],
     m = 1 + maske.length,
@@ -357,33 +361,37 @@ async function temaandel(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[
       lagene,
       Array.from({ length: m }, (_, i) => i),
       kat.map((_, i) => m + i)
-    ),
-    km2 = biter.map(L => (summen(L.map(K => K.antall * K.faktor)) * BITRES * BITRES) / 1e6);
+    );
+  return { nr, tema, biter };
+}
+/* Det samme med arealet per kategori (arealAvBiter i kommune.ts) */
+async function temaandel(nr: string, tema: Temaid, kat: Ringer[], maske: Ringer[] = []): Promise<Temaandel> {
+  const A = await temabiter(nr, tema, kat, maske),
+    km2 = A.biter.map(arealAvBiter);
   /* tallene kopieres, for temaet regnes for flere utvalg etter hverandre (generelt/kopi.ts); bitene deles med vilje */
-  return { nr, tema, biter, ...egenKopi({ km2, sum: summen(km2) }) };
+  return { ...A, ...egenKopi({ km2, sum: summen(km2) }) };
 }
-/* Tabellene solv.vernAndel, solv.villreinAndel, solv.verdsattAndel, solv.vurderesAndel, solv.kartlagtAndel og
-   solv.verdsattIKartlagtAndel: temaet i kommunen nr som dekningsandel (temaandel). Verdsatt natur og verdsatt natur som vurderes har
-   én kategori per verdi, og verdsatt natur i det kartlagte har det kartlagte som maske i tillegg til kommunen. */
-export async function vernAndel(nr: string): Promise<Temaandel> {
-  return temaandel(nr, 'vern', perKategori((await katalog.solv.verneomrader(nr)).omrader, 1));
+/* Tabellen solv.vernAndel: verneområdene i kommunen nr i rutene, slått sammen, så der områder overlapper, telles ruta én gang.
+   Støttedata til verneområdene (solv.verneomrader): arealet regnes av dem i gull (gull.vernAreal). */
+export async function vernAndel(nr: string): Promise<Temabiter> {
+  return temabiter(nr, 'vern', perKategori((await katalog.solv.verneomrader(nr)).omrader, 1));
 }
-/* Tabellen solv.verneformAndel: verneområdene som dekningsandel med én kategori per gruppe av verneformer, i rekkefølgen i
-   VERNEFORMGRUPPER. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av dem: arealet per gruppe er hele
-   arealet med den verneformen. Der grupper overlapper, blir summen av gruppene (sum) derfor større enn det vernede arealet i
-   solv.vernAndel, der overlapp telles én gang. */
-export async function verneformAndel(nr: string): Promise<Temaandel> {
+/* Tabellen solv.verneformAndel: verneområdene i rutene med én kategori per gruppe av verneformer, i rekkefølgen i
+   VERNEFORMGRUPPER. Hver gruppe regnes for seg, så et sted med flere verneformer er med i hver av dem. */
+export async function verneformAndel(nr: string): Promise<Temabiter> {
   const O = (await katalog.solv.verneomrader(nr)).omrader,
     G = await Promise.all(
       VERNEFORMGRUPPER.map(([id]) =>
-        temaandel(nr, 'verneform', [
+        temabiter(nr, 'verneform', [
           ringer(O.filter(o => verneformgruppe(o.egenskaper.verneform) === id).map(o => o.koord))
         ])
       )
-    ),
-    km2 = G.map(A => A.km2[0]);
-  return { nr, tema: 'verneform', biter: G.map(A => A.biter[0]), ...egenKopi({ km2, sum: summen(km2) }) };
+    );
+  return { nr, tema: 'verneform', biter: G.map(A => A.biter[0]) };
 }
+/* Tabellene solv.villreinAndel, solv.verdsattAndel, solv.vurderesAndel, solv.kartlagtAndel og solv.verdsattIKartlagtAndel: temaet
+   i kommunen nr som dekningsandel med arealet (temaandel). Verdsatt natur og verdsatt natur som vurderes har én kategori per verdi,
+   og verdsatt natur i det kartlagte har det kartlagte som maske i tillegg til kommunen. */
 export async function villreinAndel(nr: string): Promise<Temaandel> {
   return temaandel(nr, 'rein', perKategori((await katalog.solv.villrein(nr)).omrader, 1));
 }

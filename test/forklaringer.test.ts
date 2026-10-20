@@ -46,6 +46,10 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata bare 
   assert.equal(ds('bronse.planflis').datasett, DATASETT.utbyggingsareal);
   assert.ok(!ds('bronse.planflis').stotte && !ds('solv.kommuneplanruter').stotte);
   assert.ok(ds('bronse.planbit').stotte && ds('bronse.planoversikt').stotte && ds('bronse.planopplysninger').stotte);
+  /* verneområdene: flatene er dataene, rutene er støttedata, og arealet regnes i gull */
+  assert.equal(ds('solv.verneomrader').datasett, DATASETT.vern);
+  assert.ok(!ds('bronse.verneomrader').stotte && !ds('solv.verneomrader').stotte);
+  assert.ok(ds('solv.vernAndel').stotte && ds('solv.verneformAndel').stotte);
   /* grunnkartet: klassene og detaljklassene er én tabell i sølv */
   assert.equal(ds('solv.klasser').datasett, DATASETT.grunnkart);
   assert.ok(!alle.some(t => t.navn === 'detaljklasser'));

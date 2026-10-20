@@ -16,7 +16,7 @@ import { egenKopi } from '../generelt/kopi.ts';
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { BERORT, BIT, ruteKm2, ruteM, ruteX, ruteY } from '../solv/felles.ts';
-import type { Andelsbit } from '../solv/kommune.ts';
+import { arealAvBiter, type Andelsbit } from '../solv/kommune.ts';
 import {
   NATURTEMA,
   VURDERES,
@@ -392,8 +392,19 @@ export interface TemaIPlan {
 const [VERN, REIN, VERDI] = NATURTEMA;
 const ikke = () => null; /* det kartlagte kan mangle uten at svaret er feil: da er det ikke med */
 
-/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A fra dekningsandelen
-   (solv.vernAndel, solv.villreinAndel og solv.verdsattAndel): samlet og per verdikategori, der overlapp telles én gang. Hver tabell gir sitt eget areal, så koden viser hva hver
+/* Tabellen gull.vernAreal: arealet av verneområdene i kommunen nr i km², av verneområdene i rutene (solv.vernAndel), der områdene
+   er slått sammen, så overlapp telles én gang. km2 har én kategori, og sum er det samme tallet. Ikke rundet, som før: tallene rundes når de vises. */
+export interface VernAreal {
+  km2: number[];
+  sum: number;
+}
+export async function vernAreal(nr: string): Promise<VernAreal> {
+  const km2 = (await katalog.solv.vernAndel(nr)).biter.map(arealAvBiter);
+  return egenKopi({ km2, sum: summen(km2) });
+}
+
+/* Tabellene gull.verneomrader, gull.villrein og gull.verdsattNatur: områdene i kommunen nr, med arealet A (gull.vernAreal, og fra
+   dekningsandelen i solv.villreinAndel og solv.verdsattAndel): samlet og per verdikategori, der overlapp telles én gang. Hver tabell gir sitt eget areal, så koden viser hva hver
    av dem bygger på (verktoy/forklaringer.ts leser det). */
 async function temaet(
   tema: Naturtema,
@@ -405,7 +416,7 @@ async function temaet(
   return byggTemaet(tema, nr, O, { sum: a.sum, klasser: a.km2 }, land);
 }
 export async function verneomrader(nr: string): Promise<Temaet> {
-  return temaet(VERN, nr, await katalog.solv.verneomrader(nr), katalog.solv.vernAndel(nr));
+  return temaet(VERN, nr, await katalog.solv.verneomrader(nr), katalog.gull.vernAreal(nr));
 }
 export async function villrein(nr: string): Promise<Temaet> {
   return temaet(REIN, nr, await katalog.solv.villrein(nr), katalog.solv.villreinAndel(nr));

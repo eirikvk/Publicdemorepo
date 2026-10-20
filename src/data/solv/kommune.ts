@@ -10,6 +10,7 @@ import {
   type Ringer
 } from '../generelt/dekning.ts';
 import { flerflate, utsnitt, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
+import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { arbeid } from './arbeid.ts';
 import { BIT, BITNIVA, arealKm2, bitAv, bitFaktor, biterI, bitRuter, type Flis } from './felles.ts';
@@ -219,6 +220,9 @@ export async function tellIBitene(
 }
 /* Meter per rute i bitene (10,6) */
 export const BITRES = bitRuter([BITNIVA, 0, 0]).res;
+/* Arealet i km² av en flate i bitene (Andelsbit, som verneområdene per rute): andelene i rutene summert, rettet for målestokken i
+   hver bit, ganger arealet av en rute. Der flatene overlapper, er de alt slått sammen i andelen, så overlapp telles én gang. */
+export const arealAvBiter = (L: Andelsbit[]) => (summen(L.map(K => K.antall * K.faktor)) * BITRES * BITRES) / 1e6;
 /* Teller et tema i kommunen nr bit for bit, i bitene kommunen har ruter i (solv.kommunebiter), med tellIBitene */
 export async function tellIKommune(
   nr: string,

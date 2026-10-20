@@ -131,7 +131,8 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'gull.graaAreal': ['solv.graabit', 'solv.kommunebiter'],
   'gull.graa': ['gull.graaAreal', 'solv.arealtall'],
   'gull.graaIPlan': ['gull.graakryss'],
-  'gull.verneomrader': ['solv.arealtall', 'solv.vernAndel', 'solv.verneomrader'],
+  'gull.vernAreal': ['solv.vernAndel'],
+  'gull.verneomrader': ['gull.vernAreal', 'solv.arealtall', 'solv.verneomrader'],
   'gull.utbyggingIVerneomrader': [
     'gull.radorden',
     'gull.temaminne',
