@@ -5,12 +5,12 @@
    Filen bruker verken React eller kartet, så verktøyet kan lese den i Node. Regnestykket lager ingen nye tall: det setter tallene
    fra gull inn i tekst. */
 import { AVHENGIGHETER } from '../data/avhengigheter.ts';
-import type { Tabell, Tabelldef } from '../data/cache.ts';
-import { katalog } from '../data/katalog.ts';
+import type { Datasettinfo, Kildeinfo, Tabell, Tabelldef } from '../data/cache.ts';
+import { DATASETT, katalog } from '../data/katalog.ts';
 import { ruteKm2, ruteM } from '../data/solv/felles.ts';
 import { GRAATRINN } from '../data/solv/graa.ts';
 import { INONSONER } from '../data/solv/inon.ts';
-import { NATURTEMA } from '../data/solv/temaer.ts';
+import { NATURTEMA, VURDERES } from '../data/solv/temaer.ts';
 import type { Temaet, TemaIPlan } from '../data/gull/temaer.ts';
 import { dekar, medFortegn, nf, pst, ramse, stor } from './tekst.ts';
 
@@ -19,7 +19,10 @@ export type Hent = <V>(t: Tabell<string, V>) => V | null;
 /* Et kort: id (temaet eller id-en til overskriften), tittel, hvilket kapittel i METODE.md det står i (gruppe), hvilken side det står
    på (side) og hvilken fil komponenten står i, spørsmålet, kort fortalt, tabellene i gull det viser, egne forbehold, og regnestykket
    for valgt kommune. forklarer er tabeller kortet forklarer i tillegg til dem det viser: andre kort som bygger på dem, viser til
-   dette kortet i stedet for å gjenta stegene. */
+   dette kortet i stedet for å gjenta stegene.
+   Et kort med tall har én seksjon per tabell det viser i infoboksen, med regnestykket for den tabellen (tall, etter navnet på
+   tabellen), stegene fra kilde til det tallet (linjeFor) og usikkerheten for det. Foreløpig har bare verdsatt natur det; de andre har
+   ett regnestykke for hele kortet. */
 export interface Kort {
   id: string;
   tittel: string;
@@ -31,7 +34,8 @@ export interface Kort {
   tabeller: string[];
   forklarer?: string[];
   usikkerhet?: string[];
-  regnestykke: (hent: Hent) => string[] | null;
+  regnestykke?: (hent: Hent) => string[] | null;
+  tall?: Record<string, (hent: Hent) => string[] | null>;
 }
 /* Overskriften i METODE.md for hver gruppe, der kapitlet står */
 export const GRUPPER: Record<string, string> = {
@@ -288,30 +292,51 @@ export const KORT: Kort[] = [
       'gull.utbyggingUtenforKartlagt',
       'gull.verdsattVurderes'
     ],
-    regnestykke: hent => {
-      const T = hent(katalog.gull.verdsattNatur);
-      if (!T || !T.antall || !T.perKlasse) return null;
-      const linjer = [
-        `${stor(ramse(VERDI.klasser!.map(([navn], v) => `${navn.toLowerCase()} ${hele(T.perKlasse![v].km2)}`)))} dekar. Til sammen ${daa(T.sum)} i ${ant(T.antall)} lokaliteter.`,
-        ...(T.flere > 0
+    tall: {
+      'gull.verdsattNatur': hent => {
+        const T = hent(katalog.gull.verdsattNatur);
+        if (!T || !T.antall || !T.perKlasse) return null;
+        return [
+          `${stor(ramse(VERDI.klasser!.map(([navn], v) => `${navn.toLowerCase()} ${hele(T.perKlasse![v].km2)}`)))} dekar. Til sammen ${daa(T.sum)} i ${ant(T.antall)} lokaliteter.`,
+          ...(T.flere > 0
+            ? [
+                `Lokalitetene hver for seg er til sammen ${daa(T.sum + T.flere)}. Det er ${daa(T.flere)} mer, fordi lokaliteter overlapper. Der teller den høyeste verdien.`
+              ]
+            : []),
+          ...avLand(hent, T.andelLand)
+        ];
+      },
+      'gull.verdsattNaturKartlagt': hent => {
+        const K = hent(katalog.gull.verdsattNaturKartlagt);
+        if (!K || !K.kartlagt) return null; /* uten det kartlagte (feil hos tjenesten) */
+        return K.kartlagt.km2 > 0
+          ? [`Kartlagt etter instruksen: ${daa(K.kartlagt.km2)}, ${prosent(K.kartlagt.andelLand)} av landarealet.`]
+          : ['Ingenting i kommunen er kartlagt etter instruksen.'];
+      },
+      'gull.verdsattNaturIPlan': hent => {
+        const I = hent(katalog.gull.verdsattNaturIPlan);
+        return I ? iPlanen(I, 'lokalitetene', 'lokaliteter') : null;
+      },
+      'gull.utbyggingUtenforKartlagt': hent => {
+        const G = hent(katalog.gull.utbyggingUtenforKartlagt);
+        if (!G) return null;
+        return G.nat
           ? [
-              `Lokalitetene hver for seg er til sammen ${daa(T.sum + T.flere)}. Det er ${daa(T.flere)} mer, fordi lokaliteter overlapper. Der teller den høyeste verdien.`
+              `Av ${daa(G.natKm2)} planlagt utbygging på natur ligger ${daa(G.ukjentKm2)} (${prosent(G.andel)}) der det ikke er kartlagt.`
             ]
-          : []),
-        ...avLand(hent, T.andelLand)
-      ];
-      const K = hent(katalog.gull.verdsattNaturKartlagt);
-      if (K && K.kartlagt && K.kartlagt.km2 > 0)
-        linjer.push(
-          `Kartlagt etter instruksen: ${daa(K.kartlagt.km2)}, ${prosent(K.kartlagt.andelLand)} av landarealet.`
+          : ['Ingen planlagt utbygging på natur.'];
+      },
+      'gull.verdsattVurderes': hent => {
+        const V = hent(katalog.gull.verdsattVurderes);
+        if (!V) return null;
+        if (!V.omrader.length) return ['Ingen lokaliteter uten fast verdi.'];
+        const deler = VURDERES.klasser!.flatMap(([navn], v) =>
+          V.antall[v] > 0 ? [`${navn.toLowerCase()} ${hele(V.klasser[v])}`] : []
         );
-      linjer.push(...iPlanen(hent(katalog.gull.verdsattNaturIPlan), 'lokalitetene', 'lokaliteter'));
-      const G = hent(katalog.gull.utbyggingUtenforKartlagt);
-      if (G && G.nat)
-        linjer.push(
-          `Av ${daa(G.natKm2)} planlagt utbygging på natur ligger ${daa(G.ukjentKm2)} (${prosent(G.andel)}) der det ikke er kartlagt.`
-        );
-      return linjer;
+        return [
+          `${stor(ramse(deler))} dekar. Til sammen ${daa(V.sum)} i ${ant(V.omrader.length)} lokaliteter. De er ikke med i tallene for verdsatt natur.`
+        ];
+      }
     }
   },
   {
@@ -718,6 +743,97 @@ export const usikkerhetFor = (k: Kort) => [
       .flatMap(s => s.tabell.usikkerhet || [])
   ])
 ];
+/* Linjen fra kilde til ett tall: tallet er en tabell kortet viser, og hver seksjon i infoboksen har sin linje.
+   - kilder: datasettene tallet bygger på, hvert med kildene det hentes fra og tabellene i bronse og sølv som henter og gjør det om,
+     støttedata medregnet. Kildene står først, med kildens egen beskrivelse (beskrivelse i KILDE). Det nærmeste datasettet først, og
+     kommunene til slutt, fordi kommunegrensen er grunnlaget for alle tallene.
+   - steg: tabellene i gull med data, i den rekkefølgen de bygger på hverandre, og tallet til slutt. Støttedata i gull er ikke egne
+     steg: de står under steget som bruker dem (underveis). Et annet tall i kortet, eller en tabell et annet kort forklarer, står
+     som en henvisning (her: et tall i dette kortet; ellers se), uten det den bygger på.
+   - usikkerhet: forbeholdene på alle tabellene på linjen, støttedata medregnet, hvert én gang. Kortets egne står for seg.
+   Tekniske tabeller (teknisk i katalogen) står ikke med, men det de bygger på, gjør det. */
+export interface Kildesteg {
+  datasett: Datasettinfo | null;
+  kilder: Kildeinfo[];
+  tabeller: Steg[];
+}
+export type Tallsteg = { steg: Steg; underveis: Steg[] } | { henvisning: Steg; her: boolean };
+export interface Linje {
+  kilder: Kildesteg[];
+  steg: Tallsteg[];
+  usikkerhet: string[];
+}
+export function linjeFor(k: Kort, tall: string): Linje {
+  const steg = (n: string): Steg => ({ navn: n, tabell: tabellen(n) });
+  /* Henvisningen for en tabell som ikke er tallet: et annet tall i kortet, eller en tabell et annet kort viser eller forklarer */
+  const henvisning = (n: string): Tallsteg | null => {
+    if (n === tall) return null;
+    if (k.tabeller.includes(n)) return { henvisning: steg(n), her: true };
+    const e = eier(n);
+    return e && e !== k && !egne(k).includes(n) ? { henvisning: { ...steg(n), se: e }, her: false } : null;
+  };
+  /* Avstanden fra tallet til hver tabell, til å ordne datasettene: det nærmeste først */
+  const avstand = new Map<string, number>([[tall, 0]]),
+    ko = [tall];
+  for (const n of ko)
+    if (!henvisning(n))
+      for (const d of AVHENGIGHETER[n] || [])
+        if (!avstand.has(d)) {
+          avstand.set(d, avstand.get(n)! + 1);
+          ko.push(d);
+        }
+  /* Gjennomgangen: det en tabell bygger på, først */
+  const sett = new Set<string>(),
+    S: Tallsteg[] = [],
+    bs: string[] = [],
+    U: string[] = [];
+  const besok = (n: string, bruker: { underveis: Steg[] } | null) => {
+    if (sett.has(n)) return;
+    sett.add(n);
+    const h = henvisning(n);
+    if (h) return void S.push(h);
+    const t = tabellen(n),
+      gull = n.startsWith('gull.'),
+      dette = gull && !t.stotte && !t.teknisk ? { steg: steg(n), underveis: [] as Steg[] } : null;
+    for (const d of AVHENGIGHETER[n] || []) besok(d, dette || bruker);
+    if (t.teknisk) return;
+    U.push(...(t.usikkerhet || []));
+    if (dette) S.push(dette);
+    else if (!gull) bs.push(n);
+    else if (bruker) bruker.underveis.push(steg(n));
+  };
+  besok(tall, null);
+  /* Datasettene, med tabellene i bronse før sølv */
+  const lag = (n: string) => LAG.indexOf(n.split('.')[0] as (typeof LAG)[number]),
+    grupper = new Map<Datasettinfo | string, string[]>();
+  for (const n of [...bs].sort((a, b) => lag(a) - lag(b))) {
+    const t = tabellen(n),
+      g = t.datasett || n;
+    grupper.set(g, [...(grupper.get(g) || []), n]);
+  }
+  const rekke = Object.values(DATASETT) as Datasettinfo[],
+    nar = (N: string[]) => Math.min(...N.map(n => avstand.get(n) ?? Infinity)),
+    sist = (g: Datasettinfo | string) => (g === DATASETT.kommuner ? 1 : 0);
+  const kilder = [...grupper.entries()]
+    .sort(
+      ([a, A], [b, B]) =>
+        sist(a) - sist(b) || nar(A) - nar(B) || rekke.indexOf(a as Datasettinfo) - rekke.indexOf(b as Datasettinfo)
+    )
+    .map(([g, N]) => ({
+      datasett: typeof g === 'string' ? null : g,
+      kilder: [
+        ...new Map(
+          N.flatMap(n => {
+            const kilde = tabellen(n).kilde;
+            return kilde ? [[kilde.adresse, kilde] as const] : [];
+          })
+        ).values()
+      ],
+      tabeller: N.map(steg)
+    }));
+  return { kilder, steg: S, usikkerhet: [...new Set(U)].filter(u => !(k.usikkerhet || []).includes(u)) };
+}
+
 /* Kortet med id-en */
 export const kortet = (id: string) => KORT.find(k => k.id === id)!;
 /* Repoet på GitHub, der METODE.md og koden kan leses */

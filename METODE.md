@@ -1679,6 +1679,17 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Ett tall per seksjon i infoboksen, prøvd på verdsatt natur, 20. oktober 2026.** Infoboksen for verdsatt natur dekket fem tall
+med ett regnestykke og én liste på 26 steg. Nå har den én seksjon per tall: kartleggingen, verdsatt natur i planen og de andre har
+hvert sitt regnestykke, sine steg fra kilde til tall og sin usikkerhet (`tall` i kortet og `linjeFor` i `src/ui/forklaringer.ts`).
+Stegene går bare mellom tabeller med data. Første steg er kildene, hver med et kort sammendrag med egne ord av hvordan kilden
+beskriver datasettet hos Geonorge eller SSB (`beskrivelse` i `KILDE`, foreløpig for verdsatt natur, det kartlagte, kommunene, SSB og
+grunnkartet), og tabellene i bronse og sølv som henter og gjør det om bak en knapp. Så kommer stegene i gull, med tallet til slutt.
+Støttedata i gull er ikke egne steg, men står som mellomregninger under steget som bruker dem. Et annet tall i kortet, eller en tabell
+et annet kort forklarer, som utbyggingen, står som en henvisning. Kommunene står sist blant kildene, fordi kommunegrensen er
+grunnlaget for alle tallene. Regnestykket for lokalitetene uten fast verdi er nytt. De andre kortene og kapitlene her er som før. Ingen
+tall er endret.
+
 **Kolonnene i eksempelradene forklart, 20. oktober 2026.** De tre siste innspillene fra vurderingen er tatt inn. Hver kolonne kan ha
 en forklaring, en enhet og navnet på kodene (`kolonner` i `Tabelldef`, samlet i `src/data/kolonneinfo.ts`), og de vises i
 kolonneoverskriften, ved verdien i cellen (som «3 Natur» og «2 Sone 2, 1–3 km fra inngrep») og i en liste «Om kolonnene». Kodene

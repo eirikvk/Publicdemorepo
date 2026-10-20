@@ -283,7 +283,7 @@ React-komponentene, i `src/ui/komponenter/`. De fleste har en CSS-fil med samme 
 | `Oversikt.tsx` | Det viktigste fra hver side: navnet som lenke, ett tall og en kort forklaring |
 | `Regnskap.tsx` | Utbredelsesregnskapet: natur nå, forskjellen fra 2017 som stolper, regnskapsoppstillingen, og land og vann |
 | `Tallforklaring.tsx` | Overskriften på et kort med infoknappen, og panelet under |
-| `Infoknapp.tsx` | Infoknappen og panelet den åpner: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall (hver kilde med det den justeres til), usikkerheten og lenker til metoden og koden. Brukes også av tvillingen. |
+| `Infoknapp.tsx` | Infoknappen og panelet den åpner: kort fortalt, regnestykket for kommunen, stegene fra kilde til tall (hver kilde med det den justeres til), usikkerheten og lenker til metoden og koden. Et kort med tall (`tall` i kortet, foreløpig bare verdsatt natur) har én seksjon per tall, med regnestykket, stegene fra kilde til det tallet (`linjeFor`) og usikkerheten: kildene først, med kildens egen beskrivelse og detaljene bak en knapp, så stegene i gull, der støttedataene står under steget som bruker dem. Brukes også av tvillingen. |
 | `Temaside.tsx` | Toppen og rammen som alle temasidene har: navnet, arealet i kommunen, andelen av landarealet og kilden |
 | `Naturtema.tsx` | Sidene for verneområder, villrein og verdsatt natur, med lister over områdene, og ordene sidene bruker om hvert tema |
 | `Inon.tsx` | Siden for inngrepsfri natur |

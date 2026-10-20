@@ -61,13 +61,16 @@ const flisMidt =
 /* Kildene: hvem som eier dataene, datasettet, hvor det er beskrevet (Geonorge eller data.norge.no) og lisensen. Lisensene er
    kontrollert mot Geonorge og data.norge.no 11. oktober 2026, bakgrunnskartet 19. oktober (data.norge.no oppgir det som tjeneste for
    Kartverkets kartdata, som har CC BY 4.0). Brukes av tabellene
-   i bronse (kilde) til infoknappene og METODE.md. */
+   i bronse (kilde) til infoknappene og METODE.md. Beskrivelsen er vårt korte sammendrag av kildens egen beskrivelse på siden om
+   datasettet, lest 20. oktober 2026, for SSB på siden om statistikken. Den er første steg i infoboksene med ett tall per seksjon. */
 export const KILDE = {
   kartverket: {
     navn: 'Kartverket',
     datasett: 'Administrative enheter, kommuner (Kommuneinfo-API-et)',
     adresse: 'https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b',
-    lisens: 'CC BY 4.0'
+    lisens: 'CC BY 4.0',
+    beskrivelse:
+      'Den offisielle inndelingen av Norge i kommuner, med de mest nøyaktige digitale grensene, fra inndelingsbasen i matrikkelen. Oppdatert per 1. januar 2026.'
   },
   bakgrunn: {
     navn: 'Kartverket',
@@ -79,13 +82,17 @@ export const KILDE = {
     navn: 'Statistisk sentralbyrå (SSB)',
     datasett: 'tabell 09594, Arealbruk og arealressurser',
     adresse: 'https://www.ssb.no/statbank/table/09594',
-    lisens: 'CC BY 4.0'
+    lisens: 'CC BY 4.0',
+    beskrivelse:
+      'Hvordan arealet i hver kommune brukes: bebygd areal etter formål, som bolig, næring og samferdsel, og ubebygd areal etter hva som dekker det, som skog, åpen fastmark, jordbruk og ferskvann. Lages hvert år som en fulltelling av registre og kart, blant annet matrikkelen, FKB og arealressurskartet fra NIBIO. SSB skriver at tallene ikke er laget for å måle endring fra år til år, fordi kartene blir mer fullstendige over tid.'
   },
   grunnkart: {
     navn: 'NIBIO',
     datasett: 'Nasjonalt grunnkart for arealanalyse, årsversjon 2025',
     adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d',
-    lisens: 'Norge digitalt begrenset'
+    lisens: 'Norge digitalt begrenset',
+    beskrivelse:
+      'Et felles kart for arealanalyser, laget av NIBIO, SSB, Kartverket og Miljødirektoratet. Det er satt sammen av data som allerede finnes i det offentlige kartgrunnlaget (DOK), uten ny kartlegging, med kildene slik de var 1. januar 2025. Klassene følger økosystemtypene til Eurostat.'
   },
   graa: {
     navn: 'NIBIO, Miljødirektoratet, Kartverket og SSB',
@@ -115,13 +122,17 @@ export const KILDE = {
     navn: 'Miljødirektoratet',
     datasett: 'Naturtyper – verdsatte (naturtyper med KU-verdi)',
     adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314',
-    lisens: 'NLOD 2.0'
+    lisens: 'NLOD 2.0',
+    beskrivelse:
+      'Lokaliteter med naturtyper, hver med en verdikategori etter Miljødirektoratets veileder for konsekvensutredninger (M-1941). Satt sammen av tre kartlegginger: utvalgte naturtyper, naturtyper kartlagt etter Natur i Norge (NiN) og eldre kartlegging etter DN-håndbok 13. Natur i sjø er ikke med. Laget for å vise hvor verdifull naturen er når virkningene av et tiltak skal utredes.'
   },
   nin: {
     navn: 'Miljødirektoratet',
     datasett: 'Naturtyper på land (NiN), dekningskartet',
     adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/eb48dd19-03da-41e1-afd9-7ebc3079265c',
-    lisens: 'NLOD 2.0'
+    lisens: 'NLOD 2.0',
+    beskrivelse:
+      'Lokaliteter kartlagt etter Miljødirektoratets instruks for naturtyper på land, med typene i Natur i Norge (NiN). Rødlistede naturtyper og naturtyper med en sentral funksjon i økosystemet prioriteres, og hver lokalitet får en vurdering av kvaliteten. Dekningskartet er områdene som er kartlagt. Laget som kunnskapsgrunnlag når arealbruk skal avgjøres.'
   },
   inon: {
     navn: 'Miljødirektoratet',

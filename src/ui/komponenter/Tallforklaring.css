@@ -89,3 +89,26 @@
   color: inherit;
   text-decoration-color: currentColor;
 }
+/* Et kort med tall (Infoknapp.tsx, PerTall): én seksjon per tall, med en strek over. Under et steg står kildene og mellomregningene
+   som egen liste, og knappene til detaljene der har vanlig vekt, så de ikke konkurrerer med «Fra kilde til tall». */
+.tallforklaring .tallet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-8);
+  padding-top: var(--md-spacing-12);
+  border-top: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+}
+.tallforklaring .tallet h3 {
+  margin: 0;
+}
+.tallforklaring li > ul,
+.tallforklaring li > details {
+  margin-top: var(--md-spacing-4);
+}
+.tallforklaring li summary {
+  font-weight: 400;
+  text-decoration: underline;
+}
+.tallforklaring li details[open] summary {
+  margin-bottom: var(--md-spacing-4);
+}

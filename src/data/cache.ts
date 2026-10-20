@@ -23,12 +23,14 @@
    for svar fra tjenestene er noe annet, og styres av tjenestene.) Filen importerer ingenting. */
 
 export type Lag = 'bronse' | 'solv' | 'gull';
-/* Kilden til en tabell i bronse: hvem, hvilket datasett, adressen til en side om det, og lisensen */
+/* Kilden til en tabell i bronse: hvem, hvilket datasett, adressen til en side om det, og lisensen. beskrivelse er et kort sammendrag
+   med egne ord av hvordan kilden beskriver datasettet på siden om det (som hos Geonorge eller SSB), ikke deres tekst. */
 export interface Kildeinfo {
   navn: string;
   datasett: string;
   adresse: string;
   lisens: string;
+  beskrivelse?: string;
 }
 /* Et datasett i sølv: ett sett data fra virkeligheten, gjort om til vår standard. Navnet, én setning om hva det er, og hva hver
    støttedata er til for, som [navn, hva]. Tabellene i bronse og sølv som henter og lager det, hører til datasettet (datasett i

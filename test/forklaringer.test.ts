@@ -89,3 +89,42 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et 
         `${navn} finnes ikke blant støttedataene i ${d.navn}`
       );
 });
+
+test('infoboksen med ett tall per seksjon: kildene først, bare data som steg, og tallet til slutt', async () => {
+  const { KORT, linjeFor, kortet: kortMed } = await import('../src/ui/forklaringer.ts');
+  for (const k of KORT) {
+    assert.ok(k.regnestykke || k.tall, `${k.id} mangler regnestykket`);
+    for (const t of Object.keys(k.tall || {}))
+      assert.ok(k.tabeller.includes(t), `${k.id}: ${t} er ikke et tall i kortet`);
+    for (const t of k.tabeller) {
+      const L = linjeFor(k, t),
+        S = L.steg.flatMap(s => ('steg' in s ? [s.steg] : []));
+      /* støttedata og tekniske tabeller er aldri egne steg, og tallet står til slutt */
+      for (const s of S) assert.ok(!s.tabell.stotte && !s.tabell.teknisk, `${k.id}, ${t}: ${s.navn} er ikke data`);
+      assert.equal(S[S.length - 1]?.navn, t, `${k.id}: ${t} står ikke til slutt`);
+      /* kildene har bare tabeller i bronse og sølv, og ingen tekniske */
+      for (const q of L.kilder)
+        for (const s of q.tabeller)
+          assert.ok(!s.navn.startsWith('gull.') && !s.tabell.teknisk, `${k.id}, ${t}: ${s.navn}`);
+    }
+  }
+  const k = kortMed('verdi'),
+    L = linjeFor(k, 'gull.verdsattNatur');
+  /* verdsatt natur: Miljødirektoratet først, kommunene til slutt, og arealet per verdi som mellomregning */
+  assert.deepEqual(
+    L.kilder.map(q => q.datasett && q.datasett.navn),
+    ['Verdsatt natur', 'Syntetisk naturregnskap fra SSB', 'Kommunene']
+  );
+  const steg = L.steg[L.steg.length - 1];
+  assert.ok('steg' in steg && steg.underveis.some(u => u.navn === 'gull.verdsattAreal'));
+  /* et annet tall i kortet står som en henvisning, uten det det bygger på */
+  const K = linjeFor(k, 'gull.verdsattNaturKartlagt');
+  assert.ok(K.steg.some(s => 'henvisning' in s && s.her && s.henvisning.navn === 'gull.verdsattNatur'));
+  /* utbyggingen forklares av planlagt utbygging */
+  const I = linjeFor(k, 'gull.verdsattNaturIPlan');
+  assert.ok(I.steg.some(s => 'henvisning' in s && !s.her && s.henvisning.se === kortMed('planlagt')));
+  /* alle kildene i kortet har sin egen beskrivelse */
+  for (const t of k.tabeller)
+    for (const q of linjeFor(k, t).kilder)
+      for (const x of q.kilder) assert.ok(x.beskrivelse, `${x.datasett} mangler beskrivelsen`);
+});
