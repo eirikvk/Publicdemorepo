@@ -903,37 +903,36 @@ samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses
 
 ### Fra kilde til tall
 
-1. **Arealtall fra SSB** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealet i km² per arealklasse i nyeste år. Svarer ikke API-et, spørres
-   det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
-   natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
-2. **Inngrepsfri natur, kartbilder** (`bronse.inonbit` → `solv.inonbit` → `solv.inon` → `solv.inonAar`). Hentes fra
+1. **Inngrepsfri natur, kartbilder** (`bronse.inonbit` → `solv.inonbit`). Hentes fra
    `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit og år, med ruter på 10,6 meter, uten
    glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med
    de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Miljødirektoratet,
    Inngrepsfri natur i Norge](https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b), NLOD 2.0.
    Justeres: En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km)
-   eller villmarkspreget (minst 5 km). Alle årene tolkes likt. Justeres: Rutene i kommunen telles per sone, bit for bit. En rute
-   langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
-   Justeres: Det samme som for nyeste år (solv.inon), talt i de samme rutene med den samme andelen av hver rute i kommunen, men av
-   kartet for det året.
-3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+   eller villmarkspreget (minst 5 km). Alle årene tolkes likt.
+2. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-4. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
+3. **Arealtall fra SSB** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
+   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealet i km² per arealklasse i nyeste år. Svarer ikke API-et, spørres
+   det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Arealklassene summeres til bebygd, jordbruk og
+   natur (se Arealklassene), med innsjø og elv for seg. Landarealet er summen av de tre.
+4. **Areal av inngrepsfri natur** (`gull.inonAreal`). Rutene i kommunen telles per sone, bit for bit, for året. En rute langs
+   grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
+   Antall ruter ganger arealet av en rute (10,6 × 10,6 meter) er arealet, rundet til 10 dekar per sone. Hvert år telles i de samme
+   rutene.
+5. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
    og andelen av landarealet regnes ut.
-5. **Inngrepsfri natur over tid** (`gull.inonUtvikling`). Hvert år telles på samme måte og i de samme rutene som nyeste år, av
+6. **Inngrepsfri natur over tid** (`gull.inonUtvikling`). Hvert år telles på samme måte og i de samme rutene som nyeste år, av
    Miljødirektoratets kart for det året. Endringen i inngrepsnær natur er det inngrepsfri natur mister. Regnes først når siden for
    inngrepsfri natur vises, fordi den henter fire ganger så mange bilder.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
-- **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
-  ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
@@ -942,6 +941,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
+- **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
+  ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Kommunen i bitene** (`solv.kommunebiter`). Hvor stor del av hver rute som ligger i kommunen, regnet én gang per bit i
   bakgrunnstråden. En rute langs grensen telles med den delen av den som ligger i kommunen, så ingen rute telles i to kommuner.
   Brukes av alt som telles i kommunen: dagens klasser, planlagt utbygging, grått areal, inngrepsfri natur og hvor mye planen
@@ -962,8 +963,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`,
-`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/gull/inon.ts`. Kortet: `src/ui/komponenter/Inon.tsx`.
+`src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
+`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/gull/inon.ts`. Kortet: `src/ui/komponenter/Inon.tsx`.
 
 <!-- /forklaringer:inon -->
 
@@ -1587,6 +1588,14 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Arealet av inngrepsfri natur i gull, 20. oktober 2026.** Inngrepsfri natur er ett datasett i sølv med år: én rad per rute og
+år, med sonen (`solv.inonbit`). Arealet i kommunen ble talt i sølv, i to tabeller med den samme utregningen: én for nyeste år
+(`solv.inon`) og én for de tidligere årene (`solv.inonAar`). Å telle ruter og gange med arealet av en rute er slik arealet regnes av
+et rutenett, og det hører til gull. Nå er det én tabell i gull som lagres, `gull.inonAreal`, kalt med kommunen og året, som
+5001/2008, eller bare kommunen for nyeste år. Den gir arealet per sone og samlet i km², rundet til 10 dekar som før. Siden om
+inngrepsfri natur og utviklingen siden 1988 leser arealet derfra. Tallene er ikke endret, og regresjonstesten for Trondheim, Surnadal
+og Oslo ga ingen avvik. Testet i Chromium, ikke på iPhone.
 
 **Klassene og detaljklassene som ett datasett, og fire nye datasett i katalogen, 20. oktober 2026.** Dagens klasser og
 detaljklassene var to tabeller i sølv, fordi de kom til på ulike tidspunkter og hentes som to ulike kartbilder. Innholdsmessig er det

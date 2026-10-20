@@ -420,29 +420,30 @@ Begge må oppdateres når en metode, en kilde eller et bibliotek endres.
 
 Datapipelinen er organisert som kall mot en katalog, slik Unity Catalog i Databricks har `katalog.skjema.tabell`. Katalogen
 (`src/data/katalog.ts`) er listen over ETL-funksjonene i bronse, sølv og gull, som tabeller: `katalog.bronse.inonbit`,
-`katalog.solv.inon` og `katalog.gull.inon`. Man kaller en tabell med nøkkelen, som regel kommunenummeret. Hver tabell er en
+`katalog.solv.inonbit` og `katalog.gull.inon`. Man kaller en tabell med nøkkelen, som regel kommunenummeret. Hver tabell er en
 ETL-funksjon med samme navn, og funksjonen henter selv det den bygger på fra katalogen:
 
 ```ts
 /* gull/inon.ts: tallene på siden om inngrepsfri natur */
 export async function inon(nr: string): Promise<Inontall> {
-  const [S, land] = await Promise.all([katalog.solv.inon(nr), landareal(nr)]),
-    A = arealFraRuter(S.n, S.res, S.skala);
+  const [A, land] = await Promise.all([katalog.gull.inonAreal(nr), landareal(nr)]);
   return { ...byggInon({ nr, tilstand: 'ok', soner: A.km2, sum: A.sum }, land), sum: A.sum, soner: A.km2 };
 }
 
-/* solv/inon.ts: sonene talt i kommunen, bit for bit */
-export async function inon(nr: string): Promise<Bitruter> {
-  return tellIKommune(nr, 3, tc => katalog.solv.inonbit(tc).then(D => D.sone), s => (s === UTENFOR ? null : s));
+/* gull/inon.ts: arealet per sone i kommunen for et år: rutene talt bit for bit, og antall ganger arealet av en rute */
+export async function inonAreal(n: string): Promise<InonAreal> {
+  const [nr, aar] = lesInonNokkel(n),
+    S = await tellIKommune(nr, 3, tc => katalog.solv.inonbit([aar, tc]).then(D => D.sone), /* … */);
+  return { aar, ...arealFraRuter(S.n, S.res, S.skala) };
 }
 
-/* solv/inon.ts: sonen per rute i en bit */
-export async function inonbit(tc: Flis): Promise<Inonsoner> {
-  return { ...bitRuter(tc), sone: tolkInon(await bildePiksler(await katalog.bronse.inonbit(tc), BIT, BIT)) };
+/* solv/inon.ts: sonen per rute i en bit for et år */
+export async function inonbit([aar, tc]: [number, Flis]): Promise<Inonsoner> {
+  return { ...bitRuter(tc), sone: await arbeid({ type: 'inon', P: await katalog.bronse.inonbit([aar, tc]) }) };
 }
 ```
 
-Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.inon` kaller `solv.inon`, som kaller
+Katalogen vet ikke hvor dataene kommer fra. Det ser man i ETL-funksjonen: `gull.inon` kaller `gull.inonAreal`, som kaller
 `solv.inonbit` for hver bit og år, som kaller `bronse.inonbit`, som henter bildet fra Miljødirektoratet. Utviklingen siden 1988
 (`gull.inonUtvikling`) kaller de samme tabellene med de tidligere årene. Slik kan man følge hvert tall fra siden ned til kilden.
 

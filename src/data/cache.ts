@@ -94,7 +94,7 @@ export interface Utgangspunkt {
   midt: number[] | null;
   z: number;
 }
-/* En tabell man kaller med nøkkelen: katalog.solv.inon('5001') gir sonene for Trondheim, fra cachen eller fra ETL-funksjonen.
+/* En tabell man kaller med nøkkelen: katalog.solv.grense('5001') gir grensen for Trondheim, fra cachen eller fra ETL-funksjonen.
    For tabeller uten ETL-funksjon gir kallet verdien som den er, eller null. naa gir verdien som den er nå, eller null, og starter hentingen hvis den mangler. straks gir verdien med en gang, og lager den
    med lag hvis den mangler (til maskene, som lages midt i en utregning). */
 export type Tabell<N, V> = Tabelldef<N, V> & {
@@ -424,7 +424,7 @@ export function kallI(navn: string, n: unknown): Promise<unknown> {
   const t = ALLE.find(x => fulltNavn(x) === navn);
   return t ? hent(t, n) : Promise.reject(new Error('ukjent tabell'));
 }
-/* Verdien i raden med nøkkelen k i tabellen med det fulle navnet (som solv.inon), til oversikten under Tekniske valg. undefined når
+/* Verdien i raden med nøkkelen k i tabellen med det fulle navnet (som solv.grense), til oversikten under Tekniske valg. undefined når
    raden ikke finnes, eller ikke har noen verdi ennå. */
 export function verdiI(navn: string, k: string): unknown {
   const t = ALLE.find(x => fulltNavn(x) === navn),

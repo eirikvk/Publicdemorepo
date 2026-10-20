@@ -4,7 +4,7 @@ import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
 import type Overlay from 'ol/Overlay.js';
 import type { Coordinate } from 'ol/coordinate.js';
 import { ol } from './ol.ts';
-import { se } from '../../data/cache.ts';
+import { se, type Tabelldef } from '../../data/cache.ts';
 import { katalog } from '../../data/katalog.ts';
 import { STYRKER } from '../../data/gull/planflis.ts';
 import { ALLE } from '../../data/solv/klasser.ts';
@@ -84,7 +84,7 @@ async function finnKommune(koord: Coordinate) {
   }
 }
 /* Om temaet t er talt for valgt kommune, uten å hente noe */
-const talt = (t: typeof katalog.solv.graa) => {
+const talt = <V>(t: Tabelldef<string, V>) => {
   const r = app.valgt ? se(t, app.valgt.nr) : null;
   return !!r && r.status === 'ok';
 };
@@ -115,7 +115,7 @@ export async function trykkIKartet(e: MapBrowserEvent) {
     slaaOpp(klasserIFlis),
     planVises ? slaaOpp(tc => planIFlis(tc, ui.visSmale)) : 0,
     talt(katalog.solv.graa) ? slaaOpp(graaIFlis) : null,
-    talt(katalog.solv.inon) ? slaaOpp(soneIFlis) : null
+    talt(katalog.gull.inonAreal) ? slaaOpp(soneIFlis) : null
   ]);
   /* et nyere trykk, et trykk utenfor kommunen, en annen kommune eller tegning har tatt over */
   if (mitt !== trykkNr || app.valgt !== valgtNa || tegner()) return;

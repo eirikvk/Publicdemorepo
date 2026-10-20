@@ -1,7 +1,8 @@
-/* Gull for inngrepsfri natur: arealet per sone i kommunen, og i villreinområdene, nå og i årene Miljødirektoratet har status for. */
+/* Gull for inngrepsfri natur: arealet per sone i kommunen, og i villreinområdene, nå og i årene Miljødirektoratet har status for.
+   Arealet i kommunen per år regnes én gang og lagres (gull.inonAreal), og det temasiden og utviklingen viser, leses derfra. */
 import { katalog } from '../katalog.ts';
 import { INONAAR, INON_NYESTE, UTENFOR } from '../solv/inon.ts';
-import { BITRES, tellIBitene, type Andelsbit } from '../solv/kommune.ts';
+import { BITRES, tellIBitene, tellIKommune, type Andelsbit } from '../solv/kommune.ts';
 import { andel, arealFraRuter, bildetall, landareal, tiDekar, type Bildetall, type Kommunebilde } from './felles.ts';
 
 /* Inngrepsfri natur for kommunen: når den er hentet, areal per sone (villmarkspreget, sone 1, sone 2) i km² */
@@ -19,9 +20,35 @@ export type Inontall = Bildetall<{ sum: number; soner: number[]; andelLand: numb
   soner: number[];
 };
 export async function inon(nr: string): Promise<Inontall> {
-  const [S, land] = await Promise.all([katalog.solv.inon(nr), landareal(nr)]),
-    A = arealFraRuter(S.n, S.res, S.skala);
+  const [A, land] = await Promise.all([katalog.gull.inonAreal(nr), landareal(nr)]);
   return { ...byggInon({ nr, tilstand: 'ok', soner: A.km2, sum: A.sum }, land), sum: A.sum, soner: A.km2 };
+}
+
+/* Arealet av inngrepsfri natur i kommunen for et år: km² per sone (villmarkspreget, sone 1, sone 2) og samlet, rundet til 10 dekar */
+export interface InonAreal {
+  aar: number;
+  km2: number[];
+  sum: number;
+}
+/* Kommunen og året i en nøkkel som 5001/2008. Uten år er det nyeste året. */
+export const lesInonNokkel = (n: string): [nr: string, aar: number] => {
+  const [nr, a] = n.split('/');
+  return [nr, a ? Number(a) : INON_NYESTE];
+};
+/* Tabellen gull.inonAreal: arealet av inngrepsfri natur per sone i kommunen for et år, kalt med kommunen og året (5001/2008), eller
+   bare kommunen for nyeste år. Rutene på 10,6 meter for året (solv.inonbit) telles per sone i kommunen, og en rute langs grensen
+   telles med den delen av den som ligger i kommunen (solv.kommunebiter), rettet for målestokken. Antall ruter ganger arealet av en
+   rute er arealet. */
+export async function inonAreal(n: string): Promise<InonAreal> {
+  const [nr, aar] = lesInonNokkel(n),
+    S = await tellIKommune(
+      nr,
+      3,
+      tc => katalog.solv.inonbit([aar, tc]).then(D => D.sone),
+      s => (s === UTENFOR ? null : s),
+      UTENFOR
+    );
+  return { aar, ...arealFraRuter(S.n, S.res, S.skala) };
 }
 
 /* Inngrepsfri natur i villreinområdene: arealet av villreinområdene i kommunen (villrein), inngrepsfri natur i dem samlet (sum) og per
@@ -87,14 +114,14 @@ async function perAar(f: (aar: number) => Promise<{ km2: number[]; sum: number }
   return A;
 }
 /* Tabellen gull.inonUtvikling: inngrepsfri natur i kommunen nr for hvert år Miljødirektoratet har status for, talt på samme måte og
-   i de samme rutene som nyeste år (solv.inon og solv.inonAar), og andelen av landarealet. Regnes først når en side ber om den, fordi
+   i de samme rutene som nyeste år (gull.inonAreal), og andelen av landarealet. Regnes først når en side ber om den, fordi
    den henter fire ganger så mange bilder. */
 export async function inonUtvikling(nr: string): Promise<InonUtvikling> {
   const [land, A] = await Promise.all([
     landareal(nr),
     perAar(async aar => {
-      const S = await (aar === INON_NYESTE ? katalog.solv.inon(nr) : katalog.solv.inonAar([nr, aar]));
-      return arealFraRuter(S.n, S.res, S.skala);
+      const A = await katalog.gull.inonAreal(aar === INON_NYESTE ? nr : `${nr}/${aar}`);
+      return { km2: A.km2, sum: A.sum };
     })
   ]);
   return byggUtvikling(A, land);

@@ -1,12 +1,11 @@
-/* Sølv for inngrepsfri natur: bildet av hver bit fra Miljødirektoratets kartlag gjort om til sone per rute, etter avstand til tyngre
-   tekniske inngrep, og sonene talt i kommunen, for nyeste år (solv.inon) og for de tidligere årene (solv.inonAar). Og sonen per
+/* Sølv for inngrepsfri natur: ett datasett med år. Bildet av hver bit fra Miljødirektoratets kartlag for hvert år gjort om til sone
+   per rute, etter avstand til tyngre tekniske inngrep (solv.inonbit). Arealet i kommunen regnes i gull (gull.inonAreal). Og sonen per
    piksel i kartet for nyeste år, én sannhet per nivå (solv.inonsoner og solv.inonsonerUt, se nivaer.ts), i naturen (inonINatur). */
 import { katalog } from '../katalog.ts';
 import { arbeid } from './arbeid.ts';
 import { FLISNIVA, bitAv, bitRuter, type Flis, type Rutebilde } from './felles.ts';
 import { iBlokk, type Klasser } from './grunnkart.ts';
 import { NAT } from './klasser.ts';
-import { tellIKommune, type Bitruter } from './kommune.ts';
 import { biterIFlisen, flestIFlisen, rutenIFlis, soneHalvpart } from './nivaer.ts';
 import { INON_NYESTE, UTENFOR } from './tolking.ts';
 export { INONAAR, INON_NYESTE, INONSONER, UTENFOR, inonSone, tolkInon } from './tolking.ts';
@@ -23,24 +22,6 @@ export async function inonbit([aar, tc]: [number, Flis]): Promise<Inonsoner> {
     sone: await arbeid<Uint8Array | null>({ type: 'inon', P: await katalog.bronse.inonbit([aar, tc]) })
   };
 }
-/* Antall ruter per sone innenfor kommunen nr for året aar, og bitene kommunen har ruter i */
-const tellAar = (nr: string, aar: number): Promise<Bitruter> =>
-  tellIKommune(
-    nr,
-    3,
-    tc => katalog.solv.inonbit([aar, tc]).then(D => D.sone),
-    s => (s === UTENFOR ? null : s),
-    UTENFOR
-  );
-/* Tabellen solv.inon: antall ruter per sone innenfor kommunen nr for nyeste år, og bitene kommunen har ruter i */
-export async function inon(nr: string): Promise<Bitruter> {
-  return tellAar(nr, INON_NYESTE);
-}
-/* Tabellen solv.inonAar: det samme for et tidligere år, kalt med [nr, aar], på samme måte og i de samme rutene */
-export async function inonAar([nr, aar]: [string, number]): Promise<Bitruter> {
-  return tellAar(nr, aar);
-}
-
 /* Sonen i bitene oversatt til flisene: sonen pluss én, og 0 uten sone */
 const SONEPLASS = Uint8Array.from({ length: 256 }, (_, v) => (v < 3 ? v + 1 : 0));
 /* Tabellen solv.inonsoner: sonen per piksel i flisen tc [z, x, y] fra nivå 10: 0 uten sone, 1 villmarkspreget, 2 sone 1, 3 sone 2.

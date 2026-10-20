@@ -167,7 +167,7 @@ export const DATASETT = {
   },
   inon: {
     navn: 'Inngrepsfri natur',
-    om: 'For hver rute på 10,6 meter og hvert år Miljødirektoratet har status for (1988, 2008, 2013, 2018 og 2023): sonen, villmarkspreget (mer enn 5 km fra tyngre tekniske inngrep), sone 1 (3–5 km) eller sone 2 (1–3 km), eller ingen sone.',
+    om: 'Én rad per rute på 10,6 meter og år Miljødirektoratet har status for (1988, 2008, 2013, 2018 og 2023), med sonen: villmarkspreget (mer enn 5 km fra tyngre tekniske inngrep), sone 1 (3–5 km) eller sone 2 (1–3 km), eller ingen sone. Arealet i kommunen regnes i gull (gull.inonAreal).',
     stotte: [
       ['Inngrepsfri natur zoomet inn', 'sonen per piksel i kartet fra nivå 10 og innover, i nyeste år.'],
       ['Inngrepsfri natur zoomet ut', 'sonen per piksel i kartet zoomet ut, i nyeste år.'],
@@ -904,7 +904,7 @@ export const katalog = {
       navn: 'inonbit',
       datasett: DATASETT.inon,
       innhold:
-        'For hver rute i en bit på 2048 × 2048 ruter og et år: sonen (villmarkspreget, sone 1 eller sone 2), eller ingen.',
+        'For hver rute i en bit på 2048 × 2048 ruter og hvert år: sonen (villmarkspreget, sone 1 eller sone 2), eller ingen. Kalles med året og biten.',
       tittel: 'Inngrepsfri natur',
       om: 'sonen per rute i en bit (2048 x 2048 ruter à 10,6 meter) for et år, kalt med [år, biten]. Nøkkel: «år/z/x/y».',
       forklaring:
@@ -913,27 +913,6 @@ export const katalog = {
       nokkel: ([aar, tc]) => `${aar}/${flisnavn(tc)}`,
       etl: solvInon.inonbit,
       eksempel: u => (u.midt ? [INON_NYESTE, flisVed(u.midt, BITNIVA)] : null)
-    }),
-    inon: tabell({
-      lag: 'solv',
-      navn: 'inon',
-      tittel: 'Inngrepsfri natur i kommunen',
-      om: 'antall ruter à 10,6 meter per sone innenfor kommunen, og bitene kommunen har ruter i',
-      forklaring:
-        'Rutene i kommunen telles per sone, bit for bit. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.',
-      husk: 3,
-      etl: solvInon.inon
-    }),
-    inonAar: tabell<[string, number], solvKommune.Bitruter>({
-      lag: 'solv',
-      navn: 'inonAar',
-      tittel: 'Inngrepsfri natur i kommunen et tidligere år',
-      om: 'antall ruter à 10,6 meter per sone innenfor kommunen for et år Miljødirektoratet har status for, kalt med [kommunenummer, år]. Nøkkel: «nummer/år».',
-      forklaring:
-        'Det samme som for nyeste år (solv.inon), talt i de samme rutene med den samme andelen av hver rute i kommunen, men av kartet for det året.',
-      husk: 16,
-      nokkel: ([nr, aar]) => `${nr}/${aar}`,
-      etl: solvInon.inonAar
     }),
     inonsoner: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
@@ -1589,6 +1568,20 @@ export const katalog = {
       husk: 6,
       brukerstyrt: true,
       etl: gullPlan.plansum
+    }),
+    inonAreal: tabell<string, gullInon.InonAreal>({
+      lag: 'gull',
+      navn: 'inonAreal',
+      tittel: 'Areal av inngrepsfri natur',
+      om: 'arealet av inngrepsfri natur per sone i kommunen for ett år, i km² rundet til 10 dekar, regnet av rutene på 10,6 meter. Kalt med kommunen og året, som 5001/2008, eller bare kommunen for nyeste år. Nøkkel: «nummer» eller «nummer/år».',
+      forklaring:
+        'Rutene i kommunen telles per sone, bit for bit, for året. En rute langs grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten. Antall ruter ganger arealet av en rute (10,6 × 10,6 meter) er arealet, rundet til 10 dekar per sone. Hvert år telles i de samme rutene.',
+      husk: 40,
+      nokkel: n => {
+        const [nr, aar] = gullInon.lesInonNokkel(n);
+        return aar === INON_NYESTE ? nr : `${nr}/${aar}`;
+      },
+      etl: gullInon.inonAreal
     }),
     inon: tabell({
       lag: 'gull',
