@@ -33,9 +33,22 @@ const TYPER: Record<string, string> = {
 };
 const TESTPLAN = path.join(HER, 'testdata', 'testplan-bygg.geojson');
 
-/* Bygger siden fra mappen rot til en midlertidig mappe og gir stien tilbake. */
+/* De midlertidige mappene testen lager: byggene og den gamle utgaven fra git. De slettes når testen er ferdig, så de ikke fyller
+   disken (hvert bygg er over 100 MB). Lenken til node_modules i den gamle utgaven fjernes først, så det den peker på, står. */
+const MIDLERTIDIG: string[] = [];
+process.on('exit', () => {
+  for (const m of MIDLERTIDIG)
+    try {
+      const nm = path.join(m, 'node_modules');
+      if (fs.existsSync(nm) && fs.lstatSync(nm).isSymbolicLink()) fs.unlinkSync(nm);
+      fs.rmSync(m, { recursive: true, force: true });
+    } catch (e) {}
+});
+
+/* Bygger siden fra mappen rot til en midlertidig mappe og gir stien tilbake. Mappen slettes når testen er ferdig. */
 export function bygg(rot: string) {
   const ut = fs.mkdtempSync(path.join(os.tmpdir(), 'bygg-'));
+  MIDLERTIDIG.push(ut);
   execSync(`npx vite build --outDir "${ut}" --emptyOutDir --logLevel error`, { cwd: rot, stdio: 'inherit' });
   return ut;
 }
@@ -486,8 +499,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (mot) {
     /* Den andre utgaven hentes fra git og bygges med de samme pakkene som arbeidskopien har installert. Den kjøres med sitt eget
        testverktøy, så hver utgave leser tallene fra sin egen datamotor. Det som sammenlignes, er tallene, teksten og bildene. */
-    const gammel = fs.mkdtempSync(path.join(os.tmpdir(), 'regresjon-')),
-      utGammel = path.resolve(ut.replace(/\/+$/, '') + '-' + mot.replace(/[^\w.-]/g, '_'));
+    const gammel = fs.mkdtempSync(path.join(os.tmpdir(), 'regresjon-'));
+    MIDLERTIDIG.push(gammel);
+    const utGammel = path.resolve(ut.replace(/\/+$/, '') + '-' + mot.replace(/[^\w.-]/g, '_'));
     execSync(`git -C "${ROT}" archive ${mot} | tar -x -C "${gammel}"`);
     fs.symlinkSync(
       path.join(ROT, 'node_modules'),

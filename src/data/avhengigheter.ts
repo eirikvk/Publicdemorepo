@@ -40,6 +40,7 @@ export const AVHENGIGHETER: Record<string, string[]> = {
   'solv.blokker': ['solv.kommunebiter'],
   'solv.egne': ['bronse.egne'],
   'solv.egneruter': ['solv.egne'],
+  'solv.egneinfo': ['bronse.egne', 'solv.egne'],
   'solv.plandekning': ['bronse.planbit', 'solv.kommunebiter'],
   'solv.planinfo': ['bronse.planopplysninger', 'solv.plandekning'],
   'solv.planoversikt': ['bronse.planoversikt', 'solv.grense'],

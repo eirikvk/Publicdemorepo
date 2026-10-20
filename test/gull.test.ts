@@ -202,7 +202,7 @@ test('planlagt utbygging i kartet: rutene på nivå 10, og zoomet ut bare innenf
   assert.equal(planUt(D, K, [8, 1, 1])[p], 0);
 });
 
-test('utbyggingen: planen alene og planen med egne områder telles hver av sitt rutenett', async () => {
+test('utbyggingen: planen alene og planen med egne planer telles hver av sitt rutenett', async () => {
   const { byggUtbygging } = await import('../src/data/gull/utbygging.ts');
   const { finn } = await import('../src/data/generelt/glissen.ts');
   /* én blokk med natur overalt og et felt på 10 x 10 ruter natur satt av */
@@ -217,14 +217,9 @@ test('utbyggingen: planen alene og planen med egne områder telles hver av sitt 
     andel: null,
     faktor: 1
   };
-  /* et eget område som ikke er utbygging (2), over de fem første kolonnene i feltet */
-  const plan = new Uint8Array(512 * 512),
-    omrade = new Uint8Array(512 * 512);
-  for (let y = 100; y < 110; y++) {
-    plan.fill(2, y * 512 + 100, y * 512 + 105);
-    omrade.fill(1, y * 512 + 100, y * 512 + 105);
-  }
-  const E = { z: 10, cx0: 0, cy0: 0, w: 512, h: 512, plan, omrade, ider: [1] };
+  /* en egen plan som ikke er utbygging (2), over de fem første kolonnene i feltet, i sitt eget utsnitt */
+  const plan = new Uint8Array(5 * 10).fill(2);
+  const E = [{ z: 10, cx0: 100, cy0: 100, w: 5, h: 10, plan, id: 1 }];
   const R = byggUtbygging('1', 10, [[0, 0]], new Map([['10/0/0', blokk]]), E, 10.6);
   assert.equal(R.basisSum!.rn, 100); /* planen alene: hele feltet */
   assert.equal(R.sum.rn, 50); /* med det egne området: halve feltet */
@@ -246,6 +241,27 @@ test('utbyggingen: planen alene og planen med egne områder telles hver av sitt 
       assert.equal(U.alleV[k], 1);
     });
   }
+});
+
+test('egne planer: der planer overlapper, gjelder den siste', async () => {
+  const { byggUtbygging, byggUtvalg } = await import('../src/data/gull/utbygging.ts');
+  /* natur overalt og ingen kommuneplan */
+  const blokk = {
+    d: new Uint8Array(512 * 512),
+    kl: new Uint8Array(512 * 512).fill(3),
+    pl: new Uint8Array(512 * 512),
+    n: { beb: 0, nat: 512 * 512, jor: 0, pnat: 0, pjor: 0 },
+    andel: null,
+    faktor: 1
+  };
+  /* plan 1 er utbygging i kolonnene 100–119, plan 2 ikke utbygging i kolonnene 110–129, begge i radene 100–109 */
+  const A = { z: 10, cx0: 100, cy0: 100, w: 20, h: 10, plan: new Uint8Array(200).fill(1), id: 1 },
+    B = { z: 10, cx0: 110, cy0: 100, w: 20, h: 10, plan: new Uint8Array(200).fill(2), id: 2 },
+    bygg = (E: (typeof A)[]) => byggUtbygging('1', 10, [[0, 0]], new Map([['10/0/0', blokk]]), E, 10.6);
+  const R = bygg([A, B]);
+  assert.equal(R.sum.rn, 100); /* plan 2 tar overlappet: bare kolonnene 100–109 er utbygging */
+  assert.equal(byggUtvalg(R, 'ny', 1).celler.length, 100);
+  assert.equal(bygg([B, A]).sum.rn, 200); /* omvendt rekkefølge: plan 1 tar overlappet */
 });
 
 test('inngrepsfri natur over tid: endringen per periode, og inngrepsnær natur får det inngrepsfri natur mister', () => {

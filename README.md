@@ -194,7 +194,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `ssb.ts` | Tolkingen av SSBs arealstatistikk for alle kommunene: km² for hver arealklasse per år og kommune, til de syntetiske tallene |
 | `naturregnskap.ts` | Datasettet «Naturregnskap fra SSB»: SSBs to tabeller for naturregnskapet i SSBs form, med økosystemtypene i SSBs klassifisering (KLASS 988). Til SSB publiserer dem, lages de syntetisk her av arealtallene, se under |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
-| `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
+| `egne.ts` | Datasettet «Areal satt av til framtidig utbygging i egne planer» fra `bronse.egne`: hver plan per rute, én rad per plan (`solv.egneruter`), og som støttedata flatene tolket til utbygging eller ikke (`solv.egne`) og opplysningene om planene (`solv.egneinfo`) |
 | `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen (lokalitetene i verdsatt natur bare der kanten av kommunen går gjennom dem, og da mot den delen av kommunen som ligger rundt), temaet som andel per rute i bitene (`solv.vernAndel` og de andre, uten arealet, som regnes i gull), og flatene som oppslag for rutene i utbyggingen |
 | `inon.ts` | Inngrepsfri natur: sone per rute, sonen per piksel i kartet på hvert nivå (`solv.inonsoner` og `solv.inonsonerUt`), og sonene i naturen |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon, trinnet per piksel i kartet på hvert nivå (`solv.graatrinn` og `solv.graatrinnUt`), og grønt i bebygd område |
@@ -458,9 +458,13 @@ verneområdene. Hver tabell beskriver innholdet i sine egne data (`innhold`), og
 En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes etter komma, som «Dekningen av kommuneplanen,
 kartbilder». Datasettene står i `DATASETT` i katalogen. I katalogvisningen står dataene som én vanlig rad, i gruppen for filen de
 lages i, og støttedataene ligger bak knappen «Støttedata» på raden. Bare én av knappene Info, Data og Støttedata på en rad er åpen om
-gangen. Det som ikke er ferdig i støttedataene, står også på raden. Ti datasett er delt inn slik: arealklassene fra grunnkartet,
-grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen, de fire naturtemaene (verneområdene, villreinområdene, verdsatt
-natur og det kartlagte for naturtyper) og naturregnskapet fra SSB. Arealklassene fra grunnkartet er ett datasett med to kolonner,
+gangen. Det som ikke er ferdig i støttedataene, står også på raden. Elleve datasett er delt inn slik: arealklassene fra grunnkartet,
+grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen, egne planer, de fire naturtemaene (verneområdene, villreinområdene,
+verdsatt natur og det kartlagte for naturtyper) og naturregnskapet fra SSB. Egne planer følger mønsteret fra kommuneplanen:
+*Areal satt av til framtidig utbygging i egne planer*, med hver plan per rute som dataene, én rad per plan (`solv.egneruter`), og
+«ikke utbygging» i tillegg til utbygging, fordi en egen plan erstatter kommuneplanen der den ligger. Flatene og opplysningene om
+planene er støttedata. Sammenslåingen, der den siste planen gjelder der planer overlapper og planene erstatter kommuneplanen, skjer i
+gull (`leggInnEgne` i `gull/utbygging.ts`). Arealklassene fra grunnkartet er ett datasett med to kolonner,
 klassen og detaljklassen, i én tabell i sølv (`solv.klasser`). Støttedataene er de lagrede klassene og detaljklassene, blokkene i
 kommunen, klassene zoomet ut og grunnkartet i et punkt. For grått areal og inngrepsfri natur er støttedataene kartet zoomet inn og ut
 (og sonen i et punkt), og for kommunegrensen de lagrede grensene. Kommuneplanen er *Areal satt av til framtidig utbygging i
@@ -542,7 +546,7 @@ fyller en ETL-funksjon underveis: utbyggingens blokker og oppslagene i områdene
    ulike ting sammen. Det gjør gull: at et eget område erstatter kommuneplanen der det ligger, planen lagt oppå dagens klasser,
    verneområdene krysset med utbyggingen, verdsatt natur innenfor det kartlagte. Kommunegrensen og rutenettet er rammen, ikke en
    kilde, så å klippe verneområdene mot kommunen er sølv. Planen ligger i to tabeller, én per kilde, med samme datamodell (`Planruter`):
-   `solv.kommuneplanruter` og `solv.egneruter`. Dagens klasser er blokkene på 10,6 meter (`solv.klasser`), lagret eller hentet fra
+   `solv.kommuneplanruter` og `solv.egneruter` (én rad per egen plan). Dagens klasser er blokkene på 10,6 meter (`solv.klasser`), lagret eller hentet fra
    NIBIO når kommunen velges.
 2. **Gull deles der det kommer inn en ny eller tregere kilde.** Hver tabell i gull svarer på ett spørsmål. Trenger en del av svaret
    noe som kommer senere, som utbyggingen, blir den delen en egen tabell som kaller den første. `gull.verneomrader` er

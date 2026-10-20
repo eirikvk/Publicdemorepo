@@ -1,6 +1,9 @@
-/* Sølv for egne områder og opplastet plan: hvilke flater som regnes som utbygging (solv.egne), og de samme områdene som planen per
-   rute (solv.egneruter), i samme datamodell som kommuneplanen. Kilden er bronse.egne, det brukeren har tegnet eller lastet opp, som
-   datamotoren fyller. Gull avgjør at et eget område erstatter kommuneplanen der det ligger (gull/utbygging.ts). */
+/* Sølv for datasettet «Areal satt av til framtidig utbygging i egne planer»: planene brukeren har tegnet eller lastet opp, etter
+   mønsteret fra kommuneplanen. Dataene er hver plan per rute (solv.egneruter), i samme datamodell som kommuneplanen, men med
+   «ikke utbygging» i tillegg, og én rad per plan. Støttedataene er flatene tolket til utbygging eller ikke (solv.egne), til kartet,
+   og opplysningene om hver plan (solv.egneinfo). Kilden er bronse.egne, det brukeren har tegnet eller lastet opp, som datamotoren
+   fyller. Gull slår planene sammen med kommuneplanen: en egen plan erstatter kommuneplanen der den ligger, og der planer overlapper,
+   gjelder den siste (gull/utbygging.ts). */
 import { overlapper, type Flerflate, type Utsnitt } from '../generelt/geometri.ts';
 import { katalog } from '../katalog.ts';
 import { HALV, ORIGO, PLANNIVA, arealKm2, ruteM, type Planruter } from './felles.ts';
@@ -32,9 +35,11 @@ export interface Planflate {
   status: string;
 }
 /* Et eget område slik brukeren laget det, i tabellen bronse.egne: et tegnet område med typen brukeren har valgt, eller en opplastet
-   plan med arealformål og status per flate (harFormal sier om filen har arealformål i det hele tatt) */
+   plan med arealformål og status per flate (harFormal sier om filen har arealformål i det hele tatt), plan-id og projeksjonen filen
+   var i */
 export type Egetinn = { id: number; ext: Utsnitt } & (
-  { kilde: 'tegnet'; deler: Del[] } | { kilde: 'fil'; deler: Planflate[]; harFormal: boolean }
+  | { kilde: 'tegnet'; deler: Del[] }
+  | { kilde: 'fil'; deler: Planflate[]; harFormal: boolean; planid?: string; proj?: string }
 );
 
 /* Om en flate i en opplastet plan er utbygging ('bygg') eller ikke ('fri'). Bebyggelse og anlegg og samferdsel (arealformål i
@@ -48,8 +53,9 @@ export const planType = (formal: string, status: string, harFormal: boolean): Ty
 export const samletKm2 = (deler: { koord: Flerflate; ext: Utsnitt }[]) =>
   deler.reduce((s, d) => s + arealKm2(d.koord, d.ext), 0);
 
-/* Tabellen solv.egne: de egne områdene i kommunen nr fra bronse.egne, med typen for hver flate. Tegnede områder har typen brukeren
-   har valgt, og flatene i en opplastet plan får typen etter planType. */
+/* Tabellen solv.egne: flatene i de egne planene i kommunen nr fra bronse.egne, med typen for hver flate. Tegnede områder har typen
+   brukeren har valgt, og flatene i en opplastet plan får typen etter planType. Støttedata: tallene regnes av planene per rute
+   (solv.egneruter), og flatene tegner planene i kartet med skarpe kanter (egneIFlis). */
 export async function egne(nr: string): Promise<Egne> {
   const B = (await katalog.bronse.egne(nr)) || [];
   return {
@@ -68,40 +74,56 @@ export async function egne(nr: string): Promise<Egne> {
   };
 }
 
-/* Tabellen solv.egneruter: de egne områdene i kommunen nr som planen per rute (Planruter i felles.ts), i rutenettet for planen på
-   nivå 10 (PLANNIVA) og over utsnittet rundt alle områdene. plan er 1 utbygging og 2 ikke utbygging, og omrade hvilket område ruta hører til (1 er det
-   første i ider). null uten egne områder. */
-export type Egneruter = Planruter & { omrade: Uint8Array; ider: number[] };
-export async function egneruter(nr: string): Promise<Egneruter | null> {
+/* Én egen plan per rute (Planruter i felles.ts), i rutenettet for planen på nivå 10 (PLANNIVA) og over utsnittet rundt planen: plan er
+   1 utbygging, 2 ikke utbygging og 0 utenfor planen. id er planens id i bronse.egne. */
+export type Egenplan = Planruter & { id: number };
+/* Tabellen solv.egneruter: de egne planene i kommunen nr per rute, én rad per plan i rekkefølgen brukeren laget dem. Tom uten egne
+   planer. */
+export async function egneruter(nr: string): Promise<Egenplan[]> {
   const E = await katalog.solv.egne(nr);
-  if (!E.flater.length) return null;
-  const Z = PLANNIVA,
-    m = ruteM(Z),
-    x0 = Math.min(...E.flater.map(g => g.ext[0])),
-    y0 = Math.min(...E.flater.map(g => g.ext[1])),
-    x1 = Math.max(...E.flater.map(g => g.ext[2])),
-    y1 = Math.max(...E.flater.map(g => g.ext[3]));
-  const cx0 = Math.floor((x0 - ORIGO[0]) / m),
-    cy0 = Math.floor((ORIGO[1] - y1) / m),
-    w = Math.floor((x1 - ORIGO[0]) / m) - cx0 + 1,
-    h = Math.floor((ORIGO[1] - y0) / m) - cy0 + 1;
-  const R: Egneruter = {
-    z: Z,
-    cx0,
-    cy0,
-    w,
-    h,
-    plan: new Uint8Array(w * h),
-    omrade: new Uint8Array(w * h),
-    ider: E.ider
-  };
-  E.flater.forEach((g, i) => tegnEget(g, i + 1, R));
-  return R;
+  return E.flater.map((g, k) => {
+    const m = ruteM(PLANNIVA),
+      cx0 = Math.floor((g.ext[0] - ORIGO[0]) / m),
+      cy0 = Math.floor((ORIGO[1] - g.ext[3]) / m),
+      w = Math.floor((g.ext[2] - ORIGO[0]) / m) - cx0 + 1,
+      h = Math.floor((ORIGO[1] - g.ext[1]) / m) - cy0 + 1,
+      R: Egenplan = { z: PLANNIVA, cx0, cy0, w, h, plan: new Uint8Array(w * h), id: E.ider[k] };
+    tegnEget(g, R);
+    return R;
+  });
 }
 
-/* Et eget område g med nummeret merke inn i rutenettet R. En rute hører til området når området dekker minst halve ruta. Der
-   flater i samme område overlapper, vinner utbygging. Der områder overlapper, gjelder det siste. */
-function tegnEget(g: Flater, merke: number, R: Egneruter) {
+/* Opplysninger om en egen plan: id, om den er tegnet eller lastet opp, plan-id og projeksjonen for en opplastet plan, om filen har
+   arealformål, antall flater, og arealet i km² av flatene som er utbygging og som ikke er det */
+export interface Planinfo {
+  id: number;
+  kilde: 'tegnet' | 'fil';
+  planid: string | null;
+  proj: string | null;
+  harFormal: boolean | null;
+  flater: number;
+  km2: { bygg: number; fri: number };
+}
+/* Tabellen solv.egneinfo: opplysningene om de egne planene i kommunen nr, i samme rekkefølge som solv.egneruter */
+export async function egneinfo(nr: string): Promise<Planinfo[]> {
+  const [B, E] = await Promise.all([katalog.bronse.egne(nr), katalog.solv.egne(nr)]);
+  return (B || []).map((g, k) => {
+    const D = E.flater[k].deler;
+    return {
+      id: g.id,
+      kilde: g.kilde,
+      planid: g.kilde === 'fil' ? g.planid || null : null,
+      proj: g.kilde === 'fil' ? g.proj || null : null,
+      harFormal: g.kilde === 'fil' ? g.harFormal : null,
+      flater: D.length,
+      km2: { bygg: samletKm2(D.filter(d => d.type === 'bygg')), fri: samletKm2(D.filter(d => d.type === 'fri')) }
+    };
+  });
+}
+
+/* En egen plan g inn i rutenettet R. En rute hører til planen når planen dekker minst halve ruta. Der flater i planen overlapper,
+   vinner utbygging. */
+function tegnEget(g: Flater, R: Planruter) {
   const u = g.ext,
     m = ruteM(R.z),
     X0 = Math.max(0, Math.floor((u[0] - ORIGO[0]) / m) - R.cx0),
@@ -133,9 +155,7 @@ function tegnEget(g: Flater, merke: number, R: Egneruter) {
         for (let x = 0; x < cw; x++) {
           const q = 4 * (y * cw + x);
           if (a[q + 3] < HALV) continue;
-          const i = (y0 + y) * R.w + x0 + x;
-          R.omrade[i] = merke;
-          R.plan[i] = a[q] > a[q + 1] ? 1 : 2;
+          R.plan[(y0 + y) * R.w + x0 + x] = a[q] > a[q + 1] ? 1 : 2;
         }
     }
 }

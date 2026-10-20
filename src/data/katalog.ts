@@ -234,6 +234,20 @@ export const DATASETT = {
       ]
     ]
   },
+  egne: {
+    navn: 'Areal satt av til framtidig utbygging i egne planer',
+    om: 'For hver plan brukeren har tegnet eller lastet opp i kommunen: hver rute på 10,6 meter i planen som utbygging eller ikke utbygging, én rad per plan. Flatene i en opplastet plan er utbygging etter arealformål og status, som i kommuneplanen, og et tegnet område har typen brukeren valgte. En egen plan erstatter kommuneplanen der den ligger, så «ikke utbygging» trekker fra utbyggingen i kommuneplanen. Det, og at den siste planen gjelder der planer overlapper, avgjøres i gull.',
+    stotte: [
+      [
+        'Flatene i egne planer',
+        'flatene tolket til utbygging eller ikke, så planene kan tegnes i kartet med skarpe kanter.'
+      ],
+      [
+        'Opplysninger om egne planer',
+        'om hver plan er tegnet eller lastet opp, plan-id og projeksjon for en opplastet plan, antall flater og arealet som er utbygging og ikke.'
+      ]
+    ]
+  },
   naturregnskap: {
     navn: 'Naturregnskap fra SSB (syntetisk)',
     om: 'SSBs to tabeller for naturregnskapet per kommune, med økosystemtypene i SSBs klassifisering av økosystemtyper (KLASS 988, nivå 1): arealet per økosystemtype i 2024, og endringen i areal mellom bebygd og hver av de andre økosystemtypene fra 2017 til 2024. Den eneste kilden til SSB-tall på sidene. SSB publiserer tabellene 25. november 2026. Til da er tallene syntetiske og lages i sølv av SSBs arealstatistikk (tabell 09594) med faste tommelfingerregler, i den samme formen. Arealstatistikken brukes ikke til noe annet. Når tabellene kommer, byttes bronse og sølv ut, og gull og sidene står.'
@@ -707,9 +721,12 @@ export const katalog = {
     egne: tabell<string, Egetinn[]>({
       lag: 'bronse',
       navn: 'egne',
+      datasett: DATASETT.egne,
+      innhold:
+        'Planene brukeren har laget i kommunen, i rekkefølge: tegnede områder med flatene og typen brukeren valgte (utbygging eller ikke), og opplastede planer med flatene, arealformål og arealbruksstatus per flate, plan-id og projeksjonen filen var i. Flatene er i UTM33.',
       fil: 'motor/egne.ts',
-      tittel: 'Egne områder',
-      om: 'egne områder brukeren har tegnet eller lastet opp i kommunen, slik brukeren laget dem: tegnede områder med typen brukeren valgte, og opplastede planer med arealformål og status per flate, i UTM33. En kilde fra brukeren, som datamotoren fyller.',
+      tittel: 'Areal satt av til framtidig utbygging i egne planer, tegnet eller lastet opp',
+      om: 'planene brukeren har tegnet eller lastet opp i kommunen, slik brukeren laget dem: tegnede områder med typen brukeren valgte, og opplastede planer med arealformål og status per flate, i UTM33. En kilde fra brukeren, som datamotoren fyller.',
       forklaring:
         'Områder brukeren tegner, eller en GeoJSON-fil i samme format som plandata fra DiBK. Filen leses i nettleseren og sendes ingen steder. Projeksjonen leses fra filen, eller gjettes. Tegnede områder under 400 m² avvises.',
       husk: 30
@@ -818,24 +835,45 @@ export const katalog = {
     egne: tabell({
       lag: 'solv',
       navn: 'egne',
-      tittel: 'Egne områder, tolket',
-      om: 'de egne områdene i kommunen med om hver flate er utbygging. Tegnede områder har typen brukeren valgte, og flatene i en opplastet plan får typen etter arealformål og status.',
+      datasett: DATASETT.egne,
+      stotte: true,
+      innhold:
+        'For hver plan: flatene, hver med om den er utbygging eller ikke, og utsnittet rundt planen. I samme rekkefølge som planene.',
+      tittel: 'Flatene i egne planer',
+      om: 'flatene i de egne planene i kommunen med om hver flate er utbygging. Tegnede områder har typen brukeren valgte, og flatene i en opplastet plan får typen etter arealformål og status.',
       forklaring:
         'Hver flate er utbygging eller ikke. Arealformål i 1000- og 2000-serien med status framtidig, eller uten status, er utbygging, som i kommuneplanen. Uten arealformål er alle flatene utbygging. Et tegnet område er utbygging til brukeren sier noe annet.',
       husk: 30,
       brukerstyrt: true,
       etl: solvEgne.egne
     }),
-    egneruter: tabell({
+    egneruter: tabell<string, solvEgne.Egenplan[]>({
       lag: 'solv',
       navn: 'egneruter',
-      tittel: 'Egne områder per rute',
-      om: 'de egne områdene i kommunen som planen per rute, i samme datamodell som kommuneplanen: utbygging eller ikke, og hvilket område ruta hører til. Over utsnittet rundt alle områdene.',
+      datasett: DATASETT.egne,
+      innhold:
+        'Én rad per plan, i rekkefølgen brukeren laget dem: for hver rute på 10,6 meter i utsnittet rundt planen, 1 utbygging, 2 ikke utbygging eller 0 utenfor planen, og planens id.',
+      tittel: 'Areal satt av til framtidig utbygging i egne planer',
+      om: 'de egne planene i kommunen per rute, i samme datamodell som kommuneplanen, men med ikke utbygging i tillegg: én rad per plan, over utsnittet rundt planen',
       forklaring:
-        'Flatene legges i planrutenettet etter halvregelen. Overlapper flater i samme område, vinner utbygging. Overlapper områder, gjelder det siste.',
+        'Flatene legges i planrutenettet etter halvregelen: en rute hører til planen når planen dekker minst halve ruta. Overlapper flater i samme plan, vinner utbygging. Planene slås sammen med kommuneplanen i gull.',
       husk: 6,
       brukerstyrt: true,
       etl: solvEgne.egneruter
+    }),
+    egneinfo: tabell<string, solvEgne.Planinfo[]>({
+      lag: 'solv',
+      navn: 'egneinfo',
+      datasett: DATASETT.egne,
+      stotte: true,
+      innhold:
+        'Én rad per plan: id, om den er tegnet eller lastet opp, plan-id, projeksjon og om filen har arealformål for en opplastet plan, antall flater, og arealet i km² som er utbygging og som ikke er det.',
+      tittel: 'Opplysninger om egne planer',
+      om: 'opplysninger om hver av de egne planene i kommunen, i samme rekkefølge som planene',
+      forklaring: 'Fra planene slik brukeren laget dem, og flatene tolket til utbygging eller ikke.',
+      husk: 6,
+      brukerstyrt: true,
+      etl: solvEgne.egneinfo
     }),
     plandekning: tabell({
       lag: 'solv',

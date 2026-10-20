@@ -2,7 +2,7 @@
    rutenett med ruter på 10,6 meter, med smale striper tatt bort. Svarer på hvor det er planlagt utbygging, og hva som er der i dag.
    Alle kryssinger med planlagt utbygging går gjennom utbyggingen: temaene (gull/temaer.ts), grått areal (gull/graa.ts), tallene for
    planlagt utbygging (gull/planlagt.ts) og egne områder (gull/egne.ts).
-   Hver kilde tolkes per rute i sølv: planen, med kommuneplanen (solv.kommuneplanruter) og egne områder (solv.egneruter) i samme
+   Hver kilde tolkes per rute i sølv: planen, med kommuneplanen (solv.kommuneplanruter) og egne planer (solv.egneruter) i samme
    datamodell, og dagens klasser (solv.klasser). Her settes de
    sammen: dagens klasser klippes til kommunen, et eget område erstatter kommuneplanen der det ligger, og planen legges oppå dagens
    klasser. Én rute er ruteKm2(z) km² (felles.ts). */
@@ -23,7 +23,7 @@ import {
 } from '../generelt/glissen.ts';
 import { katalog } from '../katalog.ts';
 import { PLANNIVA, ruteM, type Flis, type Plassering } from '../solv/felles.ts';
-import type { Egneruter } from '../solv/egne.ts';
+import type { Egenplan } from '../solv/egne.ts';
 import { klasserIKommunen } from '../solv/grunnkart.ts';
 import { JOR, NAT } from '../solv/klasser.ts';
 import { kommuneIBlokk } from '../solv/kommune.ts';
@@ -238,7 +238,7 @@ export function tellRyddet(L: Glissen, andeler: Map<number, Andel>, faktorer: Ma
 
 /* Setter flisene sammen til ett rutenett for kommunen, legger inn egne områder og rydder bort smale striper. nr er kommunen,
    Z nivået rutenettet er på, nokler er [x, y] for flisene på nivå Z, blokker resultatene fra kombinerBlokk per flis («Z/x/y»), E er
-   de egne områdene per rute fra solv.egneruter (null uten), og rute er rutestørrelsen i meter slik den skal oppgis.
+   de egne planene per rute fra solv.egneruter (tom uten), og rute er rutestørrelsen i meter slik den skal oppgis.
    Rutenettet er glissent: blokkene fra kombinerBlokk deles, og bare blokkene med planlagt utbygging eller egne områder er med i
    planen. Rutene har samme nummer som i ett stort rutenett over alle flisene.
    Med egne områder regnes også kommuneplanen alene (basis), så de samme analysene kan regnes for begge planene (Utvalg under). For
@@ -248,7 +248,7 @@ export function byggUtbygging(
   Z: number,
   nokler: number[][],
   blokker: Map<string, Blokk>,
-  E: Egneruter | null,
+  E: Egenplan[],
   rute: number,
   alene: PlanAlene | null = null
 ): Utbygging {
@@ -280,19 +280,19 @@ export function byggUtbygging(
   let basis: Rydding | null = null,
     eget: Glissen | null = null,
     egetType: Glissen | null = null;
-  const egneIder = E ? E.ider : [];
+  const egneIder = E.map(P => P.id);
   const planensBlokker = nokler.map(([x, y]) => blokker.get(`${Z}/${x}/${y}`)!.d || null),
     sammeBlokker =
       !!alene && alene.d.length === planensBlokker.length && alene.d.every((b, k) => b === planensBlokker[k]),
     kommuneplanen = sammeBlokker ? alene!.rydding : ryddStriper(d);
-  if (E) {
+  if (E.length) {
     basis = kommuneplanen;
     d = kopiAv(d);
     eget = glissent(G);
     egetType = glissent(G);
     leggInnEgne(E, d, kl, eget, egetType);
   }
-  const { celler, ryddet } = E ? ryddStriper(d) : kommuneplanen;
+  const { celler, ryddet } = E.length ? ryddStriper(d) : kommuneplanen;
   const egneTall: EgetTall[] = egneIder.map(() => ({ nat: 0, jor: 0, beb: 0, vann: 0, ukjent: 0 }));
   if (eget)
     for (const i of finn(eget, e => e !== 0)) {
@@ -415,18 +415,21 @@ export async function utvalg(n: string): Promise<Utvalg | null> {
   return R ? byggUtvalg(R, u.plan, u.omrade) : null;
 }
 
-/* Egne områder inn i utbyggingen: innenfor et eget område erstatter det kommuneplanen. E er områdene per rute fra solv.egneruter, d
-   rutenettet for planlagt utbygging og kl dagens klasser. Som utbygging tar området all natur og alt jordbruk i ruta. Som ikke
-   utbygging fjerner det planlagt utbygging der. Fyller eget (hvilket område ruta hører til) og egetType (1 utbygging, 2 ikke
-   utbygging), og endrer d. */
-export function leggInnEgne(E: Egneruter, d: Glissen, kl: Glissen, eget: Glissen, egetType: Glissen) {
-  for (let y = 0; y < E.h; y++)
-    for (let x = 0; x < E.w; x++) {
-      const q = y * E.w + x,
-        o = E.omrade[q],
-        i = o ? nummer(d, E.cx0 + x, E.cy0 + y) : -1;
+/* Egne planer inn i utbyggingen: innenfor en egen plan erstatter den kommuneplanen. E er planene per rute fra solv.egneruter, i
+   rekkefølgen brukeren laget dem, d rutenettet for planlagt utbygging og kl dagens klasser. Planene legges inn etter hverandre, så
+   der planer overlapper, gjelder den siste. Som utbygging tar planen all natur og alt jordbruk i ruta. Som ikke utbygging fjerner den
+   planlagt utbygging der. Fyller eget (hvilken plan ruta hører til, 1 er den første) og egetType (1 utbygging, 2 ikke utbygging), og
+   endrer d. */
+export function leggInnEgne(E: Egenplan[], d: Glissen, kl: Glissen, eget: Glissen, egetType: Glissen) {
+  E.forEach((P, k) => leggInnPlan(P, k + 1, d, kl, eget, egetType));
+}
+function leggInnPlan(P: Egenplan, o: number, d: Glissen, kl: Glissen, eget: Glissen, egetType: Glissen) {
+  for (let y = 0; y < P.h; y++)
+    for (let x = 0; x < P.w; x++) {
+      const q = y * P.w + x,
+        t = P.plan[q],
+        i = t ? nummer(d, P.cx0 + x, P.cy0 + y) : -1;
       if (i < 0) continue;
-      const t = E.plan[q];
       sett(eget, i, o);
       sett(egetType, i, t);
       if (t === 1) {
@@ -444,7 +447,7 @@ export function leggInnEgne(E: Egneruter, d: Glissen, kl: Glissen, eget: Glissen
    områder, eller når dagens klasser mangler.
    Dagens klasser kommer fra blokkene (solv.klasser) på nivå 10, lagret eller hentet fra NIBIO når kommunen velges
    (gull.dagensKlasser), klippet til kommunen med kommunens andel i hver rute (solv.kommunebiter), og hele kommunen er med. Egne
-   områder kommer fra solv.egneruter.
+   planer kommer fra solv.egneruter, én per plan.
    Utbyggingen bygges av blokker på 512 x 512 ruter à 10,6 meter, én per flis på nivå 10 (PLANNIVA). Blokkene huskes i
    gull.utbyggingsblokker. Det gir et anslag til illustrasjon, ikke offisiell statistikk. */
 export async function utbygging(nr: string): Promise<Utbygging | null> {
@@ -455,7 +458,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
     katalog.solv.kommunebiter(nr)
   ]);
   const ingenPlan = !!info && !info.finnes;
-  if ((ingenPlan && !E) || !D.blokker) return null;
+  if ((ingenPlan && !E.length) || !D.blokker) return null;
   const O = ingenPlan ? null : await katalog.solv.planoversikt(nr).catch(() => null) /* uten oversikt hentes alle */,
     Z = PLANNIVA,
     blokker = katalog.gull.utbyggingsblokker.straks(nr, () => new Map<string, Blokk>()),
@@ -477,7 +480,7 @@ export async function utbygging(nr: string): Promise<Utbygging | null> {
       });
     })
   );
-  if (E && E.z !== Z) throw new Error('egne områder er regnet på et annet nivå');
+  if (E.some(P => P.z !== Z)) throw new Error('egne planer er regnet på et annet nivå');
   /* kommuneplanen alene fra sist, når blokkene er de samme (se PlanAlene) */
   const A = katalog.gull.planAlene.straks(nr, () => ({ alene: null as PlanAlene | null })),
     R = byggUtbygging(nr, Z, under, blokker, E, Math.round(ruteM(Z) * 10) / 10 /* 10,6 meter */, A.alene);

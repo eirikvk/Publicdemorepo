@@ -31,7 +31,15 @@ export function oppdaterEgne(nr: string) {
       .map((g): Egetinn =>
         g.kilde === 'tegnet'
           ? { id: g.id, ext: g.ext, kilde: g.kilde, deler: g.deler.map(d => ({ ...d })) }
-          : { id: g.id, ext: g.ext, kilde: g.kilde, deler: g.deler, harFormal: g.harFormal }
+          : {
+              id: g.id,
+              ext: g.ext,
+              kilde: g.kilde,
+              deler: g.deler,
+              harFormal: g.harFormal,
+              planid: g.planid,
+              proj: g.proj
+            }
       ),
     har = se(katalog.bronse.egne, nr),
     fra = har && har.status === 'ok' ? har.verdi! : [];

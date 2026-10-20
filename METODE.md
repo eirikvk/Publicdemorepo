@@ -527,7 +527,8 @@ oftest kommer av at grensene ikke er tegnet helt likt, tas bort.
    uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
    kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også
    zoomet inn, så hver piksel er den samme klassen i alle lagene.
-8. **Egne områder per rute** (`solv.egneruter`). Forklart under [Egne områder](#egne-områder-og-opplastet-plan).
+8. **Areal satt av til framtidig utbygging i egne planer** (`solv.egneruter`). Forklart under [Egne
+   områder](#egne-områder-og-opplastet-plan).
 9. **Kommuneplanen** (`gull.kommuneplan`). Opplysningene om kommuneplanen fra sølv, slik siden viser dem.
 10. **Dagens klasser** (`gull.dagensKlasser`). Dagens klasser for hele kommunen, i blokkene på 10,6 meter. For kommunene med
     lagrede klasser ligger blokkene ferdig sammen med siden. For de andre hentes kartbildene fra NIBIO når kommunen velges, og
@@ -663,12 +664,13 @@ begge og forskjellen.
 
 ### Fra kilde til tall
 
-1. **Egne områder** (`bronse.egne` → `solv.egne` → `solv.egneruter`). Områder brukeren tegner, eller en GeoJSON-fil i samme format
-   som plandata fra DiBK. Filen leses i nettleseren og sendes ingen steder. Projeksjonen leses fra filen, eller gjettes. Tegnede
-   områder under 400 m² avvises. Justeres: Hver flate er utbygging eller ikke. Arealformål i 1000- og 2000-serien med status
-   framtidig, eller uten status, er utbygging, som i kommuneplanen. Uten arealformål er alle flatene utbygging. Et tegnet område
-   er utbygging til brukeren sier noe annet. Justeres: Flatene legges i planrutenettet etter halvregelen. Overlapper flater i
-   samme område, vinner utbygging. Overlapper områder, gjelder det siste.
+1. **Areal satt av til framtidig utbygging i egne planer, tegnet eller lastet opp** (`bronse.egne` → `solv.egne` →
+   `solv.egneruter`). Områder brukeren tegner, eller en GeoJSON-fil i samme format som plandata fra DiBK. Filen leses i
+   nettleseren og sendes ingen steder. Projeksjonen leses fra filen, eller gjettes. Tegnede områder under 400 m² avvises.
+   Justeres: Hver flate er utbygging eller ikke. Arealformål i 1000- og 2000-serien med status framtidig, eller uten status, er
+   utbygging, som i kommuneplanen. Uten arealformål er alle flatene utbygging. Et tegnet område er utbygging til brukeren sier noe
+   annet. Justeres: Flatene legges i planrutenettet etter halvregelen: en rute hører til planen når planen dekker minst halve
+   ruta. Overlapper flater i samme plan, vinner utbygging. Planene slås sammen med kommuneplanen i gull.
 2. **Opplysninger om kommuneplanen** (`solv.planinfo`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
 3. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Forklart under [Grått areal](#grått-areal).
 4. **Planlagt utbygging** (`gull.planlagt`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
@@ -1658,6 +1660,18 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Egne planer som datasett etter mønsteret fra kommuneplanen, 20. oktober 2026.** Egne områder sto utenfor datasettene. Nå er de
+datasettet «Areal satt av til framtidig utbygging i egne planer», med navn som for kommuneplanen. Dataene er hver plan per rute,
+én rad per plan, i samme datamodell som kommuneplanen (`solv.egneruter`): 1 utbygging, 2 ikke utbygging og 0 utenfor planen.
+«Ikke utbygging» er med fordi en egen plan erstatter kommuneplanen der den ligger, så den trekker fra utbyggingen i kommuneplanen.
+Før la sølv områdene i ett felles rutenett, der det siste området gjaldt der områder overlappet. Den sammenslåingen skjer nå i gull,
+sammen med kommuneplanen: planene legges inn etter hverandre (`leggInnEgne` i `gull/utbygging.ts`), og det gir det samme. Flatene
+tolket til utbygging eller ikke er støttedata, til kartet («Flatene i egne planer», `solv.egne`), og det samme er opplysningene om
+planene («Opplysninger om egne planer», `solv.egneinfo`): om planen er tegnet eller lastet opp, plan-id og projeksjon, antall flater
+og arealet. Plan-id og projeksjon følger nå med planen i bronse. Tallene er ikke endret, og regresjonstesten ga ingen avvik. En ny
+test sjekker at den siste planen gjelder der planer overlapper. Regresjonstesten sletter nå byggene sine når den er ferdig; de ble
+liggende igjen og fylte disken. Testet i Chromium, ikke på iPhone.
 
 **De syntetiske tallene som eneste kilde til SSB-tall, 20. oktober 2026.** Arealstatistikken fra SSB brukes ikke lenger direkte
 noe sted på sidene. Den er bare en kilde i bronse (`bronse.arealAlle`, alle kommunene i 2017 og 2024), som tabellene for
