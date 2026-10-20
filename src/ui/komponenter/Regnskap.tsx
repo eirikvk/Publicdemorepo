@@ -1,8 +1,9 @@
 /* Utbredelsesregnskapet: hvor mye natur, jordbruk og bebygd areal kommunen har, og om det blir mer eller mindre. Først forklart med
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
-   for naturregnskap (SEEA EA). Tallene er SSBs arealstatistikk (tabell 09594), til SSBs egne tabeller over arealendringer kommer.
-   Til slutt land og vann. Tallene kommer ferdig regnet ut fra gull (katalog.gull.utbredelse, endring, oppstilling og landOgVann).
-   Her blir de tekst, stolper og tabell. */
+   for naturregnskap (SEEA EA). Tallene er SSBs tabeller for naturregnskapet: arealet per økosystemtype i 2024, og endringen mellom
+   bebygd og de andre fra 2017. Til SSB publiserer dem 25. november 2026, er de syntetiske, og det står under hvert kort. Til slutt
+   land og vann. Tallene kommer ferdig regnet ut fra gull (katalog.gull.utbredelse, endring, oppstilling og landOgVann). Her blir de
+   tekst, stolper og tabell. */
 import type { CSSProperties } from 'react';
 import { katalog } from '../../data/katalog.ts';
 import type { Endring } from '../../data/gull/regnskap.ts';
@@ -12,6 +13,14 @@ import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
 import { andelTekst, dekar, iTekst, medFortegn, nf, ramse } from '../tekst.ts';
 import { Korttittel } from './Tallforklaring.tsx';
 import './Regnskap.css';
+
+/* Merket under et kort med syntetiske tall */
+const Syntetisk = ({ s }: { s: boolean }) =>
+  s ? (
+    <p className="hint">
+      Syntetiske tall: laget av SSBs arealstatistikk til SSBs tabeller for naturregnskapet kommer 25. november 2026.
+    </p>
+  ) : null;
 
 /* Hele dekar fra km², og en endring i hele dekar med fortegn */
 const hele = (km2: number) => nf(Math.round(km2 * 1000), 0),
@@ -25,8 +34,8 @@ function Endring({ E }: { E: Endring }) {
       <div className="utvikling">
         <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {E.fra}?</h3>
         <p>
-          Kommunens flate er ikke den samme i SSBs tall for {E.fra} og {E.til}, trolig fordi grensen er flyttet. Tallene
-          kan derfor ikke sammenlignes.
+          SSBs tall har ikke kommunen i {E.fra}, trolig fordi grensen er flyttet eller kommunen er ny. Endringen kan
+          derfor ikke regnes.
         </p>
       </div>
     );
@@ -40,8 +49,8 @@ function Endring({ E }: { E: Endring }) {
     <div className="utvikling">
       <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {E.fra}?</h3>
       <p>
-        Fra {E.fra} til {E.til}: {tekst}. Det er forskjellen mellom to årganger av SSBs statistikk, ikke målt endring.
-        Noe av forskjellen kan skyldes bedre kartlegging.
+        Fra {E.fra} til {E.til}: {tekst}. Det er arealet som er gått fra jordbruk og natur til bebygd.
+        {E.flyttet ? ' Grensen er trolig flyttet i perioden, så tallene er mer usikre.' : ''}
       </p>
       <ul className="endring">
         {E.klasser.map(({ id, navn, km2: v }) => (
@@ -94,6 +103,7 @@ function Utbredelse() {
         </div>
       )}
       {E && <Endring E={E} />}
+      <Syntetisk s={!!U && U.syntetisk} />
     </section>
   );
 }
@@ -114,6 +124,7 @@ function Oppstilling() {
           { navn: `Utgående areal ${O.til}`, klasse: 'sum', tall: O.utgaende.map(v => [hele(v)]) }
         ]}
       />
+      <Syntetisk s={O.syntetisk} />
       {O.avvik !== 0 && (
         <p>
           Summen av landarealet er ikke den samme i de to årgangene, så netto endring går ikke i null. Forskjellen er{' '}
@@ -131,7 +142,7 @@ function Oppstilling() {
   );
 }
 
-/* Land og vann: land, innsjø og elv er SSBs tall. Hav er regnet ut som kommunens flate minus land og ferskvann. */
+/* Land og vann: land, innsjø og elv er SSBs tall for 2024. Hav er regnet ut som kommunens flate minus land og ferskvann. */
 function LandOgVann() {
   const V = verdi(katalog.gull.landOgVann);
   return (
@@ -143,6 +154,7 @@ function LandOgVann() {
           <Forklaring
             deler={V.deler.map(([id, navn, v]) => [navn, '--' + id, `${id === 'hav' ? 'ca. ' : ''}${dekar(v)}`])}
           />
+          <Syntetisk s={V.syntetisk} />
         </>
       )}
     </section>

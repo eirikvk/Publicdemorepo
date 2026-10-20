@@ -274,7 +274,7 @@ export const SCENARIER: Record<string, Scenario> = {
     await p.goto('http://demo.test/' + S.adresse('1566'));
     await vent(p, R, 'surnadal', () => {
       const M = window.motor;
-      if (!M || !M.verdi(M.katalog.gull.inon) || !M.verdi(M.katalog.solv.arealtall) || !M.verdi(M.katalog.gull.graa))
+      if (!M || !M.verdi(M.katalog.gull.inon) || !M.verdi(M.katalog.gull.utbredelse) || !M.verdi(M.katalog.gull.graa))
         return false;
       const D = M.verdi(M.katalog.gull.dagensKlasser),
         T = M.planTall();

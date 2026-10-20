@@ -169,7 +169,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `henting.ts` | Henting, kall-loggen, hvor sidens egne filer ligger, og køen for kartbilder (høyst fire kall om gangen per kilde). Bakgrunnskartet har en egen kø som tallene ikke venter på. En feilmelding i XML i stedet for et bilde regnes som et kall som feilet, og for hver kilde står det om siste kall feilet (`feiletSist`). Husker ingenting: det gjør cachen. Sier fra om hva som skjer, uten å vite hvem som lytter. |
 | `endepunkter.ts` | Endepunktene for alle kildene, samlet. Filene i bronse bygger kallene på dem, og katalogen viser dem ved hver kilde i infoknappene og METODE.md |
 | `wms.ts` | Adressen til et kartbilde eller et oppslag fra en kartjeneste etter WMS 1.3.0, for et utsnitt i UTM33 eller ett punkt |
-| `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve: hver arealklasse fra 2017 for én kommune, med SSBs summer for jordbruk og skog, og for alle kommunene i 2017 og 2024 |
+| `ssb.ts` | SSB, tabell 09594, med det eldre API-et som reserve: hver arealklasse for alle kommunene i 2017 og 2024, bare til de syntetiske tallene for naturregnskapet |
 | `kartverket.ts` | Fylker og kommuner, kommunegrensene, oppslag av kommune i et punkt, og bakgrunnskartet |
 | `nibio-grunnkart.ts` | Nasjonalt grunnkart for arealanalyse: kartbildene med de seks klassene i rene farger og med de 19 detaljklassene, per flis, de lagrede klassene og detaljklassene per blokk med registrene, og grunnkartet i ett punkt |
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
@@ -191,7 +191,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `oppgaver.ts` | Det tunge bildearbeidet som oppgaver: pakke ut og tolke bildene, dekningsandelen til flater i bitene (kommunen og naturtemaene), og telle i kommunen |
 | `arbeid.ts`, `arbeider.ts` | Bakgrunnstråden (Web Worker med OffscreenCanvas): oppgavene kjøres der, så siden ikke henger, og på siden når nettleseren ikke har den |
 | `klasser.ts` | Bebygd, jordbruk og natur: koblingen til SSBs arealklasser og grunnkartets økosystemtyper, tolking av fargene i kartbildene, og dagens klasse per rute i en flis |
-| `ssb.ts` | Datasettet «Arealtall fra SSB»: SSB-svarene gjort om til km² for hver arealklasse per år fra 2017, for én kommune (`solv.arealtall`) og for alle kommunene i 2017 og 2024 (`solv.arealdetaljerAlle`) |
+| `ssb.ts` | Tolkingen av SSBs arealstatistikk for alle kommunene: km² for hver arealklasse per år og kommune, til de syntetiske tallene |
 | `naturregnskap.ts` | Datasettet «Naturregnskap fra SSB»: SSBs to tabeller for naturregnskapet i SSBs form, med økosystemtypene i SSBs klassifisering (KLASS 988). Til SSB publiserer dem, lages de syntetisk her av arealtallene, se under |
 | `kommuneplan.ts` | Kommuneplanen fra DiBK: planen per rute i en flis (`solv.kommuneplanruter`), hvor planen ligger i kommunen (`solv.planoversikt`), og om kommunen har plan og hvilken |
 | `egne.ts` | Egne områder fra `bronse.egne`: hvilke flater som er utbygging (`solv.egne`), og områdene som planen per rute (`solv.egneruter`) |
@@ -207,11 +207,11 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 
 | Fil | Innhold |
 |---|---|
-| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, arealtallene fra SSB summert per klasse og sammenlignet med 2017, landarealet, og tilstanden for temaene som hentes i biter |
+| `felles.ts` | Andel i prosent, areal fra antall ruter avrundet til nærmeste 10 dekar, landarealet (fra tabellen for naturregnskapet), og tilstanden for temaene som hentes i biter |
 | `grunnkart.ts` | Dagens klasser for hele kommunen: alle blokkene lest, lagret eller hentet fra NIBIO når kommunen velges, og arealet per detaljklasse |
 | `planflis.ts` | Planlagt utbygging per piksel i kartet, én sannhet per nivå: rutene i utbyggingen på nivå 10, finere nivåer i eller inntil feltene der, og zoomet ut innenfor dagens klasse i pikselen |
 | `utbygging.ts` | Utbyggingen, midtpunktet: egne områder erstatter kommuneplanen der de ligger, og planen legges oppå dagens klasser i ruter på 10,6 meter, med smale striper tatt bort. Én rad per rute med planlagt utbygging i den nye eller den gamle planen. Rutenettene er glisne: planen har bare blokkene med planlagt utbygging. Utvalgene (`Utvalg`) sier hvilke ruter en analyse regnes over: den nye planen eller den gamle (kommuneplanen alene), i hele kommunen eller i ett eget område. Nøkkelen er utvalget, som `5001`, `5001/gammel` eller `5001/ny/1`. Hvert utvalg slås opp én gang (`gull.utvalg`), med raden og verdien for hver rute, så analysene slipper. Kommuneplanen alene ryddes for smale striper én gang så lenge blokkene med planen er de samme (`gull.planAlene`). |
-| `regnskap.ts` | Utbredelsen nå, forskjellen fra 2017, regnskapsoppstillingen, og land og vann |
+| `regnskap.ts` | Utbredelsen i 2024, endringen fra 2017, regnskapsoppstillingen, og land og vann, regnet av tabellene for naturregnskapet fra SSB |
 | `naturregnskap.ts` | SSBs tabeller for naturregnskapet fra sølv, lest med hovedøkosystemene i grunnkartet: arealet per hovedøkosystem i 2024 og endringen mellom bebygd og landklassene 2017–2024, for kommunen og for alle kommunene i Norge, og summene, regnskapet og sammenligningen med Norge som tvillingen viser. Merket syntetisk så lenge tallene i sølv er det. |
 | `okosystemer.ts` | Grunnkartets økosystemtyper: skog, våtmark, naturen i verneområdene og planlagt utbygging per økosystemtype, av arealet per detaljklasse. Brukes av tvillingen og i sammenligningen for egne områder. |
 | `planlagt.ts` | Natur og jordbruk som planen setter av, med andeler, for et utvalg, kortversjonen til oversikten, og planlagt utbygging per detaljklasse |
@@ -458,9 +458,9 @@ verneområdene. Hver tabell beskriver innholdet i sine egne data (`innhold`), og
 En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes etter komma, som «Dekningen av kommuneplanen,
 kartbilder». Datasettene står i `DATASETT` i katalogen. I katalogvisningen står dataene som én vanlig rad, i gruppen for filen de
 lages i, og støttedataene ligger bak knappen «Støttedata» på raden. Bare én av knappene Info, Data og Støttedata på en rad er åpen om
-gangen. Det som ikke er ferdig i støttedataene, står også på raden. Elleve datasett er delt inn slik: arealklassene fra grunnkartet,
+gangen. Det som ikke er ferdig i støttedataene, står også på raden. Ti datasett er delt inn slik: arealklassene fra grunnkartet,
 grått areal, inngrepsfri natur, kommunegrensen, kommuneplanen, de fire naturtemaene (verneområdene, villreinområdene, verdsatt
-natur og det kartlagte for naturtyper), arealtallene fra SSB og naturregnskapet fra SSB. Arealklassene fra grunnkartet er ett datasett med to kolonner,
+natur og det kartlagte for naturtyper) og naturregnskapet fra SSB. Arealklassene fra grunnkartet er ett datasett med to kolonner,
 klassen og detaljklassen, i én tabell i sølv (`solv.klasser`). Støttedataene er de lagrede klassene og detaljklassene, blokkene i
 kommunen, klassene zoomet ut og grunnkartet i et punkt. For grått areal og inngrepsfri natur er støttedataene kartet zoomet inn og ut
 (og sonen i et punkt), og for kommunegrensen de lagrede grensene. Kommuneplanen er *Areal satt av til framtidig utbygging i
@@ -475,16 +475,16 @@ Villreinområdene, verdsatt natur og det kartlagte er delt inn på samme måte, 
 datasett med én henting: lokalitetene med og uten fast verdi, klippet mot kommunen, i én tabell i sølv. Kryssingen av verdsatt
 natur og det kartlagte regnes i gull (`gull.verdsattNaturIKartlagt`), og oppslagene for kryssingen med utbyggingen er en
 hjelpetabell i gull (`gull.naturoppslag`). Alle feltene for et område i naturtemaene er felles støttedata og står foreløpig utenfor
-datasettene. Arealtallene fra SSB er én henting og én tabell per kommune med hver arealklasse i hvert år fra 2017
-(`solv.arealtall`), og summene per klasse, landarealet og sammenligningen med 2017 regnes i gull (`perKlasse` og `historie` i
-`gull/felles.ts`). Tallene for alle kommunene i 2017 og 2024 er støttedata.
+datasettene.
 
 **Syntetiske data lages i sølv.** Naturregnskapet fra SSB er et bevisst avvik fra regelen om at sølv bare tolker kildene. SSBs to
 tabeller (arealet per økosystemtype i 2024, og endringen mellom bebygd og de andre økosystemtypene 2017–2024) publiseres 25. november
 2026. Til da lages de syntetisk i sølv (`solv/naturregnskap.ts`), av arealtallene, i den formen SSB vil gi dem, med kodene i SSBs
 klassifisering av økosystemer. Grunnen er at bronse og sølv er det som byttes ut når de ekte tallene kommer, mens gull og sidene skal
 bestå. Da kommer en tabell i bronse, og tabellene i sølv tolker den i stedet for å lage tallene. Datasettet og tabellene i sølv er
-merket syntetisk, og feltet `syntetisk` følger tallene til sidene.
+merket syntetisk, og feltet `syntetisk` følger tallene til sidene. Tabellene er den eneste kilden til SSB-tall: utbredelsesregnskapet,
+land og vann og landarealet på hovedsiden regnes også av dem. SSBs arealstatistikk (tabell 09594) er bare en kilde i bronse
+(`bronse.arealAlle`) som de syntetiske tallene lages av.
 
 **Katalogen og cachen er to ting.** Katalogen er det interne API-et: hvilke tabeller som finnes, hvordan de kalles, og hvor
 ETL-funksjonen står. Alt som hentes, går gjennom den, også bakgrunnskartet (`bronse.bakgrunnsflis`). Cachen er hvor mye som huskes

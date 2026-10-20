@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { innhold } from '../../data/cache.ts';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
-import { historie, perKlasse } from '../../data/gull/felles.ts';
 import { planTall, utbyggingen } from '../../data/motor/plan.ts';
 import { app, bruk, nullstillBruk } from '../../data/motor/tilstand.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
@@ -48,8 +47,6 @@ export default function App() {
         planTall,
         utbyggingen,
         innhold,
-        perKlasse,
-        historie,
         nullstillBruk,
         get bruk() {
           return bruk;

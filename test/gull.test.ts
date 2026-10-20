@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felles.ts';
 import { byggInon, byggUtvikling } from '../src/data/gull/inon.ts';
-import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
+import { byggEndring, byggLandOgVann, byggUtbredelse, historieAv, klasseareal } from '../src/data/gull/regnskap.ts';
 import {
   byggHovedklasser,
   byggNorge,
@@ -121,6 +121,25 @@ test('syntetiske tabeller: fordeling på hovedøkosystemer og endring mellom beb
     sum(r => r.inngaende),
     sum(r => r.utgaende)
   );
+});
+
+test('utbredelsesregnskapet på hovedsiden av de syntetiske tabellene: 2024 summert, og 2017 med endringen lagt tilbake', () => {
+  const F = { kommune: '1', aar: '2024', syntetisk: true, kilde: '', klasser: byggFordeling(D, '2024', 100) },
+    E0 = byggBebygdEndring(D, '2017', '2024'),
+    E = { ...E0, kommune: '1', syntetisk: true, kilde: '' },
+    T = klasseareal(F);
+  /* bebygd 14, jordbruk 5 + 3, natur skog 49 og myr 10, og innsjø 5 */
+  assert.deepEqual(T, { a: [14, 8, 59], land: 81, aar: '2024', ferskvann: { inn: 5, elv: 0 } });
+  /* bebygd opp 4, jordbruk ned 2 og natur ned 2 */
+  assert.deepEqual(historieAv(F, E), {
+    nr: '1',
+    fra: '2017',
+    til: '2024',
+    a0: [10, 10, 61],
+    a1: [14, 8, 59],
+    endret: false
+  });
+  assert.deepEqual(historieAv(F, { ...E, endret: true }).a0, [14, 8, 59]);
 });
 
 test('syntetiske tabeller: en nedgang i en bebygd klasse gir ikke natur tilbake', () => {

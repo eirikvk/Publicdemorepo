@@ -109,7 +109,7 @@ export const KORT: Kort[] = [
     komponent: 'src/ui/komponenter/Regnskap.tsx',
     sporsmal: 'Hvor mye natur, jordbruk og bebygd areal har kommunen, og er det mer eller mindre natur enn i 2017?',
     kortFortalt:
-      'Tallene er SSBs arealstatistikk. Natur, jordbruk og bebygd areal er SSBs arealklasser slått sammen til tre, og andelen er regnet av landarealet. Forskjellen fra 2017 er forskjellen mellom to årganger av statistikken, ikke målt endring.',
+      'Tallene er SSBs tabeller for naturregnskapet: arealet per økosystemtype i 2024, slått sammen til natur, jordbruk og bebygd, og endringen mellom bebygd og de andre fra 2017. Andelen er regnet av landarealet. Til SSB publiserer tabellene 25. november 2026, er tallene syntetiske, laget av SSBs arealstatistikk med faste tommelfingerregler.',
     tabeller: ['gull.utbredelse', 'gull.endring', 'gull.oppstilling'],
     regnestykke: hent => {
       const U = hent(katalog.gull.utbredelse);
@@ -136,7 +136,7 @@ export const KORT: Kort[] = [
     komponent: 'src/ui/komponenter/Regnskap.tsx',
     sporsmal: 'Hvor mye areal hadde hver klasse i 2017 og nå, satt opp som et regnskap?',
     kortFortalt:
-      'Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år. Regnskapet gjelder landarealet, så vann er ikke med.',
+      'Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og areal ved slutt. Arealet i 2024 er fra SSBs tabell over arealet per økosystemtype, og arealet i 2017 er det samme med det som gikk til og fra bebygd lagt tilbake. Regnskapet gjelder landarealet, så vann er ikke med. Tallene er syntetiske til SSB publiserer tabellene.',
     tabeller: ['gull.oppstilling'],
     usikkerhet: [
       'Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.'
@@ -163,7 +163,7 @@ export const KORT: Kort[] = [
     komponent: 'src/ui/komponenter/Regnskap.tsx',
     sporsmal: 'Hvordan fordeler kommunens flate seg på land, innsjø, elv og hav?',
     kortFortalt:
-      'Land, innsjø og elv er SSBs tall. Hav er det som blir igjen når de trekkes fra kommunens flate, som er arealet innenfor kommunegrensen fra Kartverket.',
+      'Land, innsjø og elv er fra SSBs tabell over arealet per økosystemtype i 2024, syntetisk til SSB publiserer den. Hav er det som blir igjen når de trekkes fra kommunens flate, som er arealet innenfor kommunegrensen fra Kartverket.',
     tabeller: ['gull.landOgVann'],
     regnestykke: hent => {
       const V = hent(katalog.gull.landOgVann);
@@ -623,7 +623,7 @@ export const KORT: Kort[] = [
   }
 ];
 
-/* Tabellen med det fulle navnet (som solv.arealtall) */
+/* Tabellen med det fulle navnet (som solv.grense) */
 const LAG = ['bronse', 'solv', 'gull'] as const;
 export function tabellen(navn: string): Tabelldef<unknown, unknown> {
   const [lag, t] = navn.split('.') as [(typeof LAG)[number], string];

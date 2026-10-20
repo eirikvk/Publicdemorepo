@@ -1,9 +1,8 @@
 /* Bronse for SSB: tabell 09594, «Arealbruk og arealressurser», gjennom SSBs API. Svarene kommer urørt tilbake som JSON-stat 2.0 og
-   gjøres om i solv/ssb.ts. Én henting per kommune med alle arealklassene fra 2017, og én for alle kommunene i 2017 og 2024. */
+   gjøres om i solv/ssb.ts. Én henting for alle kommunene i 2017 og 2024, som de syntetiske tallene for naturregnskapet lages av
+   (solv/naturregnskap.ts). Ingen tall på sidene kommer fra arealstatistikken direkte. */
 import { katalog } from '../katalog.ts';
-import type { Kommune } from '../solv/felles.ts';
-import { kommunen } from './kartverket.ts';
-import { DETALJER, SAMLET, type JsonStat } from '../solv/ssb.ts';
+import { DETALJER, type JsonStat } from '../solv/ssb.ts';
 import { SSB, SSB_ELDRE as SSB0 } from './endepunkter.ts';
 import { hent } from './henting.ts';
 
@@ -32,28 +31,9 @@ async function hentSSB(hva: string, nytt: string, region: Utvalg, tid: Utvalg, k
     })
   ) as Promise<JsonStat>;
 }
-/* Arealet for kommunen k fra 2017 og fram, for hver av SSBs arealklasser for seg (DETALJER i solv/ssb.ts) og SSBs egne summer for
-   jordbruk og skog (SAMLET), med SSBs sammenslåtte tidsserier (kodelisten agg_KommSummer), så tallene gjelder dagens kommune også
-   der kommuner er slått sammen. Summene hentes med, fordi summen av klassene kan avvike med 10 dekar fra SSBs egen sum. */
-export function hentArealtall(k: Kommune) {
-  const koder = [...DETALJER.map(d => d[0]), ...SAMLET];
-  return hentSSB(
-    `Arealtall fra 2017 for ${k.navn}`,
-    `${SSB}?lang=no&outputformat=json-stat2&codelist[Region]=agg_KommSummer&outputValues[Region]=aggregated&valueCodes[Region]=K-${k.nr}&valueCodes[ArealKlasse]=${koder.join(',')}&valueCodes[ContentsCode]=Areal&valueCodes[Tid]=from(2017)`,
-    ['agg:KommSummer', ['K-' + k.nr]],
-    ['all', ['*']],
-    koder
-  );
-}
-
-/* Tabellen bronse.arealtall: arealet for kommunen fra 2017 per arealklasse, som JSON-stat */
-export async function arealtall(nr: string): Promise<JsonStat> {
-  return hentArealtall(await kommunen(nr));
-}
-
-/* Tabellen bronse.arealAlle: arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, med de
-   samme sammenslåtte tidsseriene. Til de syntetiske tabellene for hele Norge. Det eldre API-et får kommunene fra listen over
-   kommuner. */
+/* Tabellen bronse.arealAlle: arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, med SSBs
+   sammenslåtte tidsserier (kodelisten agg_KommSummer), så tallene gjelder dagens kommuner også der kommuner er slått sammen. Til de
+   syntetiske tabellene for naturregnskapet. Det eldre API-et får kommunene fra listen over kommuner. */
 export async function arealAlle(): Promise<JsonStat> {
   const koder = DETALJER.map(d => d[0]),
     alle = (await katalog.bronse.kommuner()).flatMap(f => f.kommuner.map(k => 'K-' + k.nr));

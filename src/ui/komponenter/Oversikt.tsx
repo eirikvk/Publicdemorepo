@@ -37,9 +37,8 @@ function regnskap() {
     tall: dekar(natur.km2),
     tekst:
       `Natur i ${U.aar}${avLand(natur.andel)}.` +
-      (Math.round(d * 1000)
-        ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E!.fra}, men forskjellen mellom årgangene er ikke målt endring.`
-        : '')
+      (Math.round(d * 1000) ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E!.fra}.` : '') +
+      (U.syntetisk ? ' Syntetiske tall til SSBs tabeller kommer.' : '')
   };
 }
 

@@ -45,7 +45,7 @@ export function motortall() {
         : null;
     };
   const R = M.utbyggingen(),
-    T = M.valgt(K.solv.arealtall),
+    T = M.valgt(K.gull.utbredelse),
     P = v(K.solv.grense) ? M.valgt(K.gull.kommuneplan) : null,
     I = M.valgt(K.gull.inon),
     G = M.valgt(K.gull.graa),
@@ -55,11 +55,11 @@ export function motortall() {
     arealtall:
       T &&
       (T.status === 'ok'
-        ? plukk({ tilstand: 'ok', a: M.perKlasse(T.verdi!).a, aar: M.perKlasse(T.verdi!).aar }, 'tilstand', 'a', 'aar')
+        ? plukk({ tilstand: 'ok', ...T.verdi! }, 'tilstand', 'aar', 'land', 'klasser', 'syntetisk')
         : { tilstand: T.status }),
-    ferskvann: rund(T && T.status === 'ok' ? M.perKlasse(T.verdi!).ferskvann : null),
+    landOgVann: plukk(v(K.gull.landOgVann), 'flate', 'hav', 'deler'),
     flate: r(v(K.solv.grense) ? v(K.solv.grense)!.km2 : 0),
-    historie: plukk(v(K.solv.arealtall) ? M.historie(v(K.solv.arealtall)!) : null, 'fra', 'til', 'a0', 'a1', 'endret'),
+    oppstilling: plukk(v(K.gull.oppstilling), 'fra', 'til', 'inngaende', 'netto', 'utgaende'),
     planInfo:
       P &&
       (P.status === 'ok'

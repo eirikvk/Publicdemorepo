@@ -234,19 +234,9 @@ export const DATASETT = {
       ]
     ]
   },
-  ssb: {
-    navn: 'Arealtall fra SSB',
-    om: 'For hver kommune og hvert år fra 2017: arealet i km² for hver av SSBs arealklasser i tabell 09594 (bebygd per formål, fulldyrka og ikke fulldyrka jord, skog per treslag, resten av naturen per klasse, og innsjø og elv), med SSBs egne summer for jordbruk og skog. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommune. Summene per klasse (bebygd, jordbruk, natur), landarealet og sammenligningen med 2017 regnes i gull.',
-    stotte: [
-      [
-        'Arealtall fra SSB for alle kommuner',
-        'de samme arealklassene for alle kommunene i 2017 og 2024 i ett kall, som de syntetiske tallene for naturregnskapet lages av.'
-      ]
-    ]
-  },
   naturregnskap: {
     navn: 'Naturregnskap fra SSB (syntetisk)',
-    om: 'SSBs to tabeller for naturregnskapet per kommune, med økosystemtypene i SSBs klassifisering av økosystemer (KLASS 988, nivå 1): arealet per økosystemtype i 2024, og endringen i areal mellom bebygd og hver av de andre økosystemtypene fra 2017 til 2024. SSB publiserer dem 25. november 2026. Til da er tallene syntetiske og lages i sølv av arealtallene fra SSB med faste tommelfingerregler, i den samme formen. Når tabellene kommer, byttes bronse og sølv ut, og gull og sidene står.'
+    om: 'SSBs to tabeller for naturregnskapet per kommune, med økosystemtypene i SSBs klassifisering av økosystemtyper (KLASS 988, nivå 1): arealet per økosystemtype i 2024, og endringen i areal mellom bebygd og hver av de andre økosystemtypene fra 2017 til 2024. Den eneste kilden til SSB-tall på sidene. SSB publiserer tabellene 25. november 2026. Til da er tallene syntetiske og lages i sølv av SSBs arealstatistikk (tabell 09594) med faste tommelfingerregler, i den samme formen. Arealstatistikken brukes ikke til noe annet. Når tabellene kommer, byttes bronse og sølv ut, og gull og sidene står.'
   },
   utbyggingsareal: {
     navn: 'Areal satt av til framtidig utbygging i kommuneplanen',
@@ -373,32 +363,17 @@ export const katalog = {
       nokkel: ([t, id]) => `${t}/${id}`,
       etl: mdirNatur.temaegenskaper
     }),
-    arealtall: tabell({
-      lag: 'bronse',
-      navn: 'arealtall',
-      datasett: DATASETT.ssb,
-      innhold:
-        'Ett svar per kommune med arealet i km² for hver arealklasse og SSBs summer for jordbruk og skog, i hvert år fra 2017.',
-      endepunkt: E.SSB,
-      tittel: 'Arealtall fra SSB, JSON-stat',
-      om: 'arealet fra 2017 for hver av SSBs arealklasser for seg, med SSBs summer for jordbruk og skog, som JSON-stat',
-      forklaring:
-        'Arealklassene i tabell 09594 for kommunen fra 2017, med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen. Svarer ikke API-et, spørres det eldre (v0) om det samme.',
-      kilde: KILDE.ssb,
-      husk: 6,
-      etl: ssb.arealtall
-    }),
     arealAlle: tabell<void, solvSsbJson>({
       lag: 'bronse',
       navn: 'arealAlle',
-      datasett: DATASETT.ssb,
-      stotte: true,
-      innhold: 'Ett svar med arealet i km² for hver arealklasse for alle kommunene, i 2017 og 2024.',
+      datasett: DATASETT.naturregnskap,
+      innhold:
+        'Ett svar med SSBs arealstatistikk for alle kommunene i 2017 og 2024: arealet i km² for hver arealklasse i tabell 09594. Bare til å lage de syntetiske tallene.',
       endepunkt: E.SSB,
-      tittel: 'Arealtall fra SSB for alle kommuner, JSON-stat',
-      om: 'arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, som JSON-stat',
+      tittel: 'Arealstatistikk fra SSB for alle kommuner, JSON-stat',
+      om: 'arealet i 2017 og 2024 for hver av SSBs arealklasser for seg, for alle kommunene i ett kall, som JSON-stat. Brukes bare til å lage de syntetiske tallene for naturregnskapet.',
       forklaring:
-        'Det samme som arealtallene for én kommune, men for alle kommunene og bare 2017 og 2024: rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner.',
+        'Arealklassene i tabell 09594 for alle kommunene, bare 2017 og 2024: rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner. Svarer ikke API-et, spørres det eldre (v0) om det samme.',
       kilde: KILDE.ssb,
       husk: 1,
       etl: ssb.arealAlle
@@ -754,47 +729,16 @@ export const katalog = {
       etl: solvKommune.grense,
       lagret: solvKommune.lagretGrense
     }),
-    arealtall: tabell<string, solvSsb.Arealtall>({
-      lag: 'solv',
-      navn: 'arealtall',
-      datasett: DATASETT.ssb,
-      innhold:
-        'For kommunen: arealet i km² for hver av SSBs arealklasser i hvert år fra 2017, med navnet og klassen den regnes til (bebygd, jordbruk, natur eller vann), SSBs summer for jordbruk og skog, og om grensen trolig er flyttet i perioden.',
-      tittel: 'Arealtall fra SSB',
-      om: 'arealet per arealklasse hos SSB, hver for seg, i hvert år fra 2017, med SSBs summer for jordbruk og skog',
-      forklaring:
-        'Hver av SSBs arealklasser for seg, i km² per år fra 2017. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet. Summene per klasse og sammenligningen med 2017 regnes i gull.',
-      usikkerhet: [
-        'SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig over tid. Forskjeller mellom år er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der tallet står.',
-        'Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved deling.'
-      ],
-      husk: 6,
-      etl: solvSsb.arealtall
-    }),
-    arealdetaljerAlle: tabell<void, Record<string, solvSsb.Arealdetaljer>>({
-      lag: 'solv',
-      navn: 'arealdetaljerAlle',
-      datasett: DATASETT.ssb,
-      stotte: true,
-      innhold:
-        'For hver kommune: arealet i km² for hver av SSBs arealklasser i 2017 og 2024, og om grensen trolig er flyttet.',
-      tittel: 'Arealtall fra SSB for alle kommuner',
-      om: 'arealet per arealklasse hos SSB i 2017 og 2024 for alle kommunene, etter kommunenummer, i samme form som arealtallene',
-      forklaring:
-        'Svaret for alle kommunene delt opp per kommune. Avviker kommunens samlede areal med mer enn 0,5 % fra 2017 til 2024, er grensen trolig flyttet.',
-      husk: 1,
-      etl: solvSsb.arealdetaljerAlle
-    }),
     okosystemareal: tabell<void, solvNaturregnskap.Okosystemareal>({
       lag: 'solv',
       navn: 'okosystemareal',
       datasett: DATASETT.naturregnskap,
       innhold:
-        'For hver kommune: arealet i km² per økosystemtype i 2024, med kodene i SSBs klassifisering (01 til 12), og om tallene er syntetiske.',
+        'For hver kommune: arealet i km² per økosystemtype i 2024, med kodene i SSBs klassifisering (01 Bebygd og opparbeidet areal til 12 Hav), og om tallene er syntetiske.',
       tittel: 'Areal per økosystemtype (syntetisk)',
-      om: 'SYNTETISK til SSBs tabell kommer: arealet per økosystemtype i 2024 for alle kommunene, i formen til SSBs tabell. Laget av arealtallene fra SSB for alle kommuner og flaten til kommunene.',
+      om: 'SYNTETISK til SSBs tabell kommer: arealet per økosystemtype i 2024 for alle kommunene, i formen til SSBs tabell. Laget av SSBs arealstatistikk for alle kommuner og flaten til kommunene.',
       forklaring:
-        'SSBs arealklasser for 2024 oversettes til økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Marine ecosystems» (12); «Marine inlets and transitional waters» (10) er 0, fordi arealstatistikken ikke skiller fjordene ut. Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.',
+        'SSBs arealklasser for 2024 oversettes til økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med. Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.',
       usikkerhet: [
         'Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i grunnkartet.'
       ],
@@ -808,7 +752,7 @@ export const katalog = {
       innhold:
         'For hver kommune: arealet i km² fra hver av de andre økosystemtypene til bebygd, og fra bebygd til typen, fra 2017 til 2024, med kodene i SSBs klassifisering, og om tallene er syntetiske. De syntetiske tallene har også merknader om kommunegrensen er flyttet.',
       tittel: 'Endring mellom bebygd og de andre økosystemtypene (syntetisk)',
-      om: 'SYNTETISK til SSBs tabell kommer: endringen i areal mellom bebygd og hver av de andre økosystemtypene på land fra 2017 til 2024 for alle kommunene, i formen til SSBs tabell. Anslått av arealtallene fra SSB for alle kommuner.',
+      om: 'SYNTETISK til SSBs tabell kommer: endringen i areal mellom bebygd og hver av de andre økosystemtypene på land fra 2017 til 2024 for alle kommunene, i formen til SSBs tabell. Anslått av SSBs arealstatistikk for alle kommuner.',
       forklaring:
         'SSBs arealklasser for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet i 2017. Vann og hav er ikke med.',
       usikkerhet: [
@@ -1380,7 +1324,7 @@ export const katalog = {
       tittel: 'Hovedøkosystemer per kommune 2024',
       om: 'arealet per hovedøkosystem i grunnkartet i kommunen i 2024, lest av SSBs tabell over arealet per økosystemtype (solv.okosystemareal). Syntetisk så lenge tabellen i sølv er det. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
-        'Økosystemtypene hos SSB summeres til hovedøkosystemene i grunnkartet, med de samme navnene: «Marine inlets and transitional waters» og «Marine ecosystems» er havet.',
+        'Økosystemtypene hos SSB summeres til hovedøkosystemene i grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.',
       husk: 12,
       etl: gullNaturregnskap.okosystemfordeling
     }),
@@ -1459,8 +1403,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbredelse',
       tittel: 'Utbredelsen nå',
-      om: 'utbredelsen nå: landarealet, og arealet og andelen for hver klasse',
-      forklaring: 'Arealet for hver klasse i nyeste år, og andelen av landarealet.',
+      om: 'utbredelsen i 2024: landarealet, og arealet og andelen for hver klasse, fra SSBs tabell over arealet per økosystemtype (gull.okosystemfordeling). Syntetisk så lenge tabellen i sølv er det.',
+      forklaring:
+        'Økosystemtypene summert til bebygd, jordbruk og natur i 2024, og andelen av landarealet, som er summen av de tre.',
       husk: 6,
       etl: gullRegnskap.utbredelse
     }),
@@ -1468,8 +1413,9 @@ export const katalog = {
       lag: 'gull',
       navn: 'endring',
       tittel: 'Endring fra 2017',
-      om: 'forskjellen fra 2017 for hver klasse',
-      forklaring: 'Forskjellen fra 2017 til nyeste år for hver klasse.',
+      om: 'endringen fra 2017 til 2024 for hver klasse, fra SSBs tabell over endringen mellom bebygd og de andre økosystemtypene (gull.bebygdEndring). Syntetisk så lenge tabellen i sølv er det.',
+      forklaring:
+        'Bebygd øker med det som gikk fra de andre klassene til bebygd, og jordbruk og natur går ned med det samme. Kan årene ikke sammenlignes, gis bare årene.',
       husk: 6,
       etl: gullRegnskap.endring
     }),
@@ -1479,10 +1425,9 @@ export const katalog = {
       tittel: 'Regnskapsoppstillingen',
       om: 'regnskapsoppstillingen: areal ved start, netto endring og areal ved slutt',
       forklaring:
-        'Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA EA): inngående areal i 2017, netto endring og utgående areal i nyeste år, per klasse og med en sum for landarealet.',
+        'Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA EA): inngående areal i 2017, netto endring og utgående areal i 2024, per klasse og med en sum for landarealet. Utgående areal er arealet per økosystemtype summert, og inngående areal er det samme med det som gikk til og fra bebygd lagt tilbake.',
       usikkerhet: [
-        'Landarealet er ikke alltid det samme i de to årgangene, så netto endring går ikke alltid i null. Siden sier fra når det skjer.',
-        'Bare netto endring per klasse er kjent. Tilvekst og avgang hver for seg, og hva natur ble til, kommer først med SSBs egne tabeller over arealendringer.'
+        'Bare endringen mellom bebygd og de andre klassene er med. Endringer mellom jordbruk og natur, og i vann, er ikke med i SSBs tabell.'
       ],
       husk: 6,
       etl: gullRegnskap.oppstilling
@@ -1493,7 +1438,7 @@ export const katalog = {
       tittel: 'Land og vann',
       om: 'land, innsjø, elv og hav i kommunens flate',
       forklaring:
-        'Hav er kommunens flate minus landareal, innsjø og elv. SSB har klassen 23 «Sjøområde», men den er tom per kommune. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik mellom grense og statistikk, og kommunen vises uten hav.',
+        'Land, innsjø og elv kommer fra SSBs tabell over arealet per økosystemtype i 2024 (gull.okosystemfordeling). Hav er kommunens flate minus landareal, innsjø og elv. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik mellom grense og tabell, og kommunen vises uten hav.',
       husk: 6,
       etl: gullRegnskap.landOgVann
     }),

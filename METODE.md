@@ -287,8 +287,9 @@ kartet: `src/ui/kart/grunnkart.ts`. Dagens klasser per blokk og zoomet ut: `solv
 
 **Spørsmål.** Hvor mye natur, jordbruk og bebygd areal har kommunen, og er det mer eller mindre natur enn i 2017?
 
-**Kort fortalt.** Tallene er SSBs arealstatistikk. Natur, jordbruk og bebygd areal er SSBs arealklasser slått sammen til tre, og
-andelen er regnet av landarealet. Forskjellen fra 2017 er forskjellen mellom to årganger av statistikken, ikke målt endring.
+**Kort fortalt.** Tallene er SSBs tabeller for naturregnskapet: arealet per økosystemtype i 2024, slått sammen til natur, jordbruk
+og bebygd, og endringen mellom bebygd og de andre fra 2017. Andelen er regnet av landarealet. Til SSB publiserer tabellene 25.
+november 2026, er tallene syntetiske, laget av SSBs arealstatistikk med faste tommelfingerregler.
 
 **Tabeller.** Kortet viser `gull.utbredelse`, `gull.endring` og `gull.oppstilling`. Det står i `src/ui/komponenter/Regnskap.tsx`.
 
@@ -297,7 +298,9 @@ andelen er regnet av landarealet. Forskjellen fra 2017 er forskjellen mellom to 
 **Spørsmål.** Hvor mye areal hadde hver klasse i 2017 og nå, satt opp som et regnskap?
 
 **Kort fortalt.** Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og
-areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år. Regnskapet gjelder landarealet, så vann er ikke med.
+areal ved slutt. Arealet i 2024 er fra SSBs tabell over arealet per økosystemtype, og arealet i 2017 er det samme med det som gikk
+til og fra bebygd lagt tilbake. Regnskapet gjelder landarealet, så vann er ikke med. Tallene er syntetiske til SSB publiserer
+tabellene.
 
 **Tabeller.** Kortet viser `gull.oppstilling`. Det står i `src/ui/komponenter/Regnskap.tsx`.
 
@@ -305,33 +308,49 @@ areal ved slutt. Tallene er SSBs arealstatistikk for 2017 og nyeste år. Regnska
 
 **Spørsmål.** Hvordan fordeler kommunens flate seg på land, innsjø, elv og hav?
 
-**Kort fortalt.** Land, innsjø og elv er SSBs tall. Hav er det som blir igjen når de trekkes fra kommunens flate, som er arealet
-innenfor kommunegrensen fra Kartverket.
+**Kort fortalt.** Land, innsjø og elv er fra SSBs tabell over arealet per økosystemtype i 2024, syntetisk til SSB publiserer den.
+Hav er det som blir igjen når de trekkes fra kommunens flate, som er arealet innenfor kommunegrensen fra Kartverket.
 
 **Tabeller.** Kortet viser `gull.landOgVann`. Det står i `src/ui/komponenter/Regnskap.tsx`.
 
 ### Fra kilde til tall
 
-1. **Arealtall fra SSB, JSON-stat** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for kommunen fra 2017, med SSBs
-   sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen. Svarer ikke API-et, spørres det
-   eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Hver av SSBs arealklasser for seg, i km² per år
-   fra 2017. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet. Summene per klasse og
-   sammenligningen med 2017 regnes i gull.
-2. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+1. **Arealstatistikk fra SSB for alle kommuner, JSON-stat** (`bronse.arealAlle` → `solv.okosystemareal` →
+   `solv.okosystemendring`). Hentes fra `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for
+   alle kommunene, bare 2017 og 2024: rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner. Svarer
+   ikke API-et, spørres det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: SSBs arealklasser for 2024 oversettes til
+   økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
+   tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
+   Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark. Justeres: SSBs arealklasser
+   for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd
+   klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter
+   arealet i 2017. Vann og hav er ikke med.
+2. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
+   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
+   [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
+   Flaten til hver kommune fra den lagrede filen.
+3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-3. **Utbredelsen nå** (`gull.utbredelse`). Arealet for hver klasse i nyeste år, og andelen av landarealet.
-4. **Endring fra 2017** (`gull.endring`). Forskjellen fra 2017 til nyeste år for hver klasse.
-5. **Regnskapsoppstillingen** (`gull.oppstilling`). Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA
-   EA): inngående areal i 2017, netto endring og utgående areal i nyeste år, per klasse og med en sum for landarealet.
-6. **Land og vann** (`gull.landOgVann`). Hav er kommunens flate minus landareal, innsjø og elv. SSB har klassen 23 «Sjøområde»,
-   men den er tom per kommune. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik mellom grense og statistikk, og
-   kommunen vises uten hav.
+4. **Hovedøkosystemer per kommune 2024** (`gull.okosystemfordeling`). Økosystemtypene hos SSB summeres til hovedøkosystemene i
+   grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.
+5. **Utbredelsen nå** (`gull.utbredelse`). Økosystemtypene summert til bebygd, jordbruk og natur i 2024, og andelen av
+   landarealet, som er summen av de tre.
+6. **Endring mellom bebygd og landklassene 2017–2024** (`gull.bebygdEndring`). Økosystemtypene hos SSB summeres til landklassene i
+   grunnkartet, med de samme navnene. Om årene kan sammenlignes, kommer fra tabellen.
+7. **Endring fra 2017** (`gull.endring`). Bebygd øker med det som gikk fra de andre klassene til bebygd, og jordbruk og natur går
+   ned med det samme. Kan årene ikke sammenlignes, gis bare årene.
+8. **Regnskapsoppstillingen** (`gull.oppstilling`). Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA
+   EA): inngående areal i 2017, netto endring og utgående areal i 2024, per klasse og med en sum for landarealet. Utgående areal
+   er arealet per økosystemtype summert, og inngående areal er det samme med det som gikk til og fra bebygd lagt tilbake.
+9. **Land og vann** (`gull.landOgVann`). Land, innsjø og elv kommer fra SSBs tabell over arealet per økosystemtype i 2024
+   (gull.okosystemfordeling). Hav er kommunens flate minus landareal, innsjø og elv. Er resten mindre enn 0,5 km² eller 0,5 % av
+   flaten, er det avvik mellom grense og tabell, og kommunen vises uten hav.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
@@ -345,20 +364,19 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Usikkerhet
 
-- SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig
-  over tid. Forskjeller mellom år er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der
-  tallet står.
-- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved
-  deling.
-- Landarealet er ikke alltid det samme i de to årgangene, så netto endring går ikke alltid i null. Siden sier fra når det skjer.
-- Bare netto endring per klasse er kjent. Tilvekst og avgang hver for seg, og hva natur ble til, kommer først med SSBs egne
-  tabeller over arealendringer.
+- Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig
+  størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i
+  grunnkartet.
+- Syntetiske tall: arealet i to år, ikke målte overganger. SSB skriver at forskjellen mellom årgangene også kommer av bedre
+  kartlegging. Der grensen er flyttet siden 2017, er endringen mer usikker.
+- Bare endringen mellom bebygd og de andre klassene er med. Endringer mellom jordbruk og natur, og i vann, er ikke med i SSBs
+  tabell.
 - Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.
 
 ### Kode
 
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
-`src/data/gull/regnskap.ts`. Kortene: `src/ui/komponenter/Regnskap.tsx`.
+`src/data/bronse/ssb.ts`, `src/data/solv/naturregnskap.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
+`src/data/gull/naturregnskap.ts`, `src/data/gull/regnskap.ts`. Kortene: `src/ui/komponenter/Regnskap.tsx`.
 
 <!-- /forklaringer:ssb -->
 
@@ -372,8 +390,16 @@ eller periode, med areal i km². Feltet `syntetisk` sier at tallene er syntetisk
 (`src/data/gull/naturregnskap.ts`) og summerer kodene til hovedøkosystemene i grunnkartet, så sidene bruker de samme navnene. Når SSBs
 tabeller kommer, hentes de i bronse, og tabellene i sølv tolker dem i stedet for å lage dem. Gull og det som bygger på det, endres
 ikke. Det er et bevisst avvik fra regelen om at sølv bare tolker kildene: bronse og sølv er det som byttes ut, mens gull og sidene
-skal bestå. Tallene skal bare ha riktig størrelsesorden. Grunnkartet har ett hav, mens SSB skiller «Marine inlets and transitional
-waters» (10) fra «Marine ecosystems» (12). De syntetiske tallene legger hele havet i 12, og 10 er 0.
+skal bestå. Tallene skal bare ha riktig størrelsesorden. Grunnkartet har ett hav, mens SSB skiller «Bukter, kiler og tidevannsonen»
+(10) fra «Hav» (12). De syntetiske tallene legger hele havet i 12, og 10 er 0. Navnene er SSBs, på bokmål.
+
+Tabellene er den eneste kilden til SSB-tall på sidene. Også utbredelsesregnskapet, regnskapsoppstillingen og land og vann på
+hovedsiden regnes av dem (`gull/regnskap.ts`), og det samme gjør landarealet, som alle andelene av landarealet regnes av
+(`landareal` i `gull/felles.ts`). Arealstatistikken (tabell 09594) er bare en kilde i bronse (`bronse.arealAlle`), som de
+syntetiske tabellene lages av. Natur, jordbruk og bebygd i 2024 er økosystemtypene summert, og 2017 er det samme med det som gikk
+til og fra bebygd lagt tilbake. Endringen fra 2017 er derfor bare det som er gått til og fra bebygd, ikke forskjellen mellom to
+årganger av statistikken. «Uklassifisert ubebygd område» hos SSB er ikke med i noen økosystemtype, så landarealet er litt mindre
+enn summen av SSBs klasser på land.
 
 Begge lages av SSBs arealstatistikk (tabell 09594) alene, så de kan lages for alle kommunene av ett kall til SSB. Hovedøkosystemene
 er økosystemtypene på nivå 1 i grunnkartet (`HOVEDOKOSYSTEMER` i `src/data/solv/klasser.ts`). SSBs arealklasser oversettes til dem
@@ -717,13 +743,26 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
 
 ### Fra kilde til tall
 
-1. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
+1. **Arealstatistikk fra SSB for alle kommuner, JSON-stat** (`bronse.arealAlle` → `solv.okosystemareal`). Hentes fra
+   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for alle kommunene, bare 2017 og 2024:
+   rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner. Svarer ikke API-et, spørres det eldre (v0)
+   om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: SSBs arealklasser for 2024 oversettes til
+   økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
+   tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
+   Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
+2. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
+   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
+   [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
+   Flaten til hver kommune fra den lagrede filen.
+3. **Kommunegrensen, GeoJSON** (`bronse.kommunegrense` → `solv.grense`). Hentes fra
    `https://api.kartverket.no/kommuneinfo/v1/kommuner/{kommunenummer}/omrade`: Kommunegrensen som flate i UTM 33. Kilde:
    [Kartverket, Administrative enheter, kommuner
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-2. **Verneområder, GeoJSON** (`bronse.verneomrader` → `solv.verneomrader` → `solv.vernAndel` → `solv.verneformAndel`). Hentes fra
+4. **Verneområder, GeoJSON** (`bronse.verneomrader` → `solv.verneomrader` → `solv.vernAndel` → `solv.verneformAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/vern/MapServer/0/query`: Verneområdene i kommunen som flater i UTM 33,
    forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
    Naturvernområder](https://kartkatalog.geonorge.no/metadata/uuid/5857ec0a-8d2c-4cd8-baa2-0dc54ae213b4), NLOD 2.0. Justeres:
@@ -733,23 +772,16 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
    Arealet av verneområdene i kommunen regnes av den i gull (gull.vernAreal), og den brukes når verneområdene krysses med
    utbyggingen og detaljklassene. Justeres: Som verneområdene per rute, men delt på gruppene av verneformer. Hver gruppe regnes
    for seg, så et sted med flere verneformer er med i hver av dem. Brukes når det vernede arealet deles på land og sjø.
-3. **Arealtall fra SSB, JSON-stat** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for kommunen fra 2017, med SSBs
-   sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen. Svarer ikke API-et, spørres det
-   eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Hver av SSBs arealklasser for seg, i km² per år
-   fra 2017. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet. Summene per klasse og
-   sammenligningen med 2017 regnes i gull.
-4. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
+5. **Arealklasser fra grunnkartet, kartbilder med detaljklassene** (`bronse.detaljflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av grunnkartet med 19 klasser: skogen delt etter treslag og
    underlag (tresatt myr og tresatt innmarksbeite), jordbruket i dyrket mark og grasmark, og naturen ellers etter økosystemtype.
    Hver klasse i sin farge, med 24 bit farge. Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
    2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
-5. **Arealklasser fra grunnkartet, kartbilder med klassene** (`bronse.grunnkartflis`). Hentes fra
+6. **Arealklasser fra grunnkartet, kartbilder med klassene** (`bronse.grunnkartflis`). Hentes fra
    `https://wms.nibio.no/cgi-bin/grunnkart_arealanalyse`: Kartbilder av dagens arealklasser, 512 × 512 piksler per flis, i egen
    stil uten kantstrek (se Arealklassene). Kilde: [NIBIO, Nasjonalt grunnkart for arealanalyse, årsversjon
    2025](https://kartkatalog.geonorge.no/metadata/uuid/28c28e3a-d88f-4a34-8c60-5efe6d56a44d), Norge digitalt begrenset.
-6. **Villreinområder, GeoJSON** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
+7. **Villreinområder, GeoJSON** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/villrein/MapServer/1/query`: Leveområdene for villrein i kommunen som
    flater i UTM 33, forenklet med 20 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
    Villreinområder](https://kartkatalog.geonorge.no/metadata/uuid/fc59e9a4-59df-4eb3-978a-1c173b84bf4e), NLOD 2.0. Justeres:
@@ -758,7 +790,7 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
    bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang.
    Arealet av villreinområdene regnes av den i gull (gull.villreinAreal), og den brukes når villreinområdene krysses med
    utbyggingen, grått areal og inngrepsfri natur.
-7. **Verdsatt natur, GeoJSON** (`bronse.verdsattNatur` → `solv.verdsattNatur` → `solv.verdsattAndel` → `solv.vurderesAndel`).
+8. **Verdsatt natur, GeoJSON** (`bronse.verdsattNatur` → `solv.verdsattNatur` → `solv.verdsattAndel` → `solv.vurderesAndel`).
    Hentes fra `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_kuverdi/MapServer/0/query`: Naturtyper med svært
    stor, stor, middels eller noe verdi, og de som skal vurderes per lokalitet eller per naturtype eller ikke er gitt verdi, i
    kommunen, som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
@@ -773,7 +805,7 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
    Hvor stor del av hver rute som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene
    slås sammen i rutene, så der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller «vurderes per lokalitet»
    først. Arealet per kategori regnes av den i gull (gull.vurderesAreal).
-8. **Kartlagt for naturtyper, GeoJSON** (`bronse.kartlagt` → `solv.kartlagt` → `solv.kartlagtAndel`). Hentes fra
+9. **Kartlagt for naturtyper, GeoJSON** (`bronse.kartlagt` → `solv.kartlagt` → `solv.kartlagtAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_nin/MapServer/1/query`: Dekningsflatene for
    naturtypekartlegging etter Miljødirektoratets instruks rundt kommunen, forenklet med 10 meter, side for side når de ikke kommer
    i ett svar. Kilde: [Miljødirektoratet, Naturtyper på land (NiN),
@@ -784,71 +816,73 @@ lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) 
    kom (solv.kartlagt). Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang. Arealet som er kartlagt,
    regnes av den i gull (gull.kartlagtAreal), og den brukes til hvor mye av planlagt utbygging på natur som ligger utenfor det
    kartlagte.
-9. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
-   kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
-   leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
-   uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
-   kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser, også
-   zoomet inn, så hver piksel er den samme klassen i alle lagene.
-10. **Areal av verneområdene** (`gull.vernAreal`). Andelen av hver rute som ligger i et verneområde og i kommunen, summeres bit
+10. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
+    kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
+    leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
+    uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
+    kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser,
+    også zoomet inn, så hver piksel er den samme klassen i alle lagene.
+11. **Hovedøkosystemer per kommune 2024** (`gull.okosystemfordeling`). Økosystemtypene hos SSB summeres til hovedøkosystemene i
+    grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.
+12. **Areal av verneområdene** (`gull.vernAreal`). Andelen av hver rute som ligger i et verneområde og i kommunen, summeres bit
     for bit og rettes for målestokken i biten (solv.vernAndel). Summen ganger arealet av en rute (10,6 × 10,6 meter) er arealet.
     Områdene er slått sammen i rutene, så der to områder overlapper, telles overlappet én gang.
-11. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (gull.vernAreal), så der to områder
+13. **Verneområder** (`gull.verneomrader`). Arealet i kommunen er verneområdene slått sammen (gull.vernAreal), så der to områder
     overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
-12. **Oppslag i områdene** (`gull.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i
+14. **Oppslag i områdene** (`gull.naturoppslag`). Hvert område får et oppslag som gir hvor stor del av en rute som ligger i
     flaten, med de samme fire delradene som dekningsandelen. Det lages første gang planlagt utbygging kan ligge i området. Det er
     ingen ruter i oppslaget, så svaret er det samme hvor stort området er.
-13. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-14. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
+15. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+16. **Utbyggingen i verneområder** (`gull.utbyggingIVerneomrader`), **Utbyggingen i villreinområder** (`gull.utbyggingIVillrein`)
     og **Utbyggingen i verdsatt natur** (`gull.utbyggingIVerdsattNatur`). For hver rute med planlagt utbygging: hvor stor del av
     ruta som ligger i temaet og i kommunen, fra dekningsandelen i sølv (der områder overlapper, telles delen én gang), og hvor
     stor del som ligger i hvert område, regnet med de samme fire delradene i flaten til området. Det gir kolonner i utbyggingen.
-15. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
+17. **Verneområder i planen** (`gull.verneomraderIPlan`), **Villreinområder i planen** (`gull.villreinIPlan`) og **Verdsatt natur
     i planen** (`gull.verdsattNaturIPlan`). Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og
     for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område
     regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.
-16. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
+18. **Vernet areal på land og i sjø** (`gull.vernLandSjo`). Hvor mye av det vernede som ligger på land og hvor mye i sjø, per
     verneform. Hver rute teller med den delen av den som ligger i verneområdene, og grunnkartet sier om ruta er hav. Et sted med
     flere verneformer telles i hver av dem, så hver verneform har hele arealet sitt. Det som er telt mer enn én gang, står for
     seg: gruppene minus det gir det vernede arealet, der overlapp telles én gang. Ruter uten klasse i grunnkartet er ikke med.
-17. **Areal av villreinområdene** (`gull.villreinAreal`). Andelen av hver rute som ligger i et villreinområde og i kommunen,
+19. **Areal av villreinområdene** (`gull.villreinAreal`). Andelen av hver rute som ligger i et villreinområde og i kommunen,
     summeres bit for bit og rettes for målestokken i biten (solv.villreinAndel). Summen ganger arealet av en rute (10,6 × 10,6
     meter) er arealet. Der to områder overlapper, telles overlappet én gang.
-18. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (gull.villreinAreal), så der to
+20. **Villreinområder** (`gull.villrein`). Arealet i kommunen er villreinområdene slått sammen (gull.villreinAreal), så der to
     områder overlapper, telles overlappet én gang. Andelen er regnet av landarealet. Arealet per område i listen er hele området i
     kommunen.
-19. **Areal av verdsatt natur** (`gull.verdsattAreal`). Andelen av hver rute som ligger i en lokalitet og i kommunen, per
+21. **Areal av verdsatt natur** (`gull.verdsattAreal`). Andelen av hver rute som ligger i en lokalitet og i kommunen, per
     verdikategori, summeres bit for bit og rettes for målestokken i biten (solv.verdsattAndel). Summen ganger arealet av en rute
     er arealet. Der lokaliteter overlapper, telles overlappet én gang, i den høyeste verdien.
-20. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori (gull.verdsattAreal), der overlapp telles én
+22. **Verdsatt natur** (`gull.verdsattNatur`). Arealet samlet og per verdikategori (gull.verdsattAreal), der overlapp telles én
     gang og den høyeste verdien teller, antall lokaliteter per kategori, og andelen av landarealet.
-21. **Areal av det kartlagte** (`gull.kartlagtAreal`). Andelen av hver rute som er kartlagt og ligger i kommunen, summeres bit for
+23. **Areal av det kartlagte** (`gull.kartlagtAreal`). Andelen av hver rute som er kartlagt og ligger i kommunen, summeres bit for
     bit og rettes for målestokken i biten (solv.kartlagtAndel). Summen ganger arealet av en rute er arealet. Der dekningsflater
     overlapper, telles overlappet én gang.
-22. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Kryssingen av verdsatt natur og det kartlagte:
+24. **Verdsatt natur i det kartlagte** (`gull.verdsattNaturIKartlagt`). Kryssingen av verdsatt natur og det kartlagte:
     lokalitetene med fast verdi legges i rutene med både kommunen og dekningsflatene som masker, så bare det som ligger i begge,
     telles, og arealet per verdikategori regnes av rutene. Der lokaliteter overlapper, teller den høyeste verdien.
-23. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
+25. **Kartleggingen** (`gull.verdsattNaturKartlagt`). Kartleggingsgraden er det kartlagte arealet delt på landarealet fra SSB, og
     vises som høyst 100 %. Helhetsbildet deler landarealet i kartlagt og ikke kartlagt, og viser verdsatt natur per verdi i hver
     del.
-24. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
+26. **Utbygging utenfor det kartlagte** (`gull.utbyggingUtenforKartlagt`). Rutene med planlagt utbygging på natur, uten smale
     striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte
     (solv.kartlagtAndel), er ikke kartlagt.
-25. **Areal av verdsatt natur uten fast verdi** (`gull.vurderesAreal`). Som arealet av verdsatt natur, av solv.vurderesAndel. Der
+27. **Areal av verdsatt natur uten fast verdi** (`gull.vurderesAreal`). Som arealet av verdsatt natur, av solv.vurderesAndel. Der
     lokaliteter overlapper, telles overlappet én gang, i den første kategorien.
-26. **Verdsatt natur uten fast verdi** (`gull.verdsattVurderes`). Lokalitetene uten fast verdi fra verdsatt natur
+28. **Verdsatt natur uten fast verdi** (`gull.verdsattVurderes`). Lokalitetene uten fast verdi fra verdsatt natur
     (solv.verdsattNatur). Arealet per kategori regnes som for verdsatt natur (gull.vurderesAreal), så overlapp telles én gang.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
+- **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
+  ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Lagrede kommunegrenser, register** (`bronse.grenseregister`). Hentes fra `kommunegrenser.json`: Kommunene som har grensen og
   andelen per rute lagret sammen med siden.
 - **Lagrede kommunegrenser, filer** (`bronse.grensefil`). Hentes fra `kommunegrenser/{kommunenummer}.json`: Kommunegrensen som
   flerflate i UTM 33, med utsnittet og flaten i km², laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så
   ingenting må hentes fra Kartverket.
-- **Fylker og kommuner** (`bronse.kommuner`). Hentes fra `kommuner.json`: Listen over fylker og kommuner med nummer og navn. Den
-  ligger lagret sammen med siden, og hentes fra Kartverket hvis den mangler.
 - **Lagret andel per rute** (`bronse.andelfil`). Hentes fra `kommunegrenser/{kommunenummer}-andel.bin.gz`: Hvor stor del av hver
   rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når
   kommunen velges.
@@ -875,11 +909,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Usikkerhet
 
-- SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig
-  over tid. Forskjeller mellom år er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der
-  tallet står.
-- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved
-  deling.
+- Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig
+  størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i
+  grunnkartet.
 - Verneområder kan ligge i sjø og innsjøer, men andelen regnes av landarealet. I kystkommuner kan den bli høy, og over 100 %, for
   eksempel på Frøya.
 - Arealet er talt i ruter på 10,6 meter og kan avvike litt fra arealet av flatene. Grensen mellom land og sjø er grunnkartets, som
@@ -891,10 +923,10 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
 ### Kode
 
-`src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`,
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/bronse/nibio-grunnkart.ts`, `src/data/solv/grunnkart.ts`,
-`src/data/gull/temaer.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/utbygging.ts`. Kortene:
-`src/ui/komponenter/Naturtema.tsx`.
+`src/data/bronse/ssb.ts`, `src/data/solv/naturregnskap.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
+`src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/bronse/nibio-grunnkart.ts`,
+`src/data/solv/grunnkart.ts`, `src/data/gull/naturregnskap.ts`, `src/data/gull/temaer.ts`, `src/data/gull/grunnkart.ts`,
+`src/data/gull/utbygging.ts`. Kortene: `src/ui/komponenter/Naturtema.tsx`.
 
 <!-- /forklaringer:natur -->
 
@@ -934,20 +966,28 @@ samme rutene, av kartene for 1988, 2008, 2013 og 2018. Inngrepsfri natur krysses
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-3. **Arealtall fra SSB, JSON-stat** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for kommunen fra 2017, med SSBs
-   sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen. Svarer ikke API-et, spørres det
-   eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Hver av SSBs arealklasser for seg, i km² per år
-   fra 2017. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet. Summene per klasse og
-   sammenligningen med 2017 regnes i gull.
-4. **Areal av inngrepsfri natur** (`gull.inonAreal`). Rutene i kommunen telles per sone, bit for bit, for året. En rute langs
+3. **Arealstatistikk fra SSB for alle kommuner, JSON-stat** (`bronse.arealAlle` → `solv.okosystemareal`). Hentes fra
+   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for alle kommunene, bare 2017 og 2024:
+   rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner. Svarer ikke API-et, spørres det eldre (v0)
+   om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: SSBs arealklasser for 2024 oversettes til
+   økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
+   tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
+   Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
+4. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
+   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
+   [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
+   Flaten til hver kommune fra den lagrede filen.
+5. **Areal av inngrepsfri natur** (`gull.inonAreal`). Rutene i kommunen telles per sone, bit for bit, for året. En rute langs
    grensen telles med den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten.
    Antall ruter ganger arealet av en rute (10,6 × 10,6 meter) er arealet, rundet til 10 dekar per sone. Hvert år telles i de samme
    rutene.
-5. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
+6. **Hovedøkosystemer per kommune 2024** (`gull.okosystemfordeling`). Økosystemtypene hos SSB summeres til hovedøkosystemene i
+   grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.
+7. **Inngrepsfri natur** (`gull.inon`). Antall ruter per sone regnes om til areal, avrundet til nærmeste 10 dekar som SSBs tall,
    og andelen av landarealet regnes ut.
-6. **Inngrepsfri natur over tid** (`gull.inonUtvikling`). Hvert år telles på samme måte og i de samme rutene som nyeste år, av
+8. **Inngrepsfri natur over tid** (`gull.inonUtvikling`). Hvert år telles på samme måte og i de samme rutene som nyeste år, av
    Miljødirektoratets kart for det året. Endringen i inngrepsnær natur er det inngrepsfri natur mister. Regnes først når siden for
    inngrepsfri natur vises, fordi den henter fire ganger så mange bilder.
 
@@ -975,11 +1015,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 - I kartet får bare klassen natur sonefarge.
 - Alle årene er fra Miljødirektoratets utgave fra april 2024. Neste status gjelder 2028, og kan endre tallene for de tidligere
   årene. Den første perioden er 20 år, de andre fem.
-- SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig
-  over tid. Forskjeller mellom år er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der
-  tallet står.
-- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved
-  deling.
+- Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig
+  størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i
+  grunnkartet.
 - Arealet gjelder alt innenfor sonene, også innsjøer, mens andelen regnes av landarealet.
 - Alle årene er fra Miljødirektoratets utgave fra april 2024, og kan sammenlignes. Neste status gjelder 2028, og kan endre tallene
   for de tidligere årene.
@@ -989,7 +1027,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 ### Kode
 
 `src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/gull/inon.ts`. Kortet: `src/ui/komponenter/Inon.tsx`.
+`src/data/bronse/ssb.ts`, `src/data/solv/naturregnskap.ts`, `src/data/gull/inon.ts`, `src/data/gull/naturregnskap.ts`. Kortet:
+`src/ui/komponenter/Inon.tsx`.
 
 <!-- /forklaringer:inon -->
 
@@ -1024,24 +1063,32 @@ grått areal er gjenbruk av areal som alt er tatt i bruk.
    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
    Kommunens flate i km², rettet for målestokken i UTM (se Felles grunnlag). For noen kommuner ligger svaret lagret sammen med
    siden (bronse.grensefil).
-3. **Arealtall fra SSB, JSON-stat** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for kommunen fra 2017, med SSBs
-   sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen. Svarer ikke API-et, spørres det
-   eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Hver av SSBs arealklasser for seg, i km² per år
-   fra 2017. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet. Summene per klasse og
-   sammenligningen med 2017 regnes i gull.
-4. **Areal av grått areal** (`gull.graaAreal`). Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med
+3. **Arealstatistikk fra SSB for alle kommuner, JSON-stat** (`bronse.arealAlle` → `solv.okosystemareal`). Hentes fra
+   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for alle kommunene, bare 2017 og 2024:
+   rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner. Svarer ikke API-et, spørres det eldre (v0)
+   om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: SSBs arealklasser for 2024 oversettes til
+   økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
+   tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
+   Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.
+4. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
+   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
+   [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
+   Flaten til hver kommune fra den lagrede filen.
+5. **Areal av grått areal** (`gull.graaAreal`). Rutene i kommunen telles per trinn, bit for bit. En rute langs grensen telles med
    den delen av den som ligger i kommunen (solv.kommunebiter), og alle er rettet for målestokken i biten. Antall ruter ganger
    arealet av en rute (10,6 × 10,6 meter) er arealet, rundet til 10 dekar per trinn.
-5. **Grått areal** (`gull.graa`). Arealet per trinn og samlet, avrundet til nærmeste 10 dekar som SSBs tall, og andelen av
+6. **Hovedøkosystemer per kommune 2024** (`gull.okosystemfordeling`). Økosystemtypene hos SSB summeres til hovedøkosystemene i
+   grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.
+7. **Grått areal** (`gull.graa`). Arealet per trinn og samlet, avrundet til nærmeste 10 dekar som SSBs tall, og andelen av
    landarealet.
-6. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
-7. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Midtpunktet i hver rute med planlagt utbygging på land slås opp i
+8. **Utbyggingen** (`gull.utbygging`). Forklart under [Planlagt utbygging](#planlagt-utbygging).
+9. **Grått areal krysset med utbyggingen** (`gull.graakryss`). Midtpunktet i hver rute med planlagt utbygging på land slås opp i
    bildet av grått areal. Her er alle ruter med, også der det alt er bebygd og i smale striper. Grønt i bebygd område er ruter som
    er bebygd i grunnkartet, men ikke grå.
-8. **Grått areal i planen** (`gull.graaIPlan`). Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon
-   (trinnene fra 50 % og opp), og på grønt i bebygd område.
+10. **Grått areal i planen** (`gull.graaIPlan`). Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon
+    (trinnene fra 50 % og opp), og på grønt i bebygd område.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
 
@@ -1063,11 +1110,9 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 ### Usikkerhet
 
 - Kartet er en testversjon. Andel bygninger er ikke brukt, fordi tjenesten oppga 0 for alle flater som ble slått opp.
-- SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig
-  over tid. Forskjeller mellom år er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der
-  tallet står.
-- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved
-  deling.
+- Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig
+  størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i
+  grunnkartet.
 - Grått betyr ikke ledig. Kartet skiller ikke et boligområde i bruk fra en nedlagt industritomt.
 - Totalen for planlagt utbygging på land er større enn tallet for planlagt utbygging på natur og jordbruk, fordi den også tar med
   ruter som alt er bebygd, og smale striper.
@@ -1075,7 +1120,8 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
 ### Kode
 
 `src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`, `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`,
-`src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`, `src/data/gull/graa.ts`. Kortet: `src/ui/komponenter/Graa.tsx`.
+`src/data/bronse/ssb.ts`, `src/data/solv/naturregnskap.ts`, `src/data/gull/graa.ts`, `src/data/gull/naturregnskap.ts`. Kortet:
+`src/ui/komponenter/Graa.tsx`.
 
 <!-- /forklaringer:graa -->
 
@@ -1234,14 +1280,23 @@ ned mest.
    bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang.
    Arealet av verneområdene i kommunen regnes av den i gull (gull.vernAreal), og den brukes når verneområdene krysses med
    utbyggingen og detaljklassene.
-5. **Arealtall fra SSB, JSON-stat** (`bronse.arealtall` → `solv.arealtall`). Hentes fra
-   `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for kommunen fra 2017, med SSBs
-   sammenslåtte tidsserier, så tallene gjelder dagens kommune også der kommuner er slått sammen. Svarer ikke API-et, spørres det
-   eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Hver av SSBs arealklasser for seg, i km² per år
-   fra 2017. Avviker kommunens samlede areal med mer enn 0,5 % i perioden, er grensen trolig flyttet. Summene per klasse og
-   sammenligningen med 2017 regnes i gull.
-6. **Villreinområder, GeoJSON** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
+5. **Arealstatistikk fra SSB for alle kommuner, JSON-stat** (`bronse.arealAlle` → `solv.okosystemareal` →
+   `solv.okosystemendring`). Hentes fra `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Arealklassene i tabell 09594 for
+   alle kommunene, bare 2017 og 2024: rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder dagens kommuner. Svarer
+   ikke API-et, spørres det eldre (v0) om det samme. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
+   arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: SSBs arealklasser for 2024 oversettes til
+   økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og
+   tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med.
+   Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark. Justeres: SSBs arealklasser
+   for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd
+   klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter
+   arealet i 2017. Vann og hav er ikke med.
+6. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
+   kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
+   [Kartverket, Administrative enheter, kommuner
+   (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
+   Flaten til hver kommune fra den lagrede filen.
+7. **Villreinområder, GeoJSON** (`bronse.villrein` → `solv.villrein` → `solv.villreinAndel`). Hentes fra
    `https://kart.miljodirektoratet.no/arcgis/rest/services/villrein/MapServer/1/query`: Leveområdene for villrein i kommunen som
    flater i UTM 33, forenklet med 20 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet,
    Villreinområder](https://kartkatalog.geonorge.no/metadata/uuid/fc59e9a4-59df-4eb3-978a-1c173b84bf4e), NLOD 2.0. Justeres:
@@ -1250,69 +1305,54 @@ ned mest.
    bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de overlapper, telles arealet én gang.
    Arealet av villreinområdene regnes av den i gull (gull.villreinAreal), og den brukes når villreinområdene krysses med
    utbyggingen, grått areal og inngrepsfri natur.
-7. **Inngrepsfri natur, kartbilder** (`bronse.inonbit` → `solv.inonbit`). Hentes fra
+8. **Inngrepsfri natur, kartbilder** (`bronse.inonbit` → `solv.inonbit`). Hentes fra
    `https://kart.miljodirektoratet.no/geoserver/inngrepsfrinatur/wms`: Ett bilde per bit og år, med ruter på 10,6 meter, uten
    glatting av kantene: laget status for 2023, og status_1988, status_2008, status_2013 og status_2018 for de tidligere årene, med
    de samme fargene. En bit er 21,7 km på hver side, og kommunen hentes i så mange biter som trengs. Kilde: [Miljødirektoratet,
    Inngrepsfri natur i Norge](https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b), NLOD 2.0.
    Justeres: En rute som er minst halvt dekket, får sonen fargen ligger nærmest: sone 2 (1–3 km fra inngrep), sone 1 (3–5 km)
    eller villmarkspreget (minst 5 km). Alle årene tolkes likt.
-8. **Grått areal, kartbilder** (`bronse.graabit` → `solv.graabit`). Hentes fra `https://wms.nibio.no/cgi-bin/graastruktur`: To
+9. **Grått areal, kartbilder** (`bronse.graabit` → `solv.graabit`). Hentes fra `https://wms.nibio.no/cgi-bin/graastruktur`: To
    bilder per bit i egen stil uten kantstrek, med ruter på 10,6 meter: alt grått areal, og flatene med andel vegetasjon, der
    trinnet leses av fargen. De hentes hver for seg, så fargene ikke blandes langs kantene. En bit er 21,7 km på hver side, og
    kommunen hentes i så mange biter som trengs. Kilde: [NIBIO, Miljødirektoratet, Kartverket og SSB, Kart over grå arealer,
    testversjon 1 (2025)](https://kartkatalog.geonorge.no/metadata/uuid/c5f09d79-1546-495c-8b36-91efd4008bd7), Norge
    digitalt-lisensen. Justeres: En rute som er minst halvt dekket, får et trinn etter andel vegetasjon: under 1 %, 1–25, 25–50,
    50–75 eller 75–100 %, og grått uten oppgitt andel, som veier, for seg.
-9. **Verdsatt natur, GeoJSON** (`bronse.verdsattNatur` → `solv.verdsattNatur` → `solv.verdsattAndel`). Hentes fra
-   `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_kuverdi/MapServer/0/query`: Naturtyper med svært stor, stor,
-   middels eller noe verdi, og de som skal vurderes per lokalitet eller per naturtype eller ikke er gitt verdi, i kommunen, som
-   flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet, Naturtyper –
-   verdsatte (naturtyper med KU-verdi)](https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314), NLOD
-   2.0. Justeres: Lokalitetene klippes mot kommunegrensen, og arealet av hver lokalitet i kommunen regnes ut. Bare lokalitetene
-   kanten av kommunen går gjennom, klippes; de andre ligger helt inne. De sorteres med høyest verdi først og så etter areal.
-   Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter. Justeres: Hvor stor del av hver rute som ligger i
-   temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så der de
-   overlapper, telles arealet én gang. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet viser det. Arealet per
-   verdikategori regnes av den i gull (gull.verdsattAreal), og den brukes når verdsatt natur krysses med utbyggingen.
-10. **Arealtall fra SSB for alle kommuner, JSON-stat** (`bronse.arealAlle` → `solv.arealdetaljerAlle` → `solv.okosystemendring` →
-    `solv.okosystemareal`). Hentes fra `https://data.ssb.no/api/pxwebapi/v2/tables/09594/data`: Det samme som arealtallene for én
-    kommune, men for alle kommunene og bare 2017 og 2024: rundt 100 kB. Med SSBs sammenslåtte tidsserier, så tallene gjelder
-    dagens kommuner. Kilde: [Statistisk sentralbyrå (SSB), tabell 09594, Arealbruk og
-    arealressurser](https://www.ssb.no/statbank/table/09594), CC BY 4.0. Justeres: Svaret for alle kommunene delt opp per kommune.
-    Avviker kommunens samlede areal med mer enn 0,5 % fra 2017 til 2024, er grensen trolig flyttet. Justeres: SSBs arealklasser
-    for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd
-    klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter
-    arealet i 2017. Vann og hav er ikke med. Justeres: SSBs arealklasser for 2024 oversettes til økosystemtypene med en fast
-    nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Marine ecosystems» (12); «Marine inlets and
-    transitional waters» (10) er 0, fordi arealstatistikken ikke skiller fjordene ut. Kyststrender, svaberg og dyner er 0,1 % av
-    havet, tatt fra hei og buskmark og lite vegetert mark.
-11. **Flaten til kommunene** (`bronse.kommuneareal` → `solv.kommuneareal`). Hentes fra `kommuneareal.json`: Flaten innenfor hver
-    kommunegrense, rettet for målestokken i UTM 33, som solv.grense gir for én kommune. Laget av verktoy/kommuneareal.ts. Kilde:
-    [Kartverket, Administrative enheter, kommuner
-    (Kommuneinfo-API-et)](https://kartkatalog.geonorge.no/metadata/041f1e6e-bdbc-4091-b48f-8a5990f3cc5b), CC BY 4.0. Justeres:
-    Flaten til hver kommune fra den lagrede filen.
-12. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
+10. **Verdsatt natur, GeoJSON** (`bronse.verdsattNatur` → `solv.verdsattNatur` → `solv.verdsattAndel`). Hentes fra
+    `https://kart.miljodirektoratet.no/arcgis/rest/services/naturtyper_kuverdi/MapServer/0/query`: Naturtyper med svært stor,
+    stor, middels eller noe verdi, og de som skal vurderes per lokalitet eller per naturtype eller ikke er gitt verdi, i kommunen,
+    som flater i UTM 33, forenklet med 5 meter, side for side når de ikke kommer i ett svar. Kilde: [Miljødirektoratet, Naturtyper
+    – verdsatte (naturtyper med KU-verdi)](https://kartkatalog.geonorge.no/metadata/uuid/64cbb884-a19d-4356-a114-380cfe4a7314),
+    NLOD 2.0. Justeres: Lokalitetene klippes mot kommunegrensen, og arealet av hver lokalitet i kommunen regnes ut. Bare
+    lokalitetene kanten av kommunen går gjennom, klippes; de andre ligger helt inne. De sorteres med høyest verdi først og så
+    etter areal. Feiler klippingen, regnes arealet med dekningsandelen i ruter på 10,6 meter. Justeres: Hvor stor del av hver rute
+    som ligger i temaet og i kommunen, regnet i bakgrunnstråden med fire delrader per ruterad. Flatene slås sammen i rutene, så
+    der de overlapper, telles arealet én gang. Der lokaliteter overlapper, teller den høyeste verdien, slik kartet viser det.
+    Arealet per verdikategori regnes av den i gull (gull.verdsattAreal), og den brukes når verdsatt natur krysses med utbyggingen.
+11. **Arealklasser fra grunnkartet** (`solv.klasser`). Klassen og detaljklassen per rute i fliser på 512 × 512 ruter, fra to
     kartbilder per flis (se Arealklassene). Klassen leses av fargen: det det er mest av, når fargen er en blanding. Detaljklassen
     leses på samme måte, innenfor klassen i ruta: hører den til en annen klasse, blir den «jordbruk, uspesifisert» eller «natur,
     uspesifisert», så detaljklassene summerer til klassene. Tallene regnes av blokkene på nivå 10 (10,6 meter), og for 57 og 59
     kommuner er klassene og detaljklassene lagret sammen med siden. Alle kartlagene tegnes av klassene på nivået kartet viser,
     også zoomet inn, så hver piksel er den samme klassen i alle lagene.
-13. **Areal per detaljklasse** (`gull.detaljareal`). Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og
+12. **Areal per detaljklasse** (`gull.detaljareal`). Arealet per detaljklasse i kommunen fra grunnkartet: barskog, lauvskog og
     blandingsskog, med tresatt myr og tresatt innmarksbeite for seg, åpen våtmark og de andre økosystemtypene. Er detaljklassene
     ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.
-14. **Skog i grunnkartet** (`gull.skog`). Skog er økosystemtypen skog i grunnkartet, også tresatt myr og tresatt innmarksbeite.
+13. **Skog i grunnkartet** (`gull.skog`). Skog er økosystemtypen skog i grunnkartet, også tresatt myr og tresatt innmarksbeite.
     Arealet summeres fra detaljklassene, og andelen er av landarealet i grunnkartet (alt unntatt hav, innsjøer og elver).
-15. **Våtmark i grunnkartet** (`gull.vatmark`). Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr,
+14. **Våtmark i grunnkartet** (`gull.vatmark`). Våtmark er økosystemtypen våtmark (åpen myr og annen åpen våtmark) og tresatt myr,
     som skissene regner med i våtmarken. Tresatt myr er dermed både skog og våtmark.
-16. **Areal per detaljklasse i verneområdene** (`gull.detaljerIVerneomrader`). Grunnkartets økosystemtyper i verneområdene: hvor
+15. **Areal per detaljklasse i verneområdene** (`gull.detaljerIVerneomrader`). Grunnkartets økosystemtyper i verneområdene: hvor
     mye av det vernede som er skog, våtmark, fjell, hav og så videre. Der verneområder overlapper, telles arealet én gang. Er
     detaljklassene ikke lagret for kommunen, hentes de fra NIBIO, ett kall per blokk.
-17. **Naturen i verneområdene** (`gull.vernetNatur`). Arealet per detaljklasse innenfor verneområdene, summert til økosystemtypene
+16. **Naturen i verneområdene** (`gull.vernetNatur`). Arealet per detaljklasse innenfor verneområdene, summert til økosystemtypene
     på nivå 1 og til land, sjø og ferskvann.
-18. **Verdsatt natur** (`gull.verdsattNatur`). Forklart under [Verdsatt natur](#verdsatt-natur).
-19. **Verdsatt natur per naturtype** (`gull.verdsattPerNaturtype`). Lokalitetene gruppert per naturtype. Arealet er summen av
+17. **Verdsatt natur** (`gull.verdsattNatur`). Forklart under [Verdsatt natur](#verdsatt-natur).
+18. **Verdsatt natur per naturtype** (`gull.verdsattPerNaturtype`). Lokalitetene gruppert per naturtype. Arealet er summen av
     lokalitetene, så overlapp telles flere ganger.
+19. **Hovedøkosystemer per kommune 2024** (`gull.okosystemfordeling`). Økosystemtypene hos SSB summeres til hovedøkosystemene i
+    grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.
 20. **Villreinområder** (`gull.villrein`). Forklart under [Villrein](#villrein).
 21. **Villreinområdene i kommunen** (`gull.villreinPerOmrade`). Hvert villreinområde med arealet i kommunen og andelen av
     landarealet hos SSB.
@@ -1354,17 +1394,15 @@ ned mest.
     (trinnene fra 50 % og opp), og på grønt i bebygd område.
 37. **Endring mellom bebygd og landklassene 2017–2024** (`gull.bebygdEndring`). Økosystemtypene hos SSB summeres til landklassene
     i grunnkartet, med de samme navnene. Om årene kan sammenlignes, kommer fra tabellen.
-38. **Hovedøkosystemer per kommune 2024** (`gull.okosystemfordeling`). Økosystemtypene hos SSB summeres til hovedøkosystemene i
-    grunnkartet, med de samme navnene: «Marine inlets and transitional waters» og «Marine ecosystems» er havet.
-39. **Kortene på oversikten** (`gull.oversiktKort`). Hovedøkosystemene summert til natur, jordbruk og bebygd, og endringen mellom
+38. **Kortene på oversikten** (`gull.oversiktKort`). Hovedøkosystemene summert til natur, jordbruk og bebygd, og endringen mellom
     bebygd og de andre summert på samme måte.
-40. **Nedbygd per landklasse 2017–2024** (`gull.nedbygging`). Arealet fra hver landklasse til bebygd, med andelen av arealet
+39. **Nedbygd per landklasse 2017–2024** (`gull.nedbygging`). Arealet fra hver landklasse til bebygd, med andelen av arealet
     klassen hadde i 2017.
-41. **Regnskap per hovedøkosystem 2017–2024** (`gull.okosystemregnskap`). Arealet i 2024 med det som gikk til og fra bebygd lagt
+40. **Regnskap per hovedøkosystem 2017–2024** (`gull.okosystemregnskap`). Arealet i 2024 med det som gikk til og fra bebygd lagt
     tilbake gir arealet i 2017. Summen for land er den samme begge år.
-42. **Hovedøkosystemer i alle kommuner** (`gull.okosystemerNorge`). Arealet per hovedøkosystem i 2024 og endringen mellom bebygd
+41. **Hovedøkosystemer i alle kommuner** (`gull.okosystemerNorge`). Arealet per hovedøkosystem i 2024 og endringen mellom bebygd
     og landklassene fra 2017, for hver kommune og for Norge, av tabellene i sølv (solv.okosystemareal og solv.okosystemendring).
-43. **Kommunen sammenlignet med Norge** (`gull.sammenligning`). Kommunen mot summen for Norge. Plassen er blant kommunene som kan
+42. **Kommunen sammenlignet med Norge** (`gull.sammenligning`). Kommunen mot summen for Norge. Plassen er blant kommunene som kan
     sammenlignes med 2017, der 1 bygget ned mest, etter areal og etter andel av arealet i 2017.
 
 Underveis brukes også hjelpetabeller som ikke endrer tallene:
@@ -1406,30 +1444,24 @@ Underveis brukes også hjelpetabeller som ikke endrer tallene:
   blir derfor for små.
 - Hovedsiden regner andelen av alt som er vernet, også i sjø, av landarealet hos SSB. Derfor er andelen der høyere i kommuner med
   vern i sjø.
-- SSB skriver at tabellen ikke kan brukes til å beregne arealendringer mellom årganger, fordi datagrunnlaget blir mer fullstendig
-  over tid. Forskjeller mellom år er derfor ikke målt endring, og noe av den kan skyldes bedre kartlegging. Siden sier det der
-  tallet står.
-- Har SSB ikke tall for kommunen i 2017, vises ikke sammenligningen. Det gjelder blant annet kommuner som ble opprettet ved
-  deling.
+- Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig
+  størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i
+  grunnkartet.
 - Kartet er en testversjon. Andel bygninger er ikke brukt, fordi tjenesten oppga 0 for alle flater som ble slått opp.
 - Villreinområdene er dagens grenser for alle årene.
 - Grått areal er areal som er tatt i bruk, ikke bare bygninger. Små inngrep under rutestørrelsen kommer ikke med.
 - Andelen vegetasjon gjelder hver flate i kartet over grå arealer, så en flate med 60 % vegetasjon telles helt med.
 - Syntetiske tall: arealet i to år, ikke målte overganger. SSB skriver at forskjellen mellom årgangene også kommer av bedre
   kartlegging. Der grensen er flyttet siden 2017, er endringen mer usikker.
-- Syntetiske tall: tommelfingerregler som står i stedet for SSBs tabell til den publiseres, og som bare skal gi riktig
-  størrelsesorden. SSBs tabell bygger på grunnkartet, som kan gi andre tall: i Trondheim er bebygd rundt 10 % større i
-  grunnkartet.
 
 ### Kode
 
 `src/data/bronse/kartverket.ts`, `src/data/solv/kommune.ts`, `src/data/bronse/nibio-grunnkart.ts`,
-`src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/bronse/ssb.ts`, `src/data/solv/ssb.ts`,
+`src/data/bronse/mdir-naturtema.ts`, `src/data/solv/temaer.ts`, `src/data/bronse/ssb.ts`, `src/data/solv/naturregnskap.ts`,
 `src/data/bronse/mdir-inon.ts`, `src/data/solv/inon.ts`, `src/data/bronse/nibio-graa.ts`, `src/data/solv/graa.ts`,
-`src/data/solv/naturregnskap.ts`, `src/data/solv/grunnkart.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/okosystemer.ts`,
-`src/data/gull/temaer.ts`, `src/data/gull/inon.ts`, `src/data/gull/graa.ts`, `src/data/gull/planlagt.ts`,
-`src/data/gull/naturregnskap.ts`, `src/data/gull/utbygging.ts`. Kortene: `srcFigma/sider/Temasider.tsx`,
-`srcFigma/sider/Hovedsider.tsx`.
+`src/data/solv/grunnkart.ts`, `src/data/gull/grunnkart.ts`, `src/data/gull/okosystemer.ts`, `src/data/gull/temaer.ts`,
+`src/data/gull/naturregnskap.ts`, `src/data/gull/inon.ts`, `src/data/gull/graa.ts`, `src/data/gull/planlagt.ts`,
+`src/data/gull/utbygging.ts`. Kortene: `srcFigma/sider/Temasider.tsx`, `srcFigma/sider/Hovedsider.tsx`.
 
 <!-- /forklaringer:tvilling -->
 
@@ -1626,6 +1658,21 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**De syntetiske tallene som eneste kilde til SSB-tall, 20. oktober 2026.** Arealstatistikken fra SSB brukes ikke lenger direkte
+noe sted på sidene. Den er bare en kilde i bronse (`bronse.arealAlle`, alle kommunene i 2017 og 2024), som tabellene for
+naturregnskapet lages av i sølv. Datasettet «Arealtall fra SSB» og hentingen per kommune er tatt bort. Hovedsidens
+utbredelsesregnskap, regnskapsoppstilling og land og vann regnes nå av de to tabellene for naturregnskapet, og det samme gjør
+landarealet. Tallene endres derfor:
+- Året er 2024, ikke nyeste år i statistikken (2026).
+- Endringen fra 2017 er det som er gått til og fra bebygd, ikke forskjellen mellom to årganger. Natur og jordbruk endres bare med det
+  som er bygget ned, og landarealet er det samme begge år.
+- Landarealet er summen av økosystemtypene på land i 2024. «Uklassifisert ubebygd område» er ikke med, så landarealet og alle
+  andelene av det endres litt.
+- Er grensen flyttet, regnes endringen likevel, med en merknad. Bare når kommunen ikke hadde areal i 2017, kan årene ikke
+  sammenlignes.
+Kortene merkes «Syntetiske tall». Økosystemtypene har fått navnene fra SSBs klassifisering på bokmål, fra SSBs API for
+klassifikasjoner (versjon 3599), og «Bukter, kiler og tidevannsonen» (10) står med sitt eget navn.
 
 **Arealtallene og naturregnskapet fra SSB som datasett, 20. oktober 2026.** Arealtallene fra SSB (tabell 09594) var fire hentinger
 og fire tabeller i sølv: nyeste år summert per klasse, 2017 og nå summert, hver arealklasse for seg fra 2017, og alle kommunene. Nå

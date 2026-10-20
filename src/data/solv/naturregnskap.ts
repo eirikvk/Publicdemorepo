@@ -3,16 +3,17 @@
    1. Arealet per økosystemtype i 2024 (solv.okosystemareal).
    2. Endringen i areal mellom bebygd og hver av de andre økosystemtypene fra 2017 til 2024 (solv.okosystemendring).
 
-   SSB publiserer tabellene 25. november 2026. Til da er tallene syntetiske, og de lages her, av SSBs arealstatistikk (tabell 09594,
-   solv.arealdetaljerAlle) og flaten til kommunene (solv.kommuneareal), med faste tommelfingerregler. Tallene skal bare ha riktig
+   Dette er den eneste kilden til SSB-tall på sidene. SSB publiserer tabellene 25. november 2026. Til da er tallene syntetiske, og de
+   lages her, av SSBs arealstatistikk (tabell 09594, bronse.arealAlle, tolket i ssb.ts) og flaten til kommunene (solv.kommuneareal),
+   med faste tommelfingerregler. Arealstatistikken brukes ikke til noe annet. Tallene skal bare ha riktig
    størrelsesorden. Det er et bevisst avvik fra regelen om at sølv bare tolker kildene: bronse og sølv er det som byttes ut når de ekte
    tallene kommer, mens gull og sidene skal bestå. Da hentes SSBs tabeller i bronse, og tabellene her tolker dem i stedet for å lage
    dem, i den samme formen. Feltet syntetisk sier hvilke tall som er syntetiske, så sidene kan si det.
 
    1. Arealet per økosystemtype (lagFordeling). SSBs arealklasser oversettes med den faste nøkkelen (ssbTilHovedokosystem i
       klasser.ts) til hovedøkosystemene i grunnkartet, og derfra til økosystemtypene hos SSB. Havet er resten av kommunens flate når
-      land og ferskvann er trukket fra, og står i sin helhet som «Marine ecosystems» (12), fordi arealstatistikken ikke skiller
-      fjordene ut (10 er 0). Kyststrender, svaberg og dyner er en fast andel av havet (KYST_AV_HAV), tatt fra hei og buskmark og lite
+      land og ferskvann er trukket fra, og står i sin helhet som «Hav» (12), fordi arealstatistikken ikke skiller ut «Bukter, kiler
+      og tidevannsonen» (10 er 0). «Uklassifisert ubebygd område» hos SSB er ikke med i noen økosystemtype. Kyststrender, svaberg og dyner er en fast andel av havet (KYST_AV_HAV), tatt fra hei og buskmark og lite
       vegetert mark.
    2. Arealet mellom bebygd og hver av de andre økosystemtypene på land (lagEndring), med en grådig tommelfingerregel: økningen i hver
       bebygd klasse hos SSB tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet. Vann og hav er ikke
@@ -22,7 +23,7 @@ import { summen, tiDekar } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { HAV_MIN_ANDEL, HAV_MIN_KM2 } from './felles.ts';
 import { HOVEDOKOSYSTEMER, OKOSYSTEMTYPER, ssbTilHovedokosystem } from './klasser.ts';
-import type { Arealdetaljer } from './ssb.ts';
+import { perKommune, type Arealdetaljer } from './ssb.ts';
 
 /* Kilden til de syntetiske tallene, slik sidene skal oppgi den */
 export const SYNTETISK =
@@ -75,8 +76,8 @@ function perHovedokosystem(D: Arealdetaljer, i: number) {
   });
   return m;
 }
-/* Arealet per hovedøkosystem i grunnkartet (m) som arealet per økosystemtype hos SSB, avrundet til 10 dekar. Havet står som
-   «Marine ecosystems» (12), og «Marine inlets and transitional waters» (10) er 0. */
+/* Arealet per hovedøkosystem i grunnkartet (m) som arealet per økosystemtype hos SSB, avrundet til 10 dekar. Havet står som «Hav»
+   (12), og «Bukter, kiler og tidevannsonen» (10) er 0. */
 const tilSsb = (m: Map<string, number>, koder = OKOSYSTEMTYPER) =>
   Object.fromEntries(koder.map(o => [o.kode, o.kode === '10' ? 0 : tiDekar(m.get(o.grunnkart) || 0)]));
 
@@ -178,11 +179,11 @@ export function lagOkosystemendring(alle: Record<string, Arealdetaljer>): Okosys
 
 /* Tabellen solv.okosystemareal: arealet per økosystemtype i 2024 for alle kommunene, syntetisk til SSBs tabell kommer */
 export async function okosystemareal(): Promise<Okosystemareal> {
-  const [A, F] = await Promise.all([katalog.solv.arealdetaljerAlle(), katalog.solv.kommuneareal()]);
-  return lagOkosystemareal(A, F);
+  const [j, F] = await Promise.all([katalog.bronse.arealAlle(), katalog.solv.kommuneareal()]);
+  return lagOkosystemareal(perKommune(j), F);
 }
 /* Tabellen solv.okosystemendring: endringen mellom bebygd og de andre økosystemtypene fra 2017 til 2024 for alle kommunene,
    syntetisk til SSBs tabell kommer */
 export async function okosystemendring(): Promise<Okosystemendring> {
-  return lagOkosystemendring(await katalog.solv.arealdetaljerAlle());
+  return lagOkosystemendring(perKommune(await katalog.bronse.arealAlle()));
 }

@@ -20,8 +20,7 @@ import {
 import { INONSONER, UTENFOR, inonINatur, inonSone, tolkInon } from '../src/data/solv/inon.ts';
 import { GRONT, graaOgGront, graaTrinn } from '../src/data/solv/graa.ts';
 import { biterIFlisen, flestIFlisen, graaHalvpart, rutenIFlis, soneHalvpart } from '../src/data/solv/nivaer.ts';
-import { tolkArealtall } from '../src/data/solv/ssb.ts';
-import { historie, perKlasse } from '../src/data/gull/felles.ts';
+import { tolkDetaljerAlle } from '../src/data/solv/ssb.ts';
 import { planType } from '../src/data/solv/egne.ts';
 import { tilUTM } from '../src/data/solv/projeksjoner.ts';
 
@@ -57,21 +56,24 @@ test('grått areal: trinn etter rødfargen', () => {
   assert.equal(graaTrinn(255, 255), 5);
 });
 
-test('SSB: arealklassene summert til bebygd, jordbruk og natur, med SSBs egne summer for jordbruk og skog', () => {
-  /* fulldyrka og ikke fulldyrka jord er 2,99 til sammen, men SSBs sum er 3, og den brukes */
-  const D = tolkArealtall(
-    {
-      dimension: {
-        ArealKlasse: { category: { index: ['01', '15', '16', '15-16', '17.01', '17', '22.01', '22.02'] } },
-        Tid: { category: { index: ['2017', '2025'] } }
-      },
-      value: [2, 2, 1.5, 1.5, 1.49, 1.49, 3, 3, 5, 5, 5, 5, 0.5, 0.5, 0.25, 0.25]
+test('SSB: arealstatistikken for alle kommuner, per kommune og arealklasse', () => {
+  /* to regioner (en kommune og resten), to klasser (barskog og myr) og to år */
+  const [D, ...resten] = tolkDetaljerAlle({
+    id: ['Region', 'ArealKlasse', 'ContentsCode', 'Tid'],
+    size: [2, 2, 1, 2],
+    dimension: {
+      Region: { category: { index: ['K-5001', 'Rest'] } },
+      ArealKlasse: { category: { index: ['17.01', '19'] } },
+      ContentsCode: { category: { index: ['Areal'] } },
+      Tid: { category: { index: ['2017', '2024'] } }
     },
-    '5001'
-  );
-  assert.deepEqual(D.samlet, { '15-16': [3, 3], '17': [5, 5] });
-  assert.deepEqual(perKlasse(D), { a: [2, 3, 5], land: 10, aar: '2025', ferskvann: { inn: 0.5, elv: 0.25 } });
-  assert.deepEqual(historie(D), { nr: '5001', fra: '2017', til: '2025', a0: [2, 3, 5], a1: [2, 3, 5], endret: false });
+    value: [10, 11, 6, 5, 1, 1, 1, 1]
+  });
+  assert.equal(resten.length, 0);
+  assert.deepEqual([D.nr, D.aar, D.endret], ['5001', ['2017', '2024'], false]);
+  assert.deepEqual(D.klasser.find(k => k.kode === '17.01')!.km2, [10, 11]);
+  assert.deepEqual(D.klasser.find(k => k.kode === '19')!.km2, [6, 5]);
+  assert.deepEqual(D.klasser.find(k => k.kode === '01')!.km2, [0, 0]);
 });
 
 test('planflater: utbygging er framtidig bebyggelse og samferdsel', () => {
@@ -115,25 +117,6 @@ test('punkt: feltene fra GetFeatureInfo hos NIBIO og DiBK, med navn på koder og
   } finally {
     globalThis.fetch = ekte;
   }
-});
-
-test('SSB: arealklassene hver for seg, fra 2017', async () => {
-  const { tolkDetaljer } = await import('../src/data/solv/ssb.ts');
-  /* To klasser (barskog og myr) og tre år, der 2016 skal tas bort */
-  const D = tolkDetaljer(
-    {
-      dimension: {
-        ArealKlasse: { category: { index: ['17.01', '19'] } },
-        Tid: { category: { index: ['2016', '2017', '2018'] } }
-      },
-      value: [9, 10, 11, 5, 6, 6]
-    },
-    '5001'
-  );
-  assert.deepEqual(D.aar, ['2017', '2018']);
-  assert.deepEqual(D.klasser.find(k => k.kode === '17.01')!.km2, [10, 11]);
-  assert.deepEqual(D.klasser.find(k => k.kode === '19')!.km2, [6, 6]);
-  assert.deepEqual(D.klasser.find(k => k.kode === '01')!.km2, [0, 0]);
 });
 
 test('detaljklassene: de rene fargene, og en blanding gir klassen det er mest av', () => {
