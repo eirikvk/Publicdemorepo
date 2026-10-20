@@ -55,11 +55,34 @@ export function motortall() {
     arealtall:
       T &&
       (T.status === 'ok'
-        ? plukk({ tilstand: 'ok', ...T.verdi! }, 'tilstand', 'aar', 'land', 'klasser', 'syntetisk')
+        ? plukk(
+            {
+              tilstand: 'ok',
+              ...T.verdi!,
+              /* i samme form som før 20. oktober 2026, da endringen sto i en egen tabell */
+              klasser: T.verdi!.klasser.map(k => ({ id: k.id, navn: k.navn, km2: k.km2, andel: k.andel }))
+            },
+            'tilstand',
+            'aar',
+            'land',
+            'klasser',
+            'syntetisk'
+          )
         : { tilstand: T.status }),
     landOgVann: plukk(v(K.gull.landOgVann), 'flate', 'hav', 'deler'),
     flate: r(v(K.solv.grense) ? v(K.solv.grense)!.km2 : 0),
-    oppstilling: plukk(v(K.gull.oppstilling), 'fra', 'til', 'inngaende', 'netto', 'utgaende'),
+    /* regnskapet i samme form som før 20. oktober 2026: én kolonne per klasse og en sum, og ingen når årene ikke kan sammenlignes */
+    oppstilling: (O => {
+      if (!O || O.endret) return null;
+      const kol = [...O.klasser, O.sum];
+      return rund({
+        fra: O.fra,
+        til: O.til,
+        inngaende: kol.map(k => k.inngaende),
+        netto: kol.map(k => k.endring),
+        utgaende: kol.map(k => k.utgaende)
+      });
+    })(v(K.gull.okosystemregnskap)),
     planInfo:
       P &&
       (P.status === 'ok'

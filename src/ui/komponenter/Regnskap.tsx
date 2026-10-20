@@ -2,11 +2,11 @@
    tekst og stolper, så satt opp som et regnskap: areal ved start, netto endring og areal ved slutt, etter mønster fra FNs standard
    for naturregnskap (SEEA EA). Tallene er SSBs tabeller for naturregnskapet: arealet per økosystemtype i 2024, og endringen mellom
    bebygd og de andre fra 2017. Til SSB publiserer dem 25. november 2026, er de syntetiske, og det står under hvert kort. Til slutt
-   land og vann. Tallene kommer ferdig regnet ut fra gull (katalog.gull.utbredelse, endring, oppstilling og landOgVann). Her blir de
-   tekst, stolper og tabell. */
+   land og vann. Tallene kommer ferdig regnet ut fra gull (katalog.gull.utbredelse, okosystemregnskap og landOgVann), de samme som
+   tvillingen bruker. Her blir de tekst, stolper og tabell. */
 import type { CSSProperties } from 'react';
 import { katalog } from '../../data/katalog.ts';
-import type { Endring } from '../../data/gull/regnskap.ts';
+import type { Utbredelse } from '../../data/gull/naturregnskap.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
 import { Forklaring, Rute, Sidelenke, Stripe, Talltabell } from './deler.tsx';
@@ -28,7 +28,7 @@ const hele = (km2: number) => nf(Math.round(km2 * 1000), 0),
 
 /* Forskjellen fra 2017 for hver klasse, som stolper ut fra en midtlinje: til venstre er mindre, til høyre er mer. Den lengste
    stolpen fyller halve bredden. */
-function Endring({ E }: { E: Endring }) {
+function Endring({ E }: { E: Utbredelse }) {
   if (E.endret)
     return (
       <div className="utvikling">
@@ -39,12 +39,14 @@ function Endring({ E }: { E: Endring }) {
         </p>
       </div>
     );
-  const tekst = ramse(
-    E.klasser.map(
-      ({ navn, km2: v }) =>
-        `${navn.toLowerCase()} ${Math.round(v * 1000) ? `${v < 0 ? 'ned' : 'opp'} ${iTekst(Math.abs(v))}` : 'uendret'}`
-    )
-  );
+  /* endringen per klasse, som alltid er regnet når årene kan sammenlignes */
+  const K = E.klasser.map(k => ({ id: k.id, navn: k.navn, v: k.endring || 0 })),
+    tekst = ramse(
+      K.map(
+        ({ navn, v }) =>
+          `${navn.toLowerCase()} ${Math.round(v * 1000) ? `${v < 0 ? 'ned' : 'opp'} ${iTekst(Math.abs(v))}` : 'uendret'}`
+      )
+    );
   return (
     <div className="utvikling">
       <h3 className="md-typography-heading-xs">Mer eller mindre natur enn i {E.fra}?</h3>
@@ -53,7 +55,7 @@ function Endring({ E }: { E: Endring }) {
         {E.flyttet ? ' Grensen er trolig flyttet i perioden, så tallene er mer usikre.' : ''}
       </p>
       <ul className="endring">
-        {E.klasser.map(({ id, navn, km2: v }) => (
+        {K.map(({ id, navn, v }) => (
           <li key={id}>
             <span className="navn">
               <Rute id={id} />
@@ -77,8 +79,7 @@ function Endring({ E }: { E: Endring }) {
 function Utbredelse() {
   const T = valgt(katalog.gull.utbredelse),
     U = T && T.status === 'ok' ? T.verdi! : null,
-    natur = U && U.klasser[0],
-    E = verdi(katalog.gull.endring);
+    natur = U && U.klasser[0];
   return (
     <section className="utbredelse" aria-labelledby="regnskap-tittel">
       <Korttittel kort="utbredelse" id="regnskap-tittel" />
@@ -88,7 +89,7 @@ function Utbredelse() {
       ) : (
         <div className="fordeling">
           <p className="total">
-            <b>{dekar(natur!.km2)}</b> natur i {U.aar}, {andelTekst(natur!.andel)} av landarealet
+            <b>{dekar(natur!.km2)}</b> natur i {U.aar}, {andelTekst(natur!.andel || 0)} av landarealet
           </p>
           <Stripe
             hva={`Landarealet i ${U.aar}`}
@@ -96,13 +97,13 @@ function Utbredelse() {
               k.navn,
               '--' + k.id,
               Math.max(k.km2, 0.0001),
-              `${k.navn}: ${dekar(k.km2)}, ${andelTekst(k.andel)}`
+              `${k.navn}: ${dekar(k.km2)}, ${andelTekst(k.andel || 0)}`
             ])}
           />
-          <Forklaring deler={U.klasser.map(k => [k.navn, '--' + k.id, andelTekst(k.andel)])} />
+          <Forklaring deler={U.klasser.map(k => [k.navn, '--' + k.id, andelTekst(k.andel || 0)])} />
         </div>
       )}
-      {E && <Endring E={E} />}
+      {U && <Endring E={U} />}
       <Syntetisk s={!!U && U.syntetisk} />
     </section>
   );
@@ -110,18 +111,18 @@ function Utbredelse() {
 
 /* Regnskapsoppstillingen: én kolonne per klasse og en sum, og radene areal ved start, netto endring og areal ved slutt */
 function Oppstilling() {
-  const O = verdi(katalog.gull.oppstilling);
-  if (!O) return null;
+  const O = verdi(katalog.gull.okosystemregnskap);
+  if (!O || O.endret) return null;
   const P = utenPlan() ? null : verdi(katalog.gull.plansum);
   return (
     <section className="regnskap prosa" aria-labelledby="oppstilling-tittel">
       <Korttittel kort="oppstilling" id="oppstilling-tittel" />
       <Talltabell
-        kolonner={['daa', ...O.kolonner]}
+        kolonner={['daa', ...O.klasser.map(k => k.navn), 'Sum']}
         rader={[
-          { navn: `Inngående areal ${O.fra}`, tall: O.inngaende.map(v => [hele(v)]) },
-          { navn: 'Netto endring', tall: O.netto.map(v => [endring(v)]) },
-          { navn: `Utgående areal ${O.til}`, klasse: 'sum', tall: O.utgaende.map(v => [hele(v)]) }
+          { navn: `Inngående areal ${O.fra}`, tall: [...O.klasser, O.sum].map(k => [hele(k.inngaende)]) },
+          { navn: 'Netto endring', tall: [...O.klasser, O.sum].map(k => [endring(k.endring)]) },
+          { navn: `Utgående areal ${O.til}`, klasse: 'sum', tall: [...O.klasser, O.sum].map(k => [hele(k.utgaende)]) }
         ]}
       />
       <Syntetisk s={O.syntetisk} />

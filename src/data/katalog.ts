@@ -46,7 +46,6 @@ import * as gullInon from './gull/inon.ts';
 import * as gullOkosystemer from './gull/okosystemer.ts';
 import * as gullNaturregnskap from './gull/naturregnskap.ts';
 import * as gullPlan from './gull/planlagt.ts';
-import * as gullRegnskap from './gull/regnskap.ts';
 import * as gullTemaer from './gull/temaer.ts';
 import * as gullUtbygging from './gull/utbygging.ts';
 import type { Blokk, Utbygging } from './gull/utbygging.ts';
@@ -144,7 +143,10 @@ export const KILDE = {
    (stotte, med navnet og hva den er til for). En støttedata har det samme navnet i bronse og sølv, i bronse med hvordan den hentes
    etter komma. Støttedata kan favne bredere enn dataene, for eksempel hele kommuneplanen. Tallene kan regnes av støttedata som er
    dataene i en annen form, som arealet av verneområdene av verneområdene per rute. Foreløpig er grunnkartet, grått areal,
-   inngrepsfri natur, kommunene, kommuneplanen, egne planer, de fire naturtemaene og naturregnskapet fra SSB delt inn slik. */
+   inngrepsfri natur, kommunene, kommuneplanen, egne planer, de fire naturtemaene og naturregnskapet fra SSB delt inn slik.
+   Gull har ingen datasett. Der er det sidene viser (tabellene i et kort i src/ui/forklaringer.ts), data, og alt annet støttedata:
+   mellomregninger som arealet av et tema eller kolonnene i utbyggingen, og hurtigminne som husker arbeid mellom gangene. Katalogen
+   på siden viser gull etter kortene. */
 export const DATASETT = {
   grunnkart: {
     navn: 'Arealklasser fra grunnkartet',
@@ -259,7 +261,7 @@ export const DATASETT = {
     ]
   },
   naturregnskap: {
-    navn: 'Naturregnskap fra SSB (syntetisk)',
+    navn: 'Syntetisk naturregnskap fra SSB',
     om: 'SSBs to tabeller for naturregnskapet per kommune, med økosystemtypene i SSBs klassifisering av økosystemtyper (KLASS 988, nivå 1): arealet per økosystemtype i 2024, og endringen i areal mellom bebygd og hver av de andre økosystemtypene fra 2017 til 2024. Den eneste kilden til SSB-tall på sidene. SSB publiserer tabellene 25. november 2026. Til da er tallene syntetiske og lages i sølv av SSBs arealstatistikk (tabell 09594) med faste tommelfingerregler, i den samme formen. Arealstatistikken brukes ikke til noe annet. Når tabellene kommer, byttes bronse og sølv ut, og gull og sidene står.'
   },
   utbyggingsareal: {
@@ -285,7 +287,7 @@ export const katalog = {
       datasett: DATASETT.kommuner,
       innhold: 'Fylkene med nummer og navn, og kommunene i hvert fylke med nummer og navn, sortert etter navn.',
       endepunkt: 'kommuner.json',
-      tittel: 'Fylker og kommuner',
+      tittel: 'Fylker og kommuner, JSON',
       om: 'fylkene og kommunene, sortert etter navn',
       teknisk: true,
       forklaring:
@@ -623,7 +625,7 @@ export const katalog = {
       innhold:
         'Kartbilder der flatene kommuneplanen setter av til framtidig bebyggelse og anlegg, eller samferdsel, er fylt: én flis på 512 × 512 piksler, der en piksel er en rute på 10,6 meter.',
       endepunkt: E.KOMMUNEPLAN,
-      tittel: 'Areal satt av til framtidig utbygging, kartbilder',
+      tittel: 'Areal satt av til framtidig utbygging i kommuneplanen, kartbilder',
       om: 'kartbilder av kommuneplanen fra DiBK, 512 x 512 piksler, kalt med flisen [z, x, y]. Nøkkel: flisen som «z/x/y».',
       forklaring:
         'Kartbilder av laget kparealformalomrade, 512 × 512 piksler per flis: arealformål i 1000- og 2000-serien (bebyggelse og anlegg, samferdsel og teknisk infrastruktur) med status framtidig, fylt og uten kantstrek.',
@@ -779,7 +781,7 @@ export const katalog = {
       datasett: DATASETT.naturregnskap,
       innhold:
         'For hver kommune: arealet i km² per økosystemtype i 2024, med kodene i SSBs klassifisering (01 Bebygd og opparbeidet areal til 12 Hav), og om tallene er syntetiske.',
-      tittel: 'Areal per økosystemtype (syntetisk)',
+      tittel: 'Syntetisk areal per økosystemtype',
       om: 'SYNTETISK til SSBs tabell kommer: arealet per økosystemtype i 2024 for alle kommunene, i formen til SSBs tabell. Laget av SSBs arealstatistikk for alle kommuner og flaten til kommunene.',
       forklaring:
         'SSBs arealklasser for 2024 oversettes til økosystemtypene med en fast nøkkel. Havet er kommunens flate minus land og ferskvann, og står som «Hav» (12); «Bukter, kiler og tidevannsonen» (10) er 0, fordi arealstatistikken ikke skiller dem ut. «Uklassifisert ubebygd område» hos SSB er ikke med. Kyststrender, svaberg og dyner er 0,1 % av havet, tatt fra hei og buskmark og lite vegetert mark.',
@@ -795,7 +797,7 @@ export const katalog = {
       datasett: DATASETT.naturregnskap,
       innhold:
         'For hver kommune: arealet i km² fra hver av de andre økosystemtypene til bebygd, og fra bebygd til typen, fra 2017 til 2024, med kodene i SSBs klassifisering, og om tallene er syntetiske. De syntetiske tallene har også merknader om kommunegrensen er flyttet.',
-      tittel: 'Endring mellom bebygd og de andre økosystemtypene (syntetisk)',
+      tittel: 'Syntetisk endring mellom bebygd og de andre økosystemtypene',
       om: 'SYNTETISK til SSBs tabell kommer: endringen i areal mellom bebygd og hver av de andre økosystemtypene på land fra 2017 til 2024 for alle kommunene, i formen til SSBs tabell. Anslått av SSBs arealstatistikk for alle kommuner.',
       forklaring:
         'SSBs arealklasser for 2017 og 2024 oversettes til økosystemtypene med en fast nøkkel. Økningen i bebygd er summen av økningene i hver bebygd klasse hos SSB, så bebygd går aldri ned. Den tas først fra jordbruket, så langt det gikk ned, og resten fra naturen etter arealet i 2017. Vann og hav er ikke med.',
@@ -1266,6 +1268,9 @@ export const katalog = {
     detaljareal: tabell({
       lag: 'gull',
       navn: 'detaljareal',
+      stotte: true,
+      innhold:
+        'Arealet per detaljklasse i kommunen i km², arealet uten klasse, og når de lagrede detaljklassene er laget.',
       tittel: 'Areal per detaljklasse',
       om: 'arealet i km² per detaljklasse i kommunen, av blokkene på 10,6 meter, der en rute langs grensen telles med den delen av den som ligger i kommunen. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes av tvillingen fra Figma og i sammenligningen for egne områder.',
       forklaring:
@@ -1280,6 +1285,8 @@ export const katalog = {
     detaljerIVerneomrader: tabell({
       lag: 'gull',
       navn: 'detaljerIVerneomrader',
+      stotte: true,
+      innhold: 'Arealet per detaljklasse innenfor verneområdene i km², og arealet uten klasse.',
       tittel: 'Areal per detaljklasse i verneområdene',
       om: 'arealet i km² per detaljklasse innenfor verneområdene i kommunen, av blokkene på 10,6 meter. Hver rute teller med den delen av den som ligger i verneområdene og i kommunen (solv.vernAndel). Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
@@ -1395,8 +1402,10 @@ export const katalog = {
     okosystemfordeling: tabell({
       lag: 'gull',
       navn: 'okosystemfordeling',
+      stotte: true,
+      innhold: 'Arealet per hovedøkosystem i kommunen i 2024 i km², med året, kilden og om tallene er syntetiske.',
       tittel: 'Hovedøkosystemer per kommune 2024',
-      om: 'arealet per hovedøkosystem i grunnkartet i kommunen i 2024, lest av SSBs tabell over arealet per økosystemtype (solv.okosystemareal). Syntetisk så lenge tabellen i sølv er det. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet per hovedøkosystem i grunnkartet i kommunen i 2024, lest av SSBs tabell over arealet per økosystemtype (solv.okosystemareal). Syntetisk så lenge tabellen i sølv er det.',
       forklaring:
         'Økosystemtypene hos SSB summeres til hovedøkosystemene i grunnkartet, med de samme navnene: «Bukter, kiler og tidevannsonen» og «Hav» er havet.',
       husk: 12,
@@ -1405,22 +1414,15 @@ export const katalog = {
     bebygdEndring: tabell({
       lag: 'gull',
       navn: 'bebygdEndring',
+      stotte: true,
+      innhold:
+        'For hver landklasse arealet i km² som gikk til bebygd og tilbake fra 2017 til 2024, og om årene kan sammenlignes.',
       tittel: 'Endring mellom bebygd og landklassene 2017–2024',
-      om: 'arealet fra hver landklasse til bebygd, og fra bebygd til klassen, fra 2017 til 2024, lest av SSBs tabell over endringen (solv.okosystemendring). Syntetisk så lenge tabellen i sølv er det. Brukes foreløpig bare av tvillingen fra Figma.',
+      om: 'arealet fra hver landklasse til bebygd, og fra bebygd til klassen, fra 2017 til 2024, lest av SSBs tabell over endringen (solv.okosystemendring). Syntetisk så lenge tabellen i sølv er det.',
       forklaring:
         'Økosystemtypene hos SSB summeres til landklassene i grunnkartet, med de samme navnene. Om årene kan sammenlignes, kommer fra tabellen.',
       husk: 12,
       etl: gullNaturregnskap.bebygdEndring
-    }),
-    oversiktKort: tabell({
-      lag: 'gull',
-      navn: 'oversiktKort',
-      tittel: 'Kortene på oversikten',
-      om: 'natur, jordbruk og bebygd i 2024 med andelen av landarealet og endringen fra 2017, summert fra de to tabellene fra SSB. Brukes foreløpig bare av tvillingen fra Figma.',
-      forklaring:
-        'Hovedøkosystemene summert til natur, jordbruk og bebygd, og endringen mellom bebygd og de andre summert på samme måte.',
-      husk: 12,
-      etl: gullNaturregnskap.oversiktKort
     }),
     nedbygging: tabell({
       lag: 'gull',
@@ -1434,16 +1436,21 @@ export const katalog = {
     okosystemregnskap: tabell({
       lag: 'gull',
       navn: 'okosystemregnskap',
-      tittel: 'Regnskap per hovedøkosystem 2017–2024',
-      om: 'arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd og arealet i 2024 (utgående), satt opp som et regnskap fra de to tabellene fra SSB. Brukes foreløpig bare av tvillingen fra Figma.',
+      tittel: 'Regnskapet per hovedøkosystem og klasse 2017–2024',
+      om: 'utbredelsesregnskapet: arealet per hovedøkosystem på land i 2017 (inngående), endringen mot bebygd og arealet i 2024 (utgående), og summene for natur, jordbruk og bebygd og for landarealet, fra de to tabellene fra SSB. Hovedsiden viser summene, tvillingen hovedøkosystemene.',
       forklaring:
-        'Arealet i 2024 med det som gikk til og fra bebygd lagt tilbake gir arealet i 2017. Summen for land er den samme begge år.',
+        'Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA EA). Utgående areal i 2024 er arealet per hovedøkosystem, og inngående areal i 2017 er det samme med det som gikk til og fra bebygd lagt tilbake. Summene per klasse og for landarealet er summen av hovedøkosystemene. Summen for land er den samme begge år.',
+      usikkerhet: [
+        'Bare endringen mellom bebygd og de andre klassene er med. Endringer mellom jordbruk og natur, og i vann, er ikke med i SSBs tabell.'
+      ],
       husk: 12,
       etl: gullNaturregnskap.okosystemregnskap
     }),
     okosystemerNorge: tabell<void, gullNaturregnskap.OkosystemerNorge>({
       lag: 'gull',
       navn: 'okosystemerNorge',
+      stotte: true,
+      innhold: 'De to tabellene over for hver kommune i Norge, og summen for Norge.',
       tittel: 'Hovedøkosystemer i alle kommuner',
       om: 'de to tabellene fra SSB for alle kommunene i Norge, lest som for én kommune, og summen for Norge. Endringen summeres for alle kommuner unntatt de der årene ikke kan sammenlignes. Syntetisk så lenge tabellene i sølv er det. Brukes foreløpig bare av tvillingen fra Figma.',
       forklaring:
@@ -1466,6 +1473,8 @@ export const katalog = {
     dagensKlasser: tabell({
       lag: 'gull',
       navn: 'dagensKlasser',
+      stotte: true,
+      innhold: 'Om kommunen har lagrede klasser, og hvor mange blokker den har.',
       tittel: 'Dagens klasser',
       om: 'alle blokkene med dagens klasser for kommunen lest, lagret eller hentet fra NIBIO, med om kommunen har lagrede klasser og hvor mange blokker den har. Bes om når kommunen velges, så blokkene er klare for tallene og kartet.',
       forklaring:
@@ -1476,35 +1485,12 @@ export const katalog = {
     utbredelse: tabell({
       lag: 'gull',
       navn: 'utbredelse',
-      tittel: 'Utbredelsen nå',
-      om: 'utbredelsen i 2024: landarealet, og arealet og andelen for hver klasse, fra SSBs tabell over arealet per økosystemtype (gull.okosystemfordeling). Syntetisk så lenge tabellen i sølv er det.',
+      tittel: 'Natur, jordbruk og bebygd nå og endringen fra 2017',
+      om: 'natur, jordbruk og bebygd i 2024 med arealet og andelen av landarealet, og endringen fra 2017, fra de to tabellene fra SSB (gull.okosystemfordeling og gull.bebygdEndring). Syntetisk så lenge tabellene i sølv er det. Hovedsiden og tvillingen viser den samme.',
       forklaring:
-        'Økosystemtypene summert til bebygd, jordbruk og natur i 2024, og andelen av landarealet, som er summen av de tre.',
+        'Hovedøkosystemene summert til natur, jordbruk og bebygd i 2024, og andelen av landarealet, som er summen av de tre. Bebygd øker med det som gikk fra de andre klassene til bebygd, og jordbruk og natur går ned med det samme. Kan årene ikke sammenlignes, er endringen tom.',
       husk: 6,
-      etl: gullRegnskap.utbredelse
-    }),
-    endring: tabell({
-      lag: 'gull',
-      navn: 'endring',
-      tittel: 'Endring fra 2017',
-      om: 'endringen fra 2017 til 2024 for hver klasse, fra SSBs tabell over endringen mellom bebygd og de andre økosystemtypene (gull.bebygdEndring). Syntetisk så lenge tabellen i sølv er det.',
-      forklaring:
-        'Bebygd øker med det som gikk fra de andre klassene til bebygd, og jordbruk og natur går ned med det samme. Kan årene ikke sammenlignes, gis bare årene.',
-      husk: 6,
-      etl: gullRegnskap.endring
-    }),
-    oppstilling: tabell({
-      lag: 'gull',
-      navn: 'oppstilling',
-      tittel: 'Regnskapsoppstillingen',
-      om: 'regnskapsoppstillingen: areal ved start, netto endring og areal ved slutt',
-      forklaring:
-        'Utbredelsesregnskapet etter mønster fra FNs standard for naturregnskap (SEEA EA): inngående areal i 2017, netto endring og utgående areal i 2024, per klasse og med en sum for landarealet. Utgående areal er arealet per økosystemtype summert, og inngående areal er det samme med det som gikk til og fra bebygd lagt tilbake.',
-      usikkerhet: [
-        'Bare endringen mellom bebygd og de andre klassene er med. Endringer mellom jordbruk og natur, og i vann, er ikke med i SSBs tabell.'
-      ],
-      husk: 6,
-      etl: gullRegnskap.oppstilling
+      etl: gullNaturregnskap.utbredelse
     }),
     landOgVann: tabell({
       lag: 'gull',
@@ -1514,7 +1500,7 @@ export const katalog = {
       forklaring:
         'Land, innsjø og elv kommer fra SSBs tabell over arealet per økosystemtype i 2024 (gull.okosystemfordeling). Hav er kommunens flate minus landareal, innsjø og elv. Er resten mindre enn 0,5 km² eller 0,5 % av flaten, er det avvik mellom grense og tabell, og kommunen vises uten hav.',
       husk: 6,
-      etl: gullRegnskap.landOgVann
+      etl: gullNaturregnskap.landOgVann
     }),
     kommuneplan: tabell({
       lag: 'gull',
@@ -1528,6 +1514,9 @@ export const katalog = {
     utbygging: tabell<string, Utbygging | null>({
       lag: 'gull',
       navn: 'utbygging',
+      stotte: true,
+      innhold:
+        'Rutenettene for kommunen: planlagt utbygging med og uten smale striper, dagens klasser og egne områder, og summene.',
       tittel: 'Utbyggingen',
       om: 'utbyggingen: kommuneplanen og egne områder lagt oppå dagens klasser, i ruter på 10,6 meter med smale striper tatt bort. Én rad per rute med planlagt utbygging på natur eller jordbruk. Rutenettene er glisne: bare blokkene med noe i finnes. Midtpunktet: alle kryssinger med planlagt utbygging går gjennom den.',
       forklaring:
@@ -1542,6 +1531,8 @@ export const katalog = {
     planAlene: tabell<string, { alene: gullUtbygging.PlanAlene | null }>({
       lag: 'gull',
       navn: 'planAlene',
+      stotte: true,
+      innhold: 'Kommuneplanen alene ryddet for smale striper, og summen.',
       fil: 'gull/utbygging.ts',
       tittel: 'Kommuneplanen alene, sist regnet ut',
       om: 'hjelpetabell: kommuneplanen alene ryddet for smale striper, og summen, fra sist utbyggingen ble regnet ut, så den ikke regnes ut på nytt når egne områder endres',
@@ -1554,6 +1545,8 @@ export const katalog = {
     radorden: tabell({
       lag: 'gull',
       navn: 'radorden',
+      stotte: true,
+      innhold: 'Radene i utbyggingen sortert etter rute og i rekkefølgen punktnettet gir dem.',
       fil: 'gull/temaer.ts',
       tittel: 'Radene i utbyggingen i rekkefølge',
       om: 'hjelpetabell: radene i utbyggingen sortert etter rute, og i rekkefølgen punktnettet gir dem, som kolonnene for alle temaene bruker',
@@ -1566,6 +1559,8 @@ export const katalog = {
     temaminne: tabell<string, { forrige: gullTemaer.Temakolonne | null }>({
       lag: 'gull',
       navn: 'temaminne',
+      stotte: true,
+      innhold: 'De siste kolonnene for temaet i utbyggingen.',
       fil: 'gull/temaer.ts',
       tittel: 'Kolonnene for temaene, sist regnet ut',
       om: 'hjelpetabell: de siste kolonnene for hvert tema i utbyggingen, så bare nye ruter regnes ut når egne områder endres. Nøkkel: temaet og kommunen, som vern/5001.',
@@ -1578,6 +1573,8 @@ export const katalog = {
     utvalg: tabell({
       lag: 'gull',
       navn: 'utvalg',
+      stotte: true,
+      innhold: 'Rutene i utvalget, med raden i utbyggingen og verdien i planen for hver.',
       fil: 'gull/utbygging.ts',
       tittel: 'Utvalg av utbyggingen',
       om: 'hjelpetabell: rutene en analyse regnes over, for den nye eller den gamle planen, i hele kommunen eller i ett eget område, med raden i utbyggingen og verdien i planen slått opp én gang per rute. Nøkkelen er utvalget, som 5001, 5001/gammel eller 5001/ny/1.',
@@ -1591,6 +1588,8 @@ export const katalog = {
     utbyggingsblokker: tabell<string, Map<string, Blokk>>({
       lag: 'gull',
       navn: 'utbyggingsblokker',
+      stotte: true,
+      innhold: 'Utbyggingen i én blokk på 512 × 512 ruter.',
       fil: 'gull/utbygging.ts',
       tittel: 'Utbyggingen i blokker',
       om: 'hjelpetabell: utbyggingen i blokker på 512 x 512 ruter, én per flis på nivå 10, så blokkene ikke regnes ut på nytt når egne områder endres',
@@ -1603,7 +1602,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'planlagt',
       tittel: 'Planlagt utbygging',
-      om: 'natur og jordbruk som planen setter av, med andeler Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'natur og jordbruk som planen setter av, med andeler. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'De beholdte rutene telles for natur og jordbruk og regnes om til areal. Prosenten er andelen av rutene som i dag er natur, eller jordbruk, i det samme rutenettet. Tallet med smale striper står i parentes.',
       husk: 40,
@@ -1614,6 +1613,8 @@ export const katalog = {
     planlagtPerDetaljklasse: tabell({
       lag: 'gull',
       navn: 'planlagtPerDetaljklasse',
+      stotte: true,
+      innhold: 'Natur og jordbruk satt av til utbygging per detaljklasse, i km².',
       tittel: 'Planlagt utbygging per detaljklasse',
       om: 'natur og jordbruk satt av til utbygging, fordelt på detaljklassene i grunnkartet: hver rute får den detaljklassen av riktig slag det er mest av i ruta. Summen er den samme som i gull.plansum. Lagret for noen kommuner, ellers hentet fra NIBIO. Brukes av tvillingen fra Figma og i sammenligningen for egne områder. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
@@ -1629,6 +1630,8 @@ export const katalog = {
       navn: 'plansum',
       tittel: 'Planlagt utbygging, kort',
       om: 'natur og jordbruk satt av i km², til oversikten og regnskapet',
+      forklaring:
+        'Summen av natur og jordbruk satt av i utbyggingen, uten smale striper, i den nye planen i hele kommunen. Den samme summen som i planlagt utbygging, bare uten andelene.',
       husk: 6,
       brukerstyrt: true,
       etl: gullPlan.plansum
@@ -1636,6 +1639,8 @@ export const katalog = {
     inonAreal: tabell<string, gullInon.InonAreal>({
       lag: 'gull',
       navn: 'inonAreal',
+      stotte: true,
+      innhold: 'Arealet per sone i km² for ett år.',
       tittel: 'Areal av inngrepsfri natur',
       om: 'arealet av inngrepsfri natur per sone i kommunen for ett år, i km² rundet til 10 dekar, regnet av rutene på 10,6 meter. Kalt med kommunen og året, som 5001/2008, eller bare kommunen for nyeste år. Nøkkel: «nummer» eller «nummer/år».',
       forklaring:
@@ -1726,8 +1731,10 @@ export const katalog = {
     graakryss: tabell({
       lag: 'gull',
       navn: 'graakryss',
+      stotte: true,
+      innhold: 'Utbyggingen krysset med grått areal: planlagt utbygging på land per trinn, og grønt i bebygd område.',
       tittel: 'Grått areal krysset med utbyggingen',
-      om: 'utbyggingen krysset med grått areal: planlagt utbygging på land, også der det alt er bebygd, og grønt i bebygd område Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'utbyggingen krysset med grått areal: planlagt utbygging på land, også der det alt er bebygd, og grønt i bebygd område. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Midtpunktet i hver rute med planlagt utbygging på land slås opp i bildet av grått areal. Her er alle ruter med, også der det alt er bebygd og i smale striper. Grønt i bebygd område er ruter som er bebygd i grunnkartet, men ikke grå.',
       usikkerhet: [
@@ -1741,6 +1748,8 @@ export const katalog = {
     graaAreal: tabell<string, gullGraa.GraaAreal>({
       lag: 'gull',
       navn: 'graaAreal',
+      stotte: true,
+      innhold: 'Arealet per trinn i km².',
       tittel: 'Areal av grått areal',
       om: 'arealet av grått areal per trinn i kommunen, i km² rundet til 10 dekar, regnet av rutene på 10,6 meter',
       forklaring:
@@ -1763,7 +1772,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'graaIPlan',
       tittel: 'Grått areal i planen',
-      om: 'planlagt utbygging på grått areal, og grønt i bebygd område Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'planlagt utbygging på grått areal, og grønt i bebygd område. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Planlagt utbygging på grått areal, på grått areal med minst halvparten vegetasjon (trinnene fra 50 % og opp), og på grønt i bebygd område.',
       husk: 40,
@@ -1774,6 +1783,8 @@ export const katalog = {
     vernAreal: tabell<string, gullTemaer.Temaareal>({
       lag: 'gull',
       navn: 'vernAreal',
+      stotte: true,
+      innhold: 'Arealet av verneområdene i km², der overlapp telles én gang.',
       tittel: 'Areal av verneområdene',
       om: 'arealet av verneområdene i kommunen i km², der overlapp telles én gang, regnet av verneområdene per rute på 10,6 meter',
       forklaring:
@@ -1784,6 +1795,8 @@ export const katalog = {
     villreinAreal: tabell<string, gullTemaer.Temaareal>({
       lag: 'gull',
       navn: 'villreinAreal',
+      stotte: true,
+      innhold: 'Arealet av villreinområdene i km², der overlapp telles én gang.',
       tittel: 'Areal av villreinområdene',
       om: 'arealet av villreinområdene i kommunen i km², der overlapp telles én gang, regnet av villreinområdene per rute på 10,6 meter',
       forklaring:
@@ -1794,6 +1807,8 @@ export const katalog = {
     verdsattAreal: tabell<string, gullTemaer.Temaareal>({
       lag: 'gull',
       navn: 'verdsattAreal',
+      stotte: true,
+      innhold: 'Arealet per verdikategori og samlet i km², der overlapp telles én gang.',
       tittel: 'Areal av verdsatt natur',
       om: 'arealet av verdsatt natur med fast verdi i kommunen i km², per verdikategori og samlet, regnet av verdsatt natur per rute på 10,6 meter',
       forklaring:
@@ -1804,6 +1819,8 @@ export const katalog = {
     vurderesAreal: tabell<string, gullTemaer.Temaareal>({
       lag: 'gull',
       navn: 'vurderesAreal',
+      stotte: true,
+      innhold: 'Arealet per kategori uten fast verdi og samlet i km², der overlapp telles én gang.',
       tittel: 'Areal av verdsatt natur uten fast verdi',
       om: 'arealet av lokalitetene uten fast verdi i kommunen i km², per kategori og samlet, regnet av verdsatt natur uten fast verdi per rute på 10,6 meter',
       forklaring:
@@ -1815,6 +1832,8 @@ export const katalog = {
     kartlagtAreal: tabell<string, gullTemaer.Temaareal>({
       lag: 'gull',
       navn: 'kartlagtAreal',
+      stotte: true,
+      innhold: 'Arealet som er kartlagt i km², der overlapp telles én gang.',
       tittel: 'Areal av det kartlagte',
       om: 'arealet som er kartlagt for naturtyper i kommunen i km², der overlapp telles én gang, regnet av det kartlagte per rute på 10,6 meter',
       forklaring:
@@ -1825,6 +1844,8 @@ export const katalog = {
     naturoppslag: tabell<string, Omradesok | null>({
       lag: 'gull',
       navn: 'naturoppslag',
+      stotte: true,
+      innhold: 'Oppslaget for ett område: flaten, og kommunen når flaten ikke er klippet mot den.',
       fil: 'gull/temaer.ts',
       tittel: 'Oppslag i områdene',
       om: 'hjelpetabell til kryssingen i gull: områdene i naturtemaene og kommunen som oppslag, til kryssingen med utbyggingen. Nøkkel: tema/kommune/plassen til området, eller kommune/kommune. Lages første gang en rute med planlagt utbygging kan ligge i området.',
@@ -1848,6 +1869,8 @@ export const katalog = {
     utbyggingIVerneomrader: tabell({
       lag: 'gull',
       navn: 'utbyggingIVerneomrader',
+      stotte: true,
+      innhold: 'For hver rute med planlagt utbygging: andelen i verneområdene, samlet og per område.',
       tittel: 'Utbyggingen i verneområder',
       om: 'kolonnene for verneområdene i utbyggingen: hvor stor del av hver rad som ligger i verneområdene, samlet og per område',
       forklaring:
@@ -1860,7 +1883,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'verneomraderIPlan',
       tittel: 'Verneområder i planen',
-      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnene Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'planlagt utbygging innenfor verneområdene, samlet og per område: summene over kolonnene. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 40,
@@ -1881,6 +1904,8 @@ export const katalog = {
     utbyggingIVillrein: tabell({
       lag: 'gull',
       navn: 'utbyggingIVillrein',
+      stotte: true,
+      innhold: 'For hver rute med planlagt utbygging: andelen i villreinområdene, samlet og per område.',
       tittel: 'Utbyggingen i villreinområder',
       om: 'kolonnene for villreinområdene i utbyggingen: hvor stor del av hver rad som ligger i villreinområdene, samlet og per område',
       forklaring:
@@ -1893,7 +1918,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'villreinIPlan',
       tittel: 'Villreinområder i planen',
-      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnene Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'planlagt utbygging innenfor villreinområdene, samlet og per område: summene over kolonnene. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 40,
@@ -1917,6 +1942,8 @@ export const katalog = {
     verdsattNaturIKartlagt: tabell({
       lag: 'gull',
       navn: 'verdsattNaturIKartlagt',
+      stotte: true,
+      innhold: 'Arealet av verdsatt natur per verdikategori innenfor det kartlagte, i km².',
       tittel: 'Verdsatt natur i det kartlagte',
       om: 'verdsatt natur per verdikategori innenfor det kartlagte',
       forklaring:
@@ -1940,6 +1967,8 @@ export const katalog = {
     utbyggingIVerdsattNatur: tabell({
       lag: 'gull',
       navn: 'utbyggingIVerdsattNatur',
+      stotte: true,
+      innhold: 'For hver rute med planlagt utbygging: andelen i verdsatt natur, per verdikategori og per lokalitet.',
       tittel: 'Utbyggingen i verdsatt natur',
       om: 'kolonnene for verdsatt natur i utbyggingen: hvor stor del av hver rad som ligger i verdsatt natur, per verdikategori og per lokalitet',
       forklaring:
@@ -1952,7 +1981,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'verdsattNaturIPlan',
       tittel: 'Verdsatt natur i planen',
-      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnene Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'planlagt utbygging i verdsatt natur: per verdikategori og de berørte lokalitetene, summert over kolonnene. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Delene av rutene summeres, rettet for målestokken, og regnes om til areal: samlet og for verdsatt natur per verdikategori, der overlapp telles én gang, og per område, der hvert område teller sin del. Et område regnes som berørt når utbyggingen dekker minst en halv rute av det. Ruter i smale striper telles for seg.',
       husk: 40,
@@ -1964,7 +1993,7 @@ export const katalog = {
       lag: 'gull',
       navn: 'utbyggingUtenforKartlagt',
       tittel: 'Utbygging utenfor det kartlagte',
-      om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
+      om: 'planlagt utbygging på natur, og hvor mye av den som ligger utenfor det kartlagte for naturtyper. Nøkkelen er utvalget av utbyggingen: 5001 for den nye planen i hele kommunen, og 5001/gammel, 5001/ny/1 og så videre for den gamle planen og for egne områder (gull/utbygging.ts).',
       forklaring:
         'Rutene med planlagt utbygging på natur, uten smale striper, deles i kartlagt og ikke kartlagt: den delen av ruta som ligger i kommunen, men ikke i det kartlagte (solv.kartlagtAndel), er ikke kartlagt.',
       husk: 40,
@@ -2021,7 +2050,6 @@ const ETL_FILER: [string, object][] = [
   ['solv/temaer.ts', solvTemaer],
   ['solv/egne.ts', solvEgne],
   ['solv/punkt.ts', solvPunkt],
-  ['gull/regnskap.ts', gullRegnskap],
   ['gull/planlagt.ts', gullPlan],
   ['gull/grunnkart.ts', gullGrunnkart],
   ['gull/utbygging.ts', gullUtbygging],

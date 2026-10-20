@@ -1,7 +1,9 @@
-/* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, og i hvert lag tabellene gruppert
-   etter ETL-filen, med tittelen og hvor mye cachen har lagret i hver. Dataene i et datasett i sølv (DATASETT i katalogen) står som én
-   vanlig rad, og støttedataene ligger bak knappen «Støttedata» på raden, med hva hver av dem er til for først. Støttedata som ikke
-   hører til ett datasett, står for seg sist i laget, som «Andre støttedata». «Info» viser hva tabellen er, det tekniske navnet og hvor
+/* Katalogen og cachen, i teknisk visning på siden Om og metode: bronse, sølv og gull som trekkspill, med tittelen og hvor mye cachen
+   har lagret i hver tabell. I bronse og sølv står tabellene gruppert etter ETL-filen. Dataene i et datasett i sølv (DATASETT i
+   katalogen) står som én vanlig rad, og støttedataene ligger bak knappen «Støttedata» på raden, med hva hver av dem er til for først.
+   Støttedata som ikke hører til ett datasett, står for seg sist i laget, som «Andre støttedata». Gull står etter kortene som viser
+   tallene (KORT i forklaringer.ts): hvert kort med tabellene det viser, og støttedataene det bygger på, mellomregninger og
+   hurtigminne, bak knappen på den siste. «Info» viser hva tabellen er, det tekniske navnet og hvor
    ETL-funksjonen ligger. «Data» viser radene i cachen. For tabeller som ikke lagres, kan katalogen spørres i stedet, også fra kildene.
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
@@ -13,6 +15,8 @@ import { kartetsMidte, kartetsMinne } from '../kart/kart.ts';
 import { kb, nf, tid } from '../tekst.ts';
 import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
 import { MdAccordionItem, MdButton } from './md.ts';
+import { AVHENGIGHETER } from '../../data/avhengigheter.ts';
+import { KORT } from '../forklaringer.ts';
 import './Katalog.css';
 
 type Innhold = ReturnType<typeof innhold>;
@@ -216,7 +220,9 @@ function Info({ d }: { d: Tabellen }) {
       {(d.datasett || d.stotte) && (
         <p>
           {!d.datasett
-            ? 'Støttedata som ikke hører til ett datasett.'
+            ? d.lag === 'gull'
+              ? 'Støttedata i gull: en mellomregning eller et hurtigminne for det sidene viser.'
+              : 'Støttedata som ikke hører til ett datasett.'
             : d.stotte
               ? `Støttedata for «${d.datasett.navn}».`
               : `Dataene ligger i tabellen «${d.tittel}».`}
@@ -255,6 +261,68 @@ function Info({ d }: { d: Tabellen }) {
 }
 
 const sum = (d: Tabellen) => d.rader.reduce((s, x) => s + x.byte, 0);
+
+/* En gruppe i et lag: overskriften, om den er et filnavn (fil), tabellene med data, og støttedataene til hver (stotteFor) */
+interface Gruppe {
+  tittel: string;
+  fil: boolean;
+  data: Tabellen[];
+  stotteFor: (d: Tabellen) => Tabellen[];
+}
+/* Gull etter kortene som viser tallene, i rekkefølgen kortene står. En tabell står under det første kortet som viser den. Støttedataene
+   et kort bygger på, også gjennom andre støttedata, står bak knappen på den siste tabellen kortet viser, under det første kortet som
+   bygger på dem. Det som ikke hører til noe kort, står sist som «Andre støttedata». */
+function gullEtterKort(T: Tabellen[]): Gruppe[] {
+  const finn = new Map(T.map(d => [d.navn, d])),
+    brukt = new Set<string>(),
+    grupper: Gruppe[] = [];
+  /* støttedataene tabellen n bygger på, gjennom støttedata */
+  const bygger = (n: string, ut: Set<string>) => {
+    for (const a of AVHENGIGHETER[n] || []) {
+      const d = finn.get(a);
+      if (!d || !d.stotte || ut.has(a)) continue;
+      ut.add(a);
+      bygger(a, ut);
+    }
+  };
+  for (const k of KORT) {
+    const data = k.tabeller.map(n => finn.get(n)).filter((d): d is Tabellen => !!d && !d.stotte && !brukt.has(d.navn));
+    if (!data.length) continue;
+    const S = new Set<string>();
+    for (const n of k.tabeller) bygger(n, S);
+    const stotte = [...S].map(n => finn.get(n)!).filter(d => !brukt.has(d.navn));
+    [...data, ...stotte].forEach(d => brukt.add(d.navn));
+    const siste = data[data.length - 1];
+    grupper.push({
+      tittel: (k.gruppe === 'tvilling' ? 'Tvillingen: ' : '') + k.tittel,
+      fil: false,
+      data,
+      stotteFor: d => (d === siste ? stotte : [])
+    });
+  }
+  const rest = T.filter(d => !brukt.has(d.navn));
+  if (rest.length) grupper.push({ tittel: 'Andre støttedata', fil: false, data: rest, stotteFor: () => [] });
+  return grupper;
+}
+/* Bronse og sølv etter ETL-filen, med støttedataene i hvert datasett under den siste tabellen med data i datasettet i laget, og
+   støttedata som ikke hører til ett datasett, sist som «Andre støttedata» */
+function etterFil(T: Tabellen[], lag: string): Gruppe[] {
+  const vises = T.filter(d => !d.stotte) /* støttedataene står under dataene de støtter */,
+    andre = T.filter(d => d.stotte && !d.datasett),
+    stotteFor = (d: Tabellen) =>
+      d.datasett && T.filter(x => x.datasett && x.datasett.navn === d.datasett!.navn && !x.stotte).pop() === d
+        ? T.filter(s => s.stotte && s.datasett && s.datasett.navn === d.datasett!.navn)
+        : [];
+  return [
+    ...[...new Set(vises.map(d => d.fil))].map(fil => ({
+      tittel: fil.startsWith(lag + '/') ? fil.slice(lag.length + 1) : fil,
+      fil: true,
+      data: vises.filter(d => d.fil === fil),
+      stotteFor
+    })),
+    ...(andre.length ? [{ tittel: 'Andre støttedata', fil: false, data: andre, stotteFor: () => [] }] : [])
+  ];
+}
 type Apen = { navn: string; hva: 'info' | 'data' } | null;
 type Minne = ReturnType<typeof kartetsMinne>;
 const mellomrom = (s: string) => s.replace(/ /g, '\u00a0');
@@ -456,13 +524,14 @@ export default function Katalog() {
     <section className="prosa katalog">
       <h2 className="md-typography-heading-s">Katalogen</h2>
       <p>
-        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå, etter filen de lages i. I bronse og sølv
-        står hvert datasett som én rad med dataene, og støttedataene, som trengs for å hente, forstå og regne med
+        Tabellene i datapipelinen, og hva cachen har lagret i hver akkurat nå. I bronse og sølv står de etter filen de
+        lages i, og hvert datasett som én rad med dataene. Støttedataene, som trengs for å hente, forstå og regne med
         dataene, ligger bak knappen «Støttedata». Støttedata som ikke hører til ett datasett, står sist i laget som
-        «Andre støttedata». «Info» sier hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser det som ligger i
-        cachen. Tabeller som ikke lagrer, kan spørres i stedet, også fra kildene, men ikke etter noe som ikke finnes.
-        Alt ligger i minnet og er borte når siden lukkes: siden lagrer ingenting selv i nettleseren. Nettleserens
-        vanlige hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv bestemmer.
+        «Andre støttedata». Gull står etter kortene som viser tallene, med mellomregningene og hurtigminnet som
+        støttedata. «Info» sier hva tabellen er og hvor ETL-funksjonen ligger. «Data» viser det som ligger i cachen.
+        Tabeller som ikke lagrer, kan spørres i stedet, også fra kildene, men ikke etter noe som ikke finnes. Alt ligger
+        i minnet og er borte når siden lukkes: siden lagrer ingenting selv i nettleseren. Nettleserens vanlige
+        hurtigbuffer kan likevel ta vare på svar fra tjenestene, slik tjenestene selv bestemmer.
       </p>
       <MdButton
         theme="secondary"
@@ -477,14 +546,7 @@ export default function Katalog() {
       {K &&
         (['bronse', 'solv', 'gull'] as const).map(lag => {
           const T = K.filter(d => d.lag === lag),
-            vises = T.filter(d => !d.stotte) /* støttedataene står under dataene de støtter */,
-            andre = T.filter(d => d.stotte && !d.datasett) /* støttedata som ikke hører til ett datasett */,
-            filer = [...new Set(vises.map(d => d.fil))],
-            /* støttedataene står under den siste tabellen med data i datasettet i laget, så dataene står samlet over dem */
-            stotteFor = (d: Tabellen) =>
-              d.datasett && T.filter(x => x.datasett && x.datasett.navn === d.datasett!.navn && !x.stotte).pop() === d
-                ? T.filter(s => s.stotte && s.datasett && s.datasett.navn === d.datasett!.navn)
-                : [];
+            grupper = lag === 'gull' ? gullEtterKort(T) : etterFil(T, lag);
           return (
             <MdAccordionItem
               key={lag}
@@ -504,32 +566,18 @@ export default function Katalog() {
                       <td />
                     </tr>
                   </thead>
-                  {filer.map(fil => (
-                    <tbody key={fil}>
+                  {grupper.map(g => (
+                    <tbody key={g.tittel}>
                       <tr className="gruppe">
                         <th colSpan={3} scope="colgroup">
-                          <code>{fil.startsWith(lag + '/') ? fil.slice(lag.length + 1) : fil}</code>
+                          {g.fil ? <code>{g.tittel}</code> : g.tittel}
                         </th>
                       </tr>
-                      {vises
-                        .filter(d => d.fil === fil)
-                        .map(d => (
-                          <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} stotte={stotteFor(d)} />
-                        ))}
-                    </tbody>
-                  ))}
-                  {andre.length > 0 && (
-                    <tbody>
-                      <tr className="gruppe">
-                        <th colSpan={3} scope="colgroup">
-                          Andre støttedata
-                        </th>
-                      </tr>
-                      {andre.map(d => (
-                        <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} />
+                      {g.data.map(d => (
+                        <Tabellrad key={d.navn} d={d} apen={apen} veksle={veksle} stotte={g.stotteFor(d)} />
                       ))}
                     </tbody>
-                  )}
+                  ))}
                 </table>
               </div>
             </MdAccordionItem>

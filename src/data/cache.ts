@@ -78,7 +78,8 @@ export interface Tabelldef<N, V> {
   usikkerhet?: string[] /* forbehold ved tallene som kommer fra dette steget */;
   kilde?: Kildeinfo /* i bronse: hvor dataene hentes fra */;
   datasett?: Datasettinfo /* i bronse og sølv: datasettet i sølv tabellen hører til */;
-  stotte?: boolean /* i et datasett: tabellen er støttedata. Uten er den dataene, altså selve datasettet. */;
+  stotte?: boolean /* tabellen er støttedata. I et datasett er tabellen uten dataene, altså selve datasettet. I gull er det sidene viser
+    data, og mellomregninger og hurtigminne støttedata. */;
   innhold?: string /* hva dataene i tabellen er, på klarspråk: hva en rad, et bilde eller en verdi inneholder */;
   endepunkt?: string /* i bronse: adressen som kalles, uten parametre ({…} er det som settes inn), eller filen sammen med siden */;
   teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i

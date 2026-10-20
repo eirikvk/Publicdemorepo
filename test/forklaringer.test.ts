@@ -23,7 +23,7 @@ test('infoboksen: hver kilde står sammen med det den justeres til i sølv', () 
   assert.ok(kilder('egne').includes('bronse.egne: solv.egne + solv.egneruter'));
 });
 
-test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et datasett eller som andre støttedata, og innholdet beskrevet', async () => {
+test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et datasett eller for seg, og i gull det kortene viser som data', async () => {
   const { katalog, DATASETT } = await import('../src/data/katalog.ts');
   const alle = Object.values(katalog).flatMap(l => Object.values(l)) as {
     lag: string;
@@ -35,10 +35,17 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et 
   for (const t of alle) {
     if (t.datasett)
       assert.ok(t.lag === 'bronse' || t.lag === 'solv', `${t.lag}.${t.navn} kan ikke høre til et datasett`);
-    /* støttedata uten datasett er andre støttedata, som bakgrunnskartet: bare i bronse og sølv */
-    if (t.stotte) assert.ok(t.lag === 'bronse' || t.lag === 'solv', `${t.lag}.${t.navn} kan ikke være støttedata`);
     if (t.datasett || t.stotte) assert.ok(t.innhold, `${t.lag}.${t.navn} mangler innholdet`);
   }
+  /* i gull er det sidene viser (tabellene i et kort), data, og alt annet støttedata: mellomregninger og hurtigminne */
+  const { KORT } = await import('../src/ui/forklaringer.ts'),
+    vist = new Set(KORT.flatMap(k => k.tabeller));
+  for (const t of alle.filter(t => t.lag === 'gull'))
+    assert.equal(
+      !!t.stotte,
+      !vist.has(`gull.${t.navn}`),
+      `gull.${t.navn} ${t.stotte ? 'er støttedata, men vises i et kort' : 'vises ikke i noe kort, men er ikke støttedata'}`
+    );
   for (const d of Object.values(DATASETT)) {
     const I = alle.filter(t => t.datasett === d);
     assert.ok(

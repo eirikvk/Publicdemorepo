@@ -1,13 +1,18 @@
-/* Gull for naturregnskapet fra SSB: det sidene viser av SSBs to tabeller for naturregnskapet (datasettet «Naturregnskap fra SSB» i
-   sølv, solv/naturregnskap.ts): arealet per økosystemtype i 2024, og endringen mellom bebygd og de andre økosystemtypene fra 2017 til
-   2024. Tabellene leses med økosystemtypene i grunnkartet (HOVEDOKOSYSTEMER), så sidene bruker de samme navnene som for grunnkartet.
-   Foreløpig er tallene i sølv syntetiske. Når SSBs tabeller kommer, byttes sølv ut, og alt her står som det er. Feltet syntetisk
-   følger tallene fra sølv, så sidene kan si det.
+/* Gull for naturregnskapet fra SSB: det sidene viser av SSBs to tabeller for naturregnskapet (datasettet «Syntetisk naturregnskap fra
+   SSB» i sølv, solv/naturregnskap.ts): arealet per økosystemtype i 2024, og endringen mellom bebygd og de andre økosystemtypene fra
+   2017 til 2024. Det er den eneste kilden til SSB-tall på sidene. Tabellene leses med økosystemtypene i grunnkartet
+   (HOVEDOKOSYSTEMER), så sidene bruker de samme navnene som for grunnkartet. Foreløpig er tallene i sølv syntetiske. Når SSBs tabeller
+   kommer, byttes sølv ut, og alt her står som det er. Feltet syntetisk følger tallene fra sølv, så sidene kan si det. Alle arealer er
+   i km².
 
-   Av de to lages det tvillingen viser: kortene, nedbyggingen, regnskapet, og de samme tabellene for alle kommunene i Norge
-   (gull.okosystemerNorge) med sammenligningen for kommunen (gull.sammenligning). */
+   De to tabellene lest med hovedøkosystemene (gull.okosystemfordeling og gull.bebygdEndring) er støttedata. Av dem lages det sidene
+   viser, de samme tabellene for hovedsiden og tvillingen: natur, jordbruk og bebygd nå og endringen fra 2017 (gull.utbredelse),
+   regnskapet per hovedøkosystem med summene per klasse (gull.okosystemregnskap), land og vann (gull.landOgVann), nedbyggingen per
+   landklasse (gull.nedbygging), og de samme tabellene for alle kommunene i Norge (gull.okosystemerNorge, støttedata) med
+   sammenligningen for kommunen (gull.sammenligning). */
 import { summen, tiDekar } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
+import { HAV_MIN_ANDEL, HAV_MIN_KM2 } from '../solv/felles.ts';
 import { HOVEDOKOSYSTEMER, KL, OKOSYSTEMTYPER, type KlasseId } from '../solv/klasser.ts';
 import type { Kommuneendring, Okosystemareal, Okosystemendring } from '../solv/naturregnskap.ts';
 import { andel } from './felles.ts';
@@ -15,6 +20,9 @@ import { andel } from './felles.ts';
 /* Et hovedøkosystem i en tabell: koden i grunnkartet, navnet og klassen blant dagens seks */
 type Hovedokosystem = (typeof HOVEDOKOSYSTEMER)[number];
 const LAND: KlasseId[] = ['beb', 'jor', 'nat'];
+/* Klassene på land slik sidene viser dem, med natur først, og navnet på hver */
+const NATUR_FORST: KlasseId[] = ['nat', 'jor', 'beb'];
+const navnet = (id: KlasseId) => KL.find(k => k[0] === id)![1];
 /* Summen av verdiene i A for økosystemtypene hos SSB som svarer til hovedøkosystemet h, avrundet til 10 dekar */
 const iGrunnkartet = (A: Record<string, number>, h: Hovedokosystem) =>
   tiDekar(summen(OKOSYSTEMTYPER.filter(o => o.grunnkart === h.kode).map(o => A[o.kode] || 0)));
@@ -98,13 +106,15 @@ export interface Hovedklasse {
   pst: number | null;
 }
 export function byggHovedklasser(F: Fordelingsrad[], E: Endringsrad[] | null): Hovedklasse[] {
-  const areal = (id: KlasseId) => summen(F.filter(r => r.gruppe === id).map(r => r.km2)),
+  const areal = (id: KlasseId) => tiDekar(summen(F.filter(r => r.gruppe === id).map(r => r.km2))),
     land = summen(LAND.map(areal)),
     netto = (id: KlasseId) =>
       E
-        ? id === 'beb'
-          ? summen(E.map(r => r.tilBebygd - r.fraBebygd))
-          : -summen(E.filter(r => r.gruppe === id).map(r => r.tilBebygd - r.fraBebygd))
+        ? tiDekar(
+            id === 'beb'
+              ? summen(E.map(r => r.tilBebygd - r.fraBebygd))
+              : -summen(E.filter(r => r.gruppe === id).map(r => r.tilBebygd - r.fraBebygd))
+          )
         : null;
   return LAND.map(id => {
     const km2 = areal(id),
@@ -119,27 +129,42 @@ export function byggHovedklasser(F: Fordelingsrad[], E: Endringsrad[] | null): H
   });
 }
 
-/* Tabellen gull.oversiktKort: kortene på oversikten i tvillingen, natur, jordbruk og bebygd, summert fra de to tabellene over.
-   Endringen er null når årene ikke kan sammenlignes. */
-export interface OversiktKort {
-  fra: string | null;
-  til: string | null;
+/* Tabellen gull.utbredelse: natur, jordbruk og bebygd i 2024 (aar), med natur først, summert fra de to tabellene over. Hver klasse har
+   arealet, andelen av landarealet (land, summen av de tre), endringen fra fra til til (bebygd opp, natur og jordbruk ned) og
+   endringen i prosent av arealet i fra. endret: kommunegrensen er flyttet, så årene kan ikke sammenlignes, og endringen er null.
+   flyttet: grensen er flyttet, men endringen er regnet likevel. maks er den største endringen, til stolpene på hovedsiden. Både
+   hovedsiden og tvillingen viser denne. */
+export interface Utbredelse {
+  aar: string;
+  land: number;
+  fra: string;
+  til: string;
+  endret: boolean;
+  flyttet: boolean;
   syntetisk: boolean;
   kilde: string;
   klasser: (Hovedklasse & { navn: string })[];
+  maks: number;
 }
-export async function oversiktKort(nr: string): Promise<OversiktKort> {
-  const [F, E] = await Promise.all([katalog.gull.okosystemfordeling(nr), katalog.gull.bebygdEndring(nr)]);
-  const sammenlign = !E.endret,
-    K = byggHovedklasser(F.klasser, sammenlign ? E.klasser : null),
-    navn = (id: KlasseId) => KL.find(k => k[0] === id)![1];
+export function byggUtbredelse(F: Okosystemfordeling, E: BebygdEndring): Utbredelse {
+  const K = byggHovedklasser(F.klasser, E.endret ? null : E.klasser),
+    klasser = NATUR_FORST.map(id => ({ ...K.find(k => k.id === id)!, navn: navnet(id) }));
   return {
-    fra: sammenlign ? E.fra : null,
-    til: sammenlign ? E.til : null,
+    aar: F.aar,
+    land: tiDekar(summen(klasser.map(k => k.km2))),
+    fra: E.fra,
+    til: E.til,
+    endret: E.endret,
+    flyttet: E.flyttet,
     syntetisk: F.syntetisk || E.syntetisk,
     kilde: F.kilde,
-    klasser: (['nat', 'jor', 'beb'] as KlasseId[]).map(id => ({ ...K.find(k => k.id === id)!, navn: navn(id) }))
+    klasser,
+    maks: Math.max(...klasser.map(k => Math.abs(k.endring || 0))) || 1
   };
+}
+export async function utbredelse(nr: string): Promise<Utbredelse> {
+  const [F, E] = await Promise.all([katalog.gull.okosystemfordeling(nr), katalog.gull.bebygdEndring(nr)]);
+  return byggUtbredelse(F, E);
 }
 
 /* Hvor mye av hver landklasse som ble bygget ned, med arealet i 2024 og andelen av arealet i 2017, og summen for natur og jordbruk.
@@ -221,8 +246,22 @@ export function byggRegnskap(F: Fordelingsrad[], E: Endringsrad[]): Regnskapsrad
     };
   });
 }
-/* Tabellen gull.okosystemregnskap: regnskapet per hovedøkosystem på land fra 2017 til 2024, fra de to tabellene over. endret:
-   kommunegrensen er flyttet, så årene kan ikke sammenlignes. */
+/* Inngående areal, endringen og utgående areal, summert */
+export interface Regnskapssum {
+  inngaende: number;
+  endring: number;
+  utgaende: number;
+}
+/* Summene av radene R, avrundet til 10 dekar */
+const regnskapssum = (R: Regnskapssum[]): Regnskapssum => ({
+  inngaende: tiDekar(summen(R.map(r => r.inngaende))),
+  endring: tiDekar(summen(R.map(r => r.endring))),
+  utgaende: tiDekar(summen(R.map(r => r.utgaende)))
+});
+/* Tabellen gull.okosystemregnskap: utbredelsesregnskapet fra 2017 til 2024 etter mønster fra FNs standard for naturregnskap (SEEA EA),
+   fra de to tabellene over. Én rad per hovedøkosystem på land (rader), summene per klasse med natur først (klasser), som hovedsiden
+   viser, og summen for landarealet (sum). avvik er hvor mye landarealet er endret mellom årgangene, i hele dekar. endret:
+   kommunegrensen er flyttet, så årene kan ikke sammenlignes. Både hovedsiden og tvillingen viser denne. */
 export interface Okosystemregnskap {
   fra: string;
   til: string;
@@ -230,17 +269,66 @@ export interface Okosystemregnskap {
   kilde: string;
   endret: boolean;
   rader: Regnskapsrad[];
+  klasser: (Regnskapssum & { id: KlasseId; navn: string })[];
+  sum: Regnskapssum;
+  avvik: number;
 }
-export async function okosystemregnskap(nr: string): Promise<Okosystemregnskap> {
-  const [F, E] = await Promise.all([katalog.gull.okosystemfordeling(nr), katalog.gull.bebygdEndring(nr)]);
+export function byggOkosystemregnskap(F: Okosystemfordeling, E: BebygdEndring): Okosystemregnskap {
+  const rader = byggRegnskap(F.klasser, E.klasser),
+    klasser = NATUR_FORST.map(id => ({ id, navn: navnet(id), ...regnskapssum(rader.filter(r => r.gruppe === id)) })),
+    sum = regnskapssum(klasser);
   return {
     fra: E.fra,
     til: E.til,
     syntetisk: F.syntetisk || E.syntetisk,
     kilde: F.kilde,
     endret: E.endret,
-    rader: byggRegnskap(F.klasser, E.klasser)
+    rader,
+    klasser,
+    sum,
+    avvik: Math.round((sum.utgaende - sum.inngaende) * 1000)
   };
+}
+export async function okosystemregnskap(nr: string): Promise<Okosystemregnskap> {
+  const [F, E] = await Promise.all([katalog.gull.okosystemfordeling(nr), katalog.gull.bebygdEndring(nr)]);
+  return byggOkosystemregnskap(F, E);
+}
+
+/* Delene av kommunens flate: land og ferskvann fra SSB, og hav som det som blir igjen av flaten (fra kommunegrensen). En liten rest
+   er avvik mellom grense og statistikk, ikke hav. flate og rest er med til forklaringen av tallene. */
+export function byggLandOgVann(flate: number, land: number, ferskvann: { inn: number; elv: number } | null) {
+  if (!land || !ferskvann || !flate) return null;
+  const rest = flate - land - ferskvann.inn - ferskvann.elv,
+    hav = rest < Math.max(HAV_MIN_KM2, flate * HAV_MIN_ANDEL) ? 0 : rest;
+  return {
+    flate,
+    rest,
+    hav,
+    deler: (
+      [
+        ['land', 'Land', land],
+        ['inn', 'Innsjø', ferskvann.inn],
+        ['elv', 'Elv', ferskvann.elv],
+        ['hav', 'Hav', hav]
+      ] as [id: string, navn: string, km2: number][]
+    ).filter(d => d[2] > 0)
+  };
+}
+/* Landarealet (summen av klassene på land) og innsjø og elv i arealet per hovedøkosystem (F) */
+export function landOgFerskvann(F: Fordelingsrad[]) {
+  const km2 = (kode: string) => (F.find(r => r.kode === kode) || { km2: 0 }).km2;
+  return {
+    land: tiDekar(summen(F.filter(r => LAND.includes(r.gruppe)).map(r => r.km2))),
+    ferskvann: { inn: km2('innsjoerVannmagasiner'), elv: km2('elverBekkerKanaler') }
+  };
+}
+/* Tabellen gull.landOgVann: land, innsjø, elv og hav i kommunens flate (solv.grense), av arealet per hovedøkosystem */
+export type LandOgVann = NonNullable<ReturnType<typeof byggLandOgVann>> & { syntetisk: boolean };
+export async function landOgVann(nr: string): Promise<LandOgVann | null> {
+  const [g, F] = await Promise.all([katalog.solv.grense(nr), katalog.gull.okosystemfordeling(nr)]),
+    { land, ferskvann } = landOgFerskvann(F.klasser),
+    V = byggLandOgVann(g.km2, land, ferskvann);
+  return V && { ...V, syntetisk: F.syntetisk };
 }
 
 /* De to tabellene for alle kommunene i Norge, lest som for én kommune, og summen for Norge. Summen av endringen tar bare med

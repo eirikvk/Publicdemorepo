@@ -85,9 +85,9 @@ export const verdsattVurderes = () => fraRad(valgt(katalog.gull.verdsattVurderes
 export const verneformer = () => fraRad(valgt(katalog.gull.verneformer));
 export const graaIPlan = () => verdi(katalog.gull.graaIPlan);
 
-/* Kortene på oversikten (natur, jordbruk, bebygd nå og endringen fra 2017), nedbyggingen per landklasse og regnskapet per
-   hovedøkosystem, fra de syntetiske tabellene. Og planlagt utbygging. */
-export const oversiktKort = () => fraRad(valgt(katalog.gull.oversiktKort));
+/* Natur, jordbruk og bebygd nå og endringen fra 2017 (kortene på oversikten), nedbyggingen per landklasse og regnskapet per
+   hovedøkosystem, fra de syntetiske tabellene, de samme som hovedsiden bruker. Og planlagt utbygging. */
+export const utbredelse = () => fraRad(valgt(katalog.gull.utbredelse));
 export const nedbygging = () => fraRad(valgt(katalog.gull.nedbygging));
 export const okosystemregnskap = () => fraRad(valgt(katalog.gull.okosystemregnskap));
 /* Kommunen sammenlignet med resten av Norge, fra de syntetiske tabellene for alle kommunene. Ingen når kommunen ikke er med. */

@@ -26,7 +26,7 @@ import {
   useSporsmal,
   svar
 } from '../komponenter/deler.tsx';
-import { nedbygging, okosystemregnskap, oversiktKort, plansum, sammenligning } from '../tall.ts';
+import { nedbygging, okosystemregnskap, plansum, sammenligning, utbredelse } from '../tall.ts';
 import { TEMAER } from '../temaer.ts';
 import { FLAGG } from '../flagg.ts';
 
@@ -195,7 +195,7 @@ const DATAPLATTFORM = 'Krever dataplattform';
 
 export function Oversikt() {
   const [vist, settVist] = useState<Klassevalg>('nat');
-  const U = oversiktKort(),
+  const U = utbredelse(),
     N = nedbygging(),
     S = sammenligning(),
     P = plansum(),

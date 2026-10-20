@@ -108,7 +108,7 @@ export const KORT: Kort[] = [
     sporsmal: 'Hvor mye natur, jordbruk og bebygd areal har kommunen, og er det mer eller mindre natur enn i 2017?',
     kortFortalt:
       'Tallene er SSBs tabeller for naturregnskapet: arealet per økosystemtype i 2024, slått sammen til natur, jordbruk og bebygd, og endringen mellom bebygd og de andre fra 2017. Andelen er regnet av landarealet. Til SSB publiserer tabellene 25. november 2026, er tallene syntetiske, laget av SSBs arealstatistikk med faste tommelfingerregler.',
-    tabeller: ['gull.utbredelse', 'gull.endring', 'gull.oppstilling'],
+    tabeller: ['gull.utbredelse', 'gull.okosystemregnskap'],
     regnestykke: hent => {
       const U = hent(katalog.gull.utbredelse);
       if (!U) return null;
@@ -118,11 +118,13 @@ export const KORT: Kort[] = [
         `Landarealet i ${U.aar} er ${daa(U.land)}: bebygd ${hele(k('beb').km2)}, jordbruk ${hele(k('jor').km2)} og natur ${hele(n.km2)} dekar.`,
         `Natur er ${hele(n.km2)} av ${hele(U.land)} dekar, altså ${prosent(n.andel)} av landarealet.`
       ];
-      const O = hent(katalog.gull.oppstilling);
-      if (O)
+      const O = hent(katalog.gull.okosystemregnskap);
+      if (O && !O.endret) {
+        const N = O.klasser[0];
         linjer.push(
-          `Natur var ${hele(O.inngaende[0])} dekar i ${O.fra} og ${hele(O.utgaende[0])} dekar i ${O.til}. Forskjellen er ${pluss(O.netto[0])} dekar.`
+          `Natur var ${hele(N.inngaende)} dekar i ${O.fra} og ${hele(N.utgaende)} dekar i ${O.til}. Forskjellen er ${pluss(N.endring)} dekar.`
         );
+      }
       return linjer;
     }
   },
@@ -135,16 +137,16 @@ export const KORT: Kort[] = [
     sporsmal: 'Hvor mye areal hadde hver klasse i 2017 og nå, satt opp som et regnskap?',
     kortFortalt:
       'Regnskapet følger mønsteret fra FNs standard for naturregnskap (SEEA EA): areal ved start, netto endring og areal ved slutt. Arealet i 2024 er fra SSBs tabell over arealet per økosystemtype, og arealet i 2017 er det samme med det som gikk til og fra bebygd lagt tilbake. Regnskapet gjelder landarealet, så vann er ikke med. Tallene er syntetiske til SSB publiserer tabellene.',
-    tabeller: ['gull.oppstilling'],
+    tabeller: ['gull.okosystemregnskap'],
     usikkerhet: [
       'Planlagt utbygging er ikke med i regnskapet, som viser arealet fram til i dag. Den omtales under regnskapet.'
     ],
     regnestykke: hent => {
-      const O = hent(katalog.gull.oppstilling);
-      if (!O) return null;
-      const linjer = O.kolonner.map(
-        (navn, j) =>
-          `${navn}: ${hele(O.inngaende[j])} ${O.netto[j] < 0 ? '−' : '+'} ${hele(Math.abs(O.netto[j]))} = ${hele(O.utgaende[j])} dekar.`
+      const O = hent(katalog.gull.okosystemregnskap);
+      if (!O || O.endret) return null;
+      const linjer = [...O.klasser, { ...O.sum, navn: 'Sum' }].map(
+        k =>
+          `${k.navn}: ${hele(k.inngaende)} ${k.endring < 0 ? '−' : '+'} ${hele(Math.abs(k.endring))} = ${hele(k.utgaende)} dekar.`
       );
       if (O.avvik)
         linjer.push(
@@ -185,7 +187,7 @@ export const KORT: Kort[] = [
     sporsmal: 'Hvor mye natur og jordbruk setter kommuneplanen av til utbygging?',
     kortFortalt:
       'Kommuneplanen fra DiBK legges oppå dagens arealklasser fra NIBIO i et rutenett, med ruter på 10,6 meter. Ruter som i dag er natur eller jordbruk, og som planen setter av til bebyggelse, anlegg eller samferdsel, telles. Smale striper inntil bebygd areal, som oftest kommer av at grensene ikke er tegnet helt likt, tas bort.',
-    tabeller: ['gull.kommuneplan', 'gull.planlagt'],
+    tabeller: ['gull.kommuneplan', 'gull.planlagt', 'gull.plansum'],
     forklarer: ['gull.utbygging', 'gull.dagensKlasser', 'solv.planinfo'],
     usikkerhet: ['Tallene er anslag til illustrasjon, ikke offisiell statistikk.'],
     regnestykke: hent => {
@@ -415,7 +417,7 @@ export const KORT: Kort[] = [
     sporsmal: 'Hva slags natur er vernet i kommunen, og hvor stor del av landarealet er vernet?',
     kortFortalt:
       'Grunnkartet fra NIBIO klippes til verneområdene fra Miljødirektoratet i kommunen, og arealet summeres per økosystemtype og til land, hav og ferskvann. Andelen vernet er bare det vernede på land, av landarealet i grunnkartet. Skogen som er vernet, er skog i grunnkartet, også tresatt myr og tresatt innmarksbeite.',
-    tabeller: ['gull.vernetNatur'],
+    tabeller: ['gull.vernetNatur', 'gull.verneformer'],
     usikkerhet: [
       'Hovedsiden regner andelen av alt som er vernet, også i sjø, av landarealet hos SSB. Derfor er andelen der høyere i kommuner med vern i sjø.'
     ],
@@ -582,9 +584,9 @@ export const KORT: Kort[] = [
       'Hvor mye natur, jordbruk og bebygd areal har kommunen, og hvor mye natur og jordbruk ble bygget ned fra 2017 til 2024?',
     kortFortalt:
       'Tallene er syntetiske: de står i stedet for SSBs tabeller over hovedøkosystemer til de publiseres 25. november 2026. SSBs arealklasser for 2017 og 2024 oversettes til hovedøkosystemer med en fast nøkkel, og økningen i bebygd tas først fra jordbruket og så fra naturen. Natur, jordbruk og bebygd er hovedøkosystemene summert, og andelen er av landarealet.',
-    tabeller: ['gull.oversiktKort', 'gull.nedbygging', 'gull.okosystemregnskap'],
+    tabeller: ['gull.utbredelse', 'gull.nedbygging', 'gull.okosystemregnskap'],
     regnestykke: hent => {
-      const O = hent(katalog.gull.oversiktKort);
+      const O = hent(katalog.gull.utbredelse);
       if (!O) return null;
       const N = hent(katalog.gull.nedbygging);
       return [

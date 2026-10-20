@@ -1,4 +1,4 @@
-/* Sølv, datasettet «Naturregnskap fra SSB»: SSBs to tabeller for naturregnskapet, per kommune, i den formen SSB gir dem, med
+/* Sølv, datasettet «Syntetisk naturregnskap fra SSB»: SSBs to tabeller for naturregnskapet, per kommune, i den formen SSB gir dem, med
    økosystemtypene i SSBs klassifisering av økosystemer (OKOSYSTEMTYPER i klasser.ts):
    1. Arealet per økosystemtype i 2024 (solv.okosystemareal).
    2. Endringen i areal mellom bebygd og hver av de andre økosystemtypene fra 2017 til 2024 (solv.okosystemendring).

@@ -31,13 +31,12 @@ function regnskap() {
   if (T.status !== 'ok') return ingenTall('Tallene kunne ikke hentes fra SSB.');
   const U = T.verdi!,
     natur = U.klasser[0],
-    E = verdi(katalog.gull.endring),
-    d = E && !E.endret ? E.klasser[0].km2 : 0;
+    d = U.endret ? 0 : natur.endring || 0;
   return {
     tall: dekar(natur.km2),
     tekst:
       `Natur i ${U.aar}${avLand(natur.andel)}.` +
-      (Math.round(d * 1000) ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${E!.fra}.` : '') +
+      (Math.round(d * 1000) ? ` Ca. ${iTekst(Math.abs(d))} ${d < 0 ? 'mindre' : 'mer'} enn i ${U.fra}.` : '') +
       (U.syntetisk ? ' Syntetiske tall til SSBs tabeller kommer.' : '')
   };
 }
