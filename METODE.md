@@ -1679,6 +1679,20 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Eksempelrader i katalogen, 20. oktober 2026.** «Data» i katalogen viste formen på verdien (bilder, rutenett, tabeller og et tre),
+men ikke radene der dataene er lagret pakket. Nå står eksempelrader først, som i Databricks: hva én rad er, hvor mange det er, og 20
+rader spredt jevnt over alle, med kolonnene, typene og hvor mange rader som har verdi. Hva én rad er, sier tabellen selv (`radform`
+i `Tabelldef`): ruter (én rad per rute der ikke alle verdiene er 0), andeler (én rad per rute med en andel), kommuner (én rad per
+kommune), JSON-stat (én rad per verdi som ikke er tom) og en liste i en liste (kommunene i fylkene). Uten radform er radene listen,
+den lengste listen i svaret som ikke er tom, eller hele svaret som én rad, og hurtigminne med interne strukturer har ingen rader.
+Feltene som står én gang, står over radene, og kolonner med samme verdi i alle radene som vises, på én linje. Bildene, rutenettene
+og flatene står under, og tabellene og feltene som før sto der, er borte, så ingenting står to ganger. Et første forsøk ble vurdert
+av tre agenter (datamodell, brukervennlighet og kode). Det som er tatt inn: spredte rader i stedet for de første, riktig antall i
+JSON-stat, ingen tomme lister som rader, ingen rader for hurtigminne, kolonnene funnet av alle radene, nøkkelkolonnene først, x og y
+i flisnettet også for andelene, tall med komma, ett svar loddrett, alle feltene i en rad under tabellen i full lengde med lenker,
+plassen til raden blant alle, fast første kolonne, og at en feil i eksempelradene ikke stanser siden. Ikke tatt inn ennå: forklaring
+og enhet per kolonne, navn på kodene (som 01 Skog) og hvilken verdi som betyr «ingen data» per tabell. Ingen tall er endret.
+
 **Gull etter det sidene viser, og ett regnskap for hovedsiden og tvillingen, 20. oktober 2026.** Hovedsiden og tvillingen hadde
 hvert sitt sett tabeller for SSB-tallene, regnet av de samme to tabellene: utbredelsen, endringen og oppstillingen for hovedsiden,
 og kortene og regnskapet per hovedøkosystem for tvillingen. Nå er det ett sett. `gull.utbredelse` har natur, jordbruk og bebygd nå

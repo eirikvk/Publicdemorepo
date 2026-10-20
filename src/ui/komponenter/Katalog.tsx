@@ -8,12 +8,14 @@
    Innholdet vises som bilder, rutenett, tabeller og flater (Datavisning.tsx), og alle feltene som tre. Til slutt kartets
    minne: flisene OpenLayers holder på i hvert kartlag. Innholdet leses når man ber om det, så det ikke regnes ut på nytt hver gang
    siden tegnes. */
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { eksempelI, innhold, kallI, verdiI } from '../../data/cache.ts';
 import { app } from '../../data/motor/tilstand.ts';
 import { kartetsMidte, kartetsMinne } from '../kart/kart.ts';
 import { kb, nf, tid } from '../tekst.ts';
 import Datavisning, { finnFormer, type Form } from './Datavisning.tsx';
+import { celle, eksempelrader, type Eksempelrader, type Kolonne } from '../eksempelrader.ts';
+import type { Radform } from '../../data/cache.ts';
 import { MdAccordionItem, MdButton } from './md.ts';
 import { AVHENGIGHETER } from '../../data/avhengigheter.ts';
 import { KORT } from '../forklaringer.ts';
@@ -104,31 +106,234 @@ function somTekst(v: unknown): string {
   return linjer.join('\n');
 }
 
-/* En verdi vist i to deler: om dataene (foran, og feltene som beskriver dataene) og dataene selv, etter formen de har (Datavisning.tsx).
-   Alle feltene står også som tre. */
-function Innholdet({ v, foran }: { v: unknown; foran: [string, string][] }) {
-  const [vist] = useState<{ om: [string, string][]; former: Form[]; tekst: string }>(() => ({
-    ...finnFormer(v),
-    tekst: somTekst(v)
-  }));
+/* Hvor mange rader det er, og hvilke som vises */
+function antallTekst(E: Eksempelrader) {
+  if (E.antall === null) return '';
+  if (E.antall === 0) return 'Ingen rader.';
+  const n = `${nf(E.antall, 0)} ${E.antall === 1 ? 'rad' : 'rader'}.`;
+  return E.spredt ? `${n} Her er ${nf(E.rader.length, 0)} av dem, spredt jevnt fra den første.` : n;
+}
+/* En verdi i full lengde, med lenke når det er en nettadresse */
+function Verdi({ x }: { x: unknown }) {
+  const t = celle(x, true).tekst;
+  return typeof x === 'string' && /^https?:\/\//.test(x) ? (
+    <a href={x} target="_blank" rel="noopener">
+      {t}
+    </a>
+  ) : (
+    <>{t}</>
+  );
+}
+/* Alle feltene i en rad, loddrett: felt, type og verdi, med kolonnene i tabellen først */
+function Feltene({ r, K, id, tittel }: { r: Record<string, unknown>; K: Kolonne[]; id?: string; tittel: string }) {
+  const navn = [...K.map(k => k.navn).filter(k => k in r), ...Object.keys(r).filter(k => !K.some(x => x.navn === k))];
+  return (
+    <div className="feltene" id={id}>
+      <table className="talltabell">
+        <caption>{tittel}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Felt</th>
+            <th scope="col">Type</th>
+            <th scope="col">Verdi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {navn.map(k => (
+            <tr key={k}>
+              <th scope="row">
+                <code>{k}</code>
+              </th>
+              <td>{celle(r[k]).type}</td>
+              <td>
+                <Verdi x={r[k]} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+/* Eksempelradene: hva én rad er, hvor mange det er og hvilke som vises, feltene som står én gang ved siden av radene, og radene som
+   tabell med navnet og typen til hver kolonne, og hvor mange rader som har verdi når ikke alle har det. Kolonner med samme verdi i
+   alle radene som vises, står på én linje over tabellen, så tabellen blir smalere. Ett svar står loddrett, som felt, type og verdi.
+   Knappen først i en rad, med plassen til raden blant alle, viser alle feltene i raden under tabellen. Den første kolonnen står fast
+   når tabellen rulles sidelengs. */
+const MAKS_KOLONNER = 30;
+function Eksempeltabell({ E }: { E: Eksempelrader }) {
+  const id = useId(),
+    [apen, settApen] = useState<number | null>(null),
+    lik =
+      E.rader.length >= 3
+        ? E.kolonner.filter(
+            k =>
+              !E.nokler.includes(k.navn) &&
+              E.rader.every(r => celle(r[k.navn]).tekst === celle(E.rader[0][k.navn]).tekst)
+          )
+        : [],
+    vises = E.kolonner.filter(k => !lik.includes(k)),
+    K = vises.slice(0, MAKS_KOLONNER),
+    ett = E.rader.length === 1 && E.antall === 1;
+  return (
+    <>
+      <h4 className="md-typography-label-s" id={id + 't'}>
+        Eksempelrader
+      </h4>
+      <p className="hint" id={id + 'o'}>
+        {E.hva} {ett ? '' : antallTekst(E)}
+        {E.merknad ? ' ' + E.merknad : ''}
+      </p>
+      {E.om.length > 0 && (
+        <p className="hint">
+          Står én gang ved siden av radene:{' '}
+          {E.om.map(([k, x], i) => (
+            <span key={k}>
+              {i ? ', ' : ''}
+              <code>{k}</code> {x}
+            </span>
+          ))}
+          .
+        </p>
+      )}
+      {lik.length > 0 && (
+        <p className="hint">
+          Lik i alle radene som vises:{' '}
+          {lik.map((k, i) => (
+            <span key={k.navn}>
+              {i ? ', ' : ''}
+              <code>{k.navn}</code> {celle(E.rader[0][k.navn]).tekst || 'tom'}
+            </span>
+          ))}
+          .
+        </p>
+      )}
+      {ett ? (
+        <Feltene r={E.rader[0]} K={E.kolonner} tittel="Feltene i svaret" />
+      ) : (
+        E.rader.length > 0 && (
+          <div
+            className="rullbar eksempler"
+            role="region"
+            tabIndex={0}
+            aria-labelledby={id + 't'}
+            aria-describedby={id + 'o'}
+          >
+            <table className="talltabell eksempelrader">
+              <thead>
+                <tr>
+                  <th scope="col">Rad</th>
+                  {K.map(k => (
+                    <th key={k.navn} scope="col" className={k.type === 'tall' ? 'tall' : undefined}>
+                      {k.navn}
+                      <small>
+                        <span className="skjult">, type </span>
+                        {k.type}
+                        {k.fylt < k.av ? `, i ${nf(k.fylt, 0)} av ${nf(k.av, 0)}` : ''}
+                      </small>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {E.rader.map((r, i) => (
+                  <tr key={i}>
+                    <td>
+                      <button
+                        type="button"
+                        className="fold"
+                        aria-expanded={apen === i}
+                        aria-controls={apen === i ? id + 'r' : undefined}
+                        aria-label={`Alle feltene i rad ${E.plass[i]}`}
+                        onClick={() => settApen(apen === i ? null : i)}
+                      >
+                        {apen === i ? '▾' : '▸'} {E.plass[i]}
+                      </button>
+                    </td>
+                    {K.map(k => {
+                      const c = celle(r[k.navn]);
+                      return (
+                        <td
+                          key={k.navn}
+                          className={
+                            c.type === 'tall'
+                              ? 'tall'
+                              : ['flate', 'liste', 'objekt'].includes(c.type)
+                                ? 'forkortet'
+                                : undefined
+                          }
+                        >
+                          {c.tekst}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+      {!ett && vises.length > K.length && (
+        <p className="hint">
+          Tabellen viser {K.length} av {vises.length} kolonner. Trykk på ▸ for å se alle feltene i en rad.
+        </p>
+      )}
+      {!ett && apen !== null && E.rader[apen] && (
+        <Feltene r={E.rader[apen]} K={E.kolonner} id={id + 'r'} tittel={`Alle feltene i rad ${E.plass[apen]}`} />
+      )}
+    </>
+  );
+}
+
+/* Former som viser dataene som bilde: de står også når eksempelradene vises, mens tabellene og feltene da står i eksempelradene */
+const BILDER = new Set<Form['type']>(['png', 'bilde', 'rutenett', 'flater']);
+/* ja og nei for sant og usant i feltene som beskriver dataene, som i eksempelradene */
+const janei = (x: string) => (x === 'true' ? 'ja' : x === 'false' ? 'nei' : x);
+/* En verdi vist i deler: om dataene (foran, og feltene som beskriver dataene), eksempelradene, dataene som bilde etter formen de har
+   (Datavisning.tsx), og alle feltene som tre. Uten eksempelrader vises dataene etter formen de har, som før. Kan eksempelradene ikke
+   lages, vises verdien uten dem. */
+function Innholdet({ v, foran, radform }: { v: unknown; foran: [string, string][]; radform: Radform | null }) {
+  const [vist] = useState<{ om: [string, string][]; former: Form[]; tekst: string; E: Eksempelrader | null }>(() => {
+    let E: Eksempelrader | null = null;
+    try {
+      E = eksempelrader(v, radform);
+    } catch (e) {
+      E = null;
+    }
+    return { ...finnFormer(v), tekst: somTekst(v), E };
+  });
+  const former = vist.E ? vist.former.filter(f => BILDER.has(f.type)) : vist.former;
   return (
     <>
       <h4 className="md-typography-label-s">Om dataene</h4>
-      <div className="rullbar">
+      <div className="rullbar om">
         <table className="talltabell">
           <tbody>
             {[...foran, ...vist.om].map(([k, x], i) => (
               <tr key={k}>
                 <th scope="row">{i < foran.length ? k : <code>{k}</code>}</th>
-                <td>{x}</td>
+                <td>{janei(x)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <h4 className="md-typography-label-s">Dataene</h4>
-      {vist.former.length ? <Datavisning former={vist.former} /> : <pre>{vist.tekst}</pre>}
-      {vist.former.length > 0 && (
+      {vist.E && <Eksempeltabell E={{ ...vist.E, om: vist.E.om.filter(([k]) => !vist.om.some(([n]) => n === k)) }} />}
+      {vist.E ? (
+        former.length > 0 && (
+          <>
+            <h4 className="md-typography-label-s">Som bilde</h4>
+            <Datavisning former={former} />
+          </>
+        )
+      ) : (
+        <>
+          <h4 className="md-typography-label-s">Dataene</h4>
+          {former.length ? <Datavisning former={former} /> : <pre>{vist.tekst}</pre>}
+        </>
+      )}
+      {(vist.E || former.length > 0) && (
         <details className="tre">
           <summary>Alle feltene som tre</summary>
           <pre>{vist.tekst}</pre>
@@ -139,7 +344,7 @@ function Innholdet({ v, foran }: { v: unknown; foran: [string, string][] }) {
 }
 
 /* Én rad i cachen. Verdien leses fra cachen først når raden åpnes. */
-function Rad({ navn, r }: { navn: string; r: Raden }) {
+function Rad({ navn, r, radform }: { navn: string; r: Raden; radform: Radform | null }) {
   const [apen, settApen] = useState(false),
     v = apen ? verdiI(navn, r.nokkel) : undefined;
   return (
@@ -159,6 +364,7 @@ function Rad({ navn, r }: { navn: string; r: Raden }) {
               ...(r.ms ? ([['Laget på', tid(r.ms)]] as [string, string][]) : []),
               ['Lagret', alder(r.sekunder) + ' siden']
             ]}
+            radform={radform}
           />
         ))}
     </details>
@@ -205,6 +411,7 @@ function Sporring({ d }: { d: Tabellen }) {
               ['Nøkkel', nokkelen(svar.nokkel)],
               ['Tid', tid(svar.ms)]
             ]}
+            radform={d.radform}
           />
         ))}
     </>
@@ -476,7 +683,7 @@ function Tabellrad({
                   {!d.husk ? (
                     <Sporring d={d} />
                   ) : r.length ? (
-                    r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} />)
+                    r.map(x => <Rad key={x.nokkel} navn={d.navn} r={x} radform={d.radform} />)
                   ) : (
                     <p>Ingenting lagret ennå.</p>
                   )}

@@ -178,3 +178,64 @@
 .katalog tr.detalj h4 {
   margin: var(--md-spacing-12) 0 var(--md-spacing-4);
 }
+/* Eksempelradene: typen står dempet under kolonnenavnet, det som er kortet ned (flater, lister, objekter) står dempet, og knappen med
+   plassen til raden, som viser alle feltene i den, er tekst med en trekant, som trekkspillene ellers i katalogen */
+.katalog table.eksempelrader thead th small {
+  display: block;
+  font-weight: var(--md-typography-weight-regular, 400);
+  color: var(--dempet);
+}
+.katalog table.eksempelrader td.forkortet {
+  color: var(--dempet);
+}
+.katalog table.eksempelrader button.fold {
+  font: inherit;
+  min-height: 24px;
+  padding: 0 var(--md-spacing-4);
+  border: 0;
+  background: none;
+  color: var(--md-color-cta-primary-default);
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Tekst som bare skjermlesere leser */
+.katalog .skjult {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Eksempelradene står uten høydegrense (det er høyst 20 rader), og den første kolonnen med raden står fast når tabellen rulles
+   sidelengs */
+.katalog .rullbar.eksempler {
+  max-height: none;
+}
+.katalog table.eksempelrader th:first-child,
+.katalog table.eksempelrader td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--md-color-surface-white, #fff);
+  padding-left: var(--md-spacing-4);
+}
+/* Feltene i en rad og i ett svar: loddrett, med teksten brutt, så alt får plass uten å rulle */
+.katalog .feltene {
+  margin-top: var(--md-spacing-8);
+}
+.katalog .feltene caption {
+  text-align: left;
+  font-weight: var(--md-typography-weight-medium, 500);
+  padding-bottom: var(--md-spacing-4);
+}
+.katalog .feltene td,
+.katalog .feltene th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* Om dataene: lange verdier brytes */
+.katalog .rullbar.om td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

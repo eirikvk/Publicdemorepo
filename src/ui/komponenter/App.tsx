@@ -1,6 +1,6 @@
 /* Hele siden. Kroken useApp gjør at siden tegnes på nytt når tilstanden er endret. */
 import { useEffect, useState } from 'react';
-import { innhold } from '../../data/cache.ts';
+import { innhold, verdiI } from '../../data/cache.ts';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import { NATURTEMA } from '../../data/solv/temaer.ts';
 import { planTall, utbyggingen } from '../../data/motor/plan.ts';
@@ -47,6 +47,7 @@ export default function App() {
         planTall,
         utbyggingen,
         innhold,
+        verdiI,
         nullstillBruk,
         get bruk() {
           return bruk;

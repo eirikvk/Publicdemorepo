@@ -284,6 +284,7 @@ export const katalog = {
     kommuner: tabell<void, Fylke[]>({
       lag: 'bronse',
       navn: 'kommuner',
+      radform: { utvid: 'kommuner', som: 'fylke' },
       datasett: DATASETT.kommuner,
       innhold: 'Fylkene med nummer og navn, og kommunene i hvert fylke med nummer og navn, sortert etter navn.',
       endepunkt: 'kommuner.json',
@@ -403,6 +404,7 @@ export const katalog = {
     arealAlle: tabell<void, solvSsbJson>({
       lag: 'bronse',
       navn: 'arealAlle',
+      radform: 'jsonstat',
       datasett: DATASETT.naturregnskap,
       innhold:
         'Ett svar med SSBs arealstatistikk for alle kommunene i 2017 og 2024: arealet i km² for hver arealklasse i tabell 09594. Bare til å lage de syntetiske tallene.',
@@ -462,6 +464,7 @@ export const katalog = {
     kommuneareal: tabell<void, kartverket.Kommuneareal>({
       lag: 'bronse',
       navn: 'kommuneareal',
+      radform: 'kommuner',
       datasett: DATASETT.kommuner,
       stotte: true,
       innhold: 'Flaten innenfor grensen til hver kommune i km², etter kommunenummer, og når den ble regnet.',
@@ -509,6 +512,7 @@ export const katalog = {
     detaljregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'detaljregister',
+      radform: 'kommuner',
       datasett: DATASETT.grunnkart,
       stotte: true,
       innhold:
@@ -540,6 +544,7 @@ export const katalog = {
     klasseregister: tabell<void, Klasseregister | null>({
       lag: 'bronse',
       navn: 'klasseregister',
+      radform: 'kommuner',
       datasett: DATASETT.grunnkart,
       stotte: true,
       innhold:
@@ -778,6 +783,7 @@ export const katalog = {
     okosystemareal: tabell<void, solvNaturregnskap.Okosystemareal>({
       lag: 'solv',
       navn: 'okosystemareal',
+      radform: 'kommuner',
       datasett: DATASETT.naturregnskap,
       innhold:
         'For hver kommune: arealet i km² per økosystemtype i 2024, med kodene i SSBs klassifisering (01 Bebygd og opparbeidet areal til 12 Hav), og om tallene er syntetiske.',
@@ -794,6 +800,7 @@ export const katalog = {
     okosystemendring: tabell<void, solvNaturregnskap.Okosystemendring>({
       lag: 'solv',
       navn: 'okosystemendring',
+      radform: 'kommuner',
       datasett: DATASETT.naturregnskap,
       innhold:
         'For hver kommune: arealet i km² fra hver av de andre økosystemtypene til bebygd, og fra bebygd til typen, fra 2017 til 2024, med kodene i SSBs klassifisering, og om tallene er syntetiske. De syntetiske tallene har også merknader om kommunegrensen er flyttet.',
@@ -810,6 +817,7 @@ export const katalog = {
     kommuneareal: tabell<void, Record<string, number>>({
       lag: 'solv',
       navn: 'kommuneareal',
+      radform: 'kommuner',
       datasett: DATASETT.kommuner,
       stotte: true,
       innhold: 'Flaten innenfor grensen til hver kommune i km² (land, ferskvann og hav), etter kommunenummer.',
@@ -822,6 +830,7 @@ export const katalog = {
     klasser: tabell<Flis, solvGrunnkart.Grunnkart>({
       lag: 'solv',
       navn: 'klasser',
+      radform: 'ruter',
       datasett: DATASETT.grunnkart,
       tittel: 'Arealklasser fra grunnkartet',
       om: 'klassen og detaljklassen per rute i en flis, kalt med flisen [z, x, y] fra nivå 10: to kartbilder fra NIBIO, ett med klassene og ett med detaljklassene. På nivå 10 er ruta 10,6 meter, og det er blokkene tallene regnes av; for noen kommuner ligger klassene og detaljklassene lagret sammen med siden (bronse.klassefil og bronse.detaljfil), og da hentes den kolonnen ikke fra NIBIO. Finere nivåer er den felles sannheten for kartet zoomet inn. Nøkkel: flisen som «z/x/y».',
@@ -837,6 +846,7 @@ export const katalog = {
     klasserUt: tabell<[string, number, number, number], solvGrunnkart.Grunnkart>({
       lag: 'solv',
       navn: 'klasserUt',
+      radform: 'ruter',
       datasett: DATASETT.grunnkart,
       stotte: true,
       tittel: 'Arealklassene zoomet ut',
@@ -882,6 +892,7 @@ export const katalog = {
     egneruter: tabell<string, solvEgne.Egenplan[]>({
       lag: 'solv',
       navn: 'egneruter',
+      radform: 'ruter',
       datasett: DATASETT.egne,
       innhold:
         'Én rad per plan, i rekkefølgen brukeren laget dem: for hver rute på 10,6 meter i utsnittet rundt planen, 1 utbygging, 2 ikke utbygging eller 0 utenfor planen, og planens id.',
@@ -938,6 +949,7 @@ export const katalog = {
     planoversikt: tabell({
       lag: 'solv',
       navn: 'planoversikt',
+      radform: 'ruter',
       datasett: DATASETT.utbyggingsareal,
       stotte: true,
       innhold: 'For hver piksel på 85 × 85 meter i kommunen: om noe av utvalget i dataene ligger der.',
@@ -952,6 +964,7 @@ export const katalog = {
     kommuneplanruter: tabell<Flis, Planruter>({
       lag: 'solv',
       navn: 'kommuneplanruter',
+      radform: 'ruter',
       datasett: DATASETT.utbyggingsareal,
       innhold:
         'For hver rute på 10,6 meter i én flis: 1 når minst halve ruta ligger i areal satt av til framtidig bebyggelse og anlegg, eller samferdsel, ellers 0.',
@@ -967,6 +980,7 @@ export const katalog = {
     kommunebiter: tabell<string, solvKommune.Kommunebit[]>({
       lag: 'solv',
       navn: 'kommunebiter',
+      radform: 'andeler',
       datasett: DATASETT.kommuner,
       stotte: true,
       innhold:
@@ -983,6 +997,7 @@ export const katalog = {
     inonbit: tabell<[number, Flis], solvInon.Inonsoner>({
       lag: 'solv',
       navn: 'inonbit',
+      radform: 'ruter',
       datasett: DATASETT.inon,
       innhold:
         'For hver rute i en bit på 2048 × 2048 ruter og hvert år: sonen (villmarkspreget, sone 1 eller sone 2), eller ingen. Kalles med året og biten.',
@@ -998,6 +1013,7 @@ export const katalog = {
     inonsoner: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'inonsoner',
+      radform: 'ruter',
       datasett: DATASETT.inon,
       stotte: true,
       innhold: 'Sonen per piksel i en flis fra nivå 10, i nyeste år.',
@@ -1013,6 +1029,7 @@ export const katalog = {
     inonsonerUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'inonsonerUt',
+      radform: 'ruter',
       datasett: DATASETT.inon,
       stotte: true,
       innhold: 'Sonen per piksel i en flis under nivå 10 for kommunen, i nyeste år.',
@@ -1028,6 +1045,7 @@ export const katalog = {
     graabit: tabell<Flis, solvGraa.Graatrinn>({
       lag: 'solv',
       navn: 'graabit',
+      radform: 'ruter',
       datasett: DATASETT.graa,
       innhold:
         'For hver rute i en bit på 2048 × 2048 ruter: trinnet etter andel vegetasjon (1–6), eller 0 når ruta ikke er grå.',
@@ -1043,6 +1061,7 @@ export const katalog = {
     graatrinn: tabell<Flis, solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinn',
+      radform: 'ruter',
       datasett: DATASETT.graa,
       stotte: true,
       innhold: 'Trinnet per piksel i en flis fra nivå 10: 0 når pikselen ikke er grå, ellers trinnet 1–6.',
@@ -1058,6 +1077,7 @@ export const katalog = {
     graatrinnUt: tabell<[string, number, number, number], solvGrunnkart.Klasser>({
       lag: 'solv',
       navn: 'graatrinnUt',
+      radform: 'ruter',
       datasett: DATASETT.graa,
       stotte: true,
       innhold: 'Trinnet per piksel i en flis under nivå 10 for kommunen.',
@@ -1168,6 +1188,7 @@ export const katalog = {
     vernAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'vernAndel',
+      radform: 'andeler',
       datasett: DATASETT.vern,
       stotte: true,
       innhold:
@@ -1182,6 +1203,7 @@ export const katalog = {
     verneformAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'verneformAndel',
+      radform: 'andeler',
       datasett: DATASETT.vern,
       stotte: true,
       innhold:
@@ -1197,6 +1219,7 @@ export const katalog = {
     villreinAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'villreinAndel',
+      radform: 'andeler',
       datasett: DATASETT.villrein,
       stotte: true,
       innhold:
@@ -1211,6 +1234,7 @@ export const katalog = {
     verdsattAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'verdsattAndel',
+      radform: 'andeler',
       datasett: DATASETT.verdsatt,
       stotte: true,
       innhold:
@@ -1225,6 +1249,7 @@ export const katalog = {
     vurderesAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'vurderesAndel',
+      radform: 'andeler',
       datasett: DATASETT.verdsatt,
       stotte: true,
       innhold:
@@ -1239,6 +1264,7 @@ export const katalog = {
     kartlagtAndel: tabell<string, solvTemaer.Temabiter>({
       lag: 'solv',
       navn: 'kartlagtAndel',
+      radform: 'andeler',
       datasett: DATASETT.kartlagt,
       stotte: true,
       innhold:

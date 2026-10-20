@@ -1,9 +1,9 @@
 /* Det siden gjør tilgjengelig som window.motor når teknisk visning er slått på (?teknisk): tilstanden i datamotoren og i
    visningen, temaene, katalogen (kall den, som katalog.gull.inon('5001')), oppslag for valgt kommune, rutestørrelsen, innholdet i
-   cachen og kartet.
+   cachen med verdien per nøkkel (verdiI) og kartet.
    Til feilsøking i nettleseren og til regresjonstesten, som leser tallene herfra (verktoy/motortall.ts). Settes i App.tsx. */
 import type OlMap from 'ol/Map.js';
-import type { innhold } from '../data/cache.ts';
+import type { innhold, verdiI } from '../data/cache.ts';
 import type { TEMATABELLER, katalog } from '../data/katalog.ts';
 import type { planTall, utbyggingen } from '../data/motor/plan.ts';
 import type { Tilstand } from '../data/motor/tilstand.ts';
@@ -22,6 +22,7 @@ export interface Motor {
   planTall: typeof planTall;
   utbyggingen: typeof utbyggingen;
   innhold: typeof innhold;
+  verdiI: typeof verdiI;
   nullstillBruk: () => void;
   readonly bruk: Record<string, { sum: number; n: number; maks: number }>;
   readonly kart: OlMap | null;

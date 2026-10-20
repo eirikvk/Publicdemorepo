@@ -51,6 +51,11 @@ export interface Rad<V> {
   underveis: Promise<V> | null;
   underveisBruker: number;
 }
+/* Hva én rad er i en tabell der verdien ikke er en liste: ruter (et rutenett med en verdi per rute), andeler (andelen per rute i
+   biter, pakket som spenn), kommuner (én post per kommune), jsonstat (en tabell fra SSB i JSON-stat), eller { utvid, som } for en
+   liste med en liste inni hvert element (fylkene med kommunene: utvid er feltet med den indre listen, og som er navnet på elementet
+   over). Til eksempelradene i katalogvisningen (src/ui/eksempelrader.ts). */
+export type Radform = 'ruter' | 'andeler' | 'kommuner' | 'jsonstat' | { utvid: string; som: string };
 /* En tabell: laget (bronse, sølv eller gull), navnet, hva den er, hvor mange nøkler som huskes, og ETL-funksjonen som lager verdien.
    N er det nøkkelen lages av, og V verdien. */
 export interface Tabelldef<N, V> {
@@ -81,6 +86,7 @@ export interface Tabelldef<N, V> {
   stotte?: boolean /* tabellen er støttedata. I et datasett er tabellen uten dataene, altså selve datasettet. I gull er det sidene viser
     data, og mellomregninger og hurtigminne støttedata. */;
   innhold?: string /* hva dataene i tabellen er, på klarspråk: hva en rad, et bilde eller en verdi inneholder */;
+  radform?: Radform /* hva én rad er, når verdien ikke er en liste eller et svar med en liste inni (Radform) */;
   endepunkt?: string /* i bronse: adressen som kalles, uten parametre ({…} er det som settes inn), eller filen sammen med siden */;
   teknisk?: boolean /* et steg som ikke endrer tallene: et oppslag, et lagret svar eller en hjelpetabell. Står ikke som eget steg i
      infoknappene, bare i en liste for seg i metodebeskrivelsen. */;
@@ -400,6 +406,7 @@ export function innhold() {
     datasett: t.datasett || null,
     stotte: !!t.stotte,
     innholdet: t.innhold || '',
+    radform: t.radform || null,
     sporbar: !t.husk && !!t.etl,
     rader: [...rom(t)].map(([k, r]) => ({
       nokkel: k,
