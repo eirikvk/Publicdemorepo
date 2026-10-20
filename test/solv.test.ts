@@ -20,7 +20,8 @@ import {
 import { INONSONER, UTENFOR, inonINatur, inonSone, tolkInon } from '../src/data/solv/inon.ts';
 import { GRONT, graaOgGront, graaTrinn } from '../src/data/solv/graa.ts';
 import { biterIFlisen, flestIFlisen, graaHalvpart, rutenIFlis, soneHalvpart } from '../src/data/solv/nivaer.ts';
-import { tolkAreal } from '../src/data/solv/ssb.ts';
+import { tolkArealtall } from '../src/data/solv/ssb.ts';
+import { historie, perKlasse } from '../src/data/gull/felles.ts';
 import { planType } from '../src/data/solv/egne.ts';
 import { tilUTM } from '../src/data/solv/projeksjoner.ts';
 
@@ -56,15 +57,21 @@ test('grått areal: trinn etter rødfargen', () => {
   assert.equal(graaTrinn(255, 255), 5);
 });
 
-test('SSB: arealklassene summert til bebygd, jordbruk og natur', () => {
-  const T = tolkAreal({
-    dimension: {
-      ArealKlasse: { category: { index: ['01', '15-16', '17', '22.01', '22.02'] } },
-      Tid: { category: { index: ['2025'] } }
+test('SSB: arealklassene summert til bebygd, jordbruk og natur, med SSBs egne summer for jordbruk og skog', () => {
+  /* fulldyrka og ikke fulldyrka jord er 2,99 til sammen, men SSBs sum er 3, og den brukes */
+  const D = tolkArealtall(
+    {
+      dimension: {
+        ArealKlasse: { category: { index: ['01', '15', '16', '15-16', '17.01', '17', '22.01', '22.02'] } },
+        Tid: { category: { index: ['2017', '2025'] } }
+      },
+      value: [2, 2, 1.5, 1.5, 1.49, 1.49, 3, 3, 5, 5, 5, 5, 0.5, 0.5, 0.25, 0.25]
     },
-    value: [2, 3, 5, 0.5, 0.25]
-  });
-  assert.deepEqual(T, { a: [2, 3, 5], land: 10, aar: '2025', ferskvann: { inn: 0.5, elv: 0.25 } });
+    '5001'
+  );
+  assert.deepEqual(D.samlet, { '15-16': [3, 3], '17': [5, 5] });
+  assert.deepEqual(perKlasse(D), { a: [2, 3, 5], land: 10, aar: '2025', ferskvann: { inn: 0.5, elv: 0.25 } });
+  assert.deepEqual(historie(D), { nr: '5001', fra: '2017', til: '2025', a0: [2, 3, 5], a1: [2, 3, 5], endret: false });
 });
 
 test('planflater: utbygging er framtidig bebyggelse og samferdsel', () => {

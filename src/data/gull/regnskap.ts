@@ -4,7 +4,7 @@ import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { HAV_MIN_ANDEL, HAV_MIN_KM2 } from '../solv/felles.ts';
 import { KL, type KlasseId } from '../solv/klasser.ts';
-import type { Historie } from '../solv/ssb.ts';
+import { historie, perKlasse, type Historie } from './felles.ts';
 
 /* Tallene fra SSB for valgt kommune, så langt de er hentet: arealet per klasse (bebygd, jordbruk, natur) i km² og året */
 export interface SsbTall {
@@ -88,16 +88,17 @@ export function byggLandOgVann(flate: number, land: number, ferskvann: { inn: nu
 /* Tabellene gull.utbredelse, gull.endring, gull.oppstilling og gull.landOgVann for kommunen nr */
 export type Utbredelse = NonNullable<ReturnType<typeof byggUtbredelse>>;
 export async function utbredelse(nr: string): Promise<Utbredelse> {
-  const T = await katalog.solv.arealtall(nr);
+  const T = perKlasse(await katalog.solv.arealtall(nr));
   return byggUtbredelse({ tilstand: 'ok', a: T.a, aar: T.aar })!;
 }
 export async function endring(nr: string): Promise<Endring | null> {
-  return byggEndring(await katalog.solv.historie(nr));
+  return byggEndring(historie(await katalog.solv.arealtall(nr)));
 }
 export async function oppstilling(nr: string): Promise<ReturnType<typeof byggOppstilling>> {
-  return byggOppstilling(await katalog.solv.historie(nr));
+  return byggOppstilling(historie(await katalog.solv.arealtall(nr)));
 }
 export async function landOgVann(nr: string): Promise<ReturnType<typeof byggLandOgVann>> {
-  const [g, T] = await Promise.all([katalog.solv.grense(nr), katalog.solv.arealtall(nr)]);
+  const [g, D] = await Promise.all([katalog.solv.grense(nr), katalog.solv.arealtall(nr)]),
+    T = perKlasse(D);
   return byggLandOgVann(g.km2, T.land, T.ferskvann);
 }

@@ -38,7 +38,7 @@ export const ALLE: (Landklasse | Vannklasse)[] = [...KL, ...VANN],
   NAT = 2; /* plass i ALLE: 0 bebygd, 1 jordbruk, 2 natur, deretter hav, innsjø og elv */
 
 /* Hovedøkosystemene i grunnkartet (økosystemtypene på nivå 1), i rekkefølgen tabellene bruker: koden i grunnkartet, navnet, og
-   klassen blant dagens seks. De syntetiske tabellene som står i stedet for SSBs tabeller til de kommer, bruker dem (gull/syntetisk.ts). */
+   klassen blant dagens seks. Gull viser SSBs tabeller for naturregnskapet med dem (gull/naturregnskap.ts). */
 export const HOVEDOKOSYSTEMER: { kode: string; navn: string; gruppe: KlasseId }[] = [
   { kode: 'bebygdOpparbeidetAreal', navn: 'Bebygd og opparbeidet areal', gruppe: 'beb' },
   { kode: 'dyrketmark', navn: 'Dyrket mark', gruppe: 'jor' },
@@ -51,6 +51,24 @@ export const HOVEDOKOSYSTEMER: { kode: string; navn: string; gruppe: KlasseId }[
   { kode: 'innsjoerVannmagasiner', navn: 'Innsjøer og vannmagasiner', gruppe: 'inn' },
   { kode: 'elverBekkerKanaler', navn: 'Elver, bekker og kanaler', gruppe: 'elv' },
   { kode: 'hav', navn: 'Hav', gruppe: 'hav' }
+];
+/* Økosystemtypene i SSBs klassifisering av økosystemer (KLASS 988, versjon «Ecosystems 2026-09», nivå 1), som SSBs tabeller for
+   naturregnskapet bruker: koden, navnet slik klassifiseringen viser det (foreløpig bare på engelsk), og hovedøkosystemet i
+   grunnkartet (HOVEDOKOSYSTEMER) den svarer til. Grunnkartet har ett hav, mens SSB skiller «Marine inlets and transitional waters»
+   (10) fra «Marine ecosystems» (12). Begge svarer til havet i grunnkartet. Se dataportal.ssb.no/classifications/988/codes. */
+export const OKOSYSTEMTYPER: { kode: string; navn: string; grunnkart: string }[] = [
+  { kode: '01', navn: 'Settlements and other artificial areas', grunnkart: 'bebygdOpparbeidetAreal' },
+  { kode: '02', navn: 'Cropland', grunnkart: 'dyrketmark' },
+  { kode: '03', navn: 'Grassland', grunnkart: 'grasmark' },
+  { kode: '04', navn: 'Forest and woodlands', grunnkart: 'skog' },
+  { kode: '05', navn: 'Heathland and shrub', grunnkart: 'heiBuskmark' },
+  { kode: '06', navn: 'Sparsely vegetated ecosystems', grunnkart: 'liteVegetertMark' },
+  { kode: '07', navn: 'Wetlands', grunnkart: 'vatmark' },
+  { kode: '08', navn: 'Rivers and canals', grunnkart: 'elverBekkerKanaler' },
+  { kode: '09', navn: 'Lakes and reservoirs', grunnkart: 'innsjoerVannmagasiner' },
+  { kode: '10', navn: 'Marine inlets and transitional waters', grunnkart: 'hav' },
+  { kode: '11', navn: 'Coastal beaches, rocky shores and dunes', grunnkart: 'kyststrenderSvabergDyner' },
+  { kode: '12', navn: 'Marine ecosystems', grunnkart: 'hav' }
 ];
 /* Den faste nøkkelen fra SSBs arealklasser (tabell 09594) til hovedøkosystemene. Bebygd (01–14) er bebygd, fulldyrka jord er dyrket
    mark, ikke fulldyrka jord er grasmark, skog er skog, åpen fastmark er hei og buskmark, åpen myr er våtmark, og bart fjell og snø og

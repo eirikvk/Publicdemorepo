@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
-import type { Okosystemregnskap, Plassering } from '../../src/data/gull/syntetisk.ts';
+import type { Okosystemregnskap, Plassering } from '../../src/data/gull/naturregnskap.ts';
 import { HOVEDOKOSYSTEMER } from '../../src/data/solv/klasser.ts';
 import { andelTekst, dekar, iTekst, pst } from '../tekst.ts';
 import { MdIconAdd, MdIconClose } from '../md.ts';

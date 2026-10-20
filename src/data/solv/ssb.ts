@@ -1,9 +1,9 @@
-/* Sølv for SSB, tabell 09594: svarene (JSON-stat 2.0) gjort om til arealet i km² per klasse (bebygd, jordbruk, natur), med innsjø og
-   elv for seg, for nyeste år og for 2017. */
+/* Sølv for SSB, tabell 09594: datasettet «Arealtall fra SSB». Svarene (JSON-stat 2.0) gjort om til arealet i km² for hver av SSBs
+   arealklasser i hvert år fra 2017, per kommune (solv.arealtall), og for alle kommunene i 2017 og 2024 (solv.arealdetaljerAlle,
+   støttedata). Summene per klasse (bebygd, jordbruk, natur) og sammenligningen med 2017 regnes i gull (gull/felles.ts). */
 import { summen } from '../generelt/tall.ts';
 import { katalog } from '../katalog.ts';
 import { GRENSE_FLYTTET } from './felles.ts';
-import { KL } from './klasser.ts';
 
 /* Svaret fra SSB i JSON-stat 2.0, så langt siden bruker det */
 type Indeks = string[] | Record<string, number>;
@@ -13,62 +13,8 @@ export interface JsonStat {
   dimension: Record<string, { category: { index: Indeks } }>;
   value: number[];
 }
-/* Arealet i nyeste år: per klasse på land i km² (bebygd, jordbruk, natur), landarealet, året, og innsjø og elv */
-export interface Arealtall {
-  a: number[];
-  land: number;
-  aar: string;
-  ferskvann: { inn: number; elv: number };
-}
-/* Arealet per klasse i 2017 (a0) og i nyeste år (a1), og om grensen er flyttet (endret) */
-export interface Historie {
-  nr: string;
-  fra: string;
-  til: string;
-  a0: number[];
-  a1: number[];
-  endret: boolean;
-}
-
 /* Rekkefølgen på kategoriene i en dimensjon. SSB gir indeksen enten som liste eller som objekt med plass. */
 const liste = (x: Indeks): string[] => (Array.isArray(x) ? x : Object.keys(x).sort((a, b) => x[a] - x[b]));
-
-/* Arealet per klasse i nyeste år: SSBs arealklasser summert til bebygd, jordbruk og natur (se KL), landarealet (summen av de tre),
-   og innsjø og elv for seg. */
-export function tolkAreal(j: JsonStat): Arealtall {
-  const ix = j.dimension.ArealKlasse.category.index,
-    tid = j.dimension.Tid.category.index;
-  const pos: Record<string, number> = Array.isArray(ix) ? Object.fromEntries(ix.map((c, i) => [c, i])) : ix,
-    a = KL.map(x => summen(x[3].map(c => j.value[pos[c]] || 0)));
-  return {
-    a,
-    land: summen(a),
-    aar: Array.isArray(tid) ? tid[0] : Object.keys(tid)[0],
-    ferskvann: { inn: j.value[pos['22.01']] || 0, elv: j.value[pos['22.02']] || 0 }
-  };
-}
-
-/* Arealet per klasse i 2017 (a0) og i nyeste år (a1), til utbredelsesregnskapet. Gir ingenting hvis serien ikke rekker tilbake til
-   2017. endret sier at kommunens samlede areal er så forskjellig at grensen trolig er flyttet, og da skal årgangene ikke
-   sammenlignes. */
-export function tolkHistorie(j: JsonStat, nr: string): Historie | null {
-  const kl = liste(j.dimension.ArealKlasse.category.index),
-    aar = liste(j.dimension.Tid.category.index),
-    nT = aar.length;
-  const v = (c: string, t: number) => j.value[kl.indexOf(c) * nT + t] || 0,
-    klasser = (t: number) => KL.map(x => summen(x[3].map(c => v(c, t)))),
-    alt = (t: number) => summen(klasser(t)) + v('22.01', t) + v('22.02', t);
-  const f = aar.indexOf('2017');
-  if (f < 0 || nT - f < 2 || !alt(f) || !alt(nT - 1)) return null;
-  return {
-    nr,
-    fra: aar[f],
-    til: aar[nT - 1],
-    a0: klasser(f),
-    a1: klasser(nT - 1),
-    endret: Math.abs(alt(nT - 1) - alt(f)) / alt(nT - 1) > GRENSE_FLYTTET
-  };
-}
 
 /* SSBs arealklasser hver for seg, slik tabell 09594 har dem: [kode, navn, klassen den regnes til (bebygd, jordbruk, natur eller vann)].
    Bebygd per formål, jordbruk som fulldyrka og ikke fulldyrka, skog per treslag og resten av naturen per klasse. Summert gir de det
@@ -106,6 +52,14 @@ export interface Arealdetaljer {
   klasser: { kode: string; navn: string; klasse: string; km2: number[] }[];
   endret: boolean;
 }
+/* SSBs egne summer for jordbruk (fulldyrka og ikke fulldyrka jord) og skog, som hentes med klassene. Summene per klasse regnes med
+   dem (KL i klasser.ts), fordi summen av klassene kan avvike med 10 dekar fra SSBs egen sum. */
+export const SAMLET = ['15-16', '17'];
+/* Arealtall fra SSB for én kommune: arealklassene hver for seg i hvert år fra 2017 (som Arealdetaljer), og SSBs egne summer for
+   jordbruk og skog (samlet, per kode og år) */
+export interface Arealtall extends Arealdetaljer {
+  samlet: Record<string, number[]>;
+}
 /* Tolker svaret med arealklassene hver for seg. Årene før 2017 tas bort (det eldre API-et gir alle år). Mangler en klasse, er den 0. */
 export function tolkDetaljer(j: JsonStat, nr: string): Arealdetaljer {
   const kl = liste(j.dimension.ArealKlasse.category.index),
@@ -125,6 +79,22 @@ export function tolkDetaljer(j: JsonStat, nr: string): Arealdetaljer {
     klasser,
     endret: n > 1 && alt(n - 1) > 0 && Math.abs(alt(n - 1) - alt(0)) / alt(n - 1) > GRENSE_FLYTTET
   };
+}
+
+/* Tolker svaret for én kommune (bronse.arealtall): arealklassene hver for seg, og SSBs egne summer */
+export function tolkArealtall(j: JsonStat, nr: string): Arealtall {
+  const D = tolkDetaljer(j, nr),
+    kl = liste(j.dimension.ArealKlasse.category.index),
+    alle = liste(j.dimension.Tid.category.index),
+    nT = alle.length,
+    f = Math.max(0, alle.indexOf('2017')),
+    samlet = Object.fromEntries(
+      SAMLET.map(kode => {
+        const i = kl.indexOf(kode);
+        return [kode, D.aar.map((_, t) => (i < 0 ? 0 : j.value[i * nT + f + t] || 0))];
+      })
+    );
+  return { ...D, samlet };
 }
 
 /* Tolker svaret med arealklassene for alle kommunene (bronse.arealAlle): én Arealdetaljer per kommune, som tolkDetaljer gir for én.
@@ -160,17 +130,9 @@ export function tolkDetaljerAlle(j: JsonStat): Arealdetaljer[] {
   });
 }
 
-/* Tabellen solv.arealtall: arealet per klasse fra SSB i nyeste år, med landareal, innsjø og elv */
+/* Tabellen solv.arealtall: arealtallene fra SSB for kommunen nr, hver arealklasse i hvert år fra 2017, med SSBs egne summer */
 export async function arealtall(nr: string): Promise<Arealtall> {
-  return tolkAreal(await katalog.bronse.arealtall(nr));
-}
-/* Tabellen solv.historie: arealet per klasse i 2017 og i nyeste år, eller null når serien ikke rekker så langt */
-export async function historie(nr: string): Promise<Historie | null> {
-  return tolkHistorie(await katalog.bronse.arealtidsserie(nr), nr);
-}
-/* Tabellen solv.arealdetaljer: arealet per arealklasse hos SSB, hver for seg, i hvert år fra 2017 */
-export async function arealdetaljer(nr: string): Promise<Arealdetaljer> {
-  return tolkDetaljer(await katalog.bronse.arealdetaljer(nr), nr);
+  return tolkArealtall(await katalog.bronse.arealtall(nr), nr);
 }
 /* Tabellen solv.arealdetaljerAlle: arealklassene hos SSB hver for seg i 2017 og 2024 for alle kommunene, etter kommunenummer */
 export async function arealdetaljerAlle(): Promise<Record<string, Arealdetaljer>> {

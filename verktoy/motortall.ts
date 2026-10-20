@@ -55,11 +55,11 @@ export function motortall() {
     arealtall:
       T &&
       (T.status === 'ok'
-        ? plukk({ tilstand: 'ok', a: T.verdi!.a, aar: T.verdi!.aar }, 'tilstand', 'a', 'aar')
+        ? plukk({ tilstand: 'ok', a: M.perKlasse(T.verdi!).a, aar: M.perKlasse(T.verdi!).aar }, 'tilstand', 'a', 'aar')
         : { tilstand: T.status }),
-    ferskvann: rund(T && T.status === 'ok' ? T.verdi!.ferskvann : null),
+    ferskvann: rund(T && T.status === 'ok' ? M.perKlasse(T.verdi!).ferskvann : null),
     flate: r(v(K.solv.grense) ? v(K.solv.grense)!.km2 : 0),
-    historie: plukk(v(K.solv.historie), 'fra', 'til', 'a0', 'a1', 'endret'),
+    historie: plukk(v(K.solv.arealtall) ? M.historie(v(K.solv.arealtall)!) : null, 'fra', 'til', 'a0', 'a1', 'endret'),
     planInfo:
       P &&
       (P.status === 'ok'

@@ -1,7 +1,7 @@
 /* Gull for grunnkartets økosystemtyper: de ferdige svarene om skog, våtmark, naturen i verneområdene og planlagt utbygging per
    økosystemtype, regnet ut av arealet per detaljklasse (gull/grunnkart.ts og gull/planlagt.ts). Hva som regnes som skog, våtmark og
    land, står i solv/klasser.ts. Alle arealer er i km², andeler i prosent. Økosystemtypene er hovedøkosystemene (HOVEDOKOSYSTEMER),
-   med de samme navnene og i samme rekkefølge som i de syntetiske tabellene fra SSB (gull/syntetisk.ts), så tabellene kan
+   med de samme navnene og i samme rekkefølge som i tabellene for naturregnskapet fra SSB (gull/naturregnskap.ts), så tabellene kan
    sammenlignes. Foreløpig bruker bare tvillingen fra Figma dem. */
 import { egenKopi } from '../generelt/kopi.ts';
 import { summen } from '../generelt/tall.ts';

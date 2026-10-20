@@ -5,13 +5,22 @@ import { andel, arealFraRuter, bildetall, tiDekar } from '../src/data/gull/felle
 import { byggInon, byggUtvikling } from '../src/data/gull/inon.ts';
 import { byggEndring, byggLandOgVann, byggUtbredelse } from '../src/data/gull/regnskap.ts';
 import {
-  byggEndring as byggBebygdEndring,
-  byggFordeling,
   byggHovedklasser,
   byggNorge,
   byggRegnskap,
-  byggSammenligning
-} from '../src/data/gull/syntetisk.ts';
+  byggSammenligning,
+  endringAv,
+  fordelingAv
+} from '../src/data/gull/naturregnskap.ts';
+import { lagEndring, lagFordeling, lagOkosystemareal, lagOkosystemendring } from '../src/data/solv/naturregnskap.ts';
+import type { Arealdetaljer } from '../src/data/solv/ssb.ts';
+
+/* De syntetiske tabellene lages i sølv med kodene hos SSB, og leses i gull med hovedøkosystemene i grunnkartet */
+const byggFordeling = (D: Arealdetaljer, aar: string, flate: number) => fordelingAv(lagFordeling(D, aar, flate));
+const byggBebygdEndring = (D: Arealdetaljer, fra: string, til: string) => {
+  const E = lagEndring(D, fra, til);
+  return { ...E, klasser: endringAv(E) };
+};
 
 const rutebilde = { u: [0, 0, 1, 1], res: 1, w: 1, h: 1 };
 
@@ -140,7 +149,8 @@ test('syntetiske tabeller for Norge: summen tar bare med kommunene som kan samme
       klasser: [kl('01', 'beb', [5, 6]), kl('15', 'jor', [10, 10]), kl('17.01', 'nat', [20, 19])]
     },
     C = { ...D, nr: '3', endret: true, klasser: [kl('01', 'beb', [0, 8]), kl('17.01', 'nat', [0, 30])] },
-    N = byggNorge({ 1: D, 2: B, 3: C }, { 1: 100, 2: 35, 3: 38 }),
+    alle = { 1: D, 2: B, 3: C },
+    N = byggNorge(lagOkosystemareal(alle, { 1: 100, 2: 35, 3: 38 }), lagOkosystemendring(alle)),
     S = byggSammenligning(N, '1')!;
   assert.equal(N.sammenlignbare, 2);
   /* natur bygget ned: 2 km² i kommune 1 og 1 km² i kommune 2. Kommune 3 har flyttet grense. */

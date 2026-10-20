@@ -72,7 +72,7 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata bare 
   /* hva hver støttedata er til for, står på datasettet med det samme navnet som en av støttetabellene (i bronse med hvordan den
      hentes etter komma) */
   for (const d of Object.values(DATASETT))
-    for (const [navn] of d.stotte || [])
+    for (const [navn] of (d as { stotte?: [string, string][] }).stotte || [])
       assert.ok(
         alle.some(t => t.datasett === d && t.stotte && (t as { tittel?: string }).tittel!.split(', ')[0] === navn),
         `${navn} finnes ikke blant støttedataene i ${d.navn}`

@@ -1,10 +1,11 @@
 /* Det siden gjør tilgjengelig som window.motor når teknisk visning er slått på (?teknisk): tilstanden i datamotoren og i
    visningen, temaene, katalogen (kall den, som katalog.gull.inon('5001')), oppslag for valgt kommune, rutestørrelsen, innholdet i
-   cachen og kartet.
+   cachen, summene av arealtallene fra SSB og kartet.
    Til feilsøking i nettleseren og til regresjonstesten, som leser tallene herfra (verktoy/motortall.ts). Settes i App.tsx. */
 import type OlMap from 'ol/Map.js';
 import type { innhold } from '../data/cache.ts';
 import type { TEMATABELLER, katalog } from '../data/katalog.ts';
+import type { historie, perKlasse } from '../data/gull/felles.ts';
 import type { planTall, utbyggingen } from '../data/motor/plan.ts';
 import type { Tilstand } from '../data/motor/tilstand.ts';
 import type { valgt, verdi } from '../data/motor/valgt.ts';
@@ -22,6 +23,9 @@ export interface Motor {
   planTall: typeof planTall;
   utbyggingen: typeof utbyggingen;
   innhold: typeof innhold;
+  /* arealtallene fra SSB summert per klasse, og sammenlignet med 2017, som gull regner dem (gull/felles.ts) */
+  perKlasse: typeof perKlasse;
+  historie: typeof historie;
   nullstillBruk: () => void;
   readonly bruk: Record<string, { sum: number; n: number; maks: number }>;
   readonly kart: OlMap | null;

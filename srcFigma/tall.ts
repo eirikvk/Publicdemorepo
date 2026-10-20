@@ -5,7 +5,7 @@ import type { Rad, Tabell } from '../src/data/cache.ts';
 import type { EgenRad } from '../src/data/gull/egne.ts';
 import type { Bildetall } from '../src/data/gull/felles.ts';
 import type { PlanPerOkosystem } from '../src/data/gull/okosystemer.ts';
-import type { Sammenligning } from '../src/data/gull/syntetisk.ts';
+import type { Sammenligning } from '../src/data/gull/naturregnskap.ts';
 import type { TemaIPlan, Temaet } from '../src/data/gull/temaer.ts';
 import { TEMATABELLER, katalog } from '../src/data/katalog.ts';
 import { egneRutenett, mine } from '../src/data/motor/egne.ts';
