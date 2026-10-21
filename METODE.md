@@ -1685,6 +1685,13 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**STAC-katalog for bøtta, 22. oktober 2026.** Bøtta `eirikvk/naturdata` har fått en STAC-katalog (STAC 1.1.0), så verktøy som
+leser STAC kan finne filen uten å kjenne adressen: `catalog.json`, en collection for naturvernområdene og et item for filen.
+Utstrekningen er regnet ut fra flatene i WGS84 (fra Jan Mayen til Nordaust-Svalbard), og tidsrommet går fra det første til det
+siste vernevedtaket (1914 til 2026). Itemet har projeksjonen (EPSG:25833) og alle kolonnene med type og, der det er sikkert, en
+kort beskrivelse. Lenkene er faste adresser, fordi Hugging Face sender videre til et CDN med en annen adresse. Katalogen er validert
+mot de offisielle skjemaene og vist i STAC Browser. Beskrivelsene er KI-generert og sjekket mot dataene. Testsiden lenker til den.
+
 **GeoParquet-filen i en bøtte på Hugging Face, med sideindeks, 21. oktober 2026.** Testsiden for GeoParquet bruker nå en egen
 kopi av verneområdene i den offentlige bøtta `eirikvk/naturdata` på Hugging Face (Storage Buckets), fordi lagringskontoen med
 testfilen ikke har CORS. Hugging Face sender videre til et CDN som svarer med bare biten det spørres om og tillater andre sider å

@@ -414,6 +414,12 @@ nesten alt er flatene).
 - Filen ligger i den offentlige bøtta [eirikvk/naturdata](https://huggingface.co/buckets/eirikvk/naturdata) på Hugging Face
   (Storage Buckets), som `miljodirektoratet/naturvernomrader.parquet`. Bøtta har en README om kilde, lisens og hvordan filen er
   laget, og skriptet som laget den (`miljodirektoratet/skriv.py`, med pyarrow).
+- Bøtta har en STAC-katalog (STAC 1.1.0): `catalog.json`, en collection og et item for filen, med utstrekning i WGS84, tidsrommet
+  for vernevedtakene, lisens (NLOD-2.0), projeksjonen og kolonnene (utvidelsene projection og table). Lenkene er faste adresser,
+  fordi Hugging Face sender videre til et CDN med en annen adresse, og relative lenker da ville pekt feil. Katalogen er validert
+  mot de offisielle skjemaene og kan åpnes i
+  [STAC Browser](https://radiantearth.github.io/stac-browser/#/external/huggingface.co/buckets/eirikvk/naturdata/resolve/catalog.json).
+  Skriptene (`lag-stac.py` og `valider.py`) ligger i bøtta.
 - Innholdet er det samme som i testfilen den er laget fra (3512 rader, alle kolonnene). Filen er skrevet for spørringer over
   nettet: sortert etter kommune og navn, én radgruppe med små sider (høyst 64 rader og rundt 32 KB) og sideindeks, ordbok bare for
   kolonner med få ulike verdier, og ingen ordbok og ingen statistikk for flatene. GeoParquet 1.1, WKB og EPSG:25833 som før.

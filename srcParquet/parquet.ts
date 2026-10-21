@@ -18,6 +18,9 @@ export const FIL =
   'https://huggingface.co/buckets/eirikvk/naturdata/resolve/miljodirektoratet/naturvernomrader.parquet';
 /* Siden om bøtta, med README og skriptet som skrev filen */
 export const BOTTA = 'https://huggingface.co/buckets/eirikvk/naturdata';
+/* STAC-katalogen for bøtta, vist i STAC Browser */
+export const STAC =
+  'https://radiantearth.github.io/stac-browser/#/external/huggingface.co/buckets/eirikvk/naturdata/resolve/catalog.json';
 /* Tekstkolonnene spørringen leser for radene i kommunen, i tillegg til kommune */
 export const TEKST = ['navn', 'verneform', 'vernedato', 'faktaark'];
 

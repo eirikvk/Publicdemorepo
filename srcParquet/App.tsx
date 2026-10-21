@@ -8,6 +8,7 @@ import { Flatene } from './Flatene.tsx';
 import {
   BOTTA,
   FIL,
+  STAC,
   TEKST,
   dato,
   flateneI,
@@ -198,8 +199,8 @@ export default function App() {
       )}
       <p className="kilde">
         Kilde: Miljødirektoratet, Naturvernområder (NLOD 2.0), lagt ut som GeoParquet i bøtta{' '}
-        <a href={BOTTA}>eirikvk/naturdata</a> på Hugging Face, med en beskrivelse av hvordan filen er laget. Filen:{' '}
-        <a href={FIL}>{FIL.split('/').pop()}</a>. Lenken laster ned hele filen.
+        <a href={BOTTA}>eirikvk/naturdata</a> på Hugging Face, med en beskrivelse av hvordan filen er laget og en{' '}
+        <a href={STAC}>STAC-katalog</a>. Filen: <a href={FIL}>{FIL.split('/').pop()}</a>. Lenken laster ned hele filen.
       </p>
     </main>
   );
