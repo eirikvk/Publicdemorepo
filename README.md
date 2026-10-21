@@ -408,22 +408,33 @@ tema der det finnes (`src/ui/tvilling.ts`): Utvikling fremover og Naturtapet, te
 ## Testsiden for GeoParquet
 
 En egen side på `parquet/` (kildekoden i `srcParquet/`, bygget med `npm run bygg-parquet` og `vite.parquet.config.ts`) prøver å
-spørre direkte i en GeoParquet-fil på nettet uten å laste den ned: verneområdene i Norge fra Miljødirektoratet, lagt ut som testfil
-hos `pgisnedlasting.blob.core.windows.net` (rundt 33 MB, nesten alt er flatene).
+spørre direkte i en GeoParquet-fil på nettet uten å laste den ned: verneområdene i Norge fra Miljødirektoratet (rundt 33 MB,
+nesten alt er flatene).
 
+- Filen ligger i den offentlige bøtta [eirikvk/naturdata](https://huggingface.co/buckets/eirikvk/naturdata) på Hugging Face
+  (Storage Buckets), som `miljodirektoratet/naturvernomrader.parquet`. Bøtta har en README om kilde, lisens og hvordan filen er
+  laget, og skriptet som laget den (`miljodirektoratet/skriv.py`, med pyarrow).
+- Innholdet er det samme som i testfilen den er laget fra (3512 rader, alle kolonnene). Filen er skrevet for spørringer over
+  nettet: sortert etter kommune og navn, én radgruppe med små sider (høyst 64 rader og rundt 32 KB) og sideindeks, ordbok bare for
+  kolonner med få ulike verdier, og ingen ordbok og ingen statistikk for flatene. GeoParquet 1.1, WKB og EPSG:25833 som før.
 - Man velger en kommune, og siden viser verneområdene som ligger helt eller delvis i den: navn med lenke til faktaarket, verneform,
-  vernedato og kommunene.
-- Siden henter bare beskrivelsen av filen (som står sist i filen) og fem kolonner (navn, verneform, vernedato, kommune og faktaark),
-  med Range i HTTP. Flatene hentes ikke. Det er rundt 140 kB av filen i seks kall. Siden viser hvor mye som er hentet.
+  vernedato og kommunene. Med «Hent flatene» hentes og tegnes flatene for de samme radene.
+- Spørringen går i tre steg. Først beskrivelsen av filen og sideindeksen i ett kall (de siste 64 kB), og kommunekolonnen for alle
+  radene. Så tekstkolonnene for bare radene i kommunen. Til slutt flatene for de radene. Sideindeksen sier hvilke sider radene
+  ligger i, så bare de sidene hentes.
+- Målt i Chromium 21. oktober 2026: Trondheim (14 verneområder) kostet 74 kB i 8 kall for radene, med det som hentes første gang,
+  og 96 kB i 1 kall for flatene. Til sammen 170 kB av 33 MB. Kautokeino etterpå kostet 1 kB for radene og 72 kB for flatene. Med
+  testfilen slik den var, uten sideindeks, måtte hele kolonnen med flatene (rundt 33 MB) hentes for å få flatene for én kommune.
+- Hugging Face sender videre til en adresse i sitt CDN som gjelder i en time. Siden bruker den adressen direkte etter første kall,
+  og går tilbake til den faste adressen hvis den ikke svarer. CDN-et svarer med bare biten det spørres om (206) og tillater at
+  andre sider leser filen (CORS).
 - Lesingen gjøres av [hyparquet](https://github.com/hyparam/hyparquet) (MIT). Siden ber alltid om en bestemt bit (bytes=a-b),
-  aldri «de siste n», fordi tjenesten svarer på det med hele filen. Svarer tjenesten med hele filen likevel, stoppes hentingen.
-- Det som er hentet, huskes mens siden er åpen, så neste kommune ikke henter noe på nytt. Ingenting lagres i nettleseren.
-- Nettleseren kan bare lese filen når lagringskontoen tillater det (CORS). Per 21. oktober 2026 er CORS ikke slått på, så siden
-  viser en feilmelding om det. Lagringskontoen må tillate siden (`https://eirikvk.github.io`) med GET, HEAD og OPTIONS, overskriften
-  Range, og Content-Range og Content-Length som synlige overskrifter. Med CORS slått av i Chromium virker spørringen.
+  aldri «de siste n». Svarer tjenesten med hele filen, stoppes hentingen.
+- Det som er hentet, huskes mens siden er åpen, også biter inni større biter, så ingenting hentes to ganger. Ingenting lagres i
+  nettleseren.
 - Siden står utenfor datamotoren og lagene i bronse, sølv og gull: den spør selv i én fil. Fra `src/` bruker den bare designsystemet,
-  tekstene for tall og grunnlaget for stilen, og `src/` bruker den aldri (sjekkes av `verktoy/sjekk-lag.ts`). Skal filen brukes i
-  hovedsiden, bør den inn som en tabell i bronse.
+  tekstene for tall, kartfargene og grunnlaget for stilen, og `src/` bruker den aldri (sjekkes av `verktoy/sjekk-lag.ts`). Skal
+  filen brukes i hovedsiden, bør den inn som en tabell i bronse.
 
 ## Dokumentasjon
 

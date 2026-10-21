@@ -30,8 +30,8 @@
    selv), kartet (src/ui/kart) og noen små fellesfiler (FIGMA_LOV). Hovedsidens sider og adresse (src/ui/sider.ts) bruker den ikke.
 
    Testsiden for GeoParquet, i srcParquet/ (se vite.parquet.config.ts), står utenfor datamotoren og lagene: den spør selv i én fil på
-   nettet. Fra src/ bruker den bare designsystemet (ui/komponenter/md.ts), tekstene for tall (ui/tekst.ts) og grunnlaget for stilen
-   (grunnlag.css), og src/ bruker den aldri.
+   nettet. Fra src/ bruker den bare designsystemet (ui/komponenter/md.ts), tekstene for tall (ui/tekst.ts), kartfargene
+   (ui/farger.ts) og grunnlaget for stilen (grunnlag.css), og src/ bruker den aldri.
 
    Typene sjekkes av TypeScript (tsc). Denne sjekken ser bare på hvem som importerer fra hvem, og på reglene over. Koden leses med
    oxc-parser, som kan lese TypeScript og JSX.
@@ -236,9 +236,9 @@ for (const fil of filerI(FIGMA)) {
   }
 }
 
-/* Testsiden for GeoParquet: bare designsystemet, tekstene for tall og grunnlaget for stilen fra src/, og src/ bruker den aldri */
+/* Testsiden for GeoParquet: bare designsystemet, tekstene for tall, kartfargene og grunnlaget for stilen fra src/, og src/ bruker den aldri */
 const PARQUET = path.join(ROT, 'srcParquet'),
-  PARQUET_LOV = ['ui/komponenter/md.ts', 'ui/tekst.ts', 'grunnlag.css'];
+  PARQUET_LOV = ['ui/komponenter/md.ts', 'ui/tekst.ts', 'ui/farger.ts', 'grunnlag.css'];
 for (const fil of filerI(SRC))
   for (const { fra, linje } of importer(fil))
     if (fra.includes('srcParquet'))

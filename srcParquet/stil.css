@@ -31,6 +31,21 @@
 .parquet a {
   color: var(--md-color-text-link, inherit);
 }
+/* Flatene: hele bredden, men aldri høyere enn rundt en skjermhøyde. Streken er like tynn uansett hvor stort området er. */
+.parquet .flatene {
+  width: 100%;
+  height: auto;
+  max-height: 28rem;
+  border: 1px solid var(--linje);
+}
+.parquet .flatene path {
+  fill-opacity: 0.18;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.parquet .flatene path:hover {
+  fill-opacity: 0.45;
+}
 /* Tabellen rulles sidelengs på smale skjermer */
 .parquet .rullbar {
   overflow-x: auto;

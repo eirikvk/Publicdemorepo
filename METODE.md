@@ -1685,6 +1685,16 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**GeoParquet-filen i en bøtte på Hugging Face, med sideindeks, 21. oktober 2026.** Testsiden for GeoParquet bruker nå en egen
+kopi av verneområdene i den offentlige bøtta `eirikvk/naturdata` på Hugging Face (Storage Buckets), fordi lagringskontoen med
+testfilen ikke har CORS. Hugging Face sender videre til et CDN som svarer med bare biten det spørres om og tillater andre sider å
+lese filen. Innholdet er det samme (3512 rader, alle kolonnene), men filen er skrevet på nytt for spørringer over nettet: sortert
+etter kommune og navn, små sider (høyst 64 rader og rundt 32 KB) med sideindeks, og ordbok bare for kolonner med få ulike verdier.
+Siden henter beskrivelsen og sideindeksen i ett kall, så kommunekolonnen for alle radene, så tekstkolonnene og til slutt flatene
+for bare radene i kommunen. Trondheim kostet 170 kB av 33 MB i 9 kall, med flatene. Uten sideindeks måtte hele kolonnen med flatene
+hentes for én kommune. Siden tegner flatene, og er prøvd i Chromium med CORS slått på. README og skriptet som laget filen ligger i
+bøtta. Ingen tall på hovedsiden er endret.
+
 **Testside for spørring i GeoParquet, 21. oktober 2026.** En egen side på `parquet/` spør i en GeoParquet-fil med verneområdene
 i Norge, lagt ut som testfil hos `pgisnedlasting.blob.core.windows.net`, uten å laste den ned. Filen er 33 MB i én radgruppe, med
 31 kolonner, flatene som WKB i UTM 33 og en bbox per område. Flatene er nesten hele filen. For en kommune henter siden beskrivelsen
