@@ -1685,6 +1685,14 @@ natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
 
+**Testside for spørring i GeoParquet, 21. oktober 2026.** En egen side på `parquet/` spør i en GeoParquet-fil med verneområdene
+i Norge, lagt ut som testfil hos `pgisnedlasting.blob.core.windows.net`, uten å laste den ned. Filen er 33 MB i én radgruppe, med
+31 kolonner, flatene som WKB i UTM 33 og en bbox per område. Flatene er nesten hele filen. For en kommune henter siden beskrivelsen
+av filen og fem kolonner med Range, rundt 140 kB i seks kall, og velger områdene der kommunenummeret står i kolonnen kommune
+(Trondheim: 14 verneområder). Tjenesten svarer på bestemte biter (206), men på «de siste n byte» med hele filen, så siden ber bare om
+bestemte biter. Lagringskontoen har ikke CORS slått på, så nettleseren får ikke lese filen ennå, og siden sier det. Den er prøvd i
+Chromium med CORS slått av. Siden står utenfor katalogen og lagene, og endrer ingen tall på hovedsiden.
+
 **Én infoboks per tall, der tallet står, 21. oktober 2026.** Infoboksen ved overskriften for verdsatt natur hadde fem tall i seg, og
 ble for mye på ett sted. Nå er den borte, og hvert tall har sin egen infoboks ved siden av avsnittet eller overskriften der det står:
 verdsatt natur ved setningen øverst, kartleggingen ved helhetsbildet (eller teksten om kartleggingen når det ikke vises), planlagt

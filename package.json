@@ -9,8 +9,10 @@
   "scripts": {
     "dev": "vite",
     "dev-figma": "vite -c vite.figma.config.ts",
+    "dev-parquet": "vite -c vite.parquet.config.ts",
     "bygg": "vite build",
     "bygg-figma": "vite build -c vite.figma.config.ts",
+    "bygg-parquet": "vite build -c vite.parquet.config.ts",
     "forhandsvis": "vite preview",
     "formater": "prettier --write src srcFigma verktoy/*.ts test vite.config.ts vite.figma.config.ts",
     "sjekk-format": "prettier --check src srcFigma verktoy/*.ts test vite.config.ts vite.figma.config.ts",
@@ -26,6 +28,7 @@
     "@fontsource/open-sans": "5.2.7",
     "@miljodirektoratet/md-css": "6.32.0",
     "@miljodirektoratet/md-react": "6.35.0",
+    "hyparquet": "1.31.2",
     "ol": "10.6.1",
     "polygon-clipping": "0.15.7",
     "proj4": "2.11.0",

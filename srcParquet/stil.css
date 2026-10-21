@@ -1,0 +1,54 @@
+/* Testsiden for spørring i GeoParquet: én spalte med tekst, kommunevelgeren og tabellen. Skrift, farger, linjer og avstander er
+   designsystemets variabler, og grunnlaget er det samme som på hovedsiden (src/grunnlag.css). */
+.parquet {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: var(--md-spacing-24) var(--md-spacing-16) var(--md-spacing-48);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-16);
+}
+.parquet p {
+  max-width: 44rem;
+}
+.parquet .velger {
+  max-width: 24rem;
+}
+.parquet .henter {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-8);
+}
+.parquet .hentet,
+.parquet .kilde {
+  font-size: var(--md-typography-body-s);
+}
+.parquet .kilde {
+  margin-top: var(--md-spacing-16);
+  color: var(--dempet);
+  overflow-wrap: anywhere;
+}
+.parquet a {
+  color: var(--md-color-text-link, inherit);
+}
+/* Tabellen rulles sidelengs på smale skjermer */
+.parquet .rullbar {
+  overflow-x: auto;
+}
+.parquet table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+.parquet th,
+.parquet td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--md-spacing-8) var(--md-spacing-12) var(--md-spacing-8) 0;
+  border-bottom: 1px solid var(--linje);
+}
+.parquet thead th {
+  font-weight: var(--md-typography-weight-semibold);
+}
+.parquet tbody th {
+  font-weight: var(--md-typography-weight-regular, 400);
+}

@@ -29,6 +29,10 @@
    fra src/, men src/ importerer aldri fra srcFigma/. Fra src/ kan den bruke datamotoren (src/data, men ikke bronse: den henter ikke
    selv), kartet (src/ui/kart) og noen små fellesfiler (FIGMA_LOV). Hovedsidens sider og adresse (src/ui/sider.ts) bruker den ikke.
 
+   Testsiden for GeoParquet, i srcParquet/ (se vite.parquet.config.ts), står utenfor datamotoren og lagene: den spør selv i én fil på
+   nettet. Fra src/ bruker den bare designsystemet (ui/komponenter/md.ts), tekstene for tall (ui/tekst.ts) og grunnlaget for stilen
+   (grunnlag.css), og src/ bruker den aldri.
+
    Typene sjekkes av TypeScript (tsc). Denne sjekken ser bare på hvem som importerer fra hvem, og på reglene over. Koden leses med
    oxc-parser, som kan lese TypeScript og JSX.
 
@@ -232,10 +236,31 @@ for (const fil of filerI(FIGMA)) {
   }
 }
 
+/* Testsiden for GeoParquet: bare designsystemet, tekstene for tall og grunnlaget for stilen fra src/, og src/ bruker den aldri */
+const PARQUET = path.join(ROT, 'srcParquet'),
+  PARQUET_LOV = ['ui/komponenter/md.ts', 'ui/tekst.ts', 'grunnlag.css'];
+for (const fil of filerI(SRC))
+  for (const { fra, linje } of importer(fil))
+    if (fra.includes('srcParquet'))
+      feil.push(`${path.relative(ROT, fil)}:${linje} importerer fra testsiden (${fra}): src/ bruker aldri srcParquet/`);
+for (const fil of filerI(PARQUET)) {
+  antall++;
+  for (const { fra, linje } of importer(fil)) {
+    if (!fra.startsWith('.')) continue; /* pakker */
+    const hvor = path.resolve(path.dirname(fil), fra);
+    if (hvor.startsWith(PARQUET + path.sep)) continue;
+    const rel = path.relative(SRC, hvor).split(path.sep).join('/');
+    if (!hvor.startsWith(SRC + path.sep) || !PARQUET_LOV.includes(rel))
+      feil.push(
+        `${path.relative(ROT, fil)}:${linje} importerer fra ${fra}: testsiden kan bare bruke ${PARQUET_LOV.join(', ')}`
+      );
+  }
+}
+
 feil.forEach(x => console.log(x));
 console.log(
   feil.length
     ? `\n${feil.length} brudd.`
-    : `${antall} filer i ${Object.keys(LAG).length} lag og tvillingen sjekket. Ingen brudd.`
+    : `${antall} filer i ${Object.keys(LAG).length} lag, tvillingen og testsiden sjekket. Ingen brudd.`
 );
 process.exit(feil.length ? 1 : 0);

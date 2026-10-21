@@ -26,7 +26,8 @@ npm run dev
 - Kommunenummer i adressen velger kommune, for eksempel <http://localhost:5173/#1566> for Surnadal.
 - `?teknisk` i adressen viser utgave, måling og kall-logg: <http://localhost:5173/?teknisk#5001>.
 
-Tvillingen fra Figma (`srcFigma/`, se README) kjøres for seg med `npm run dev-figma`, på adressen Vite skriver ut.
+Tvillingen fra Figma (`srcFigma/`, se README) kjøres for seg med `npm run dev-figma`, på adressen Vite skriver ut. Testsiden for
+GeoParquet (`srcParquet/`) kjøres likeens med `npm run dev-parquet`.
 
 ### Prøve på mobilen
 
@@ -44,8 +45,8 @@ npm run bygg
 npm run forhandsvis
 ```
 
-`npm run bygg` legger hele siden i `dist/`. `npm run bygg-figma` legger tvillingen fra Figma i `dist/figma/`, og må kjøres etter,
-fordi `npm run bygg` tømmer `dist/`. `npm run forhandsvis` viser bygget på <http://localhost:4173>, slik det blir på
+`npm run bygg` legger hele siden i `dist/`. `npm run bygg-figma` legger tvillingen fra Figma i `dist/figma/`, og `npm run
+bygg-parquet` testsiden for GeoParquet i `dist/parquet/`. De må kjøres etter, fordi `npm run bygg` tømmer `dist/`. `npm run forhandsvis` viser bygget på <http://localhost:4173>, slik det blir på
 GitHub Pages. `dist/` kan legges på en hvilken som helst webserver, også i en undermappe. Den virker ikke åpnet rett fra disken
 (`file://`), fordi nettleseren da ikke henter skript og data på samme måte.
 

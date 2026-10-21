@@ -405,6 +405,26 @@ tema der det finnes (`src/ui/tvilling.ts`): Utvikling fremover og Naturtapet, te
 | `sider/` | Hovedsidene, temasidene, Naturtapet og «Utforsk i kart» |
 | `stil.css` | Grunnlaget og delene. Toppen og kartet har egne stilark. |
 
+## Testsiden for GeoParquet
+
+En egen side på `parquet/` (kildekoden i `srcParquet/`, bygget med `npm run bygg-parquet` og `vite.parquet.config.ts`) prøver å
+spørre direkte i en GeoParquet-fil på nettet uten å laste den ned: verneområdene i Norge fra Miljødirektoratet, lagt ut som testfil
+hos `pgisnedlasting.blob.core.windows.net` (rundt 33 MB, nesten alt er flatene).
+
+- Man velger en kommune, og siden viser verneområdene som ligger helt eller delvis i den: navn med lenke til faktaarket, verneform,
+  vernedato og kommunene.
+- Siden henter bare beskrivelsen av filen (som står sist i filen) og fem kolonner (navn, verneform, vernedato, kommune og faktaark),
+  med Range i HTTP. Flatene hentes ikke. Det er rundt 140 kB av filen i seks kall. Siden viser hvor mye som er hentet.
+- Lesingen gjøres av [hyparquet](https://github.com/hyparam/hyparquet) (MIT). Siden ber alltid om en bestemt bit (bytes=a-b),
+  aldri «de siste n», fordi tjenesten svarer på det med hele filen. Svarer tjenesten med hele filen likevel, stoppes hentingen.
+- Det som er hentet, huskes mens siden er åpen, så neste kommune ikke henter noe på nytt. Ingenting lagres i nettleseren.
+- Nettleseren kan bare lese filen når lagringskontoen tillater det (CORS). Per 21. oktober 2026 er CORS ikke slått på, så siden
+  viser en feilmelding om det. Lagringskontoen må tillate siden (`https://eirikvk.github.io`) med GET, HEAD og OPTIONS, overskriften
+  Range, og Content-Range og Content-Length som synlige overskrifter. Med CORS slått av i Chromium virker spørringen.
+- Siden står utenfor datamotoren og lagene i bronse, sølv og gull: den spør selv i én fil. Fra `src/` bruker den bare designsystemet,
+  tekstene for tall og grunnlaget for stilen, og `src/` bruker den aldri (sjekkes av `verktoy/sjekk-lag.ts`). Skal filen brukes i
+  hovedsiden, bør den inn som en tabell i bronse.
+
 ## Dokumentasjon
 
 - [KOM-I-GANG.md](KOM-I-GANG.md) viser hvordan man kjører, bygger og tester siden lokalt.
