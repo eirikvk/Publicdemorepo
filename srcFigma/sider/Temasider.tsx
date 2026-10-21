@@ -646,12 +646,12 @@ function Verdi({ tema }: { tema: Tema }) {
         [
           'Andel av kommunen kartlagt',
           svar(K, x => (x && x.kartlagt ? prosent(x.kartlagt.andelLand) : '–')),
-          ['verdsatte-naturtyper/kort-kartlagt', 'verdi']
+          ['verdsatte-naturtyper/kort-kartlagt', 'verdi', 'gull.verdsattNaturKartlagt']
         ],
         [
           'Kartlagte verdsatte naturtyper',
           svar(T, x => (x.antall ? iTekst(x.sum) : 'Ingen')),
-          ['verdsatte-naturtyper/kort-areal', 'verdi']
+          ['verdsatte-naturtyper/kort-areal', 'verdi', 'gull.verdsattNatur']
         ]
       ]}
       kilde={
@@ -733,7 +733,7 @@ function Verdi({ tema }: { tema: Tema }) {
       {v && v.perKlasse && (
         <Figur
           tittel="Fordeling av verdiene"
-          forklaring={['verdsatte-naturtyper/figur-verdiene', 'verdi']}
+          forklaring={['verdsatte-naturtyper/figur-verdiene', 'verdi', 'gull.verdsattNatur']}
           tekst={
             <p>
               Verdien settes etter{' '}

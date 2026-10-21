@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { TEMATABELLER, katalog } from '../../data/katalog.ts';
 import type { Kartleggingen, TemaIPlan, Temaet } from '../../data/gull/temaer.ts';
-import type { Rad } from '../../data/cache.ts';
+import { fulltNavn, type Rad } from '../../data/cache.ts';
 import { FLERE_VERNEFORMER, type Naturtema as Tema } from '../../data/solv/temaer.ts';
 import { utenPlan } from '../../data/motor/egne.ts';
 import { valgt, verdi } from '../../data/motor/valgt.ts';
@@ -17,6 +17,7 @@ import { Fargelinje, Forklaring, Stripe, Talltabell, type Stripedel } from './de
 import { MdButton, MdCheckbox, MdIconLocation, MdIconOpenInNew } from './md.ts';
 import { antallOrd, dekar, iTekst, nf, periode, pst, stor, verdiOverlapp } from '../tekst.ts';
 import { Temaside } from './Temaside.tsx';
+import { MedForklaring } from './Tallforklaring.tsx';
 
 export const ETT: Record<string, string> = {
   vern: 'ett',
@@ -68,7 +69,9 @@ function Helhet({
   const verdier = (a: number[]) => t.klasser!.map(([navn, id], v): Stripedel => [navn, '--' + id, a[v]]);
   return (
     <>
-      <h3 className="md-typography-heading-xs">Helhetsbildet: verdsatt natur og kartlegging</h3>
+      <MedForklaring kort={t.id} tall="gull.verdsattNaturKartlagt">
+        <h3 className="md-typography-heading-xs">Helhetsbildet: verdsatt natur og kartlegging</h3>
+      </MedForklaring>
       <Stripe
         hva="Landarealet"
         deler={[
@@ -183,10 +186,12 @@ function UtenVerdi() {
             .join(', ')
             .replace(/, ([^,]*)$/, ' og $1');
   return (
-    <p className="hint">
-      I tillegg har {antallOrd(V.omrader.length, 'én')} {V.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} ingen
-      fast verdi, med til sammen ca. {iTekst(V.sum)}: {liste}. De er ikke med i tallene over.
-    </p>
+    <MedForklaring kort="verdi" tall="gull.verdsattVurderes">
+      <p className="hint">
+        I tillegg har {antallOrd(V.omrader.length, 'én')} {V.omrader.length === 1 ? 'lokalitet' : 'lokaliteter'} ingen
+        fast verdi, med til sammen ca. {iTekst(V.sum)}: {liste}. De er ikke med i tallene over.
+      </p>
+    </MedForklaring>
   );
 }
 
@@ -275,7 +280,9 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       tall={N.antall ? { tilstand: 'ok', sum: N.sum, andelLand: N.andelLand } : { tilstand: 'ingen' }}
       under={under}
     >
-      <p>{sumTekst}</p>
+      <MedForklaring kort={t.id} tall={fulltNavn(tab.tall)}>
+        <p>{sumTekst}</p>
+      </MedForklaring>
       {t.id === 'vern' && N.antall > 0 && <VernLandSjo />}
       {N.perKlasse && (
         <ul className="talliste">
@@ -299,7 +306,11 @@ export function Naturtema({ t: tema }: { t: Tema }) {
       {N.perKlasse && N.flere > 0 && <p className="hint">{verdiOverlapp(iTekst(N.flere))}</p>}
       {t.id === 'verdi' && <UtenVerdi />}
       {helhet && <Helhet t={t} H={K!.helhet!} E={E!} />}
-      {merk && <p>{merk}</p>}
+      {merk && (
+        <MedForklaring kort={t.id} tall="gull.verdsattNaturKartlagt">
+          <p>{merk}</p>
+        </MedForklaring>
+      )}
       {t.dekning && kartlagt && (
         <MdCheckbox
           label="Slør over det som ikke er kartlagt"
@@ -307,15 +318,21 @@ export function Naturtema({ t: tema }: { t: Tema }) {
           onChange={e => settSlor(e.target.checked)}
         />
       )}
-      {paavirkning && <p role="status">{paavirkning}</p>}
+      {paavirkning && (
+        <MedForklaring kort={t.id} tall={fulltNavn(tab.iPlan)}>
+          <p role="status">{paavirkning}</p>
+        </MedForklaring>
+      )}
       {G && (
-        <p role="status">
-          <b>
-            Av ca. {iTekst(G.natKm2)} planlagt utbygging på natur ligger ca. {iTekst(G.ukjentKm2)} ({pst(G.andel, 0)} %)
-            i områder som ikke er kartlagt.
-          </b>{' '}
-          Der vet vi ikke om det finnes verdifull natur. Smale striper er ikke med.
-        </p>
+        <MedForklaring kort={t.id} tall="gull.utbyggingUtenforKartlagt">
+          <p role="status">
+            <b>
+              Av ca. {iTekst(G.natKm2)} planlagt utbygging på natur ligger ca. {iTekst(G.ukjentKm2)} ({pst(G.andel, 0)}{' '}
+              %) i områder som ikke er kartlagt.
+            </b>{' '}
+            Der vet vi ikke om det finnes verdifull natur. Smale striper er ikke med.
+          </p>
+        </MedForklaring>
       )}
       {vises.length > 0 && (
         <ul className="talliste">

@@ -743,8 +743,14 @@ ligger i verdsatt natur eller der det ikke er kartlagt?
 **Kort fortalt.** Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet
 regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Hvor
 mye lokalitetene overlapper, står for seg. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter
-Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt
-verdi) er ikke med i tallene, men nevnes for seg.
+Miljødirektoratets instruks, og hvor mye verdsatt natur som ligger der og utenfor. Utenfor det kartlagte vet vi lite. Planlagt
+utbygging er ruter på 10,6 meter som i dag er natur eller jordbruk, og som kommuneplanen eller egne planer setter av til
+utbygging. Rutene legges oppå lokalitetene, og arealet som ligger i dem, telles, der overlapp teller én gang. En lokalitet regnes
+som berørt når utbyggingen dekker minst en halv rute av den. Smale striper inntil bebygd areal telles for seg. Planlagt utbygging
+på natur deles i det som ligger der det er kartlagt etter Miljødirektoratets instruks, og det som ikke gjør det. Der det ikke er
+kartlagt, vet vi ikke om det finnes verdifull natur. Smale striper er ikke med. Noen lokaliteter har ingen fast verdi: de skal
+vurderes per lokalitet eller per naturtype, eller er ikke gitt verdi. De er ikke med i tallene for verdsatt natur. Arealet regnes
+på samme måte, og står for seg.
 
 **Tabeller.** Kortet viser `gull.verdsattNatur`, `gull.verdsattNaturKartlagt`, `gull.verdsattNaturIPlan`,
 `gull.utbyggingUtenforKartlagt` og `gull.verdsattVurderes`. Det står i `src/ui/komponenter/Naturtema.tsx`.
@@ -1678,6 +1684,15 @@ er dekket av det ene bildet og ikke det andre. I Oppdal, som hadde ruter på 31 
 natur endres under 1 % (Trondheim 27 570 → 27 460, Oppdal 1 345 370 → 1 338 900). Grått areal i villreinområdene i Oppdal går fra
 under 0,1 % til 0,1 %. Regresjonstesten ga avvik bare i tallene og kartene for grått areal og inngrepsfri natur, og i radene for
 grått areal under egne områder. Det tar lengre tid i store kommuner: Kautokeino bruker rundt 18 sekunder på grått areal, mot 5 før.
+
+**Én infoboks per tall, der tallet står, 21. oktober 2026.** Infoboksen ved overskriften for verdsatt natur hadde fem tall i seg, og
+ble for mye på ett sted. Nå er den borte, og hvert tall har sin egen infoboks ved siden av avsnittet eller overskriften der det står:
+verdsatt natur ved setningen øverst, kartleggingen ved helhetsbildet (eller teksten om kartleggingen når det ikke vises), planlagt
+utbygging i lokalitetene og utbygging utenfor det kartlagte ved hver sin setning, og lokalitetene uten fast verdi ved merknaden om
+dem. Det er ingen infobokser inni hverandre. Hver har sin egen korte forklaring (`kortFortalt` per tall i kortet), regnestykket for
+tallet, stegene fra kilde til tall og usikkerheten, og står på egne bein. Kortets korte forklaring i dette kapitlet er de fem satt
+etter hverandre, og har fått to nye: for planlagt utbygging i lokalitetene og for utbygging utenfor det kartlagte. I tvillingen har
+tallkortene og figuren for verdsatt natur infoboksen for sitt tall. Ingen tall er endret.
 
 **Infoboksen på egne bein, og det samme i katalogen, 21. oktober 2026.** Seksjonene i infoboksen for verdsatt natur viste til
 andre tall og kort, som «Utbyggingen. Forklart under Planlagt utbygging». Nå står hver seksjon på egne bein: alt tallet bygger på, er

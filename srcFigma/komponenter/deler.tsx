@@ -205,8 +205,9 @@ export const Trekkspill = ({ tittel, children, merke }: { tittel: string; childr
   </MdAccordionItem>
 );
 
-/* Et spørsmålstegn med forklaringen bak tallene: stedet (flagget i flagg.ts) og id-en til kortet i src/ui/forklaringer.ts */
-export type Forklaring = [sted: Sted, kort: string];
+/* Et spørsmålstegn med forklaringen bak tallene: stedet (flagget i flagg.ts), id-en til kortet i src/ui/forklaringer.ts, og for et
+   kort med én infoboks per tall, tabellen i gull for tallet som står her */
+export type Forklaring = [sted: Sted, kort: string, tall?: string];
 /* Et steg et annet kort forklarer, lenker til kapitlet i METODE.md, fordi sidene på hovedsiden ikke finnes her */
 const tilMetoden: Se = k => (
   <a href={REPO + 'METODE.md#' + ankerFor(k)} target="_blank" rel="noopener">
@@ -214,7 +215,7 @@ const tilMetoden: Se = k => (
   </a>
 );
 /* Spørsmålstegnet og panelet for forklaringen f, eller ingenting når stedet er slått av */
-export const useSporsmal = (f?: Forklaring) => useInfoknapp(f && vises(f[0]) ? f[1] : null, tilMetoden);
+export const useSporsmal = (f?: Forklaring) => useInfoknapp(f && vises(f[0]) ? f[1] : null, tilMetoden, f && f[2]);
 /* En overskrift med spørsmålstegnet ved siden av, og panelet med forklaringen rett under når det er trykket */
 export function MedSporsmal({ forklaring, children }: { forklaring?: Forklaring; children: ReactNode }) {
   const { knapp, panel } = useSporsmal(forklaring);

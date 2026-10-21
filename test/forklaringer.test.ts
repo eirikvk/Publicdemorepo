@@ -90,12 +90,17 @@ test('datasettene i sølv: bare bronse og sølv, data i hvert, støttedata i et 
       );
 });
 
-test('infoboksen med ett tall per seksjon: kildene først, bare data som steg, og tallet til slutt', async () => {
+test('infoboksen for ett tall: kildene først, bare data som steg, og tallet til slutt', async () => {
   const { KORT, linjeFor, kortet: kortMed } = await import('../src/ui/forklaringer.ts');
   for (const k of KORT) {
     assert.ok(k.regnestykke || k.tall, `${k.id} mangler regnestykket`);
     for (const t of Object.keys(k.tall || {}))
       assert.ok(k.tabeller.includes(t), `${k.id}: ${t} er ikke et tall i kortet`);
+    /* et kort med én infoboks per tall har en for hvert tall, med sin egen korte forklaring, og kortets er dem etter hverandre */
+    if (k.tall) {
+      for (const t of k.tabeller) assert.ok(k.tall[t] && k.tall[t].kortFortalt, `${k.id}: ${t} mangler infoboksen`);
+      assert.equal(k.kortFortalt, k.tabeller.map(t => k.tall![t].kortFortalt).join(' '));
+    }
     for (const t of k.tabeller) {
       const L = linjeFor(k, t),
         S = L.steg.map(s => s.steg);

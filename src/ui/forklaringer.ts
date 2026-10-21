@@ -20,9 +20,10 @@ export type Hent = <V>(t: Tabell<string, V>) => V | null;
    på (side) og hvilken fil komponenten står i, spørsmålet, kort fortalt, tabellene i gull det viser, egne forbehold, og regnestykket
    for valgt kommune. forklarer er tabeller kortet forklarer i tillegg til dem det viser: andre kort som bygger på dem, viser til
    dette kortet i stedet for å gjenta stegene.
-   Et kort med tall har én seksjon per tabell det viser i infoboksen, med regnestykket for den tabellen (tall, etter navnet på
-   tabellen), stegene fra kilde til det tallet (linjeFor) og usikkerheten for det. Foreløpig har bare verdsatt natur det; de andre har
-   ett regnestykke for hele kortet. */
+   Et kort med tall har ingen infoboks for hele kortet. Hvert tall (hver tabell kortet viser) har sin egen, der tallet står på siden,
+   og den står på egne bein: kort fortalt og regnestykket for det tallet (tall, etter navnet på tabellen), stegene fra kilde til tall
+   (linjeFor) og usikkerheten. Kortets kort fortalt er da tallenes satt etter hverandre, til METODE.md. Foreløpig har bare verdsatt
+   natur det; de andre har én infoboks for hele kortet. */
 export interface Kort {
   id: string;
   tittel: string;
@@ -35,7 +36,12 @@ export interface Kort {
   forklarer?: string[];
   usikkerhet?: string[];
   regnestykke?: (hent: Hent) => string[] | null;
-  tall?: Record<string, (hent: Hent) => string[] | null>;
+  tall?: Record<string, Tallforklaring>;
+}
+/* Det et tall har for seg selv i infoboksen sin: kort fortalt og regnestykket for valgt kommune */
+export interface Tallforklaring {
+  kortFortalt: string;
+  regnestykke: (hent: Hent) => string[] | null;
 }
 /* Overskriften i METODE.md for hver gruppe, der kapitlet står */
 export const GRUPPER: Record<string, string> = {
@@ -101,6 +107,74 @@ function storst(R: { navn: string; km2: number }[], flertall: string, n = 3) {
 }
 /* Inngrepsfri natur per sone, som «villmarkspreget natur 10, sone 1 20 og sone 2 30» */
 const perSone = (soner: number[]) => ramse(INONSONER.map((s, i) => `${s[4].toLowerCase()} ${hele(soner[i])}`));
+
+/* Tallene i verdsatt natur, hvert med sin infoboks */
+const VERDI_TALL: Record<string, Tallforklaring> = {
+  'gull.verdsattNatur': {
+    kortFortalt:
+      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Hvor mye lokalitetene overlapper, står for seg.',
+    regnestykke: hent => {
+      const T = hent(katalog.gull.verdsattNatur);
+      if (!T || !T.antall || !T.perKlasse) return null;
+      return [
+        `${stor(ramse(VERDI.klasser!.map(([navn], v) => `${navn.toLowerCase()} ${hele(T.perKlasse![v].km2)}`)))} dekar. Til sammen ${daa(T.sum)} i ${ant(T.antall)} lokaliteter.`,
+        ...(T.flere > 0
+          ? [
+              `Lokalitetene hver for seg er til sammen ${daa(T.sum + T.flere)}. Det er ${daa(T.flere)} mer, fordi lokaliteter overlapper. Der teller den høyeste verdien.`
+            ]
+          : []),
+        ...avLand(hent, T.andelLand)
+      ];
+    }
+  },
+  'gull.verdsattNaturKartlagt': {
+    kortFortalt:
+      'Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks, og hvor mye verdsatt natur som ligger der og utenfor. Utenfor det kartlagte vet vi lite.',
+    regnestykke: hent => {
+      const K = hent(katalog.gull.verdsattNaturKartlagt);
+      if (!K || !K.kartlagt) return null; /* uten det kartlagte (feil hos tjenesten) */
+      return K.kartlagt.km2 > 0
+        ? [`Kartlagt etter instruksen: ${daa(K.kartlagt.km2)}, ${prosent(K.kartlagt.andelLand)} av landarealet.`]
+        : ['Ingenting i kommunen er kartlagt etter instruksen.'];
+    }
+  },
+  'gull.verdsattNaturIPlan': {
+    kortFortalt:
+      'Planlagt utbygging er ruter på 10,6 meter som i dag er natur eller jordbruk, og som kommuneplanen eller egne planer setter av til utbygging. Rutene legges oppå lokalitetene, og arealet som ligger i dem, telles, der overlapp teller én gang. En lokalitet regnes som berørt når utbyggingen dekker minst en halv rute av den. Smale striper inntil bebygd areal telles for seg.',
+    regnestykke: hent => {
+      const I = hent(katalog.gull.verdsattNaturIPlan);
+      return I ? iPlanen(I, 'lokalitetene', 'lokaliteter') : null;
+    }
+  },
+  'gull.utbyggingUtenforKartlagt': {
+    kortFortalt:
+      'Planlagt utbygging på natur deles i det som ligger der det er kartlagt etter Miljødirektoratets instruks, og det som ikke gjør det. Der det ikke er kartlagt, vet vi ikke om det finnes verdifull natur. Smale striper er ikke med.',
+    regnestykke: hent => {
+      const G = hent(katalog.gull.utbyggingUtenforKartlagt);
+      if (!G) return null;
+      return G.nat
+        ? [
+            `Av ${daa(G.natKm2)} planlagt utbygging på natur ligger ${daa(G.ukjentKm2)} (${prosent(G.andel)}) der det ikke er kartlagt.`
+          ]
+        : ['Ingen planlagt utbygging på natur.'];
+    }
+  },
+  'gull.verdsattVurderes': {
+    kortFortalt:
+      'Noen lokaliteter har ingen fast verdi: de skal vurderes per lokalitet eller per naturtype, eller er ikke gitt verdi. De er ikke med i tallene for verdsatt natur. Arealet regnes på samme måte, og står for seg.',
+    regnestykke: hent => {
+      const V = hent(katalog.gull.verdsattVurderes);
+      if (!V) return null;
+      if (!V.omrader.length) return ['Ingen lokaliteter uten fast verdi.'];
+      const deler = VURDERES.klasser!.flatMap(([navn], v) =>
+        V.antall[v] > 0 ? [`${navn.toLowerCase()} ${hele(V.klasser[v])}`] : []
+      );
+      return [
+        `${stor(ramse(deler))} dekar. Til sammen ${daa(V.sum)} i ${ant(V.omrader.length)} lokaliteter. De er ikke med i tallene for verdsatt natur.`
+      ];
+    }
+  }
+};
 
 export const KORT: Kort[] = [
   {
@@ -283,8 +357,9 @@ export const KORT: Kort[] = [
     komponent: NATUR,
     sporsmal:
       'Hvor mye verdsatt natur er registrert i kommunen, hvor mye av kommunen er kartlagt, og hvor mye planlagt utbygging ligger i verdsatt natur eller der det ikke er kartlagt?',
-    kortFortalt:
-      'Lokalitetene er naturtyper med verdi fra Miljødirektoratet. Hver lokalitet klippes mot kommunegrensen. Arealet regnes av hvor stor del av hver rute på 10,6 meter lokalitetene dekker, der overlapp teller én gang, med den høyeste verdien. Hvor mye lokalitetene overlapper, står for seg. Kartleggingen viser hvor stor del av landarealet som er kartlagt etter Miljødirektoratets instruks. Utenfor det kartlagte vet vi lite. Lokaliteter uten fast verdi (som skal vurderes, eller ikke er gitt verdi) er ikke med i tallene, men nevnes for seg.',
+    kortFortalt: Object.values(VERDI_TALL)
+      .map(t => t.kortFortalt)
+      .join(' '),
     tabeller: [
       'gull.verdsattNatur',
       'gull.verdsattNaturKartlagt',
@@ -292,52 +367,7 @@ export const KORT: Kort[] = [
       'gull.utbyggingUtenforKartlagt',
       'gull.verdsattVurderes'
     ],
-    tall: {
-      'gull.verdsattNatur': hent => {
-        const T = hent(katalog.gull.verdsattNatur);
-        if (!T || !T.antall || !T.perKlasse) return null;
-        return [
-          `${stor(ramse(VERDI.klasser!.map(([navn], v) => `${navn.toLowerCase()} ${hele(T.perKlasse![v].km2)}`)))} dekar. Til sammen ${daa(T.sum)} i ${ant(T.antall)} lokaliteter.`,
-          ...(T.flere > 0
-            ? [
-                `Lokalitetene hver for seg er til sammen ${daa(T.sum + T.flere)}. Det er ${daa(T.flere)} mer, fordi lokaliteter overlapper. Der teller den høyeste verdien.`
-              ]
-            : []),
-          ...avLand(hent, T.andelLand)
-        ];
-      },
-      'gull.verdsattNaturKartlagt': hent => {
-        const K = hent(katalog.gull.verdsattNaturKartlagt);
-        if (!K || !K.kartlagt) return null; /* uten det kartlagte (feil hos tjenesten) */
-        return K.kartlagt.km2 > 0
-          ? [`Kartlagt etter instruksen: ${daa(K.kartlagt.km2)}, ${prosent(K.kartlagt.andelLand)} av landarealet.`]
-          : ['Ingenting i kommunen er kartlagt etter instruksen.'];
-      },
-      'gull.verdsattNaturIPlan': hent => {
-        const I = hent(katalog.gull.verdsattNaturIPlan);
-        return I ? iPlanen(I, 'lokalitetene', 'lokaliteter') : null;
-      },
-      'gull.utbyggingUtenforKartlagt': hent => {
-        const G = hent(katalog.gull.utbyggingUtenforKartlagt);
-        if (!G) return null;
-        return G.nat
-          ? [
-              `Av ${daa(G.natKm2)} planlagt utbygging på natur ligger ${daa(G.ukjentKm2)} (${prosent(G.andel)}) der det ikke er kartlagt.`
-            ]
-          : ['Ingen planlagt utbygging på natur.'];
-      },
-      'gull.verdsattVurderes': hent => {
-        const V = hent(katalog.gull.verdsattVurderes);
-        if (!V) return null;
-        if (!V.omrader.length) return ['Ingen lokaliteter uten fast verdi.'];
-        const deler = VURDERES.klasser!.flatMap(([navn], v) =>
-          V.antall[v] > 0 ? [`${navn.toLowerCase()} ${hele(V.klasser[v])}`] : []
-        );
-        return [
-          `${stor(ramse(deler))} dekar. Til sammen ${daa(V.sum)} i ${ant(V.omrader.length)} lokaliteter. De er ikke med i tallene for verdsatt natur.`
-        ];
-      }
-    }
+    tall: VERDI_TALL
   },
   {
     id: 'inon',
