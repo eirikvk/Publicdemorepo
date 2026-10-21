@@ -496,15 +496,27 @@ export const KORT: Kort[] = [
     komponent: TEMASIDER,
     sporsmal: 'Hvilke verdsatte naturtyper er funnet i kommunen, og hvor mye er det av hver?',
     kortFortalt:
-      'Lokalitetene med verdi fra Miljødirektoratet grupperes etter naturtype, med arealet, antall lokaliteter og den høyeste verdien. Arealet er summen av lokalitetene, klippet mot kommunen, og der lokaliteter overlapper, telles det flere ganger. Listen gjelder bare det som er kartlagt.',
-    tabeller: ['gull.verdsattPerNaturtype'],
+      'Lokalitetene med verdi fra Miljødirektoratet grupperes etter naturtype, med arealet, antall lokaliteter og den høyeste verdien. Arealet er summen av lokalitetene, klippet mot kommunen, og der lokaliteter overlapper, telles det flere ganger. Listen gjelder bare det som er kartlagt. Andelen av det kartlagte i Norge er arealet i kommunen delt på arealet i alle kommunene, fra tallene for alle kommunene, regnet ut på forhånd på samme måte.',
+    tabeller: ['gull.verdsattPerNaturtype', 'gull.landssammenligning'],
     regnestykke: hent => {
       const N = hent(katalog.gull.verdsattPerNaturtype);
       if (!N) return null;
       if (!N.alle.length) return ['Kommunen har ingen lokaliteter med verdi.'];
+      const L = hent(katalog.gull.landssammenligning),
+        storstAndel = L
+          ? N.alle
+              .filter(t => L.naturtyper[t.navn])
+              .map(t => ({ navn: t.navn, andel: (t.km2 / L.naturtyper[t.navn]) * 100 }))
+              .sort((a, b) => b.andel - a.andel)[0]
+          : null;
       return [
         `${ant(N.alle.reduce((s, t) => s + t.antall, 0))} lokaliteter i ${ant(N.alle.length)} naturtyper. Størst: ${storst(N.alle, 'naturtyper')}.`,
-        `${ant(N.hoy.length)} av naturtypene har lokaliteter med stor eller svært stor verdi.`
+        `${ant(N.hoy.length)} av naturtypene har lokaliteter med stor eller svært stor verdi.`,
+        ...(storstAndel
+          ? [
+              `Størst andel av naturtypen i Norge: ${storstAndel.navn}, ${prosent(storstAndel.andel)} av arealet i alle kommunene.`
+            ]
+          : [])
       ];
     }
   },
@@ -665,8 +677,8 @@ export const KORT: Kort[] = [
     sporsmal:
       'Hvor stor del av naturen som er bygget ned i Norge, ligger i kommunen, og hvor mye jordbruk og våtmark bygger kommunen ned sammenlignet med de andre?',
     kortFortalt:
-      'Den samme syntetiske oversettelsen av SSBs arealklasser gjøres for alle kommunene i Norge med ett kall til SSB, og summeres for Norge. Kommunen sammenlignes med summen. Plassen er blant kommunene som kan sammenlignes med 2017, der 1 bygget ned mest.',
-    tabeller: ['gull.sammenligning'],
+      'Den samme syntetiske oversettelsen av SSBs arealklasser gjøres for alle kommunene i Norge med ett kall til SSB, og summeres for Norge. Kommunen sammenlignes med summen. Plassen er blant kommunene som kan sammenlignes med 2017, der 1 bygget ned mest. Villreinområdene, kartleggingsgraden og inngrepsfri natur kommer fra tallene for alle kommunene, regnet ut på forhånd med den samme koden som regner tallene for kommunen, og summen for Norge er summen av kommunene. Der er plassen blant kommunene som har tallet, og 1 har mest.',
+    tabeller: ['gull.sammenligning', 'gull.landssammenligning'],
     regnestykke: hent => {
       const S = hent(katalog.gull.sammenligning);
       if (!S) return null;
@@ -677,11 +689,32 @@ export const KORT: Kort[] = [
         `Natur bygget ned fra ${S.fra} til ${S.til}: ${daa(S.naturtap.km2)}, ${prosent(S.naturtap.andelAvNorge)} av all natur bygget ned i Norge. Snittet for en kommune er ${prosent(S.naturtap.snitt)}.`,
         `Andelen av naturen som ble bygget ned: ${prosent(S.natur.kommune)} i kommunen og ${prosent(S.natur.norge)} i Norge.`,
         plass('Jordbruk', S.jordbruk),
-        plass('Våtmark', S.vatmark)
+        plass('Våtmark', S.vatmark),
+        ...landslinjer(hent)
       ];
     }
   }
 ];
+/* Linjene fra tallene for alle kommunene til regnestykket for sammenligningen */
+function landslinjer(hent: Hent): string[] {
+  const L = hent(katalog.gull.landssammenligning);
+  if (!L) return [];
+  const K = L.kommune;
+  if (!K)
+    return [
+      `Kommunen er ikke med i tallene for alle kommunene (${ant(L.kommuner)} kommuner, regnet ut ${L.beregnet}).`
+    ];
+  const plass = (P: { plass: number; av: number } | null, hva: string) =>
+    P ? `Plass ${ant(P.plass)} av ${ant(P.av)} kommuner etter ${hva}.` : `Ingen plass etter ${hva}.`;
+  return [
+    K.villreinAndel !== null
+      ? `Villreinområdene i kommunen er ${prosent(K.villreinAndel)} av villreinområdene i Norge.`
+      : 'Kommunen har ingen villreinområder.',
+    plass(K.kartlegging, 'andelen kartlagt for naturtyper'),
+    plass(K.inon, 'arealet av inngrepsfri natur'),
+    `Tallene for alle ${ant(L.kommuner)} kommunene er regnet ut ${L.beregnet}.`
+  ];
+}
 
 /* Tabellen med det fulle navnet (som solv.grense) */
 const LAG = ['bronse', 'solv', 'gull'] as const;

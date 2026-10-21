@@ -45,7 +45,8 @@ import { fileURLToPath } from 'node:url';
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 /* Reglene for et lag. fra: mappene det kan importere fra (relativt, ett nivå), med pakkene det kan bruke. ikkeFra: det det ikke kan
-   importere fra. ren: sølv og gull (ingen nettleser, ingen tilstand, ingen let). utenTilstand: bruker ikke app. */
+   importere fra. ren: sølv og gull (ingen nettleser, ingen tilstand, ingen let). utenTilstand: bruker ikke app. Bronse henter
+   dataene som de er, uten pakker; sølv tolker dem, også Parquet-filer (hyparquet). */
 interface Regel {
   fra?: string[];
   filer?: string[] /* enkeltfiler laget også kan importere fra */;
@@ -60,7 +61,12 @@ const LAG: Record<string, Regel> = {
   data: { fra: ['./', './generelt/', './bronse/', './solv/', './gull/'], pakker: [], utenTilstand: true },
   'data/generelt': { fra: ['./'], pakker: [], ren: true },
   'data/bronse': { fra: ['./', '../generelt/', '../solv/'], filer: KATALOGEN, pakker: [], utenTilstand: true },
-  'data/solv': { fra: ['./', '../generelt/'], filer: KATALOGEN, pakker: ['polygon-clipping', 'proj4'], ren: true },
+  'data/solv': {
+    fra: ['./', '../generelt/'],
+    filer: KATALOGEN,
+    pakker: ['polygon-clipping', 'proj4', 'hyparquet'],
+    ren: true
+  },
   'data/gull': { fra: ['./', '../generelt/', '../solv/'], filer: KATALOGEN, pakker: ['polygon-clipping'], ren: true },
   'data/motor': {
     fra: ['./', '../generelt/', '../bronse/', '../solv/', '../gull/'],

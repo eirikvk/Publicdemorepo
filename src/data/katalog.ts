@@ -18,6 +18,7 @@ import { glem, tabell, type Datasettinfo, type Kildeinfo, type Tabell, type Utga
 import * as E from './bronse/endepunkter.ts';
 import * as dibk from './bronse/dibk-kommuneplan.ts';
 import * as kartverket from './bronse/kartverket.ts';
+import * as bronseLandstall from './bronse/landstall.ts';
 import * as mdirInon from './bronse/mdir-inon.ts';
 import * as mdirNatur from './bronse/mdir-naturtema.ts';
 import * as nibioGraa from './bronse/nibio-graa.ts';
@@ -27,6 +28,7 @@ import * as solvGraa from './solv/graa.ts';
 import * as solvGrunnkart from './solv/grunnkart.ts';
 import * as solvInon from './solv/inon.ts';
 import * as solvKommune from './solv/kommune.ts';
+import * as solvLandstall from './solv/landstall.ts';
 import * as solvPlan from './solv/kommuneplan.ts';
 import * as solvPunkt from './solv/punkt.ts';
 import * as solvSsb from './solv/ssb.ts';
@@ -44,6 +46,7 @@ import * as gullEgne from './gull/egne.ts';
 import * as gullGraa from './gull/graa.ts';
 import * as gullGrunnkart from './gull/grunnkart.ts';
 import * as gullInon from './gull/inon.ts';
+import * as gullLandstall from './gull/landstall.ts';
 import * as gullOkosystemer from './gull/okosystemer.ts';
 import * as gullNaturregnskap from './gull/naturregnskap.ts';
 import * as gullPlan from './gull/planlagt.ts';
@@ -143,6 +146,16 @@ export const KILDE = {
     datasett: 'Inngrepsfri natur i Norge',
     adresse: 'https://kartkatalog.geonorge.no/metadata/uuid/277bda73-b924-4a0e-b299-ea5441de2d3b',
     lisens: 'NLOD 2.0'
+  },
+  /* Tallene for alle kommunene er regnet ut av oss, av kildene over. Adressen er katalogen over filene (STAC) i STAC Browser. */
+  landstall: {
+    navn: 'Kommunalt naturregnskap',
+    datasett: 'Tallene for alle kommunene (landstabellen)',
+    adresse:
+      'https://radiantearth.github.io/stac-browser/#/external/huggingface.co/buckets/eirikvk/naturdata/resolve/catalog.json',
+    lisens: 'avledet av kildene, med deres lisenser',
+    beskrivelse:
+      'Tall for alle kommunene, regnet ut på forhånd av denne løsningen med den samme koden som regner tallene for én kommune: landarealet fra SSB, landet i grunnkartet fra NIBIO, verneområdene, villreinområdene, verdsatt natur og det kartlagte for naturtyper og inngrepsfri natur fra Miljødirektoratet, og grått areal. Lagt ut som Parquet i bøtta eirikvk/naturdata på Hugging Face, med en STAC-katalog. Lisensene er kildenes: NLOD 2.0, CC BY 4.0 og Norge digitalt.'
   }
 } satisfies Record<string, Kildeinfo>;
 
@@ -251,6 +264,10 @@ export const DATASETT = {
       ],
       ['Verdsatt natur uten fast verdi per rute', 'det samme for lokalitetene uten fast verdi.']
     ]
+  },
+  landstall: {
+    navn: 'Tallene for alle kommunene',
+    om: 'Én rad per kommune med landarealet, vernet areal og vernet land, villreinområdene, verdsatt natur, det kartlagte for naturtyper, inngrepsfri natur og grått areal i km², og én rad per kommune og naturtype i verdsatt natur. Regnet ut på forhånd av oss for alle kommunene med de samme tabellene som siden bruker for én kommune (gull.kommunetall, kjørt av verktoy/landstall.ts), og lagt ut som Parquet på Hugging Face. Plassen blant kommunene og andelen av Norge regnes i gull (gull.landssammenligning).'
   },
   kartlagt: {
     navn: 'Kartlagt for naturtyper',
@@ -476,6 +493,35 @@ export const katalog = {
         'Hvor stor del av hver rute som ligger i kommunen, laget på forhånd med den samme funksjonen (verktoy/kommunegrenser.ts), så den ikke må regnes ut når kommunen velges.',
       husk: 3,
       etl: kartverket.andelfil
+    }),
+    landstall: tabell<void, ArrayBuffer>({
+      lag: 'bronse',
+      navn: 'landstall',
+      datasett: DATASETT.landstall,
+      innhold:
+        'Parquet-filen som den er: én rad per kommune med kommunenummeret og navnet, landarealet, landet i grunnkartet, vernet areal og vernet land, villreinområdene, verdsatt natur, det kartlagte og andelen kartlagt, inngrepsfri natur og grått areal, og datoen tallene ble regnet ut.',
+      endepunkt: E.LANDSTALL,
+      tittel: 'Tallene for alle kommunene, fil',
+      om: 'tallene for alle kommunene, regnet ut på forhånd av verktoy/landstall.ts med gull.kommunetall og lagt i bøtta eirikvk/naturdata på Hugging Face (kommunetall.parquet). Hele filen hentes i ett kall.',
+      forklaring:
+        'Hele Parquet-filen hentes i ett kall. Tallene er regnet ut én gang for alle kommunene, med den samme koden som siden bruker for én kommune.',
+      kilde: KILDE.landstall,
+      husk: 1,
+      etl: bronseLandstall.landstall
+    }),
+    landsnaturtyper: tabell<void, ArrayBuffer>({
+      lag: 'bronse',
+      navn: 'landsnaturtyper',
+      datasett: DATASETT.landstall,
+      innhold:
+        'Parquet-filen som den er: én rad per kommune og naturtype i verdsatt natur, med kommunenummeret, naturtypen, arealet i km² og antall lokaliteter.',
+      endepunkt: E.LANDSNATURTYPER,
+      tittel: 'Naturtypene i alle kommunene, fil',
+      om: 'arealet av hver naturtype i verdsatt natur i alle kommunene, regnet ut på forhånd sammen med tallene for alle kommunene (naturtyper.parquet i bøtta eirikvk/naturdata på Hugging Face). Hele filen hentes i ett kall.',
+      forklaring: 'Hele Parquet-filen hentes i ett kall.',
+      kilde: KILDE.landstall,
+      husk: 1,
+      etl: bronseLandstall.landsnaturtyper
     }),
     kommuneareal: tabell<void, kartverket.Kommuneareal>({
       lag: 'bronse',
@@ -834,6 +880,28 @@ export const katalog = {
       ],
       husk: 1,
       etl: solvNaturregnskap.okosystemendring
+    }),
+    landstall: tabell<void, solvLandstall.Landstall>({
+      lag: 'solv',
+      navn: 'landstall',
+      datasett: DATASETT.landstall,
+      innhold: 'Én rad per kommune med tallene i km² og andelen kartlagt i prosent, og datoen tallene ble regnet ut.',
+      tittel: 'Tallene for alle kommunene',
+      om: 'landstabellen i felles form: én rad per kommune, ordnet etter kommunenummeret, med tall der filen har tall og ingenting der tallet mangler.',
+      forklaring: 'Parquet-filen leses med hyparquet, og tallene gjøres om til tall, ordnet etter kommunenummeret.',
+      husk: 1,
+      etl: solvLandstall.landstall
+    }),
+    landsnaturtyper: tabell<void, solvLandstall.Landsnaturtype[]>({
+      lag: 'solv',
+      navn: 'landsnaturtyper',
+      datasett: DATASETT.landstall,
+      innhold: 'Én rad per kommune og naturtype i verdsatt natur, med arealet i km² og antall lokaliteter.',
+      tittel: 'Naturtypene i alle kommunene',
+      om: 'arealet av hver naturtype i verdsatt natur i hver kommune, i felles form.',
+      forklaring: 'Parquet-filen leses med hyparquet, og arealet og antallet gjøres om til tall.',
+      husk: 1,
+      etl: solvLandstall.landsnaturtyper
     }),
     kommuneareal: tabell<void, Record<string, number>>({
       lag: 'solv',
@@ -1420,6 +1488,34 @@ export const katalog = {
       etterBehov: true,
       husk: 12,
       etl: gullOkosystemer.vernetNatur
+    }),
+    landssammenligning: tabell<string, gullLandstall.Landssammenligning>({
+      lag: 'gull',
+      navn: 'landssammenligning',
+      tittel: 'Kommunen mot Norge, fra tallene for alle kommunene',
+      om: 'kommunens del av villreinområdene i Norge, plassen blant kommunene på kartleggingsgrad og på arealet av inngrepsfri natur, andelen av landarealet i Norge for verneområdene, villreinområdene, verdsatt natur, inngrepsfri natur og grått areal, og arealet av hver naturtype i Norge. Fra tallene for alle kommunene (solv.landstall), regnet ut på forhånd. Brukes av tvillingen fra Figma.',
+      forklaring:
+        'Summen for Norge er summen av kommunene. Andelen av landarealet i Norge er summen av arealene delt på summen av landarealene, regnet på samme måte som andelen i kommunen. Plassen er blant kommunene som har tallet, der 1 har mest, og like tall får samme plass.',
+      usikkerhet: [
+        'Tallene for alle kommunene er regnet ut én gang, og kan være eldre enn tallene for kommunen, som hentes når kommunen velges. Datoen står ved tallene.'
+      ],
+      etterBehov: true,
+      husk: 4,
+      etl: gullLandstall.landssammenligning
+    }),
+    kommunetall: tabell<string, gullLandstall.Kommunetall>({
+      lag: 'gull',
+      navn: 'kommunetall',
+      stotte: true,
+      innhold:
+        'For kommunen, i km²: landarealet fra SSB, landet i grunnkartet, vernet areal og vernet land, villreinområdene, verdsatt natur, det kartlagte og andelen kartlagt (prosent), inngrepsfri natur og grått areal, og arealet og antall lokaliteter per naturtype.',
+      tittel: 'Tallene for kommunen til landstabellen',
+      om: 'tallene for én kommune som tvillingen sammenligner med Norge: landarealet, vernet areal og vernet land, villreinområdene, verdsatt natur og arealet per naturtype, det kartlagte for naturtyper, inngrepsfri natur og grått areal. Regnes ikke av siden selv: verktoy/landstall.ts kjører tabellen for alle kommunene og legger svarene ut som landstabellen (bronse.landstall).',
+      forklaring:
+        'De samme tallene som temakortene og tabellene på sidene viser for kommunen, hentet fra de samme tabellene, så summen for Norge regnes på samme måte som tallet for kommunen.',
+      etterBehov: true,
+      husk: 2,
+      etl: gullLandstall.kommunetall
     }),
     planPerOkosystem: tabell({
       lag: 'gull',
@@ -2147,7 +2243,9 @@ const ETL_FILER: [string, object][] = [
   ['bronse/dibk-kommuneplan.ts', dibk],
   ['bronse/mdir-inon.ts', mdirInon],
   ['bronse/mdir-naturtema.ts', mdirNatur],
+  ['bronse/landstall.ts', bronseLandstall],
   ['solv/kommune.ts', solvKommune],
+  ['solv/landstall.ts', solvLandstall],
   ['solv/ssb.ts', solvSsb],
   ['solv/naturregnskap.ts', solvNaturregnskap],
   ['solv/grunnkart.ts', solvGrunnkart],
@@ -2161,6 +2259,7 @@ const ETL_FILER: [string, object][] = [
   ['gull/grunnkart.ts', gullGrunnkart],
   ['gull/utbygging.ts', gullUtbygging],
   ['gull/inon.ts', gullInon],
+  ['gull/landstall.ts', gullLandstall],
   ['gull/okosystemer.ts', gullOkosystemer],
   ['gull/naturregnskap.ts', gullNaturregnskap],
   ['gull/graa.ts', gullGraa],

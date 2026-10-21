@@ -11,3 +11,22 @@ export const dekar = (km2: number, enhet = 'daa') => {
 export const iTekst = (km2: number) => dekar(km2, 'dekar');
 /* En andel i prosent med én desimal, «< 0,1 %» når den er mindre, og «0 %» når den er null */
 export const andelTekst = (p: number) => (p === 0 ? '0 %' : p > 0 && p < 0.1 ? '< 0,1 %' : nf(p) + ' %');
+/* Datoen åååå-mm-dd som tekst, som 22. oktober 2026 */
+const MANEDER = [
+  'januar',
+  'februar',
+  'mars',
+  'april',
+  'mai',
+  'juni',
+  'juli',
+  'august',
+  'september',
+  'oktober',
+  'november',
+  'desember'
+];
+export const datoTekst = (d: string) => {
+  const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(d);
+  return m ? `${Number(m[3])}. ${MANEDER[Number(m[2]) - 1]} ${m[1]}` : d;
+};

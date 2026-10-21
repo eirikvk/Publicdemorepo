@@ -69,6 +69,18 @@ node verktoy/regresjon.ts ut/ny --mot HEAD
 Tallene kommer fra de åpne tjenestene og endrer seg over tid, så sammenligningen kjører begge utgavene samme dag. To kjøringer av
 samme kode gir nøyaktig like tall.
 
+## Tallene for alle kommunene
+
+Sammenligningene i tvillingen bruker tall for alle kommunene, regnet ut på forhånd og lagt på Hugging Face. Slik regnes de ut på
+nytt (rundt en time, helst om natten):
+
+```
+node verktoy/landstall.ts ut/landstall.jsonl
+```
+
+Svarene gjøres om til Parquet og STAC med skriptene i bøtta eirikvk/naturdata (`publiser-landstall.py` og `lag-stac.py`), og lastes
+opp dit. Se «Tallene for alle kommunene» i README.md.
+
 ## Utgavemerke og oversiktsbilder
 
 ```

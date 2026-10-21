@@ -9,7 +9,7 @@ import { andelTekst, iTekst, nf, pst } from '../tekst.ts';
 import { lenke, type Rute } from '../navigasjon.ts';
 import { Illustrasjon } from '../illustrasjoner.tsx';
 import { GRUPPER, TEMAER, type Tema } from '../temaer.ts';
-import { sammenligning, temaflis, type Svar } from '../tall.ts';
+import { SNITT, landssammenligning, sammenligning, temaflis, type Svar } from '../tall.ts';
 import { useInfoknapp, type Se } from '../../src/ui/komponenter/Infoknapp.tsx';
 import { ankerFor, REPO } from '../../src/ui/forklaringer.ts';
 import { vises, type Sted } from '../flagg.ts';
@@ -870,23 +870,30 @@ export function NestePerspektiv() {
   );
 }
 
-/* Om temaet har mer eller mindre enn gjennomsnittet i Norge. Skog og våtmark kan sammenlignes med SSBs tall for alle kommuner (som
-   andel av landarealet i Norge); de andre temaene krever kartdata for alle kommuner, en dataplattform, og står tomme til den finnes. */
+/* Om temaet har mer eller mindre enn gjennomsnittet i Norge: andelen av landarealet i kommunen mot andelen i Norge. Skog og
+   våtmark sammenlignes med SSBs tall for alle kommuner (gull.sammenligning). De andre temaene sammenlignes med tallene for alle
+   kommunene, regnet ut på forhånd (gull.landssammenligning), der andelen i Norge regnes på samme måte som i kommunen. */
 function Gjennomsnitt({ id }: { id: string }) {
-  if (id !== 'skog' && id !== 'vatmark')
-    return <span className="snittmerke tom">Gjennomsnitt: krever dataplattform</span>;
-  const S = sammenligning();
-  if (S.s !== 'ok' || S.v.endret) return null;
-  const a = id === 'skog' ? S.v.skog : S.v.vatmarkAreal;
-  if (a.kommune === null || a.norge === null) return null;
-  const mer = a.kommune >= a.norge;
-  return (
-    <span className="snittmerke">
-      <Trend opp={mer} />
-      {mer ? 'Mer enn gjennomsnittet' : 'Mindre enn gjennomsnittet'}
-    </span>
-  );
+  if (id === 'skog' || id === 'vatmark') {
+    const S = sammenligning();
+    if (S.s !== 'ok' || S.v.endret) return null;
+    const a = id === 'skog' ? S.v.skog : S.v.vatmarkAreal;
+    if (a.kommune === null || a.norge === null) return null;
+    return <Snittmerke mer={a.kommune >= a.norge} />;
+  }
+  const L = landssammenligning(),
+    T = temaflis(id),
+    felt = SNITT[id];
+  if (!felt || L.s !== 'ok' || T.s !== 'ok' || T.v.andel === null) return null;
+  const norge = L.v.snitt[felt];
+  return norge === null ? null : <Snittmerke mer={T.v.andel >= norge} />;
 }
+const Snittmerke = ({ mer }: { mer: boolean }) => (
+  <span className="snittmerke">
+    <Trend opp={mer} />
+    {mer ? 'Mer enn gjennomsnittet' : 'Mindre enn gjennomsnittet'}
+  </span>
+);
 
 /* Temakortene som er brede i rutenettet på oversikten, som i skissene */
 const BREDE = ['vatmark', 'verdsatte-naturtyper', 'inngrepsfri-natur'];

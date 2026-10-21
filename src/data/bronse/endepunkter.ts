@@ -13,4 +13,9 @@ export const SSB = 'https://data.ssb.no/api/pxwebapi/v2/tables/09594/data',
   VERN = MILJO + 'vern/MapServer/0/query',
   VILLREIN = MILJO + 'villrein/MapServer/1/query',
   VERDSATT = MILJO + 'naturtyper_kuverdi/MapServer/0/query',
-  KARTLAGT = MILJO + 'naturtyper_nin/MapServer/1/query';
+  KARTLAGT = MILJO + 'naturtyper_nin/MapServer/1/query',
+  /* Landstabellen: tallene for alle kommunene, regnet ut på forhånd (verktoy/landstall.ts) og lagt i bøtta eirikvk/naturdata på
+     Hugging Face */
+  NATURDATA = 'https://huggingface.co/buckets/eirikvk/naturdata/resolve/',
+  LANDSTALL = NATURDATA + 'landstall/kommunetall.parquet',
+  LANDSNATURTYPER = NATURDATA + 'landstall/naturtyper.parquet';

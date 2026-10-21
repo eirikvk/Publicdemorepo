@@ -4,6 +4,7 @@
 import type { Rad, Tabell } from '../src/data/cache.ts';
 import type { EgenRad } from '../src/data/gull/egne.ts';
 import type { Bildetall } from '../src/data/gull/felles.ts';
+import type { Landssammenligning } from '../src/data/gull/landstall.ts';
 import type { PlanPerOkosystem } from '../src/data/gull/okosystemer.ts';
 import type { Sammenligning } from '../src/data/gull/naturregnskap.ts';
 import type { TemaIPlan, Temaet } from '../src/data/gull/temaer.ts';
@@ -98,6 +99,20 @@ export function sammenligning(): Svar<Sammenligning> {
 export const plansum = () => verdi(katalog.gull.plansum);
 export const planlagt = () => verdi(katalog.gull.planlagt);
 export const kommuneplan = () => verdi(katalog.gull.kommuneplan);
+
+/* Kommunen mot Norge fra tallene for alle kommunene, regnet ut på forhånd (gull.landssammenligning): kommunens del av
+   villreinområdene, plassen på kartleggingsgrad og inngrepsfri natur, gjennomsnittet for temaene og arealet av naturtypene i Norge.
+   Regnes først når siden spør. */
+export const landssammenligning = (): Svar<Landssammenligning> => fraRad(valgt(katalog.gull.landssammenligning));
+/* Andelen av landarealet i Norge for temaet id under «Utforsk naturen», fra tallene for alle kommunene. Skog og våtmark har sine
+   egne tall fra SSB (gull.sammenligning). null når temaet ikke har et tall for Norge. */
+export const SNITT: Record<string, keyof Landssammenligning['snitt']> = {
+  verneomrader: 'vern',
+  villrein: 'villrein',
+  'verdsatte-naturtyper': 'verdsatt',
+  'inngrepsfri-natur': 'inon',
+  bynatur: 'graa'
+};
 
 /* Det flisene under «Utforsk naturen» viser for hvert tema: arealet og andelen av landarealet, eller hvordan det går */
 export function temaflis(id: string): Svar<{ km2: number; andel: number | null }> {

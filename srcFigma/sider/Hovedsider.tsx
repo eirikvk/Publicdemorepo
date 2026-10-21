@@ -6,8 +6,9 @@ import { useState } from 'react';
 import { KILDE } from '../../src/data/katalog.ts';
 import { app } from '../../src/data/motor/tilstand.ts';
 import type { Okosystemregnskap, Plassering } from '../../src/data/gull/naturregnskap.ts';
+import type { Plass } from '../../src/data/gull/landstall.ts';
 import { HOVEDOKOSYSTEMER } from '../../src/data/solv/klasser.ts';
-import { andelTekst, dekar, iTekst, pst } from '../tekst.ts';
+import { andelTekst, datoTekst, dekar, iTekst, pst } from '../tekst.ts';
 import { MdIconAdd, MdIconClose } from '../md.ts';
 import Kart, { KLASSER, PLAN, type Kartlag } from '../komponenter/Kart.tsx';
 import { KLASSELAG } from '../kartlag.ts';
@@ -26,7 +27,7 @@ import {
   useSporsmal,
   svar
 } from '../komponenter/deler.tsx';
-import { nedbygging, okosystemregnskap, plansum, sammenligning, utbredelse } from '../tall.ts';
+import { landssammenligning, nedbygging, okosystemregnskap, plansum, sammenligning, utbredelse } from '../tall.ts';
 import { TEMAER } from '../temaer.ts';
 import { FLAGG } from '../flagg.ts';
 
@@ -191,7 +192,33 @@ function plassering(p: Plassering): [merke: string | null, under: string] {
     `Nr. ${p.plass} av ${p.av} kommuner som kan sammenlignes, svakere enn ${Math.floor(((p.av - p.plass) / p.av) * 100)} % av dem`
   ];
 }
-const DATAPLATTFORM = 'Krever dataplattform';
+/* Merket og linjen under for en plass fra tallene for alle kommunene, der 1 har mest. Et høydepunkt (god) er blant de beste når
+   plassen er lav, et forbedringsområde blant de svakeste når plassen er høy. hva er det kommunene er ordnet etter. */
+function plassFraLandet(
+  p: Plass | null,
+  god: boolean,
+  hva: string,
+  ingen: string
+): [merke: string | null, under: string] {
+  if (!p) return [null, ingen];
+  const fraBunnen = p.av - p.plass + 1,
+    merke = god
+      ? p.plass <= 3
+        ? 'Topp 3'
+        : p.plass <= 10
+          ? 'Topp 10'
+          : `Nr. ${p.plass}`
+      : fraBunnen <= 3
+        ? 'Bunn 3'
+        : fraBunnen <= 10
+          ? 'Bunn 10'
+          : `Nr. ${p.plass}`;
+  return [merke, `Nr. ${p.plass} av ${p.av} kommuner etter ${hva}, der 1 har mest`];
+}
+/* Linjen under når tallene for alle kommunene ikke er klare */
+const fraLandet = (s: string) => (s === 'henter' ? 'Henter …' : 'Tallene for alle kommunene kunne ikke hentes');
+/* Naturskog sammenlignes ikke: Miljødirektoratet skriver at kartet over naturskog ikke kan brukes til statistikk */
+const NATURSKOG = 'Kan ikke sammenlignes ennå: kartet over naturskog kan ikke brukes til statistikk';
 
 export function Oversikt() {
   const [vist, settVist] = useState<Klassevalg>('nat');
@@ -203,6 +230,32 @@ export function Oversikt() {
     k = kommunen(),
     jord = S.s === 'ok' && !S.v.endret ? plassering(S.v.jordbruk) : null,
     vat = S.s === 'ok' && !S.v.endret ? plassering(S.v.vatmark) : null,
+    L = landssammenligning(),
+    LK = L.s === 'ok' ? L.v.kommune : null,
+    rein: [string | null, string] =
+      L.s !== 'ok'
+        ? [null, fraLandet(L.s)]
+        : !LK
+          ? [null, 'Kommunen er ikke med i tallene for alle kommunene']
+          : LK.villreinAndel === null
+            ? [null, 'Kommunen har ingen villreinområder']
+            : [
+                andelTekst(LK.villreinAndel),
+                LK.villrein ? `Nr. ${LK.villrein.plass} av ${LK.villrein.av} kommuner med villreinområder` : ''
+              ],
+    kart: [string | null, string] =
+      L.s !== 'ok'
+        ? [null, fraLandet(L.s)]
+        : plassFraLandet(
+            LK && LK.kartlegging,
+            true,
+            'andelen kartlagt',
+            'Kommunen har ingen kartlegging å sammenligne'
+          ),
+    inonPlass: [string | null, string] =
+      L.s !== 'ok'
+        ? [null, fraLandet(L.s)]
+        : plassFraLandet(LK && LK.inon, false, 'arealet av inngrepsfri natur', 'Kommunen har ingen inngrepsfri natur'),
     nedbygd = useSporsmal(['oversikt/nedbygd', 'naturregnskap']);
   return (
     <>
@@ -365,23 +418,23 @@ export function Oversikt() {
             <Plasskort
               god
               tittel="Villreinområder"
-              merke={null}
+              merke={rein[0]}
               tekst={`av alle villreinområdene i Norge ligger i ${k}`}
-              under={DATAPLATTFORM}
+              under={rein[1]}
             />
             <Plasskort
               god
               tittel="Naturskog"
               merke={null}
               tekst="av de kommunene med mest naturskog i Norge"
-              under={DATAPLATTFORM}
+              under={NATURSKOG}
             />
             <Plasskort
               god
               tittel="Kartleggingsgrad"
-              merke={null}
-              tekst="plass av alle 357 kommuner på kartleggingsgrad i Norge"
-              under={DATAPLATTFORM}
+              merke={kart[0]}
+              tekst={`plass av alle ${L.s === 'ok' ? L.v.kommuner : 357} kommuner på kartleggingsgrad i Norge`}
+              under={kart[1]}
             />
           </ul>
           <h3 className="md-typography-heading-s">Tre forbedringsområder</h3>
@@ -400,9 +453,9 @@ export function Oversikt() {
             />
             <Plasskort
               tittel="Inngrepsfri natur"
-              merke={null}
+              merke={inonPlass[0]}
               tekst="blant alle Norges kommuner når det kommer til størrelse på inngrepsfri natur"
-              under={DATAPLATTFORM}
+              under={inonPlass[1]}
             />
           </ul>
           {S.s === 'ok' && S.v.syntetisk && <Syntetisk />}
@@ -416,9 +469,24 @@ export function Oversikt() {
               </p>
               <p>{SYNTETISK_TEKST}</p>
               <p>
-                Villreinområder, naturskog, kartleggingsgrad og inngrepsfri natur krever kartdata regnet ut på forhånd
-                for alle kommuner, en dataplattform. Til den finnes, står de tomme.
+                Villreinområder, kartleggingsgrad og inngrepsfri natur er regnet ut på forhånd for alle kommunene
+                {L.s === 'ok' && L.v.beregnet ? ` (${datoTekst(L.v.beregnet)})` : ''}, med den samme koden som regner
+                tallene for {k}. Summen for Norge er summen av kommunene. Plassen er blant kommunene som har tallet, der
+                1 har mest.
               </p>
+              <p>
+                Naturskog står tom. Miljødirektoratet har et{' '}
+                <a
+                  href="https://www.miljodirektoratet.no/ansvarsomrader/overvaking-arealplanlegging/arealplanlegging/kart-over-naturskog/"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  kart over naturskog
+                </a>{' '}
+                for hele landet, men skriver at det ikke kan brukes til statistikk over hvor mye naturskog det finnes,
+                og hvor. En ny utgave ventes tidlig i 2027.
+              </p>
+              <Kilde kilder={['ssb', 'landstall']} />
             </Trekkspill>
             <Trekkspill tittel="Hva legger vi i høydepunkt og forbedringspunkt?">
               <p>

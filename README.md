@@ -176,6 +176,7 @@ Bronse, i `src/data/bronse/`. Én fil per tjeneste, og felles filer for hvordan 
 | `dibk-kommuneplan.ts` | Kommuneplanene hos DiBK: flatene for framtidig utbygging, en oversikt over hvor de ligger i kommunen, hvor mye av kommunen planen dekker, hvilken plan det er, og flatene i ett punkt |
 | `mdir-naturtema.ts` | Miljødirektoratets verneområder, villreinområder, naturtyper med KU-verdi (med og uten fast verdi, i én henting) og det kartlagte området, side for side når det er flere flater enn tjenesten gir i ett svar, og alle feltene for ett område |
 | `mdir-inon.ts` | Inngrepsfrie naturområder, som bilder per bit (2048 x 2048 ruter à 10,6 meter) og i ett punkt |
+| `landstall.ts` | Tallene for alle kommunene (landstabellen): de to Parquet-filene i bøtta på Hugging Face, hentet hele, som de er |
 | `nibio-graa.ts` | Kart over grå arealer, som to bilder per bit (alt grått areal, og andel vegetasjon) og som de samme to bildene per flis til kartet zoomet inn |
 | `planfil.ts` | En opplastet planfil, lest i nettleseren og gjort om til UTM33 |
 
@@ -199,6 +200,7 @@ Sølv, i `src/data/solv/`. Hver fil er én ting i felles standard, med kildene s
 | `temaer.ts` | Verneområder, villrein, verdsatt natur og det kartlagte: flatene klippet mot kommunen (lokalitetene i verdsatt natur bare der kanten av kommunen går gjennom dem, og da mot den delen av kommunen som ligger rundt), temaet som andel per rute i bitene (`solv.vernAndel` og de andre, uten arealet, som regnes i gull), og flatene som oppslag for rutene i utbyggingen |
 | `inon.ts` | Inngrepsfri natur: sone per rute, sonen per piksel i kartet på hvert nivå (`solv.inonsoner` og `solv.inonsonerUt`), og sonene i naturen |
 | `graa.ts` | Grått areal: trinn per rute etter andel vegetasjon, trinnet per piksel i kartet på hvert nivå (`solv.graatrinn` og `solv.graatrinnUt`), og grønt i bebygd område |
+| `landstall.ts` | Datasettet «Tallene for alle kommunene»: Parquet-filene fra bronse lest med hyparquet og gjort om til felles form, én rad per kommune, og én per kommune og naturtype |
 | `nivaer.ts` | Én sannhet per nivå for temaene i biter: rutene i en bit lest for en flis på nivå 10 og finere, og halvregelen zoomet ut |
 | `punkt.ts` | Oppslag i ett punkt, til detaljene ved trykk i kartet: grunnkartet, kommuneplanen og inngrepsfri natur i punktet, og alle feltene for et område i et naturtema, som felt og verdi. Inngår ikke i tallene. |
 | `kodelister.ts` | Kodelister fra Geonorge og SOSI: arealformål, arealbruksstatus og eierform i kommuneplanen |
@@ -218,6 +220,7 @@ eller `kombiner` noe, er rene utregninger som tabellene bruker.
 | `egne.ts` | Hva som ligger i hvert eget område, og radene som sammenligner den gamle planen med den nye, for hele kommunen og hvert område. Analysene er de samme som for kommuneplanen, regnet for hvert utvalg; her settes bare radene og forskjellen sammen. |
 | `temaer.ts` | Naturtemaene: arealet av hvert tema (`gull.vernAreal` og de andre), temaet (områdene, arealet og andelen), kartleggingen av verdsatt natur og kryssingen med det kartlagte, oppslagene til kryssingen med utbyggingen (`gull.naturoppslag`), kolonnene for hvert tema i utbyggingen (andelen av hver rute i temaet og i hvert område), summene over dem, og planlagt utbygging utenfor det kartlagte. Når egne områder endres, regnes kolonnene bare ut for rutene som er nye (`gull.temaminne` og `gull.radorden`). |
 | `inon.ts` | Tallene på siden |
+| `landstall.ts` | Tallene for alle kommunene: tallene for én kommune til landstabellen (`gull.kommunetall`, som `verktoy/landstall.ts` kjører for alle kommunene), og kommunen mot Norge fra landstabellen (`gull.landssammenligning`): plassen blant kommunene, andelen av Norge for temaene og arealet av naturtypene i Norge. Brukes av tvillingen. |
 | `graa.ts` | Arealet per trinn, og kryssingen med utbyggingen |
 
 Datamotoren, i `src/data/motor/`.
@@ -358,8 +361,10 @@ tema der det finnes (`src/ui/tvilling.ts`): Utvikling fremover og Naturtapet, te
   for verdsatte naturtyper viser det som er kartlagt med lilla prikker, som skissene, der hovedsiden har slør over det som ikke er
   kartlagt.
   Bynaturen er ikke tegnet, så den er som før.
-- Det skissene viser som datamotoren ikke har ennå, står tomt: felt som krever en dataplattform har et tomt merke (–), og figurer
-  og felt som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget
+- Sammenligningene som krever tall for alle kommunene (villreinområdene, kartleggingsgraden, inngrepsfri natur, gjennomsnittet
+  på temakortene og andelen av hver naturtype i Norge), kommer fra landstabellen, se «Tallene for alle kommunene» under.
+  Naturskog står tom, fordi Miljødirektoratet skriver at kartet over naturskog ikke kan brukes til statistikk. Figurer og felt
+  som mangler kilde eller ikke er laget, har en stiplet flate med det som trengs. Det blå feltet om hva naturen ble bygget
   ned til (som utgår), viser kommuneplanen i stedet. Listene over områdene er beholdt.
 - Naturtapet og «Utforsk i kart» er ikke tegnet i skissene. De er satt sammen av delene fra de tegnede sidene, og merket øverst
   med at oppsettet og teksten er et KI-generert forslag:
@@ -441,6 +446,29 @@ nesten alt er flatene).
 - Siden står utenfor datamotoren og lagene i bronse, sølv og gull: den spør selv i én fil. Fra `src/` bruker den bare designsystemet,
   tekstene for tall, kartfargene og grunnlaget for stilen, og `src/` bruker den aldri (sjekkes av `verktoy/sjekk-lag.ts`). Skal
   filen brukes i hovedsiden, bør den inn som en tabell i bronse.
+
+## Tallene for alle kommunene
+
+Noen sammenligninger i tvillingen trenger de samme tallene for alle kommunene: kommunens del av villreinområdene i Norge, plassen
+på kartleggingsgrad og på arealet av inngrepsfri natur, gjennomsnittet i Norge på temakortene, og andelen av hver naturtype i
+Norge. De regnes ut på forhånd, i landstabellen.
+
+- **Samme kode som for én kommune.** `gull.kommunetall` samler tallene for én kommune fra de samme tabellene som siden bruker når
+  kommunen er valgt. `verktoy/landstall.ts` kjører den for alle 357 kommunene i siden selv, i Chromium, én kommune om gangen, og
+  skriver svarene fortløpende (`node verktoy/landstall.ts ut/landstall.jsonl`). Det tar rundt en time, og bør kjøres når
+  tjenestene har lite trafikk. Stopper kjøringen, fortsetter den der den slapp, og kommuner som feiler, prøves på nytt.
+- **Summen for Norge er summen av kommunene.** Andelen av landarealet i Norge er summen av arealene delt på summen av
+  landarealene, regnet på samme måte som andelen i kommunen. Plassen er blant kommunene som har tallet, der 1 har mest.
+- **Lagt ut på Hugging Face.** Svarene gjøres om til to Parquet-filer (`landstall/kommunetall.parquet` og
+  `landstall/naturtyper.parquet`) i bøtta [eirikvk/naturdata](https://huggingface.co/buckets/eirikvk/naturdata), med en egen
+  samling i STAC-katalogen. Skriptene som gjør det (`publiser-landstall.py` og `lag-stac.py`), ligger i bøtta.
+- **Lest som en kilde i bronse.** Siden henter filene i bronse (`bronse.landstall` og `bronse.landsnaturtyper`), sølv leser
+  Parquet med hyparquet, og `gull.landssammenligning` regner ut plassen og andelene for valgt kommune. Tvillingen leser gull, som
+  for de andre tallene. Hovedsiden har ikke disse sammenligningene, men tabellene står i katalogen der også.
+- **Lisensene er kildenes.** Tallene er summer av data fra Miljødirektoratet (NLOD 2.0), SSB (CC BY 4.0) og NIBIO (Norge
+  digitalt), de samme tallene siden viser for hver kommune.
+- **Naturskog er ikke med.** Miljødirektoratet har et kart over naturskog for hele landet (versjon 1), men skriver at det ikke
+  kan brukes til statistikk over hvor mye naturskog det finnes, og hvor. Feltet i tvillingen sier det.
 
 ## Dokumentasjon
 
@@ -836,6 +864,8 @@ Verktøyene ligger i `verktoy/` og trengs bare under utvikling.
 - `kommuneareal.ts` lager `public/kommuneareal.json`: flaten til hver kommune med land, ferskvann og hav, regnet av Kartverkets
   grenser én gang. De syntetiske tabellene bruker den til havet i alle kommunene. Den må lages på nytt når kommunene endres.
 - `figma-roykt.ts` er røyktesten for tvillingen fra Figma, se over.
+- `landstall.ts` regner ut tallene for alle kommunene (landstabellen) med `gull.kommunetall`, i Chromium, én kommune om gangen. Se
+  «Tallene for alle kommunene» over. For eksempel `node verktoy/landstall.ts ut/landstall.jsonl --bare 5001,5612`.
 - `egne-ytelse.ts` måler hvor lang tid sammenligningen for egne områder tar: laster opp testplanen og syntetiske planer med så mange
   flater som oppgis, og viser tiden til tabellene står og tiden med økosystemtypene, og stegene som tok tiden. Krever bygget i
   `dist/`. For eksempel `node verktoy/egne-ytelse.ts --kommune 5001 --flater 300,1500`.

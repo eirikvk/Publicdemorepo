@@ -9,7 +9,7 @@ import { app } from '../../src/data/motor/tilstand.ts';
 import { INONSONER } from '../../src/data/solv/inon.ts';
 import { GRAATRINN } from '../../src/data/solv/graa.ts';
 import { FLERE_VERNEFORMER, NATURTEMA } from '../../src/data/solv/temaer.ts';
-import { andelTekst, antallOrd, dekar, iTekst, nf, pst, verdiOverlapp } from '../tekst.ts';
+import { andelTekst, antallOrd, datoTekst, dekar, iTekst, nf, pst, verdiOverlapp } from '../tekst.ts';
 import { MdCheckbox } from '../md.ts';
 import Kart, { type Kartlag } from '../komponenter/Kart.tsx';
 import Tabell from '../komponenter/Tabell.tsx';
@@ -49,6 +49,7 @@ import {
   inonIVillreinUtvikling,
   inonUtvikling,
   kartleggingen,
+  landssammenligning,
   naturtema
 } from '../tall.ts';
 import { temaet, type Tema } from '../temaer.ts';
@@ -622,7 +623,23 @@ function Verdi({ tema }: { tema: Tema }) {
     vv = VV.s === 'ok' && VV.v.omrader.length ? VV.v : null;
   const [bareHoy, settBareHoy] = useState(false),
     N = verdsattPerNaturtype(),
-    typer = N.s === 'ok' ? (bareHoy ? N.v.hoy : N.v.alle) : [];
+    typer = N.s === 'ok' ? (bareHoy ? N.v.hoy : N.v.alle) : [],
+    L = landssammenligning();
+  /* Andelen av naturtypen i Norge som ligger i kommunen, fra tallene for alle kommunene. Gjelder alle lokalitetene, så den står tom
+     når bare stor og svært stor verdi er valgt, og når tallene for alle kommunene ikke er klare. */
+  const andelINorge = (t: { navn: string; km2: number }) => {
+    const norge = L.s === 'ok' ? L.v.naturtyper[t.navn] : undefined;
+    if (bareHoy || !norge)
+      return (
+        <span
+          className="tom-celle"
+          title={bareHoy ? 'Gjelder alle lokalitetene' : L.s === 'henter' ? 'Henter …' : 'Mangler tall for Norge'}
+        >
+          –
+        </span>
+      );
+    return andelTekst((t.km2 / norge) * 100);
+  };
   return (
     <Temaside
       tema={tema}
@@ -786,8 +803,8 @@ function Verdi({ tema }: { tema: Tema }) {
               </p>
               <p>
                 Tallene gjelder bare det som er kartlagt. Verken kommunen eller resten av landet er ferdig kartlagt, så
-                det kan finnes mer enn det listen viser. Andelen av det som er kartlagt i Norge krever en dataplattform,
-                og står tom.
+                det kan finnes mer enn det listen viser. Andelen av det som er kartlagt i Norge er arealet i kommunen
+                delt på arealet i alle kommunene.
               </p>
             </>
           }
@@ -802,8 +819,10 @@ function Verdi({ tema }: { tema: Tema }) {
               </Trekkspill>
               <Trekkspill tittel="Hvordan er dataene brukt i tabellen?">
                 <p>
-                  Arealet er summen av lokalitetene med naturtypen i kommunen, klippet mot kommunen. Arealet i Norge
-                  krever kartdata for alle kommuner.
+                  Arealet er summen av lokalitetene med naturtypen i kommunen, klippet mot kommunen. Arealet i Norge er
+                  summen av arealet i alle kommunene, regnet ut på forhånd på samme måte
+                  {L.s === 'ok' && L.v.beregnet ? ` (${datoTekst(L.v.beregnet)})` : ''}. Andelen gjelder alle
+                  lokalitetene, så den vises ikke når bare stor og svært stor verdi er valgt.
                 </p>
               </Trekkspill>
             </>
@@ -822,14 +841,7 @@ function Verdi({ tema }: { tema: Tema }) {
               { navn: `Dekar ${kommunen()}`, tall: true },
               { navn: 'Andel av kartlagt i Norge', tall: true, ikkeMobil: true }
             ]}
-            rader={typer.map((t, i) => [
-              String(i + 1),
-              t.navn,
-              dekar(t.km2, 'dekar'),
-              <span className="tom-celle" title="Krever dataplattform">
-                –
-              </span>
-            ])}
+            rader={typer.map((t, i) => [String(i + 1), t.navn, dekar(t.km2, 'dekar'), andelINorge(t)])}
           />
         </Figur>
       )}
