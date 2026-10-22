@@ -1722,7 +1722,12 @@ siden leser dem som en kilde i bronse (`bronse.landstall` og `bronse.landsnaturt
 datoen står ved dem. Naturskog står fortsatt tom: Miljødirektoratet har et kart over naturskog for hele landet (versjon 1, med
 versjon 2 ventet tidlig i 2027), men skriver at det ikke kan brukes til statistikk over hvor mye naturskog det finnes, og hvor.
 Andelen av en naturtype i Norge gjelder alle lokalitetene, og vises ikke når bare stor og svært stor verdi er valgt. Hovedsidens
-tall er ikke endret.
+tall er ikke endret, og regresjonstesten ga ingen avvik.
+
+Kjøringen natt til 22. oktober tok rundt 80 minutter for alle 357 kommunene, med 9 sekunder for en vanlig kommune og opptil 70
+sekunder for de største. Summene for Norge stemmer med kjente tall: landarealet er 303 559 km², vernet land 18,1 % av landet i
+grunnkartet, villreinområdene 50 441 km² (16,6 % av landarealet), inngrepsfri natur 46,3 %, verdsatt natur 4,3 %, det kartlagte
+for naturtyper 5,9 % og grått areal 2,1 %. Ingen kommune mangler, og ingen tall er tomme. Naturtypefilen har 16 842 rader.
 
 **STAC-katalog for bøtta, 22. oktober 2026.** Bøtta `eirikvk/naturdata` har fått en STAC-katalog (STAC 1.1.0), så verktøy som
 leser STAC kan finne filen uten å kjenne adressen: `catalog.json`, en collection for naturvernområdene og et item for filen.
